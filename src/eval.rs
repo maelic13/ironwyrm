@@ -1,9 +1,14 @@
+// `clippy::too_many_arguments` accepted crate-wide — see Cargo.toml. Here it
+// covers the eval terms whose `&mut mg` / `&mut eg` out-parameters keep the
+// evaluator single-pass and allocation-free.
+
 #[cfg(feature = "texel")]
 use std::cell::RefCell;
 
 use crate::board::attacks::AttackTables;
 use crate::board::movegen;
 use crate::board::{ATTACKS, Bitboard, Board, CastlingRights, Color, GameResult, Piece, Square};
+use crate::infra;
 
 pub const MATE_SCORE: i32 = 32_000;
 pub const INF_SCORE: i32 = 32_001;
@@ -221,8 +226,10 @@ macro_rules! eval_params {
                     mg += self.mg.$field[i] as i64 * p.$field[i] as i64;
                     eg += self.eg.$field[i] as i64 * p.$field[i] as i64;
                 } )*
-                ((mg * self.phase as i64 + eg * (TOTAL_PHASE as i64 - self.phase as i64))
-                    / TOTAL_PHASE as i64) as i32
+                crate::infra::saturating_i32(
+                    (mg * self.phase as i64 + eg * (TOTAL_PHASE as i64 - self.phase as i64))
+                        / TOTAL_PHASE as i64,
+                )
             }
 
             /// Per-flat-index tapered coefficient `(count_mg·phase +
@@ -256,6 +263,13 @@ macro_rules! eval_params {
             }
 
             /// Inverse of `to_flat` (rounds to nearest integer weight).
+            ///
+            /// The float->int narrowing is intended and well defined: `as`
+            /// from a float saturates at the target's bounds and maps NaN to
+            /// 0 (guaranteed by the language since Rust 1.45), and `.round()`
+            /// is exactly the rounding the tuner wants. There is no checked
+            /// helper to reach for here.
+            #[allow(clippy::cast_possible_truncation)]
             pub fn set_from_flat(&mut self, w: &[f64]) {
                 let mut k = 0usize;
                 $( for i in 0..$len { self.$field[i] = w[k].round() as i32; k += 1; } )*
@@ -271,24 +285,34 @@ eval_params! {
     pst_eg: 384 = build_default_pst(false);
     // Passers & pawn structure (Phase 4.4 fitted). passed_*/connected per-rank
     // tables; passed bonuses stay monotonic (rank 1/8 pinned 0).
-    passed_mg: 8 = [0, 0, 0, 0, 54, 135, 152, 0];
-    passed_eg: 8 = [0, 0, 0, 39, 76, 98, 98, 0];
+    passed_mg: 8 = [0, 0, 0, 1, 54, 134, 152, 0];
+    passed_eg: 8 = [0, 0, 1, 40, 76, 97, 98, 0];
     passed_supported_mg: 1 = [0];
     passed_supported_eg_base: 1 = [0];
     passed_supported_eg_per_rank: 1 = [0];
-    passed_freestop_mg_per_rank: 1 = [0];
+    passed_freestop_mg_per_rank: 1 = [2];
     passed_freestop_eg_per_rank: 1 = [0];
     passed_safestop_eg_per_rank: 1 = [16];
-    passed_candidate_mg: 1 = [2];
-    passed_candidate_eg: 1 = [1];
-    pawn_doubled_mg: 1 = [3];
-    pawn_doubled_eg: 1 = [18];
-    pawn_isolated_mg: 1 = [6];
+    passed_candidate_mg: 1 = [1];
+    passed_candidate_eg: 1 = [0];
+    pawn_doubled_mg: 1 = [1];
+    pawn_doubled_eg: 1 = [16];
+    pawn_isolated_mg: 1 = [5];
     pawn_isolated_eg: 1 = [13];
-    // Rank-scaled connected/phalanx (Phase 3.8), Phase 4.4 fitted; indexed by
-    // the pawn's relative rank (0..7).
-    pawn_connected_mg: 8 = [7, 7, 36, 17, 18, 61, 175, 7];
+    // Rank-scaled pawn *support* (Phase 3.8), Phase 4.4 fitted; indexed by the
+    // pawn's relative rank (0..7). NB despite the historical name, this term
+    // fires only for a pawn defended diagonally from behind by an own pawn
+    // (`atk.pawn(them, sq) & our_pawns`) — the *phalanx* case (pawns abreast on
+    // the same rank, which do not defend each other) is the separate
+    // `pawn_phalanx_*` table below. (Rename to `pawn_supported_*` deferred: it
+    // churns the tuner's string-keyed param list; see PLAN 7.4.)
+    pawn_connected_mg: 8 = [7, 7, 35, 18, 19, 61, 175, 7];
     pawn_connected_eg: 8 = [5, 5, 0, 0, 12, 22, 21, 5];
+    // Same-rank phalanx (Phase 7.4, seeded 0): a pawn with an own pawn on an
+    // adjacent file *on the same rank* (d4+e4). Rank-scaled; the refit activates
+    // it. Was entirely unrepresented before 7.4.
+    pawn_phalanx_mg: 8 = [0, 0, 2, 2, 1, 0, 0, 0];
+    pawn_phalanx_eg: 8 = [0, 0, 1, 1, 1, 0, 0, 0];
     pawn_backward_mg: 1 = [0];
     pawn_backward_eg: 1 = [18];
     // Pawn-structure / passer detail (Phase 3.8), Phase 4.4 fitted. pawn_lever
@@ -296,25 +320,25 @@ eval_params! {
     pawn_lever_mg: 1 = [0];
     pawn_lever_eg: 1 = [0];
     pawn_doubled_isolated_mg: 1 = [0];
-    pawn_doubled_isolated_eg: 1 = [5];
+    pawn_doubled_isolated_eg: 1 = [4];
     blocked_passer_mg: 1 = [46];
-    blocked_passer_eg: 1 = [0];
+    blocked_passer_eg: 1 = [1];
     ideal_blockader_mg: 1 = [23];
     ideal_blockader_eg: 1 = [0];
     // Minors & rooks (Phase 4.4 fitted). rook_7th and a few others fitted to 0 —
     // the data verdict that they add nothing atop mobility/threats/open-file.
     bishop_pair_mg: 1 = [25];
     bishop_pair_eg: 1 = [55];
-    rook_open_mg: 1 = [42];
+    rook_open_mg: 1 = [43];
     rook_open_eg: 1 = [0];
     rook_semiopen_mg: 1 = [2];
-    rook_semiopen_eg: 1 = [24];
+    rook_semiopen_eg: 1 = [23];
     rook_7th_mg: 1 = [0];
     rook_7th_eg: 1 = [0];
     rook_behind_passer_mg: 1 = [0];
-    rook_behind_passer_eg: 1 = [76];
+    rook_behind_passer_eg: 1 = [75];
     enemy_rook_behind_passer_mg: 1 = [13];
-    enemy_rook_behind_passer_eg: 1 = [0];
+    enemy_rook_behind_passer_eg: 1 = [1];
     knight_outpost_mg: 1 = [55];
     knight_outpost_eg: 1 = [5];
     // Per-count mobility tables (Phase 3.7 structure; Phase 4.3 fitted). Each is
@@ -344,12 +368,12 @@ eval_params! {
     // term absorbed the old flat hanging penalty, which the joint fit drove to
     // ~0 (see hanging_* below).
     threat_by_minor_mg: 6 = [0, 50, 82, 83, 72, 0];
-    threat_by_minor_eg: 6 = [2, 22, 0, 0, 0, 0];
-    threat_by_rook_mg: 6 = [0, 38, 32, 4, 71, 0];
+    threat_by_minor_eg: 6 = [3, 22, 0, 0, 0, 0];
+    threat_by_rook_mg: 6 = [0, 37, 32, 4, 71, 0];
     threat_by_rook_eg: 6 = [13, 19, 24, 1, 18, 0];
     threat_hanging_refined_mg: 6 = [0, 16, 51, 33, 0, 0];
     threat_hanging_refined_eg: 6 = [53, 28, 14, 2, 0, 0];
-    threat_safe_pawn_push_mg: 1 = [27];
+    threat_safe_pawn_push_mg: 1 = [28];
     threat_safe_pawn_push_eg: 1 = [1];
     threat_weak_piece_mg: 1 = [46];
     threat_weak_piece_eg: 1 = [0];
@@ -390,7 +414,7 @@ eval_params! {
     hanging_minor: 1 = [0];
     hanging_rook: 1 = [1];
     hanging_queen: 1 = [1];
-    passer_proximity_base: 1 = [9];
+    passer_proximity_base: 1 = [12];
     space_weight: 1 = [0];
     tempo: 1 = [40];
     // trapped_bishop frozen at hand value (feature-support: too sparse to fit).
@@ -449,6 +473,31 @@ eval_params! {
     king_protector_mg: 1 = [8];
     king_protector_eg: 1 = [4];
     space_piece_mg: 1 = [0];
+    // Phase 6.2.1 refresh structure — all seeded 0 (inert, bench-identical);
+    // activated by the 6.2.2 on-policy joint refit.
+    // SF-style space refinement: safe central squares BEHIND own pawns,
+    // weighted by piece count (rides next to space_piece_mg).
+    space_behind_piece_mg: 1 = [0];
+    // Passed-pawn whole-path weighting: the entire path to promotion is empty
+    // ("free path") / never attacked by the enemy ("safe path"), scaled by
+    // relative rank like the existing free/safe-stop terms.
+    passed_freepath_mg_per_rank: 1 = [1];
+    passed_freepath_eg_per_rank: 1 = [1];
+    passed_safepath_eg_per_rank: 1 = [3];
+    // Deferred §3.12 trio.
+    bishop_xray_pawns_mg: 1 = [0];
+    bishop_xray_pawns_eg: 1 = [0];
+    queen_battery_mg: 1 = [0];
+    queen_battery_eg: 1 = [0];
+    slider_on_queen_mg: 1 = [0];
+    slider_on_queen_eg: 1 = [0];
+    // Shelter/storm folded into the king-danger index (nonlinear — selects the
+    // safety-table bucket, so it is invisible to the linear trace and is fit by
+    // the --tune-kingsafety re-eval path, like the other ks_* inputs). The
+    // linear shelter/storm terms above stay; the Phase-4 fit zeroed the storm
+    // weights because a LINEAR term cannot express "exposed king x piece
+    // pressure" — this input is where that interaction lives.
+    ks_shelter_storm: 1 = [0];
 }
 
 // Texel trace recording (Phase 3.3). `tr_mg!`/`tr_eg!` add a net feature count
@@ -613,7 +662,7 @@ mod texel_tests {
                 if moves.is_empty() {
                     break;
                 }
-                let mv = moves.as_slice()[(rng.next() as usize) % moves.len()];
+                let mv = moves.as_slice()[crate::infra::index(rng.next()) % moves.len()];
                 board.make_move(mv);
             }
         }
@@ -663,6 +712,53 @@ mod texel_tests {
         // Minor-behind-pawn (3.12): white knight d3 shielded by the pawn on d4.
         let t = trace_of(&mut ev, "4k3/8/8/8/3P4/3N4/8/4K3 w - - 0 1");
         assert_ne!(t.mg.minor_behind_pawn_mg[0], 0, "minor_behind_pawn dead");
+    }
+
+    /// Phase 7.4 HCE semantics — counterexample tests for the four fixes.
+    #[test]
+    fn phase_7_4_semantic_fixes() {
+        let mut ev = Evaluator::default();
+
+        // (iv) Phalanx fires for pawns abreast on the same rank (d4+e4)...
+        let t = trace_of(&mut ev, "4k3/8/8/8/3PP3/8/8/4K3 w - - 0 1");
+        assert!(
+            t.mg.pawn_phalanx_mg.iter().any(|&c| c != 0),
+            "phalanx dead on d4+e4"
+        );
+        // ...but NOT for pawns two files apart (d4, f4 — not adjacent).
+        let t = trace_of(&mut ev, "4k3/8/8/8/3P1P2/8/8/4K3 w - - 0 1");
+        assert!(
+            t.mg.pawn_phalanx_mg.iter().all(|&c| c == 0),
+            "phalanx should not fire on non-adjacent pawns"
+        );
+        // Support (the old "connected") still fires for a diagonally-defended
+        // pawn (d4 defends e5), and phalanx does not.
+        let t = trace_of(&mut ev, "4k3/8/8/4P3/3P4/8/8/4K3 w - - 0 1");
+        assert!(
+            t.mg.pawn_connected_mg.iter().any(|&c| c != 0),
+            "support dead on d4->e5"
+        );
+
+        // (ii) Enemy rook behind a passer is now counted even with NO friendly
+        // rook on the file (pre-fix it required a friendly rook to be seen).
+        let t = trace_of(&mut ev, "4k3/8/8/3P4/8/8/8/3rK3 w - - 0 1");
+        assert_ne!(
+            t.mg.enemy_rook_behind_passer_mg[0], 0,
+            "enemy rook behind passer missed without a friendly rook on the file"
+        );
+
+        // (iii) Square rule is SUPPRESSED when the defender has a piece (a
+        // knight can interpose), but fires when the king is the sole defender.
+        let t = trace_of(&mut ev, "8/P7/1K6/8/8/8/6n1/7k w - - 0 1");
+        assert_eq!(
+            t.eg.unstoppable_passer_eg[0], 0,
+            "square rule must not fire while the defender has a piece"
+        );
+        let t = trace_of(&mut ev, "8/P7/1K6/8/8/8/8/7k w - - 0 1");
+        assert_ne!(
+            t.eg.unstoppable_passer_eg[0], 0,
+            "square rule should fire with a king-only defender"
+        );
     }
 }
 
@@ -739,6 +835,10 @@ const fn init_square_rank() -> [usize; 64] {
     table
 }
 
+// Const-evaluated init: the `infra` helpers are not `const fn` (trait-based),
+// and any out-of-range here would surface at COMPILE time, so plain casts are
+// sound and the lint is scoped off with this justification.
+#[allow(clippy::cast_possible_truncation)]
 const fn init_relative_ranks() -> [[u8; 64]; 2] {
     let mut table = [[0u8; 64]; 2];
     let mut sq = 0usize;
@@ -751,6 +851,12 @@ const fn init_relative_ranks() -> [[u8; 64]; 2] {
     table
 }
 
+// Const-evaluated init — see `init_relative_ranks` for the lint scoping.
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss
+)]
 const fn init_king_distance() -> [[u8; 64]; 64] {
     let mut table = [[0u8; 64]; 64];
     let mut a = 0usize;
@@ -812,6 +918,8 @@ const fn init_forward_ranks() -> [[Bitboard; 8]; 2] {
     table
 }
 
+// Const-evaluated init — see `init_relative_ranks` for the lint scoping.
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 const fn init_passed_pawn_masks() -> [[Bitboard; 64]; 2] {
     let mut table = [[Bitboard::EMPTY; 64]; 2];
     let mut color = 0usize;
@@ -920,6 +1028,25 @@ pub struct Evaluator {
     eval_table: Vec<EvalEntry>,
     params: EvalParams,
     tables: Box<EvalTables>,
+    /// Lazy-eval threshold (Phase 5.1b). Seeded from `LAZY_MARGIN` and overridden
+    /// by the `LazyMargin` UCI option (pushed in at every search start). Read only
+    /// on the non-texel lazy path, so it is unused under `--features texel`.
+    #[cfg_attr(feature = "texel", allow(dead_code))]
+    lazy_margin: i32,
+    /// 8.12(f): per-call scratch for the attack-map substrate, kept across
+    /// calls so it is not re-zeroed every evaluation.
+    ///
+    /// It is written for exactly the squares holding a knight/bishop/rook/
+    /// queen of each colour, and EVERY read site iterates that same piece set
+    /// (`bishop_long_diagonal`, the mobility loop, and king safety's
+    /// `their_from_sq`). So no read can observe a slot this call did not
+    /// write, and the old `[[Bitboard::EMPTY; 64]; 2]` local was zeroing
+    /// 1 KB per evaluation — ~1.4 GB per bench — to no purpose.
+    ///
+    /// The invariant is ENFORCED, not asserted: debug builds poison every
+    /// slot before the fill, so a read of an unwritten square changes the
+    /// score and shows up as a debug/release bench divergence.
+    attacks_from_sq: [[Bitboard; 64]; 2],
     /// Per-call feature trace, recorded only under `--features texel`. Held in
     /// a `RefCell` so the `&self` eval helpers can append to it; the field does
     /// not exist in production builds.
@@ -939,6 +1066,8 @@ impl Default for Evaluator {
             eval_table: vec![EvalEntry::default(); EVAL_TABLE_SIZE],
             params,
             tables,
+            lazy_margin: LAZY_MARGIN,
+            attacks_from_sq: [[Bitboard::EMPTY; 64]; 2],
             #[cfg(feature = "texel")]
             trace: RefCell::new(EvalTrace::default()),
         }
@@ -960,7 +1089,7 @@ impl Evaluator {
     /// is never *read* under `texel` (hits are bypassed), so stale entries from
     /// a previous parameter set are harmless and need no clearing.
     pub fn set_params(&mut self, params: EvalParams) {
-        self.tables = Box::new(build_tables(&params));
+        *self.tables = build_tables(&params);
         self.params = params;
     }
 
@@ -971,13 +1100,19 @@ impl Evaluator {
 }
 
 impl Evaluator {
+    /// Override the lazy-eval margin (Phase 5.1b `LazyMargin` UCI option). Pushed
+    /// in at every search start; at the default 600 the eval is unchanged.
+    pub fn set_lazy_margin(&mut self, margin: i32) {
+        self.lazy_margin = margin;
+    }
+
     pub fn clear_pawn_table(&mut self) {
         self.pawn_table.fill(PawnEntry::default());
         self.eval_table.fill(EvalEntry::default());
     }
 
     pub fn evaluate_result(&self, result: GameResult, color: Color, ply: usize) -> i32 {
-        let mate = MATE_SCORE - ply as i32;
+        let mate = MATE_SCORE - infra::to_i32(ply);
         match (result, color) {
             (GameResult::WhiteCheckmates, Color::White)
             | (GameResult::BlackCheckmates, Color::Black) => mate,
@@ -991,7 +1126,7 @@ impl Evaluator {
         // The whole-eval cache must be bypassed under `texel`: a cache hit
         // returns without re-emitting trace counts, which would poison the
         // per-position trace the tuner records.
-        let eval_slot = board.hash as usize & (EVAL_TABLE_SIZE - 1);
+        let eval_slot = infra::index(board.hash) & (EVAL_TABLE_SIZE - 1);
         #[cfg(not(feature = "texel"))]
         {
             let cached = self.eval_table[eval_slot];
@@ -1064,11 +1199,18 @@ impl Evaluator {
         // the eval stays a pure function of the position, so the eval cache and
         // `tests/eval_cache.rs` remain exact. `LAZY_MARGIN` is SPRT-tunable.
         #[cfg(not(feature = "texel"))]
-        let lazy = ((mg * phase + eg * (TOTAL_PHASE - phase)) / TOTAL_PHASE).abs() > LAZY_MARGIN;
+        let lazy =
+            ((mg * phase + eg * (TOTAL_PHASE - phase)) / TOTAL_PHASE).abs() > self.lazy_margin;
         #[cfg(feature = "texel")]
         let lazy = false;
 
         if lazy {
+            // 9.6(b): with `diag` on, ALSO run the full eval and log how far
+            // the served cheap score strays. The served value is untouched, so
+            // search behaviour — and the bench fingerprint — stay identical
+            // even in the diag build.
+            #[cfg(feature = "diag")]
+            self.diag_lazy_dual(board, atk, &passed, &pawn_attacks, phase, mg, eg);
             self.apply_mop_up(board, &mut mg, &mut eg);
         } else {
             self.eval_piece_activity(board, atk, &mut mg, &mut eg, &passed, &pawn_attacks, phase);
@@ -1123,7 +1265,7 @@ impl Evaluator {
         attacks: &mut [Bitboard; 2],
     ) -> (i32, i32) {
         let key = board.pawn_key();
-        let slot = key as usize & (PAWN_TABLE_SIZE - 1);
+        let slot = infra::index(key) & (PAWN_TABLE_SIZE - 1);
         // Bypass the pawn cache under `texel`: a hit skips the trace counts.
         #[cfg(not(feature = "texel"))]
         {
@@ -1169,14 +1311,15 @@ impl Evaluator {
                         mg += sign * self.params.passed_supported_mg[0];
                         eg += sign
                             * (self.params.passed_supported_eg_base[0]
-                                + rel_rank as i32 * self.params.passed_supported_eg_per_rank[0]);
+                                + infra::to_i32(rel_rank)
+                                    * self.params.passed_supported_eg_per_rank[0]);
                         tr_mg!(self, passed_supported_mg, 0, sign);
                         tr_eg!(self, passed_supported_eg_base, 0, sign);
                         tr_eg!(
                             self,
                             passed_supported_eg_per_rank,
                             0,
-                            sign * rel_rank as i32
+                            sign * infra::to_i32(rel_rank)
                         );
                     }
 
@@ -1221,12 +1364,26 @@ impl Evaluator {
                     tr_mg!(self, pawn_doubled_isolated_mg, 0, -sign);
                     tr_eg!(self, pawn_doubled_isolated_eg, 0, -sign);
                 }
-                // Connected (defended by an own pawn) — now rank-scaled.
+                // Supported (defended diagonally from behind by an own pawn) —
+                // rank-scaled. (Historical param name is `pawn_connected_*`.)
                 if (atk.pawn(them, sq) & our_pawns).any() {
                     mg += sign * self.params.pawn_connected_mg[rel_rank];
                     eg += sign * self.params.pawn_connected_eg[rel_rank];
                     tr_mg!(self, pawn_connected_mg, rel_rank, sign);
                     tr_eg!(self, pawn_connected_eg, rel_rank, sign);
+                }
+                // Phalanx (Phase 7.4, seeded 0): an own pawn directly beside
+                // this one on the same rank — the west (sq-1) or east (sq+1)
+                // neighbour, guarded against file wrap. Distinct from support:
+                // phalanx pawns do not defend each other.
+                let has_phalanx = (file > 0
+                    && (our_pawns & Bitboard::from(Square(sq.0 - 1))).any())
+                    || (file < 7 && (our_pawns & Bitboard::from(Square(sq.0 + 1))).any());
+                if has_phalanx {
+                    mg += sign * self.params.pawn_phalanx_mg[rel_rank];
+                    eg += sign * self.params.pawn_phalanx_eg[rel_rank];
+                    tr_mg!(self, pawn_phalanx_mg, rel_rank, sign);
+                    tr_eg!(self, pawn_phalanx_eg, rel_rank, sign);
                 }
                 // Pawn lever: our pawn that attacks an enemy pawn (Phase 3.8,
                 // seeded 0).
@@ -1256,12 +1413,12 @@ impl Evaluator {
             // Pawn islands (Phase 3.12, seeded 0): number of maximal groups of
             // own pawns on consecutive files. Penalty grows with fragmentation.
             let mut file_mask = 0u16;
-            for f in 0..8 {
-                if (our_pawns & FILE_BBS[f]).any() {
+            for (f, &file_bb) in FILE_BBS.iter().enumerate().take(8) {
+                if (our_pawns & file_bb).any() {
                     file_mask |= 1 << f;
                 }
             }
-            let islands = (file_mask & !(file_mask << 1)).count_ones() as i32;
+            let islands = infra::to_i32((file_mask & !(file_mask << 1)).count_ones());
             if islands != 0 {
                 mg -= sign * islands * self.params.pawn_islands_mg[0];
                 eg -= sign * islands * self.params.pawn_islands_eg[0];
@@ -1307,9 +1464,36 @@ impl Evaluator {
                     *eg += sign * rel_rank * self.params.passed_freestop_eg_per_rank[0];
                     tr_mg!(self, passed_freestop_mg_per_rank, 0, sign * rel_rank);
                     tr_eg!(self, passed_freestop_eg_per_rank, 0, sign * rel_rank);
-                    if board.attackers_to_color(stop, occupied, them).is_empty() {
+                    if !board.is_attacked_by_with_occ(stop, them, occupied) {
                         *eg += sign * rel_rank * self.params.passed_safestop_eg_per_rank[0];
                         tr_eg!(self, passed_safestop_eg_per_rank, 0, sign * rel_rank);
+                    }
+                }
+                // Whole-path weighting (Phase 6.2.1, seeded 0): the free/safe-
+                // stop above scores only the ONE square ahead; SF/Ethereal
+                // weight the entire path to promotion. free path = every path
+                // square empty; safe path = additionally, no path square
+                // attacked by the enemy (scanned only when the path is free,
+                // mirroring the stop-square nesting).
+                let path = FORWARD_RANKS[color as usize][SQUARE_RANK[sq.index()]]
+                    & FILE_BBS[SQUARE_FILE[sq.index()]];
+                if (path & occupied).is_empty() {
+                    *mg += sign * rel_rank * self.params.passed_freepath_mg_per_rank[0];
+                    *eg += sign * rel_rank * self.params.passed_freepath_eg_per_rank[0];
+                    tr_mg!(self, passed_freepath_mg_per_rank, 0, sign * rel_rank);
+                    tr_eg!(self, passed_freepath_eg_per_rank, 0, sign * rel_rank);
+                    let mut path_sqs = path;
+                    let mut safe = true;
+                    while path_sqs.any() {
+                        let psq = path_sqs.pop_lsb();
+                        if board.is_attacked_by_with_occ(psq, them, occupied) {
+                            safe = false;
+                            break;
+                        }
+                    }
+                    if safe {
+                        *eg += sign * rel_rank * self.params.passed_safepath_eg_per_rank[0];
+                        tr_eg!(self, passed_safepath_eg_per_rank, 0, sign * rel_rank);
                     }
                 }
             }
@@ -1317,7 +1501,7 @@ impl Evaluator {
     }
 
     fn eval_piece_activity(
-        &self,
+        &mut self,
         board: &Board,
         atk: &AttackTables,
         mg: &mut i32,
@@ -1342,13 +1526,29 @@ impl Evaluator {
         // occupancy — equivalent to attackers_to_color(sq, occupied, color)
         // being non-empty for any sq, by the same symmetric attack-table
         // argument attackers_to_color itself relies on.
-        let mut attacks_from_sq = [[Bitboard::EMPTY; 64]; 2];
+        // 8.12(f): reused scratch — see `Evaluator::attacks_from_sq`. Debug
+        // builds poison it so an unwritten read is detectable.
+        #[cfg(debug_assertions)]
+        for side in self.attacks_from_sq.iter_mut() {
+            side.fill(Bitboard(u64::MAX));
+        }
         let mut attacked_by = [[Bitboard::EMPTY; 6]; 2];
         let mut attacked = [Bitboard::EMPTY; 2];
         let mut attacked2 = [Bitboard::EMPTY; 2];
         for color in [Color::White, Color::Black] {
             let ci = color as usize;
             attacked_by[ci][Piece::Pawn as usize] = pawn_attacks[ci];
+            // Phase 7.4: squares two of this side's pawns both attack (the two
+            // diagonal directions overlap) are attacked *twice* — seed them into
+            // `attacked2`. The union `pawn_attacks[ci]` loses this, so before the
+            // fix a square defended by two pawns was not "strongly protected".
+            let pawns_bb = board.pieces(color, Piece::Pawn);
+            let double_pawn = if color == Color::White {
+                pawns_bb.north_east() & pawns_bb.north_west()
+            } else {
+                pawns_bb.south_east() & pawns_bb.south_west()
+            };
+            attacked2[ci] |= double_pawn;
             attacked[ci] |= pawn_attacks[ci];
 
             let king_atk = atk.king(board.king_sq(color));
@@ -1356,17 +1556,30 @@ impl Evaluator {
             attacked2[ci] |= attacked[ci] & king_atk;
             attacked[ci] |= king_atk;
 
-            for piece in [Piece::Knight, Piece::Bishop, Piece::Rook, Piece::Queen] {
-                let mut bb = board.pieces(color, piece);
-                while bb.any() {
-                    let sq = bb.pop_lsb();
-                    let atks = attacks_for(atk, piece, sq, occupied);
-                    attacks_from_sq[ci][sq.index()] = atks;
-                    attacked_by[ci][piece as usize] |= atks;
-                    attacked2[ci] |= attacked[ci] & atks;
-                    attacked[ci] |= atks;
-                }
+            // 9.7.5(d): one loop per piece type, so the attack generator is a
+            // direct call rather than `attacks_for`'s six-way `match piece`
+            // re-evaluated for every piece on the board — the match was
+            // invariant across each `while`, the same duplicated-dispatch
+            // shape 8.12(g2) found in move scoring. This runs on every
+            // evaluation, so it is the hottest instance of the pattern.
+            macro_rules! attack_loop {
+                ($piece:expr, $gen:expr) => {{
+                    let piece_index = $piece as usize;
+                    let mut bb = board.pieces(color, $piece);
+                    while bb.any() {
+                        let sq = bb.pop_lsb();
+                        let atks = $gen(sq);
+                        self.attacks_from_sq[ci][sq.index()] = atks;
+                        attacked_by[ci][piece_index] |= atks;
+                        attacked2[ci] |= attacked[ci] & atks;
+                        attacked[ci] |= atks;
+                    }
+                }};
             }
+            attack_loop!(Piece::Knight, |sq| atk.knight(sq));
+            attack_loop!(Piece::Bishop, |sq| atk.bishop(sq, occupied));
+            attack_loop!(Piece::Rook, |sq| atk.rook(sq, occupied));
+            attack_loop!(Piece::Queen, |sq| atk.queen(sq, occupied));
         }
 
         for color in [Color::White, Color::Black] {
@@ -1385,7 +1598,7 @@ impl Evaluator {
                 // Bishop-pair value scales with fewer pawns on the board
                 // (Phase 3.10): seeded 0, additive on top of the flat bonus
                 // above so the flat term can be retired once this is tuned.
-                let pawn_term = 8 - (own_pawns | their_pawns).count() as i32;
+                let pawn_term = 8 - infra::to_i32((own_pawns | their_pawns).count());
                 *mg += sign * pawn_term * self.params.bishop_pair_pawn_mg[0];
                 *eg += sign * pawn_term * self.params.bishop_pair_pawn_eg[0];
                 tr_mg!(self, bishop_pair_pawn_mg, 0, sign * pawn_term);
@@ -1411,7 +1624,7 @@ impl Evaluator {
                 }
 
                 if LONG_DIAGONALS.0 & (1u64 << sq.index()) != 0
-                    && (attacks_from_sq[color as usize][sq.index()] & king_zone).any()
+                    && (self.attacks_from_sq[color as usize][sq.index()] & king_zone).any()
                 {
                     *mg += sign * self.params.bishop_long_diagonal_mg[0];
                     *eg += sign * self.params.bishop_long_diagonal_eg[0];
@@ -1424,7 +1637,7 @@ impl Evaluator {
                 } else {
                     Bitboard::DARK_SQUARES
                 };
-                let bad_count = (own_pawns & bishop_squares).count() as i32;
+                let bad_count = infra::to_i32((own_pawns & bishop_squares).count());
                 if bad_count != 0 {
                     *mg -= sign * bad_count * self.params.bad_bishop_mg[0];
                     *eg -= sign * bad_count * self.params.bad_bishop_eg[0];
@@ -1490,7 +1703,7 @@ impl Evaluator {
                     && own_king_sq == Square([4u8, 60u8][color as usize])
                     && home_rank_corner.contains(&sq)
                 {
-                    let mobility = (atk.rook(sq, occupied) & !own_occ).count() as i32;
+                    let mobility = infra::to_i32((atk.rook(sq, occupied) & !own_occ).count());
                     if mobility <= 3 {
                         *mg -= sign * self.params.rook_trapped_mg[0];
                         *eg -= sign * self.params.rook_trapped_eg[0];
@@ -1515,33 +1728,35 @@ impl Evaluator {
             }
 
             let safe = !pawn_attacks[them as usize];
-            for piece in [Piece::Knight, Piece::Bishop, Piece::Rook, Piece::Queen] {
-                let mut pieces = board.pieces(color, piece);
-                while pieces.any() {
-                    let sq = pieces.pop_lsb();
-                    let attacks = attacks_from_sq[color as usize][sq.index()];
-                    let mobility = (attacks & safe & !own_occ).count() as usize;
-                    // One-hot per-count tables (Phase 3.7). Index clamped to the
-                    // table length for safety; the count never exceeds it in
-                    // practice (N≤8, B≤13, R≤14, Q≤27).
-                    macro_rules! mob_term {
-                        ($mgf:ident, $egf:ident) => {{
-                            let i = mobility.min(self.params.$mgf.len() - 1);
-                            *mg += sign * self.params.$mgf[i];
-                            *eg += sign * self.params.$egf[i];
-                            tr_mg!(self, $mgf, i, sign);
-                            tr_eg!(self, $egf, i, sign);
-                        }};
+            // One-hot per-count tables (Phase 3.7). Index clamped to the table
+            // length for safety; the count never exceeds it in practice
+            // (N≤8, B≤13, R≤14, Q≤27).
+            //
+            // 9.7.5(d): each piece type gets its OWN loop, so the table pair is
+            // a compile-time constant rather than a `match piece` re-evaluated
+            // for every piece on the board. The match was loop-invariant across
+            // the whole `while pieces.any()` — the same duplicated-dispatch
+            // shape 8.12(g2) found in move scoring, and the Rust equivalent of
+            // Basilisk's `if constexpr` specialisation (+0.89% there).
+            macro_rules! mob_loop {
+                ($piece:expr, $mgf:ident, $egf:ident) => {{
+                    let mut pieces = board.pieces(color, $piece);
+                    while pieces.any() {
+                        let sq = pieces.pop_lsb();
+                        let attacks = self.attacks_from_sq[color as usize][sq.index()];
+                        let mobility = (attacks & safe & !own_occ).count() as usize;
+                        let i = mobility.min(self.params.$mgf.len() - 1);
+                        *mg += sign * self.params.$mgf[i];
+                        *eg += sign * self.params.$egf[i];
+                        tr_mg!(self, $mgf, i, sign);
+                        tr_eg!(self, $egf, i, sign);
                     }
-                    match piece {
-                        Piece::Knight => mob_term!(mob_n_mg, mob_n_eg),
-                        Piece::Bishop => mob_term!(mob_b_mg, mob_b_eg),
-                        Piece::Rook => mob_term!(mob_r_mg, mob_r_eg),
-                        Piece::Queen => mob_term!(mob_q_mg, mob_q_eg),
-                        _ => {}
-                    }
-                }
+                }};
             }
+            mob_loop!(Piece::Knight, mob_n_mg, mob_n_eg);
+            mob_loop!(Piece::Bishop, mob_b_mg, mob_b_eg);
+            mob_loop!(Piece::Rook, mob_r_mg, mob_r_eg);
+            mob_loop!(Piece::Queen, mob_q_mg, mob_q_eg);
 
             let mut threats = pawn_attacks[color as usize] & board.color_occ(them);
             while threats.any() {
@@ -1640,7 +1855,7 @@ impl Evaluator {
             } else {
                 safe_push.south_east() | safe_push.south_west()
             };
-            let push_targets = (push_attacks & enemy_occ & !their_pawns).count() as i32;
+            let push_targets = infra::to_i32((push_attacks & enemy_occ & !their_pawns).count());
             if push_targets != 0 {
                 *mg += sign * push_targets * self.params.threat_safe_pawn_push_mg[0];
                 *eg += sign * push_targets * self.params.threat_safe_pawn_push_eg[0];
@@ -1658,7 +1873,7 @@ impl Evaluator {
             let weak_rook = board.pieces(color, Piece::Rook) & (pawn_attacks[ti] | their_minor_att);
             let weak_queen = board.pieces(color, Piece::Queen)
                 & (pawn_attacks[ti] | their_minor_att | attacked_by[ti][Piece::Rook as usize]);
-            let weak_cnt = (weak_minor | weak_rook | weak_queen).count() as i32;
+            let weak_cnt = infra::to_i32((weak_minor | weak_rook | weak_queen).count());
             if weak_cnt != 0 {
                 *mg -= sign * weak_cnt * self.params.threat_weak_piece_mg[0];
                 *eg -= sign * weak_cnt * self.params.threat_weak_piece_eg[0];
@@ -1669,7 +1884,8 @@ impl Evaluator {
             // Restricted squares: squares both sides attack that the enemy does
             // not strongly protect (no enemy pawn attack, not doubly attacked).
             let strongly_protected = pawn_attacks[ti] | attacked2[ti];
-            let restricted = (attacked[ti] & attacked[ci] & !strongly_protected).count() as i32;
+            let restricted =
+                infra::to_i32((attacked[ti] & attacked[ci] & !strongly_protected).count());
             if restricted != 0 {
                 *mg += sign * restricted * self.params.threat_restricted_mg[0];
                 *eg += sign * restricted * self.params.threat_restricted_eg[0];
@@ -1689,7 +1905,7 @@ impl Evaluator {
             } else {
                 own_pawns.north()
             };
-            let behind = (minors & shield).count() as i32;
+            let behind = infra::to_i32((minors & shield).count());
             if behind != 0 {
                 *mg += sign * behind * self.params.minor_behind_pawn_mg[0];
                 *eg += sign * behind * self.params.minor_behind_pawn_eg[0];
@@ -1733,18 +1949,27 @@ impl Evaluator {
 
             // Unstoppable passer (rule of the square): a passed pawn with a clear
             // path whose promotion the enemy king cannot reach in time. eg-only.
+            // Phase 7.4: the square rule only decides the race when the *king* is
+            // the sole defender — a knight/bishop/rook/queen can interpose or
+            // capture on the path even when the king cannot arrive. Restrict to a
+            // defender with no non-pawn material (passed pawns are already
+            // immune to enemy pawns by definition).
             let enemy_king = board.king_sq(them);
             let enemy_to_move = board.side_to_move() == them;
+            let defender_has_pieces = board.has_non_pawn_material(them);
             let mut pp = passed[color as usize];
             let mut unstoppable = 0i32;
             while pp.any() {
                 let ps = pp.pop_lsb();
+                if defender_has_pieces {
+                    continue;
+                }
                 let promo = if color == Color::White {
                     56 + (ps.index() % 8)
                 } else {
                     ps.index() % 8
                 };
-                let promo_sq = Square(promo as u8);
+                let promo_sq = Square(infra::to_u8(promo));
                 let path = movegen::between(ps, promo_sq) | Bitboard::from(promo_sq);
                 if (path & occupied).any() {
                     continue;
@@ -1762,7 +1987,7 @@ impl Evaluator {
             }
 
             let ks_maps = KsMaps {
-                their_from_sq: &attacks_from_sq[them as usize],
+                their_from_sq: &self.attacks_from_sq[them as usize],
                 attacked: &attacked,
                 attacked2: &attacked2,
                 attacked_by_them: &attacked_by[them as usize],
@@ -1774,6 +1999,7 @@ impl Evaluator {
             self.eval_rooks_behind_passers(board, color, sign, passed, mg, eg);
             self.eval_passer_blockade(board, color, sign, passed, mg, eg);
             self.eval_hanging_pieces(board, color, sign, mg, eg, &attacked);
+            self.eval_xray_trio(board, color, sign, occupied, &pawns, mg, eg);
         }
 
         self.eval_passed_pawn_king_proximity(board, passed, eg);
@@ -1786,11 +2012,180 @@ impl Evaluator {
         self.eval_initiative(board, eg);
     }
 
+    /// Deferred §3.12 trio (Phase 6.2.1, all seeded 0): bishop x-ray on enemy
+    /// pawns, queen batteries, and sliders x-raying the enemy queen. X-rays are
+    /// slider attacks computed with pawns-only occupancy (seeing through
+    /// pieces), the cheap standard formulation.
+    fn eval_xray_trio(
+        &self,
+        board: &Board,
+        color: Color,
+        sign: i32,
+        occupied: Bitboard,
+        pawns: &[Bitboard; 2],
+        mg: &mut i32,
+        eg: &mut i32,
+    ) {
+        let them = !color;
+        let pawns_only = pawns[0] | pawns[1];
+        let enemy_pawns = pawns[them as usize];
+        let own_rooks = board.pieces(color, Piece::Rook);
+        let own_bishops = board.pieces(color, Piece::Bishop);
+
+        // Bishop x-ray on enemy pawns: pawns on the bishop's diagonals seen
+        // through any pieces (long-term pressure the plain attack map misses).
+        let mut bishops = own_bishops;
+        let mut xray = 0i32;
+        while bishops.any() {
+            let sq = bishops.pop_lsb();
+            xray += infra::to_i32((ATTACKS.bishop(sq, pawns_only) & enemy_pawns).count());
+        }
+        if xray != 0 {
+            *mg += sign * xray * self.params.bishop_xray_pawns_mg[0];
+            *eg += sign * xray * self.params.bishop_xray_pawns_eg[0];
+            tr_mg!(self, bishop_xray_pawns_mg, 0, sign * xray);
+            tr_eg!(self, bishop_xray_pawns_eg, 0, sign * xray);
+        }
+
+        // Queen battery: own rook (file/rank) or bishop (diagonal) directly
+        // aligned with the queen — doubled-force lines.
+        let mut queens = board.pieces(color, Piece::Queen);
+        let mut battery = 0i32;
+        while queens.any() {
+            let q = queens.pop_lsb();
+            battery += infra::to_i32((ATTACKS.rook(q, occupied) & own_rooks).count());
+            battery += infra::to_i32((ATTACKS.bishop(q, occupied) & own_bishops).count());
+        }
+        if battery != 0 {
+            *mg += sign * battery * self.params.queen_battery_mg[0];
+            *eg += sign * battery * self.params.queen_battery_eg[0];
+            tr_mg!(self, queen_battery_mg, 0, sign * battery);
+            tr_eg!(self, queen_battery_eg, 0, sign * battery);
+        }
+
+        // Slider on queen: our rooks/bishops on a line to the enemy queen
+        // through at most pawns (latent pins/skewers/attacks on the queen).
+        let mut on_queen = 0i32;
+        let mut enemy_queens = board.pieces(them, Piece::Queen);
+        while enemy_queens.any() {
+            let q = enemy_queens.pop_lsb();
+            on_queen += infra::to_i32((ATTACKS.rook(q, pawns_only) & own_rooks).count());
+            on_queen += infra::to_i32((ATTACKS.bishop(q, pawns_only) & own_bishops).count());
+        }
+        if on_queen != 0 {
+            *mg += sign * on_queen * self.params.slider_on_queen_mg[0];
+            *eg += sign * on_queen * self.params.slider_on_queen_eg[0];
+            tr_mg!(self, slider_on_queen_mg, 0, sign * on_queen);
+            tr_eg!(self, slider_on_queen_eg, 0, sign * on_queen);
+        }
+    }
+
     /// Mate-drive "mop-up": when one side is clearly winning, nudge the losing
     /// king toward the edge/corner (the bishop's corner for KBNK). Extracted
     /// from `eval_piece_activity` so it also runs on the lazy-eval early-return
     /// path (Phase 3.16) — mating technique must survive a lazy skip. Frozen
     /// (non-tunable) term, so it lands in the tuner's `rest`.
+    /// 9.6(b) lazy-eval safety audit (`diag` builds only).
+    ///
+    /// Called at the moment a lazy skip fires, with `mg0`/`eg0` as they stand
+    /// at the decision point (post-pawns, pre-mop-up). Recomputes BOTH
+    /// endpoints on scratch copies — the cheap path exactly as it will be
+    /// served (mop-up only) and the full path exactly as the non-lazy branch
+    /// would have produced (activity + mop-up + imbalance) — and logs the
+    /// disagreement. Every callee is `&self` and pure, so nothing observable
+    /// changes; the caller then serves the cheap path as before.
+    ///
+    /// Why this exists: `LazyMargin` (600) is supposed to guarantee the
+    /// skipped terms cannot flip the verdict, but the skipped king-safety
+    /// table alone reaches 369 MG per side. The accepting SPRT (+4.4) was a
+    /// speed verdict, not an evaluation-safety proof. These counters either
+    /// justify a king-danger-aware margin (13.7) or retire the question.
+    // 9.7.5(b): `&mut self`, not `&self`. 8.12(f)(i) gave `eval_piece_activity`
+    // the reused `attacks_from_sq` scratch and therefore `&mut self`, which
+    // silently broke `--features diag` — this function calls it. Nothing built
+    // with the feature between then and 2026-07-25, so the whole diagnostics
+    // path was uncompilable while the plan kept citing it as the way to measure.
+    // Overwriting the scratch here is harmless: on the lazy path the caller
+    // serves the cheap score and nothing reads the scratch afterwards.
+    #[cfg(feature = "diag")]
+    fn diag_lazy_dual(
+        &mut self,
+        board: &Board,
+        atk: &AttackTables,
+        passed: &[Bitboard; 2],
+        pawn_attacks: &[Bitboard; 2],
+        phase: i32,
+        mg0: i32,
+        eg0: i32,
+    ) {
+        use crate::diag::{counters, lazy_probe};
+        use std::sync::atomic::Ordering;
+
+        let taper = |mg: i32, eg: i32| (mg * phase + eg * (TOTAL_PHASE - phase)) / TOTAL_PHASE;
+
+        let (mut mg_c, mut eg_c) = (mg0, eg0);
+        self.apply_mop_up(board, &mut mg_c, &mut eg_c);
+        let cheap = taper(mg_c, eg_c);
+
+        lazy_probe::reset();
+        let (mut mg_f, mut eg_f) = (mg0, eg0);
+        self.eval_piece_activity(
+            board,
+            atk,
+            &mut mg_f,
+            &mut eg_f,
+            passed,
+            pawn_attacks,
+            phase,
+        );
+        self.apply_mop_up(board, &mut mg_f, &mut eg_f);
+        self.eval_imbalance(board, &mut mg_f, &mut eg_f);
+        let full = taper(mg_f, eg_f);
+        let danger_idx = lazy_probe::max();
+
+        counters::lazy_fires.fetch_add(1, Ordering::Relaxed);
+        let delta = u64::from(full.abs_diff(cheap));
+        counters::lazy_delta_sum.fetch_add(delta, Ordering::Relaxed);
+        counters::lazy_delta_max.fetch_max(delta, Ordering::Relaxed);
+
+        // Buckets: king danger from the full pass (the cheap pass never
+        // computes it), and phase quartile as the material signature. phase is
+        // 0..=24, so `* 4 / 25` lands exactly in 0..=3.
+        let danger_bucket = (danger_idx / 10).min(3);
+        let phase_bucket = infra::to_usize(phase * 4 / (TOTAL_PHASE + 1));
+
+        if cheap.signum() != full.signum() {
+            counters::lazy_sign_flips.fetch_add(1, Ordering::Relaxed);
+            match danger_bucket {
+                0 => counters::lazy_flip_danger_low.fetch_add(1, Ordering::Relaxed),
+                1 => counters::lazy_flip_danger_mid.fetch_add(1, Ordering::Relaxed),
+                2 => counters::lazy_flip_danger_high.fetch_add(1, Ordering::Relaxed),
+                _ => counters::lazy_flip_danger_extreme.fetch_add(1, Ordering::Relaxed),
+            };
+            match phase_bucket {
+                0 => counters::lazy_flip_phase_q1.fetch_add(1, Ordering::Relaxed),
+                1 => counters::lazy_flip_phase_q2.fetch_add(1, Ordering::Relaxed),
+                2 => counters::lazy_flip_phase_q3.fetch_add(1, Ordering::Relaxed),
+                _ => counters::lazy_flip_phase_q4.fetch_add(1, Ordering::Relaxed),
+            };
+        }
+        if full.abs() <= self.lazy_margin {
+            counters::lazy_margin_crossings.fetch_add(1, Ordering::Relaxed);
+            match danger_bucket {
+                0 => counters::lazy_cross_danger_low.fetch_add(1, Ordering::Relaxed),
+                1 => counters::lazy_cross_danger_mid.fetch_add(1, Ordering::Relaxed),
+                2 => counters::lazy_cross_danger_high.fetch_add(1, Ordering::Relaxed),
+                _ => counters::lazy_cross_danger_extreme.fetch_add(1, Ordering::Relaxed),
+            };
+            match phase_bucket {
+                0 => counters::lazy_cross_phase_q1.fetch_add(1, Ordering::Relaxed),
+                1 => counters::lazy_cross_phase_q2.fetch_add(1, Ordering::Relaxed),
+                2 => counters::lazy_cross_phase_q3.fetch_add(1, Ordering::Relaxed),
+                _ => counters::lazy_cross_phase_q4.fetch_add(1, Ordering::Relaxed),
+            };
+        }
+    }
+
     fn apply_mop_up(&self, board: &Board, mg: &mut i32, eg: &mut i32) {
         let approximate = (*mg + *eg) / 2;
         if approximate.abs() > 200 {
@@ -1820,8 +2215,8 @@ impl Evaluator {
                     as i32;
                 sign * (8 * (7 - corner_distance) + (14 - king_distance) * 4)
             } else {
-                let lfile = SQUARE_FILE[lksq.index()] as i32;
-                let lrank = SQUARE_RANK[lksq.index()] as i32;
+                let lfile = infra::to_i32(SQUARE_FILE[lksq.index()]);
+                let lrank = infra::to_i32(SQUARE_RANK[lksq.index()]);
                 let file_push = (3 - lfile).max(lfile - 4);
                 let rank_push = (3 - lrank).max(lrank - 4);
                 sign * (5 * (file_push + rank_push) + (14 - king_distance) * 4)
@@ -1847,7 +2242,7 @@ impl Evaluator {
             & black_space_ranks
             & !board.pieces(Color::Black, Piece::Pawn)
             & !pawn_attacks[Color::White as usize];
-        let space_net = white_space.count() as i32 - black_space.count() as i32;
+        let space_net = infra::to_i32(white_space.count()) - infra::to_i32(black_space.count());
         *mg += space_net * self.params.space_weight[0];
         tr_mg!(self, space_weight, 0, space_net);
 
@@ -1856,16 +2251,31 @@ impl Evaluator {
         // `space_weight` term above stays active; Phase 4 retires it if this
         // shaped term earns its fit.
         let piece_count = |c: Color| -> i32 {
-            (board.pieces(c, Piece::Knight)
+            let count = (board.pieces(c, Piece::Knight)
                 | board.pieces(c, Piece::Bishop)
                 | board.pieces(c, Piece::Rook)
                 | board.pieces(c, Piece::Queen))
-            .count() as i32
+            .count();
+            infra::to_i32(count)
         };
-        let space_weighted = white_space.count() as i32 * piece_count(Color::White)
-            - black_space.count() as i32 * piece_count(Color::Black);
+        let space_weighted = infra::to_i32(white_space.count()) * piece_count(Color::White)
+            - infra::to_i32(black_space.count()) * piece_count(Color::Black);
         *mg += space_weighted * self.params.space_piece_mg[0];
         tr_mg!(self, space_piece_mg, 0, space_weighted);
+
+        // SF-style refinement (Phase 6.2.1, seeded 0): safe central squares
+        // BEHIND own pawns count extra — space is only usable when the pawn
+        // chain shields it. behind = own pawns shifted 1–3 ranks toward the
+        // own side; still weighted by piece count.
+        let wp = board.pieces(Color::White, Piece::Pawn);
+        let bp = board.pieces(Color::Black, Piece::Pawn);
+        let behind_w = wp.south() | wp.south().south() | wp.south().south().south();
+        let behind_b = bp.north() | bp.north().north() | bp.north().north().north();
+        let space_behind = infra::to_i32((white_space & behind_w).count())
+            * piece_count(Color::White)
+            - infra::to_i32((black_space & behind_b).count()) * piece_count(Color::Black);
+        *mg += space_behind * self.params.space_behind_piece_mg[0];
+        tr_mg!(self, space_behind_piece_mg, 0, space_behind);
     }
 
     fn eval_king_safety(
@@ -1895,16 +2305,20 @@ impl Evaluator {
         // later; the table itself is Texel-tuned.
         let mut danger = 0i32;
         for piece in [Piece::Knight, Piece::Bishop, Piece::Rook, Piece::Queen] {
+            // 9.7.5(d): the per-piece unit is invariant across this piece's
+            // whole bitboard, so resolve it once instead of re-matching for
+            // every piece that attacks the zone.
+            let unit = match piece {
+                Piece::Knight | Piece::Bishop => self.params.king_safety_unit_minor[0],
+                Piece::Rook => self.params.king_safety_unit_rook[0],
+                Piece::Queen => self.params.king_safety_unit_queen[0],
+                _ => 0,
+            };
             let mut pieces = board.pieces(them, piece);
             while pieces.any() {
                 let sq = pieces.pop_lsb();
                 if (maps.their_from_sq[sq.index()] & zone).any() {
-                    danger += match piece {
-                        Piece::Knight | Piece::Bishop => self.params.king_safety_unit_minor[0],
-                        Piece::Rook => self.params.king_safety_unit_rook[0],
-                        Piece::Queen => self.params.king_safety_unit_queen[0],
-                        _ => 0,
-                    };
+                    danger += unit;
                 }
             }
         }
@@ -1914,7 +2328,7 @@ impl Evaluator {
         let weak = zone
             & maps.attacked[them as usize]
             & (!maps.attacked[color as usize] | maps.attacked2[them as usize]);
-        danger += self.params.ks_weak_ring[0] * weak.count() as i32;
+        danger += self.params.ks_weak_ring[0] * infra::to_i32(weak.count());
 
         // Safe checks: squares from which an enemy piece type could check our
         // king, that the enemy actually attacks with that type and we do not
@@ -1929,23 +2343,23 @@ impl Evaluator {
         let rook_checks = rook_from & maps.attacked_by_them[Piece::Rook as usize] & safe;
         let queen_checks =
             (bishop_from | rook_from) & maps.attacked_by_them[Piece::Queen as usize] & safe;
-        danger += self.params.ks_safe_check_knight[0] * knight_checks.count() as i32;
-        danger += self.params.ks_safe_check_bishop[0] * bishop_checks.count() as i32;
-        danger += self.params.ks_safe_check_rook[0] * rook_checks.count() as i32;
-        danger += self.params.ks_safe_check_queen[0] * queen_checks.count() as i32;
+        danger += self.params.ks_safe_check_knight[0] * infra::to_i32(knight_checks.count());
+        danger += self.params.ks_safe_check_bishop[0] * infra::to_i32(bishop_checks.count());
+        danger += self.params.ks_safe_check_rook[0] * infra::to_i32(rook_checks.count());
+        danger += self.params.ks_safe_check_queen[0] * infra::to_i32(queen_checks.count());
 
         // King-flank pressure: enemy attacks minus our defenses over the three
         // files around the king (clamped non-negative).
-        let king_file = SQUARE_FILE[king.index()] as i32;
+        let king_file = infra::to_i32(SQUARE_FILE[king.index()]);
         let mut flank = Bitboard::EMPTY;
         for df in -1..=1 {
             let f = king_file + df;
             if (0..8).contains(&f) {
-                flank |= FILE_BBS[f as usize];
+                flank |= FILE_BBS[infra::to_usize(f)];
             }
         }
-        let flank_attack = (maps.attacked[them as usize] & flank).count() as i32;
-        let flank_defense = (maps.attacked[color as usize] & flank).count() as i32;
+        let flank_attack = infra::to_i32((maps.attacked[them as usize] & flank).count());
+        let flank_defense = infra::to_i32((maps.attacked[color as usize] & flank).count());
         danger += self.params.ks_flank_attack[0] * (flank_attack - flank_defense).max(0);
 
         // Pawnless flank: no pawns of either colour on the king's flank.
@@ -1960,21 +2374,70 @@ impl Evaluator {
         }
         let _ = maps.own_occ; // reserved for the Phase 5 blocker/pin danger input.
 
+        // Shelter/storm folded into the danger index (Phase 6.2.1, seeded 0):
+        // a small integer "pawn-cover deficit" — missing shelter files (own
+        // file 2, adjacent 1; same castled-flank gate as the linear shelter
+        // term) plus advanced storm pawns (rel_rank − 2 each, rel ≥ 3). The
+        // deficit multiplies into the nonlinear table lookup, expressing the
+        // "exposed king × piece pressure" interaction the linear terms cannot.
+        if self.params.ks_shelter_storm[0] != 0 {
+            let kf = infra::to_i32(SQUARE_FILE[king.index()]);
+            let krank = infra::to_i32(SQUARE_RANK[king.index()]);
+            let mut deficit = 0i32;
+            if kf <= 2 || kf >= 5 {
+                for df in -1..=1 {
+                    let f = kf + df;
+                    if !(0..8).contains(&f) {
+                        continue;
+                    }
+                    let file_pawns = pawns[color as usize] & FILE_BBS[infra::to_usize(f)];
+                    if (file_pawns & FORWARD_RANKS[color as usize][infra::to_usize(krank)])
+                        .is_empty()
+                    {
+                        deficit += if df == 0 { 2 } else { 1 };
+                    }
+                }
+            }
+            let mut sf = Bitboard::EMPTY;
+            for df in -1..=1 {
+                let f = kf + df;
+                if (0..8).contains(&f) {
+                    sf |= FILE_BBS[infra::to_usize(f)];
+                }
+            }
+            let mut storm_pawns = pawns[them as usize] & sf;
+            while storm_pawns.any() {
+                let p = storm_pawns.pop_lsb();
+                let rel = relative_rank(them, p) as i32;
+                if rel >= 3 {
+                    deficit += rel - 2;
+                }
+            }
+            danger += self.params.ks_shelter_storm[0] * deficit;
+        }
+
         // Non-linear table lookup: trace one-hot on the bucket actually read.
-        let safety_idx = danger.clamp(0, self.params.king_safety_table.len() as i32 - 1) as usize;
+        let safety_idx = infra::to_usize(
+            danger.clamp(0, infra::to_i32(self.params.king_safety_table.len()) - 1),
+        );
         *mg -= sign * self.params.king_safety_table[safety_idx];
         tr_mg!(self, king_safety_table, safety_idx, -sign);
+        // 9.6(b): expose the bucket actually read so the lazy dual-eval audit
+        // can attribute its findings to king danger. Diag-only side channel.
+        #[cfg(feature = "diag")]
+        crate::diag::lazy_probe::record(safety_idx);
 
-        let king_file = SQUARE_FILE[king.index()] as i32;
+        let king_file = infra::to_i32(SQUARE_FILE[king.index()]);
         if king_file <= 2 || king_file >= 5 {
-            let king_rank = SQUARE_RANK[king.index()] as i32;
+            let king_rank = infra::to_i32(SQUARE_RANK[king.index()]);
             for df in -1..=1 {
                 let file = king_file + df;
                 if !(0..8).contains(&file) {
                     continue;
                 }
-                let file_pawns = pawns[color as usize] & FILE_BBS[file as usize];
-                let in_front = file_pawns & FORWARD_RANKS[color as usize][king_rank as usize];
+                let file_pawns = pawns[color as usize] & FILE_BBS[infra::to_usize(file)];
+                let in_front =
+                    file_pawns & FORWARD_RANKS[color as usize][infra::to_usize(king_rank)];
                 if in_front.is_empty() {
                     if df == 0 {
                         *mg -= sign * self.params.shelter_missing_file_mg[0];
@@ -1990,9 +2453,9 @@ impl Evaluator {
                         in_front.msb()
                     };
                     let distance = if color == Color::White {
-                        SQUARE_RANK[pawn_sq.index()] as i32 - king_rank
+                        infra::to_i32(SQUARE_RANK[pawn_sq.index()]) - king_rank
                     } else {
-                        king_rank - SQUARE_RANK[pawn_sq.index()] as i32
+                        king_rank - infra::to_i32(SQUARE_RANK[pawn_sq.index()])
                     };
                     if distance == 1 {
                         *mg += sign * self.params.shelter_dist1_mg[0];
@@ -2007,11 +2470,11 @@ impl Evaluator {
 
         let enemy_pawns = pawns[them as usize];
         let mut storm_files = Bitboard::EMPTY;
-        let king_file = SQUARE_FILE[king.index()] as i32;
+        let king_file = infra::to_i32(SQUARE_FILE[king.index()]);
         for df in -1..=1 {
             let file = king_file + df;
             if (0..8).contains(&file) {
-                storm_files |= FILE_BBS[file as usize];
+                storm_files |= FILE_BBS[infra::to_usize(file)];
             }
         }
         let mut storm = enemy_pawns & storm_files;
@@ -2039,50 +2502,33 @@ impl Evaluator {
         mg: &mut i32,
         eg: &mut i32,
     ) {
+        // Phase 7.4: iterate over the *passers*, not the friendly rooks. The old
+        // form nested the enemy-rook check inside the friendly-rook loop, so the
+        // enemy-rook-behind penalty was only seen when a friendly rook shared the
+        // file, and doubled friendly rooks double-counted. Now each passer scores
+        // "is any own rook behind it" (bonus) and "is any enemy rook behind it"
+        // (penalty) independently and at most once — explicit blocker semantics.
         let them = !color;
-        let mut rooks = board.pieces(color, Piece::Rook);
-        while rooks.any() {
-            let rook = rooks.pop_lsb();
-            let file = SQUARE_FILE[rook.index()];
-            let file_passers = passed[color as usize] & FILE_BBS[file];
-            if file_passers.any() {
-                let passer = if color == Color::White {
-                    file_passers.lsb()
-                } else {
-                    file_passers.msb()
-                };
-                let behind = if color == Color::White {
-                    SQUARE_RANK[rook.index()] < SQUARE_RANK[passer.index()]
-                } else {
-                    SQUARE_RANK[rook.index()] > SQUARE_RANK[passer.index()]
-                };
-                if behind {
-                    *mg += sign * self.params.rook_behind_passer_mg[0];
-                    *eg += sign * self.params.rook_behind_passer_eg[0];
-                    tr_mg!(self, rook_behind_passer_mg, 0, sign);
-                    tr_eg!(self, rook_behind_passer_eg, 0, sign);
-                }
+        let own_rooks = board.pieces(color, Piece::Rook);
+        let enemy_rooks = board.pieces(them, Piece::Rook);
+        let mut pp = passed[color as usize];
+        while pp.any() {
+            let passer = pp.pop_lsb();
+            let file = SQUARE_FILE[passer.index()];
+            // "Behind" = same file, on the near side of the passer (toward our own
+            // back rank) — the ranks the enemy travels *forward* through.
+            let behind = FORWARD_RANKS[them as usize][SQUARE_RANK[passer.index()]] & FILE_BBS[file];
+            if (own_rooks & behind).any() {
+                *mg += sign * self.params.rook_behind_passer_mg[0];
+                *eg += sign * self.params.rook_behind_passer_eg[0];
+                tr_mg!(self, rook_behind_passer_mg, 0, sign);
+                tr_eg!(self, rook_behind_passer_eg, 0, sign);
             }
-
-            let mut enemy_rooks = board.pieces(them, Piece::Rook) & FILE_BBS[file];
-            while enemy_rooks.any() && file_passers.any() {
-                let enemy = enemy_rooks.pop_lsb();
-                let passer = if color == Color::White {
-                    file_passers.lsb()
-                } else {
-                    file_passers.msb()
-                };
-                let behind = if color == Color::White {
-                    SQUARE_RANK[enemy.index()] < SQUARE_RANK[passer.index()]
-                } else {
-                    SQUARE_RANK[enemy.index()] > SQUARE_RANK[passer.index()]
-                };
-                if behind {
-                    *mg -= sign * self.params.enemy_rook_behind_passer_mg[0];
-                    *eg -= sign * self.params.enemy_rook_behind_passer_eg[0];
-                    tr_mg!(self, enemy_rook_behind_passer_mg, 0, -sign);
-                    tr_eg!(self, enemy_rook_behind_passer_eg, 0, -sign);
-                }
+            if (enemy_rooks & behind).any() {
+                *mg -= sign * self.params.enemy_rook_behind_passer_mg[0];
+                *eg -= sign * self.params.enemy_rook_behind_passer_eg[0];
+                tr_mg!(self, enemy_rook_behind_passer_mg, 0, -sign);
+                tr_eg!(self, enemy_rook_behind_passer_eg, 0, -sign);
             }
         }
     }
@@ -2219,14 +2665,14 @@ impl Evaluator {
     /// coefficients are seeded 0, so this contributes nothing today.
     fn eval_imbalance(&self, board: &Board, mg: &mut i32, eg: &mut i32) {
         let count = |c: Color| -> [i32; 6] {
-            let bishops = board.pieces(c, Piece::Bishop).count() as i32;
+            let bishops = infra::to_i32(board.pieces(c, Piece::Bishop).count());
             [
                 (bishops >= 2) as i32,
-                board.pieces(c, Piece::Pawn).count() as i32,
-                board.pieces(c, Piece::Knight).count() as i32,
+                infra::to_i32(board.pieces(c, Piece::Pawn).count()),
+                infra::to_i32(board.pieces(c, Piece::Knight).count()),
                 bishops,
-                board.pieces(c, Piece::Rook).count() as i32,
-                board.pieces(c, Piece::Queen).count() as i32,
+                infra::to_i32(board.pieces(c, Piece::Rook).count()),
+                infra::to_i32(board.pieces(c, Piece::Queen).count()),
             ]
         };
         let cnt = [count(Color::White), count(Color::Black)];
@@ -2298,14 +2744,14 @@ impl Evaluator {
     fn eval_closedness(&self, board: &Board, mg: &mut i32) {
         let wp = board.pieces(Color::White, Piece::Pawn);
         let bp = board.pieces(Color::Black, Piece::Pawn);
-        let rammed = (wp.north() & bp).count() as i32;
+        let rammed = infra::to_i32((wp.north() & bp).count());
         if rammed == 0 {
             return;
         }
         for color in [Color::White, Color::Black] {
             let sign = color_sign(color);
-            let knights = board.pieces(color, Piece::Knight).count() as i32;
-            let rooks = board.pieces(color, Piece::Rook).count() as i32;
+            let knights = infra::to_i32(board.pieces(color, Piece::Knight).count());
+            let rooks = infra::to_i32(board.pieces(color, Piece::Rook).count());
             if knights != 0 {
                 *mg += sign * rammed * knights * self.params.closedness_knight_mg[0];
                 tr_mg!(self, closedness_knight_mg, 0, sign * rammed * knights);
@@ -2344,9 +2790,9 @@ impl Evaluator {
     fn eval_initiative(&self, board: &Board, eg: &mut i32) {
         let pawns =
             board.pieces(Color::White, Piece::Pawn) | board.pieces(Color::Black, Piece::Pawn);
-        let pawn_count = pawns.count() as i32;
-        let kf_w = SQUARE_FILE[board.king_sq(Color::White).index()] as i32;
-        let kf_b = SQUARE_FILE[board.king_sq(Color::Black).index()] as i32;
+        let pawn_count = infra::to_i32(pawns.count());
+        let kf_w = infra::to_i32(SQUARE_FILE[board.king_sq(Color::White).index()]);
+        let kf_b = infra::to_i32(SQUARE_FILE[board.king_sq(Color::Black).index()]);
         let king_file_distance = (kf_w - kf_b).abs();
         let queenside = FILE_BBS[0] | FILE_BBS[1] | FILE_BBS[2] | FILE_BBS[3];
         let kingside = FILE_BBS[4] | FILE_BBS[5] | FILE_BBS[6] | FILE_BBS[7];
@@ -2361,24 +2807,14 @@ impl Evaluator {
 
 #[inline(always)]
 pub fn piece_value(piece: Piece) -> i32 {
-    unsafe { *PIECE_VALUES.get_unchecked(piece as usize) }
+    // 9.0: safe indexing — `piece as usize` from a 6-variant enum is provably
+    // 0..=5, so LLVM elides the bounds check; identical codegen, no unsafe.
+    PIECE_VALUES[piece as usize]
 }
 
 #[inline(always)]
 fn color_sign(color: Color) -> i32 {
     if color == Color::White { 1 } else { -1 }
-}
-
-#[inline(always)]
-fn attacks_for(atk: &AttackTables, piece: Piece, sq: Square, occ: Bitboard) -> Bitboard {
-    match piece {
-        Piece::Pawn => Bitboard::EMPTY,
-        Piece::Knight => atk.knight(sq),
-        Piece::Bishop => atk.bishop(sq, occ),
-        Piece::Rook => atk.rook(sq, occ),
-        Piece::Queen => atk.queen(sq, occ),
-        Piece::King => atk.king(sq),
-    }
 }
 
 #[inline(always)]
@@ -2519,10 +2955,11 @@ fn kpk_normalized(board: &Board) -> Option<(bool, usize, usize, usize)> {
     }
 }
 
-/// True for the wrong-bishop rook-pawn draw: the strong side has K + one bishop
-/// + one or more pawns all on a single rook file, the bishop is the wrong colour
-/// to control the queening square, and the bare defending king holds that corner
-/// (within one square of it). Such positions are dead draws.
+/// True for the wrong-bishop rook-pawn draw. All of the following hold:
+/// the strong side has K + one bishop + one or more pawns all on a single rook
+/// file; the bishop is the wrong colour to control the queening square; and the
+/// bare defending king holds that corner (within one square of it). Such
+/// positions are dead draws.
 fn kbp_wrong_corner_draw(board: &Board) -> bool {
     for strong in [Color::White, Color::Black] {
         let weak = !strong;
@@ -2554,7 +2991,7 @@ fn kbp_wrong_corner_draw(board: &Board) -> bool {
         } else {
             file
         };
-        let queening_sq = Square(queening as u8);
+        let queening_sq = Square(infra::to_u8(queening));
         // A bishop can only guard the queening square if it shares that square's
         // colour. Wrong colour → it can never evict the king from the corner.
         let bishop_light = (bishops & Bitboard::LIGHT_SQUARES).any();
@@ -2656,8 +3093,9 @@ fn opposite_bishop_scale(board: &Board) -> Option<i32> {
     if white_dark == black_dark {
         return None;
     }
-    let pawns = (board.pieces(Color::White, Piece::Pawn) | board.pieces(Color::Black, Piece::Pawn))
-        .count() as i32;
+    let pawns = infra::to_i32(
+        (board.pieces(Color::White, Piece::Pawn) | board.pieces(Color::Black, Piece::Pawn)).count(),
+    );
     let passers = count_passed_pawns(board);
     Some((32 + pawns * 4 + passers * 4).min(OCB_SCALE_NORMAL))
 }
@@ -2696,8 +3134,8 @@ fn has_exact_material(
 fn promotion_square(color: Color, pawn: Square) -> Square {
     let file = SQUARE_FILE[pawn.index()];
     match color {
-        Color::White => Square((file + 56) as u8),
-        Color::Black => Square(file as u8),
+        Color::White => Square(infra::to_u8(file + 56)),
+        Color::Black => Square(infra::to_u8(file)),
     }
 }
 

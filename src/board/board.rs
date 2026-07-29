@@ -3,11 +3,12 @@
 /// Uses 12 bitboards (one per color×piece), two occupancy bitboards, and an
 /// incremental Zobrist hash.  Make/unmake are performed in-place with an
 /// internal history stack — no full-struct copies needed.
+use crate::infra;
 use std::fmt;
 
 use super::attacks::ATTACKS;
 use super::bitboard::Bitboard;
-use super::movegen::generate_legal_moves;
+use super::movegen::{between, generate_legal_moves, ray_through};
 use super::moves::{
     CAPTURE, CASTLE_KINGSIDE, CASTLE_QUEENSIDE, DOUBLE_PUSH, EN_PASSANT, Move, MoveList,
     PROMO_BISHOP, PROMO_CAPTURE_BISHOP, PROMO_CAPTURE_KNIGHT, PROMO_CAPTURE_QUEEN,
@@ -33,8 +34,59 @@ struct UnmakeInfo {
     checkers: Bitboard,
 }
 
+/// Absolute pins on one king, captured for SEE recapture filtering (Phase
+/// 7.2). At most 8 simultaneous pins (one per direction). A pinned blocker may
+/// not recapture on the exchange square unless its pinner has left the board or
+/// the square lies on its pin line.
+struct SeePins {
+    king: Square,
+    len: usize,
+    blockers: [Square; 8],
+    pinners: [Square; 8],
+}
+
+impl SeePins {
+    #[inline]
+    fn new(king: Square) -> Self {
+        Self {
+            king,
+            len: 0,
+            blockers: [Square(0); 8],
+            pinners: [Square(0); 8],
+        }
+    }
+
+    #[inline]
+    fn push(&mut self, blocker: Square, pinner: Square) {
+        // At most one blocker per direction, so `len` cannot exceed 8.
+        self.blockers[self.len] = blocker;
+        self.pinners[self.len] = pinner;
+        self.len += 1;
+    }
+
+    /// Squares of attackers that may NOT capture on `target` under `occ`:
+    /// pinned, pinner still present, and `target` off the pin line.
+    #[inline]
+    fn forbidden(&self, target: Square, occ: Bitboard) -> Bitboard {
+        let mut forbidden = Bitboard::EMPTY;
+        let target_bb = Bitboard::from(target);
+        for i in 0..self.len {
+            if (occ & Bitboard::from(self.pinners[i])).any()
+                && (ray_through(self.king, self.blockers[i]) & target_bb).is_empty()
+            {
+                forbidden |= Bitboard::from(self.blockers[i]);
+            }
+        }
+        forbidden
+    }
+}
+
 const NO_PIECE: u8 = 255;
-const PIECE_FROM_ENCODED: [Piece; 12] = [
+// 9.0: padded 12 → 16 so the hot mailbox decode can index with `& 15` — the
+// bounds check elides and no unsafe is needed. Entries 12–15 are unreachable
+// filler (the mailbox only stores 0..=11 for occupied squares; callers assert
+// occupancy), kept as Pawn so even a broken input stays defined, never UB.
+const PIECE_FROM_ENCODED: [Piece; 16] = [
     Piece::Pawn,
     Piece::Knight,
     Piece::Bishop,
@@ -47,6 +99,10 @@ const PIECE_FROM_ENCODED: [Piece; 12] = [
     Piece::Rook,
     Piece::Queen,
     Piece::King,
+    Piece::Pawn,
+    Piece::Pawn,
+    Piece::Pawn,
+    Piece::Pawn,
 ];
 
 // -----------------------------------------------------------------------
@@ -87,6 +143,18 @@ pub struct Board {
     non_pawn_hash: [u64; 2],
     checkers: Bitboard,
     history: Vec<UnmakeInfo>,
+}
+
+/// Per-node masks for O(1) "does this move give check?" tests — see
+/// [`Board::check_info`] / [`Board::gives_check_with`] (10.3 speed pass).
+pub struct CheckInfo {
+    /// The opposing king's square at computation time.
+    their_king: Square,
+    /// `check_squares[piece]`: squares from which OUR `piece` delivers a
+    /// direct check, under pre-move occupancy. King entry is empty.
+    check_squares: [Bitboard; 6],
+    /// Sole blockers sitting between one of our sliders and their king.
+    blockers: Bitboard,
 }
 
 impl Clone for Board {
@@ -208,16 +276,16 @@ impl Board {
         for c in castling_str.chars() {
             match c {
                 'K' if !cr.has(CastlingRights::WHITE_KINGSIDE) => {
-                    cr.0 |= CastlingRights::WHITE_KINGSIDE.0
+                    cr.0 |= CastlingRights::WHITE_KINGSIDE.0;
                 }
                 'Q' if !cr.has(CastlingRights::WHITE_QUEENSIDE) => {
-                    cr.0 |= CastlingRights::WHITE_QUEENSIDE.0
+                    cr.0 |= CastlingRights::WHITE_QUEENSIDE.0;
                 }
                 'k' if !cr.has(CastlingRights::BLACK_KINGSIDE) => {
-                    cr.0 |= CastlingRights::BLACK_KINGSIDE.0
+                    cr.0 |= CastlingRights::BLACK_KINGSIDE.0;
                 }
                 'q' if !cr.has(CastlingRights::BLACK_QUEENSIDE) => {
-                    cr.0 |= CastlingRights::BLACK_QUEENSIDE.0
+                    cr.0 |= CastlingRights::BLACK_QUEENSIDE.0;
                 }
                 '-' => {}
                 c => return Err(format!("invalid castling char: {c}")),
@@ -471,7 +539,7 @@ impl Board {
                     && from.rank() == start_rank
                     && self.color_on(to).is_none()
                 {
-                    let mid = Square((from.0 as i16 + forward) as u8);
+                    let mid = Square(infra::to_u8(from.0 as i16 + forward));
                     (self.color_on(mid).is_none()).then_some(Move::new(from, to, DOUBLE_PUSH))
                 } else {
                     None
@@ -584,6 +652,18 @@ impl Board {
         super::movegen::generate_quiets(self)
     }
 
+    /// Capture generation that also yields the pinned set, for a staged picker
+    /// that will generate quiets at the same node (10.3 speed pass).
+    pub fn generate_legal_captures_pinned(&mut self) -> (MoveList, Bitboard) {
+        super::movegen::generate_captures_pinned(self)
+    }
+
+    /// Quiet generation reusing a pinned set from
+    /// [`Board::generate_legal_captures_pinned`] at the same node.
+    pub fn generate_legal_quiets_pinned(&self, pinned: Bitboard) -> MoveList {
+        super::movegen::generate_quiets_pinned(self, pinned)
+    }
+
     pub fn perft(&mut self, depth: u32) -> u64 {
         super::movegen::perft(self, depth)
     }
@@ -608,6 +688,86 @@ impl Board {
     #[inline(always)]
     pub fn is_en_passant(&self, mv: Move) -> bool {
         mv.is_en_passant()
+    }
+
+    /// Per-node check-detection masks (10.3 speed pass).
+    ///
+    /// Move scoring used to call [`Board::gives_check`] for EVERY scored
+    /// quiet at every node — an occupancy-xor plus up to two slider lookups
+    /// per move. These masks are computed once per node; a normal move's
+    /// check test then collapses to two bitboard membership tests
+    /// ([`Board::gives_check_with`]).
+    pub fn check_info(&self) -> CheckInfo {
+        let us = self.side_to_move;
+        let them = !us;
+        let ksq = self.king_sq(them);
+        let atk = &*ATTACKS;
+        let occ = self.all_occ;
+        let bishop_from_k = atk.bishop(ksq, occ);
+        let rook_from_k = atk.rook(ksq, occ);
+        let mut check_squares = [Bitboard::EMPTY; 6];
+        // Squares from which OUR pawn attacks their king = the squares a
+        // pawn of THEIR colour on ksq would attack (attack reciprocity).
+        check_squares[Piece::Pawn as usize] = atk.pawn(them, ksq);
+        check_squares[Piece::Knight as usize] = atk.knight(ksq);
+        check_squares[Piece::Bishop as usize] = bishop_from_k;
+        check_squares[Piece::Rook as usize] = rook_from_k;
+        check_squares[Piece::Queen as usize] = bishop_from_k | rook_from_k;
+        // King entry stays EMPTY: a king never gives direct check.
+
+        // Discovered-check blockers: any piece that is the SOLE occupant
+        // between one of our sliders and their king (empty-board x-ray scan).
+        let our_bq = self.pieces(us, Piece::Bishop) | self.pieces(us, Piece::Queen);
+        let our_rq = self.pieces(us, Piece::Rook) | self.pieces(us, Piece::Queen);
+        let mut snipers =
+            (atk.bishop(ksq, Bitboard::EMPTY) & our_bq) | (atk.rook(ksq, Bitboard::EMPTY) & our_rq);
+        let mut blockers = Bitboard::EMPTY;
+        while snipers.any() {
+            let sniper = snipers.pop_lsb();
+            let between_bb = crate::board::movegen::between(ksq, sniper) & occ;
+            if between_bb.count() == 1 {
+                blockers |= between_bb;
+            }
+        }
+        CheckInfo {
+            their_king: ksq,
+            check_squares,
+            blockers,
+        }
+    }
+
+    /// Fast path of [`Board::gives_check`], faithful by construction and
+    /// debug-asserted against it (the debug test suite drives this through
+    /// full searches). Normal moves are two mask tests: direct check via
+    /// `check_squares[piece]`, discovered check via the blocker set — a
+    /// blocker leaving its king-ray discovers the slider behind it, unless
+    /// the destination stays on that same ray. Promotions, en passant and
+    /// castling change occupancy/piece identity in ways the pre-move masks
+    /// cannot express, so they take the full computation (they are rare).
+    ///
+    /// The pre-move `check_squares` are correct for direct checks even when
+    /// `from` lies on the `to`→king segment: the mover attacking through its
+    /// own vacated square would mean it already attacked the enemy king
+    /// before moving — an illegal position on our turn — so a *different*
+    /// blocker must exist on that segment, and it still blocks after the
+    /// move. (Promotions break this argument, which is one reason they fall
+    /// back.)
+    pub fn gives_check_with(&self, mv: Move, ci: &CheckInfo) -> bool {
+        if mv.is_promo() || mv.is_en_passant() || mv.is_castling() {
+            return self.gives_check(mv);
+        }
+        let from = mv.from_sq();
+        let to = mv.to_sq();
+        let piece = self.moving_piece(mv);
+        let result = (ci.check_squares[piece as usize] & Bitboard::from(to)).any()
+            || ((ci.blockers & Bitboard::from(from)).any()
+                && !crate::board::movegen::on_same_ray(from, to, ci.their_king));
+        debug_assert_eq!(
+            result,
+            self.gives_check(mv),
+            "gives_check_with diverged from gives_check for {mv}"
+        );
+        result
     }
 
     pub fn gives_check(&self, mv: Move) -> bool {
@@ -827,17 +987,34 @@ impl Board {
         false
     }
 
-    pub fn can_declare_draw(&self) -> bool {
+    /// Rule-50 draw with mate precedence (Phase 7.1a, FIDE 9.6b analogue):
+    /// at clock >= 100 the game is drawn UNLESS the position is checkmate —
+    /// a mate delivered by the 100th-clock move wins. Stalemate at the
+    /// boundary is a draw either way, so only the mated case needs the
+    /// (rare) legal-move probe.
+    #[inline(always)]
+    fn is_rule50_draw(&self) -> bool {
         self.halfmove_clock >= 100
-            || self.has_insufficient_material()
-            || self.is_threefold_repetition()
+            && (!self.is_in_check() || !generate_legal_moves(self).is_empty())
+    }
+
+    pub fn can_declare_draw(&self) -> bool {
+        self.is_rule50_draw() || self.has_insufficient_material() || self.is_threefold_repetition()
     }
 
     #[inline(always)]
     pub fn can_declare_draw_in_search(&self) -> bool {
         if self.halfmove_clock >= 100 {
-            return true;
+            return self.is_rule50_draw();
         }
+        // Aggressive twofold: a single prior occurrence within the scan bound
+        // scores the position as a draw in search. This is a deliberate
+        // strength heuristic, NOT the arbiter's threefold rule — if a side can
+        // force one repetition it can usually force the claimable second, and
+        // pruning the repetition subtree early is worth Elo. Phase 7.1d tried
+        // to make this root-aware (a single *pre-root* twofold no longer
+        // draws, matching Stockfish's `repetition < ply`); that SPRT'd at
+        // −7.21 ± 6.03 (H0), so the aggressive form is kept (lesson 14).
         self.has_insufficient_material() || (self.halfmove_clock >= 4 && self.is_repetition(2))
     }
 
@@ -851,6 +1028,123 @@ impl Board {
             | self.pieces(color, Piece::Rook)
             | self.pieces(color, Piece::Queen))
         .any()
+    }
+
+    /// 9.5: rebuild every derived field from the mailbox and compare against
+    /// what make/unmake has been maintaining incrementally.
+    ///
+    /// `Board` keeps five redundant representations of the same position —
+    /// the 12 piece bitboards, the two occupancies, `all_occ`, the mailbox,
+    /// and five Zobrist keys. Only the mailbox and `hash` were ever verified
+    /// (`to_fen()` reads the mailbox, so the FEN comparison in the existing
+    /// make/unmake test validates the mailbox and nothing else). A desync in
+    /// the rest is silent: the auxiliary keys are CACHE KEYS for the pawn
+    /// cache, correction history and pawn history, so a drifted key returns
+    /// another position's cached evaluation rather than crashing.
+    ///
+    /// Returns `Err` with the first mismatch rather than panicking, so tests
+    /// can report instead of aborting. Not on any hot path — `assert_ok()`
+    /// compiles to nothing in release.
+    pub fn check_consistency(&self) -> Result<(), String> {
+        let mut pieces = [Bitboard::EMPTY; 12];
+        let mut occupancy = [Bitboard::EMPTY; 2];
+        let mut hash = 0u64;
+        let mut pawn_hash = 0u64;
+        let mut minor_hash = 0u64;
+        let mut non_pawn_hash = [0u64; 2];
+
+        for index in 0..64u8 {
+            let sq = Square(index);
+            let Some((color, piece)) = decode_piece(self.mailbox[sq.index()]) else {
+                continue;
+            };
+            let bb = Bitboard::from(sq);
+            pieces[color as usize * 6 + piece as usize] |= bb;
+            occupancy[color as usize] |= bb;
+            let piece_key = ZOBRIST.piece(color, piece, sq);
+            hash ^= piece_key;
+            match piece {
+                Piece::Pawn => pawn_hash ^= piece_key,
+                Piece::Knight | Piece::Bishop => {
+                    minor_hash ^= piece_key;
+                    non_pawn_hash[color as usize] ^= piece_key;
+                }
+                Piece::Rook | Piece::Queen => non_pawn_hash[color as usize] ^= piece_key,
+                Piece::King => {}
+            }
+        }
+
+        if self.side_to_move == Color::Black {
+            hash ^= ZOBRIST.side();
+        }
+        hash ^= ZOBRIST.castling(self.castling);
+        if self.ep_sq != 255 {
+            hash ^= ZOBRIST.ep(Square(self.ep_sq).file());
+        }
+
+        for (i, expected) in pieces.iter().enumerate() {
+            if self.pieces[i] != *expected {
+                return Err(format!(
+                    "pieces[{i}] desynced from mailbox: have {:?}, mailbox implies {:?}",
+                    self.pieces[i], expected
+                ));
+            }
+        }
+        for (i, expected) in occupancy.iter().enumerate() {
+            if self.occupancy[i] != *expected {
+                return Err(format!("occupancy[{i}] desynced from mailbox"));
+            }
+        }
+        let all = occupancy[0] | occupancy[1];
+        if self.all_occ != all {
+            return Err("all_occ is not the union of both occupancies".to_string());
+        }
+        if self.hash != hash {
+            return Err(format!(
+                "hash desynced: incremental {:#018x}, recomputed {hash:#018x}",
+                self.hash
+            ));
+        }
+        if self.pawn_hash != pawn_hash {
+            return Err(format!(
+                "pawn_hash desynced: incremental {:#018x}, recomputed {pawn_hash:#018x}",
+                self.pawn_hash
+            ));
+        }
+        if self.minor_hash != minor_hash {
+            return Err(format!(
+                "minor_hash desynced: incremental {:#018x}, recomputed {minor_hash:#018x}",
+                self.minor_hash
+            ));
+        }
+        for color in [Color::White, Color::Black] {
+            let i = color as usize;
+            if self.non_pawn_hash[i] != non_pawn_hash[i] {
+                return Err(format!(
+                    "non_pawn_hash[{color:?}] desynced: incremental {:#018x}, recomputed {:#018x}",
+                    self.non_pawn_hash[i], non_pawn_hash[i]
+                ));
+            }
+        }
+        let checkers = self.calculate_checkers();
+        if self.checkers != checkers {
+            return Err("checkers desynced from a fresh calculation".to_string());
+        }
+        Ok(())
+    }
+
+    /// Debug-only invariant assertion. Compiles to nothing in release, so it
+    /// can be called from hot code without an NPS cost.
+    #[inline(always)]
+    pub fn assert_ok(&self) {
+        #[cfg(debug_assertions)]
+        if let Err(err) = self.check_consistency() {
+            panic!(
+                "board invariant violated: {err}
+FEN: {}",
+                self.to_fen()
+            );
+        }
     }
 
     #[inline(always)]
@@ -880,6 +1174,71 @@ impl Board {
             | atk.bishop(sq, occ) & diagonal
             | atk.rook(sq, occ) & orthogonal)
             & occ
+    }
+
+    /// Short-circuiting `attackers_to_color(sq, occ, color).any()` (10.3(8b)).
+    ///
+    /// Exactly equivalent — each piece set is intersected with `occ` the same
+    /// way — but it returns on the first attacker found instead of building the
+    /// whole set, and it tests the two magic lookups last. Callers that only
+    /// need the boolean (the passed-pawn stop/path scans in eval) skip both
+    /// slider lookups whenever a pawn, knight or king already answers it.
+    #[inline(always)]
+    pub fn is_attacked_by_with_occ(&self, sq: Square, color: Color, occ: Bitboard) -> bool {
+        let atk = &*ATTACKS;
+        if (atk.pawn(!color, sq) & self.pieces(color, Piece::Pawn) & occ).any() {
+            return true;
+        }
+        if (atk.knight(sq) & self.pieces(color, Piece::Knight) & occ).any() {
+            return true;
+        }
+        if (atk.king(sq) & self.pieces(color, Piece::King) & occ).any() {
+            return true;
+        }
+        let queens = self.pieces(color, Piece::Queen);
+        if (atk.bishop(sq, occ) & (self.pieces(color, Piece::Bishop) | queens) & occ).any() {
+            return true;
+        }
+        (atk.rook(sq, occ) & (self.pieces(color, Piece::Rook) | queens) & occ).any()
+    }
+
+    /// Absolute pins on `color`'s king, for SEE recapture filtering (Phase
+    /// 7.2). Same x-ray technique as `movegen::compute_pinned`, but keeps each
+    /// (blocker, pinner) pair so the exchange loop can tell when a pinned piece
+    /// becomes a legal recapturer — its pinner leaves the board, or the
+    /// exchange square lies on its pin line.
+    fn see_pins(&self, color: Color) -> SeePins {
+        let king_sq = self.king_sq(color);
+        let them = !color;
+        let our_occ = self.color_occ(color);
+        let atk = &*ATTACKS;
+        let mut pins = SeePins::new(king_sq);
+
+        let bishop_vision = atk.bishop(king_sq, self.all_occ);
+        let xray_bishop = atk.bishop(king_sq, self.all_occ ^ (bishop_vision & our_occ));
+        let mut diag =
+            (self.pieces(them, Piece::Bishop) | self.pieces(them, Piece::Queen)) & xray_bishop;
+        while diag.any() {
+            let pinner_sq = diag.pop_lsb();
+            let blockers = between(king_sq, pinner_sq) & our_occ;
+            if blockers.any() && !blockers.more_than_one() {
+                pins.push(blockers.lsb(), pinner_sq);
+            }
+        }
+
+        let rook_vision = atk.rook(king_sq, self.all_occ);
+        let xray_rook = atk.rook(king_sq, self.all_occ ^ (rook_vision & our_occ));
+        let mut ortho =
+            (self.pieces(them, Piece::Rook) | self.pieces(them, Piece::Queen)) & xray_rook;
+        while ortho.any() {
+            let pinner_sq = ortho.pop_lsb();
+            let blockers = between(king_sq, pinner_sq) & our_occ;
+            if blockers.any() && !blockers.more_than_one() {
+                pins.push(blockers.lsb(), pinner_sq);
+            }
+        }
+
+        pins
     }
 
     #[inline(always)]
@@ -922,9 +1281,19 @@ impl Board {
         }
         occ |= Bitboard::from(target);
 
+        // Absolute-pin masks, computed lazily per side on first recapture and
+        // reused (Phase 7.2). Most exchanges never touch a pinned piece, so the
+        // x-ray work is skipped entirely on the common path.
+        let mut pins: [Option<SeePins>; 2] = [None, None];
+
         loop {
             side = !side;
             let mut attackers = self.attackers_to_color(target, occ, side);
+            if attackers.is_empty() {
+                break;
+            }
+            let pin_set = pins[side as usize].get_or_insert_with(|| self.see_pins(side));
+            attackers &= !pin_set.forbidden(target, occ);
             if attackers.is_empty() {
                 break;
             }
@@ -1000,9 +1369,15 @@ impl Board {
 
         let mut side = self.side_to_move;
         let mut result = true;
+        let mut pins: [Option<SeePins>; 2] = [None, None];
         loop {
             side = !side;
-            let attackers = self.attackers_to_color(target, occ, side);
+            let mut attackers = self.attackers_to_color(target, occ, side);
+            if attackers.is_empty() {
+                break;
+            }
+            let pin_set = pins[side as usize].get_or_insert_with(|| self.see_pins(side));
+            attackers &= !pin_set.forbidden(target, occ);
             if attackers.is_empty() {
                 break;
             }
@@ -1124,7 +1499,31 @@ impl Board {
 
     /// Apply a move in-place.  The move must be legal.
     #[inline(always)]
+    /// Play `mv`, computing the new checker set from scratch.
     pub fn make_move(&mut self, mv: Move) {
+        self.make_move_inner(mv, None);
+    }
+
+    /// Play `mv` when the caller ALREADY knows whether it gives check
+    /// (10.3 speed pass).
+    ///
+    /// `make_move` otherwise runs [`Board::calculate_checkers`] — four attack
+    /// lookups, two of them slider lookups — on every single move, and the
+    /// overwhelming majority of moves produce `EMPTY`. The search computes
+    /// the same predicate anyway (cheaply, via [`Board::gives_check_with`]),
+    /// so passing it through turns the common case into a store of `EMPTY`.
+    /// Checking moves still take the exact computation, because the search
+    /// needs the precise checker set for evasion generation.
+    ///
+    /// The hint is `debug_assert!`ed against the real computation, and
+    /// `tests/board_differential.rs` independently rebuilds `checkers` after
+    /// every make and unmake — a wrong hint fails loudly rather than
+    /// producing illegal moves.
+    pub fn make_move_with_check(&mut self, mv: Move, gives_check: bool) {
+        self.make_move_inner(mv, Some(gives_check));
+    }
+
+    fn make_move_inner(&mut self, mv: Move, check_hint: Option<bool>) {
         let from = mv.from_sq();
         let to = mv.to_sq();
         let flags = mv.flags();
@@ -1255,7 +1654,23 @@ impl Board {
             hash: old_hash,
             checkers: old_checkers,
         });
-        self.checkers = self.calculate_checkers();
+        self.checkers = match check_hint {
+            Some(false) => {
+                debug_assert!(
+                    self.calculate_checkers().is_empty(),
+                    "check hint claimed no check, but {mv} gives check"
+                );
+                Bitboard::EMPTY
+            }
+            hint => {
+                let checkers = self.calculate_checkers();
+                debug_assert!(
+                    hint != Some(true) || !checkers.is_empty(),
+                    "check hint claimed check, but {mv} does not give check"
+                );
+                checkers
+            }
+        };
     }
 
     pub fn make_null_move(&mut self) {
@@ -1430,7 +1845,8 @@ impl Board {
     #[inline(always)]
     fn piece_type_at_unchecked(&self, sq: Square) -> Piece {
         debug_assert!(self.mailbox[sq.index()] < 12);
-        unsafe { *PIECE_FROM_ENCODED.get_unchecked(self.mailbox[sq.index()] as usize) }
+        // 9.0: `& 15` into the padded 16-entry table — check elided, no unsafe.
+        PIECE_FROM_ENCODED[self.mailbox[sq.index()] as usize & 15]
     }
 
     #[inline(always)]
@@ -1470,6 +1886,29 @@ impl Board {
         let black_king = self.pieces(Color::Black, Piece::King);
         if white_king.count() != 1 || black_king.count() != 1 {
             return Err("FEN must contain exactly one king for each side".to_string());
+        }
+
+        // Pawn count and promoted-piece consistency (mirrors Basilisk's
+        // try_set_fen). Rarog's parser already rejects back-rank pawns, bad king
+        // counts, adjacency, and side-not-to-move-in-check, but did not count
+        // pawns — a corrupt bench FEN with 9 pawns was silently searched until
+        // Basilisk's stricter set_fen flagged it (2026-07-01).
+        for color in [Color::White, Color::Black] {
+            let pawns = infra::to_i32(self.pieces(color, Piece::Pawn).count());
+            if pawns > 8 {
+                return Err(format!("{color:?} has more than 8 pawns"));
+            }
+            // A side can have at most (8 - pawns) promoted pieces: each promotion
+            // consumes one of its pawns.
+            let promoted = (infra::to_i32(self.pieces(color, Piece::Knight).count()) - 2).max(0)
+                + (infra::to_i32(self.pieces(color, Piece::Bishop).count()) - 2).max(0)
+                + (infra::to_i32(self.pieces(color, Piece::Rook).count()) - 2).max(0)
+                + (infra::to_i32(self.pieces(color, Piece::Queen).count()) - 1).max(0);
+            if promoted > 8 - pawns {
+                return Err(format!(
+                    "{color:?} has more promoted pieces than missing pawns allow"
+                ));
+            }
         }
 
         let white_king_sq = white_king.lsb();
@@ -1652,15 +2091,14 @@ fn validate_castling_rights(board: &Board, rights: CastlingRights) -> Result<(),
     ];
 
     for (right, king_sq, rook_sq, color) in required {
-        if rights.has(right) {
-            if board.piece_at(king_sq) != Some((color, Piece::King))
-                || board.piece_at(rook_sq) != Some((color, Piece::Rook))
-            {
-                return Err(format!(
-                    "castling right {} does not match king/rook placement",
-                    right.as_str()
-                ));
-            }
+        if rights.has(right)
+            && (board.piece_at(king_sq) != Some((color, Piece::King))
+                || board.piece_at(rook_sq) != Some((color, Piece::Rook)))
+        {
+            return Err(format!(
+                "castling right {} does not match king/rook placement",
+                right.as_str()
+            ));
         }
     }
 

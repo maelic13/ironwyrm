@@ -127,7 +127,12 @@ impl Square {
 
     #[inline(always)]
     pub fn index(self) -> usize {
-        self.0 as usize
+        // 9.0: mask to the valid 0..=63 range. Identity for every legal
+        // square (move encoding only produces 6-bit squares), and it lets
+        // LLVM elide the bounds check on EVERY `[_; 64]` table indexed with
+        // `sq.index()` across the codebase — the type now carries the
+        // invariant instead of each call site paying a check (or an unsafe).
+        (self.0 & 63) as usize
     }
 
     /// Flip rank (mirrors the square vertically, e.g. A1 ↔ A8).
@@ -193,9 +198,19 @@ impl fmt::Display for Square {
 impl File {
     #[inline(always)]
     pub fn from_u8(v: u8) -> Self {
-        debug_assert!(v < 8);
-        // SAFETY: File is repr(u8) with variants 0-7
-        unsafe { std::mem::transmute(v) }
+        // 9.0: total function instead of transmute — the match compiles to the
+        // same instruction as the old transmute (LLVM sees v & 7 exhaustively)
+        // but an out-of-range v can no longer be UB.
+        match v & 7 {
+            0 => File::A,
+            1 => File::B,
+            2 => File::C,
+            3 => File::D,
+            4 => File::E,
+            5 => File::F,
+            6 => File::G,
+            _ => File::H,
+        }
     }
 
     pub fn from_char(c: char) -> Option<Self> {
@@ -220,8 +235,17 @@ impl File {
 impl Rank {
     #[inline(always)]
     pub fn from_u8(v: u8) -> Self {
-        debug_assert!(v < 8);
-        unsafe { std::mem::transmute(v) }
+        // 9.0: total function instead of transmute (see File::from_u8).
+        match v & 7 {
+            0 => Rank::R1,
+            1 => Rank::R2,
+            2 => Rank::R3,
+            3 => Rank::R4,
+            4 => Rank::R5,
+            5 => Rank::R6,
+            6 => Rank::R7,
+            _ => Rank::R8,
+        }
     }
 
     pub fn from_char(c: char) -> Option<Self> {

@@ -27,8 +27,29 @@
         per-feature gate any more.
       - LTC confirmation runs at tc=10+0.1 (pass -TC "10+0.1") at phase
         boundaries and for TC-suspect features.
-      - Hash 64 MB, Threads 1, SuperGM_4mvs.pgn opening book (random order),
+      - Hash 64 MB, Threads 1, UHO_Lichess_4852_v1.epd opening book (random
+        order). Adopted 2026-07-17: the Stockfish/OpenBench-standard
+        "Unbalanced Human Openings" set — 2,632,036 positions, 3–4 moves deep,
+        curated to a ~+0.5-pawn White edge (the 4852 = the 0.48–0.52 eval
+        band). Played from both colours per pair, so the imbalance is
+        symmetric: unbiased but decisive. Cuts the draw rate (~56% → ~35–45%
+        at our level), so SPRTs resolve in substantially fewer games; kills
+        opening reuse forever (SuperGM's 2,668 lines were exhausted by any
+        run > 5,336 games, correlating 23% of pairs in 7.2b). Draw rates and
+        logistic-Elo magnitudes are NOT comparable to pre-UHO runs; verdicts
+        are (each SPRT is self-contained). Legacy PGN books still work via
+        -Book (format auto-detected from the extension),
         each opening played from both colours (-games 2 -repeat).
+      - AFFINITY + CALIBRATION: the 2026-07-21 null result (+9.34 +/- 8.20)
+        was evidence worth investigating, not proof of a persistent +9 Elo
+        bias. The old [-3,+3] null SPRT was invalid as a calibration because
+        true 0 lies midway between its hypotheses and has no preferred result.
+        Real implementation hazards were present: fastchess before 1.7.0 did
+        not correctly apply Windows process affinity, and 1.8.0 auto-topology
+        guesses SMT siblings from alternating logical CPU IDs. This harness
+        requires >=1.7.0, discovers physical cores through Windows, supplies
+        an explicit CPU list, and uses fixed-size confidence-interval
+        equivalence for null calibration.
       - model=normalized (nElo) — fastchess default, more time-control-robust
         than logistic Elo.
 
@@ -36,16 +57,17 @@
       In a self-play game only the side to move computes, so ~16 concurrent
       games already saturate 16 physical cores. Oversubscribing (e.g. the 30
       logical processors) halves NPS and changes the depth reached, distorting
-      results. Keep -Concurrency <= PHYSICAL cores - 1. This machine
-      (Ryzen 9 5950X) has 16 physical cores, so the default is 15.
+      results. The default detects physical cores and leaves two free; it does
+      not derive concurrency or affinity from logical-CPU numbering.
 
     CALIBRATION CHECK — run this FIRST, before testing any feature:
         ./tools/sprt.ps1 `
-            -EngineA "tools\test_engines\rarog-v2.1.0-windows-pext-pgo-codex-work.exe" `
-            -EngineB "tools\test_engines\rarog-v2.0.2-windows-pext-pgo.exe" `
-            -NameA "CW" -NameB "2.0.2"
-        Expected: H0 accepted (these two are behavior-identical). If the harness
-        returns H1 here, something is wrong — fix it before trusting any result.
+            -EngineA "tools\test_engines\rarog-null.exe" `
+            -EngineB "tools\test_engines\rarog-null.exe" `
+            -NameA "NullA" -NameB "NullB" -Mode calibrate
+        Calibration is a fixed 30,000-game identical-binary match. PASS
+        requires the entire 95% normalized-Elo (nElo) interval inside
+        [-5,+5] and zero anomalies.
 
 .PARAMETER EngineA
     Path to the new/candidate engine (usually in tools\test_engines).
@@ -60,6 +82,7 @@
 .PARAMETER Mode
     "gainer"       -> H0: elo<=0,  H1: elo>=Elo1  (default; test a real gain).
     "simplify"     -> H0: elo<=-5, H1: elo>=0     (non-regression / cleanup).
+    "calibrate"    -> fixed-size identical-binary null match; no SPRT.
     The explicit -Elo0/-Elo1 parameters override the mode if supplied.
 
 .PARAMETER Elo1
@@ -71,7 +94,18 @@
     Hash MB per engine. Default 64 (matches deployment).
 
 .PARAMETER Concurrency
-    Parallel games. Default 15 (physical cores - 1 on this machine).
+    Parallel games. Default 0 auto-detects physical cores and leaves two free.
+
+.PARAMETER Games
+    Fixed game count for -Mode calibrate. Default 30000. If the final interval
+    is still too wide, the result is explicitly inconclusive.
+
+.PARAMETER CalibrationTolerance
+    Calibration equivalence tolerance. Default 5 nElo. PASS requires the full
+    reported 95% confidence interval inside [-tolerance,+tolerance].
+
+.PARAMETER Seed
+    Opening randomization seed. Default 0 generates and records a seed.
 
 .PARAMETER TC
     Clock time control "base+inc" in seconds. Default "3+0.03" (the unified
@@ -89,7 +123,9 @@
     forfeit. It does not change the engine's own time budget.
 
 .PARAMETER Book
-    Opening book PGN. Default tools\books\SuperGM_4mvs.pgn.
+    Opening book, PGN or EPD (format auto-detected from the extension).
+    Default tools\books\UHO_Lichess_4852_v1.epd. Balanced-book fallback:
+    tools\books\IM_4mvs.pgn.
 
 .PARAMETER FastchessPath
     Path to fastchess.exe. Default tools\bin\fastchess.exe (or found on PATH).
@@ -105,21 +141,72 @@ param(
     [Parameter(Mandatory)][string]$EngineB,
     [string]$NameA = "New",
     [string]$NameB = "Base",
-    [ValidateSet("gainer", "simplify")][string]$Mode = "gainer",
+    [ValidateSet("gainer", "simplify", "calibrate", "fixed")][string]$Mode = "gainer",
     [Nullable[int]]$Elo0 = $null,
     [Nullable[int]]$Elo1 = $null,
     [double]$Alpha = 0.05,
     [double]$Beta  = 0.05,
     [int]$Hash = 64,
-    [int]$Concurrency = 15,
+    [int]$Concurrency = 0,
+    # 8.13: engine Threads for BOTH sides. Concurrency and the affinity list
+    # scale with it automatically; a multi-thread gate must be null-pair
+    # calibrated at the same Threads value before it is trusted.
+    [int]$Threads = 1,
+    # 8.13 tie-breaker: per-engine Threads override (defaults to $Threads).
+    # Enables the asymmetric 4T-vs-1T self-play delta. The core budget reserves
+    # max(ThreadsA,ThreadsB) cores per game slot, so neither side oversubscribes.
+    # A calibration (null) must stay symmetric — ThreadsA must equal ThreadsB.
+    [Nullable[int]]$ThreadsA = $null,
+    [Nullable[int]]$ThreadsB = $null,
+    [int]$Games = 30000,
+    [double]$CalibrationTolerance = 5,
+    [int]$Seed = 0,
+    [string[]]$OptionsA = @(),
+    [string[]]$OptionsB = @(),
     [string]$TC = "3+0.03",
     [double]$MoveTime = 0,
     [int]$TimeMargin = 20,
-    [string]$Book = "$PSScriptRoot\books\SuperGM_4mvs.pgn",
+    [string]$Book = "$PSScriptRoot\books\UHO_Lichess_4852_v1.epd",
     [string]$FastchessPath = "$PSScriptRoot\bin\fastchess.exe"
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "harness_common.ps1")
+
+# Per-engine Threads resolve to $Threads unless overridden. The game slot must
+# hold the larger of the two, so the core arithmetic uses max(ThreadsA,ThreadsB).
+if ($null -eq $ThreadsA) { $ThreadsA = $Threads }
+if ($null -eq $ThreadsB) { $ThreadsB = $Threads }
+if ($ThreadsA -lt 1 -or $ThreadsB -lt 1) { throw "-ThreadsA/-ThreadsB must be >= 1." }
+$maxThreads = [Math]::Max($ThreadsA, $ThreadsB)
+
+$concurrencyInfo = Resolve-HarnessConcurrency -Requested $Concurrency -ThreadsPerGame $maxThreads
+$Concurrency = $concurrencyInfo.Concurrency
+$AffinityCpus = Get-HarnessAffinityCpuList -Concurrency $Concurrency -ThreadsPerGame $maxThreads
+$Seed = New-HarnessSeed -Requested $Seed
+
+# AFFINITY vs THREADS (2026-07-24): fastchess 1.8.0 `-use-affinity` binds each
+# GAME to a single core regardless of the engine Threads option — verified by
+# direct core sampling: Threads=4 concurrency=3 pinned only 3 cores (4 engine
+# threads crammed onto 1), starving every multi-thread search and corrupting the
+# 8.13(d) SmpVariant comparison (VarA read -100 purely from starvation). At
+# Threads=1 the one-core-per-game rule is exactly right and the explicit list
+# still removes the Zen-3 CCX placement bias, so it stays. At Threads>1 the OS
+# scheduler spreads the pool across cores far better than fastchess's broken
+# pinning (sampled ~9 vs 3 busy cores), so `-use-affinity` is dropped and the
+# Threads>1 null MUST be recalibrated to confirm the unpinned pool stays centred.
+if ($maxThreads -gt 1) {
+    $affinityArgs = @()
+    Write-Host "AFFINITY: -use-affinity DROPPED for Threads>1 (fastchess 1.8.0 pins 1 core/game, which starves multi-thread engines). OS-scheduled across all physical cores. Null-calibrate at this Threads before trusting a verdict." -ForegroundColor Yellow
+} else {
+    $affinityArgs = @('-use-affinity', $AffinityCpus)
+}
+
+if ($Mode -eq "calibrate" -or $Mode -eq "fixed") {
+    if ($Games -lt 2 -or ($Games % 2) -ne 0) { throw "-Games must be a positive even number." }
+    if ($CalibrationTolerance -le 0) { throw "-CalibrationTolerance must be positive." }
+    if ($ThreadsA -ne $ThreadsB) { throw "Calibration must be symmetric: -ThreadsA ($ThreadsA) must equal -ThreadsB ($ThreadsB)." }
+}
 
 # Resolve SPRT bounds from mode unless explicitly overridden.
 if ($null -eq $Elo0) { $Elo0 = if ($Mode -eq "simplify") { -5 } else { 0 } }
@@ -150,42 +237,220 @@ foreach ($p in @($EngineA, $EngineB, $Book)) {
 
 $EngineA = (Resolve-Path $EngineA).Path
 $EngineB = (Resolve-Path $EngineB).Path
+$Book    = (Resolve-Path $Book).Path
+
+$shaA = Get-HarnessSha256 $EngineA
+$shaB = Get-HarnessSha256 $EngineB
+if ($Mode -eq "calibrate" -and $shaA -ne $shaB) {
+    throw "Calibration requires byte-identical engine binaries (SHA-256 differs)."
+}
+if ($Mode -ne "calibrate" -and $shaA -eq $shaB) {
+    # 8.13(d): identical binaries ARE legitimate when the two sides differ by
+    # UCI options (the SmpVariant arms) OR by Threads (the 4T-vs-1T tie-break) —
+    # running one binary is strictly better than two, since it removes the
+    # ~0.36% per-build PGO offset from the measurement. Refuse only when the
+    # binary, the options AND the thread counts all match, because then the
+    # "test" really is a null dressed as an SPRT.
+    $sameOptions = (($OptionsA -join '|') -eq ($OptionsB -join '|'))
+    if ($sameOptions -and $ThreadsA -eq $ThreadsB) {
+        throw "Identical binaries, options AND Threads require -Mode calibrate; an SPRT centered around 0 is not a valid null calibration."
+    }
+    Write-Host "NOTE: same binary on both sides, differing only by UCI options -" -ForegroundColor Yellow
+    Write-Host "      A: $($OptionsA -join ', ')   B: $($OptionsB -join ', ')" -ForegroundColor Yellow
+}
+$fcInfo = Assert-AffinityFastchess -Path $fastchess
+
+# Book format auto-detected from the extension (.epd -> format=epd, else pgn),
+# so -Book can point at either the UHO EPD or a legacy PGN book.
+$bookFormat = if ([System.IO.Path]::GetExtension($Book) -ieq ".epd") { "epd" } else { "pgn" }
 
 $resultsDir = Join-Path $PSScriptRoot "results"
 New-Item -ItemType Directory -Force -Path $resultsDir | Out-Null
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
 $pgnOut    = Join-Path $resultsDir "sprt_${NameA}_vs_${NameB}_${timestamp}.pgn"
+$logOut    = Join-Path $resultsDir "sprt_${NameA}_vs_${NameB}_${timestamp}.log"
+$manifestPath = [System.IO.Path]::ChangeExtension($pgnOut, ".manifest.txt")
+
+# 9.7: copy both engines' provenance manifests (written by build_test.ps1 next
+# to each binary) into the result dir, so the result is permanently
+# self-describing: which SHA vs which SHA, both bench fingerprints, dirty
+# flags. Warn-not-fail on absence — pre-9.7 binaries have no manifest.
+# Local-only: tools/results/ is gitignored; nothing here reaches a release.
+foreach ($pair in @(@($EngineA, $NameA), @($EngineB, $NameB))) {
+    $manifest = [System.IO.Path]::ChangeExtension($pair[0], ".json")
+    if (Test-Path $manifest) {
+        Copy-Item $manifest (Join-Path $resultsDir "sprt_${NameA}_vs_${NameB}_${timestamp}.$($pair[1]).manifest.json") -Force
+    } else {
+        Write-Host "NOTE: no manifest next to $(Split-Path $pair[0] -Leaf) (pre-9.7 build) — result will lack provenance for $($pair[1])." -ForegroundColor Yellow
+    }
+}
+
+# 8.10a COMPILER-EQUALITY GUARD (2026-07-22) - the toolchain-pin analogue for
+# BINARIES. A rustc change between building engine A and engine B folds the
+# compiler delta into the measured Elo, and no null pair can see it: a null
+# runs ONE binary against itself, so both sides always share a compiler.
+#
+# This is not hypothetical. The 9.1 bump (1.97.0 -> 1.97.1) landed 2026-07-19
+# 21:19, AFTER p82a-nocheckext was built. Every gate before that split reads
+# -5.68..+30.75; the three run after it, all candidate-1.97.1 vs
+# baseline-1.97.0, read -8.68 / -8.22 / -7.37. Tight clustering across three
+# unrelated subsystems is the signature of a per-binary constant, not of three
+# independently bad ideas. HARD-FAIL so it can never recur silently.
+$compilers = @{}
+foreach ($pair in @(@($EngineA, $NameA), @($EngineB, $NameB))) {
+    $manifest = [System.IO.Path]::ChangeExtension($pair[0], ".json")
+    if (Test-Path $manifest) {
+        $compilers[$pair[1]] = (Get-Content $manifest -Raw | ConvertFrom-Json).rustc
+    } else {
+        Write-Warning ("No manifest for $($pair[1]) - compiler equality NOT checkable. " +
+            "Rebuild it with tools/build_test.ps1 before trusting a small verdict.")
+    }
+}
+if ($compilers.Count -eq 2) {
+    $cA = $compilers[$NameA]; $cB = $compilers[$NameB]
+    if ($cA -ne $cB) {
+        throw ("COMPILER MISMATCH - this match would measure the compiler, not the change.`n" +
+               "  $NameA : $cA`n  $NameB : $cB`n" +
+               "Rebuild BOTH engines with the pinned toolchain (rust-toolchain.toml) " +
+               "via tools/build_test.ps1, then re-run.")
+    }
+    Write-Host "  Compiler equality OK: $cA"
+}
+
+$repoSha = (git rev-parse HEAD 2>$null)
+if (-not $repoSha) { $repoSha = "n/a" } else { $repoSha = $repoSha.Trim() }
+@(
+    "mode:            $Mode"
+    "engineA:         $NameA = $EngineA"
+    "engineA_sha256:  $shaA"
+    "engineB:         $NameB = $EngineB"
+    "engineB_sha256:  $shaB"
+    "repo_revision:   $repoSha"
+    "test_design:     $(if ($Mode -eq 'calibrate') { "fixed ${Games}-game null; tolerance +/-${CalibrationTolerance} nElo" } else { "SPRT elo0=$Elo0 elo1=$Elo1 alpha=$Alpha beta=$Beta model=normalized" })"
+    "time_control:    $tcLabel; timemargin=${TimeMargin}ms"
+    "hash_mb:         $Hash"
+    "threads:         $(if ($ThreadsA -eq $ThreadsB) { $ThreadsA } else { "$NameA=$ThreadsA $NameB=$ThreadsB" })"
+    "concurrency:     $Concurrency"
+    "physical_cores:  $($concurrencyInfo.PhysicalCores)"
+    "affinity_cpus:   $(if ($maxThreads -gt 1) { "(dropped: Threads>1, fastchess 1.8.0 1-core/game starves multi-thread; OS-scheduled)" } else { $AffinityCpus })"
+    "book:            $Book"
+    "book_sha256:     $(Get-HarnessSha256 $Book)"
+    "opening_order:   random"
+    "opening_seed:    $Seed"
+    "optionsA:        $(if ($OptionsA) { $OptionsA -join ' ' } else { '(none)' })"
+    "optionsB:        $(if ($OptionsB) { $OptionsB -join ' ' } else { '(none)' })"
+    "fastchess:       $($fcInfo.Text)"
+    "fastchess_sha256: $(Get-HarnessSha256 $fastchess)"
+    "started_utc:     $((Get-Date).ToUniversalTime().ToString('u'))"
+) | Set-Content -Path $manifestPath -Encoding utf8
 
 Write-Host ""
 Write-Host "======================================================="
 Write-Host "  SPRT ($Mode): $NameA  vs  $NameB"
-Write-Host "  H0: elo<=$Elo0   H1: elo>=$Elo1   alpha=$Alpha  beta=$Beta  (nElo)"
+if ($Mode -eq "calibrate") {
+    Write-Host "  Fixed null calibration: $Games games; 95% nElo CI must fit inside +/-$CalibrationTolerance"
+} else {
+    Write-Host "  H0: elo<=$Elo0   H1: elo>=$Elo1   alpha=$Alpha  beta=$Beta  (nElo)"
+}
 Write-Host "  TC: $tcLabel   Margin: ${TimeMargin} ms   Hash: ${Hash} MB   Conc: $Concurrency"
+Write-Host "  CPUs: $AffinityCpus"
 Write-Host "  Book: $(Split-Path $Book -Leaf)"
-Write-Host "  Runner: $fastchess"
+Write-Host "  Runner: $($fcInfo.Text)"
+Write-Host "  Manifest: $manifestPath"
 Write-Host "  PGN:  $pgnOut"
+Write-Host "  Log:  $logOut  (full output; console shows report blocks only)"
 Write-Host "======================================================="
 Write-Host ""
+
+# Per-engine UCI options (8.10a): "Name=Value" pairs become option.Name=Value
+# so ONE binary can be A/B-tested on a knob without a rebuild. Empty by
+# default, so the emitted fastchess command is byte-identical to before -
+# no null-pair re-calibration is required for the default path.
+$optArgsA = @($OptionsA | ForEach-Object { "option.$_" })
+$optArgsB = @($OptionsB | ForEach-Object { "option.$_" })
+
+$rounds = if ($Mode -eq "calibrate" -or $Mode -eq "fixed") { [int]($Games / 2) } else { 50000 }
+$sprtArgs = if ($Mode -eq "calibrate" -or $Mode -eq "fixed") {
+    @()
+} else {
+    @('-sprt', "elo0=$Elo0", "elo1=$Elo1", "alpha=$Alpha", "beta=$Beta", 'model=normalized')
+}
+
+# Console-noise filter (2026-07-16): the per-game 'Started game …' / normal
+# 'Finished game … {Draw/wins by adjudication}' / 'Score of …' lines bury the
+# periodic Elo/LLR report blocks and make it impossible to scroll back through
+# how the result progressed. So: TEE the FULL stream to $logOut (nothing lost —
+# grep/scroll it for detail), and on the CONSOLE keep everything EXCEPT that
+# per-game noise. Keep-by-default is deliberate — report blocks, errors, and
+# any time-loss / disconnect / illegal 'Finished game' lines (the SPRT canaries)
+# all still print. `-ratinginterval 20` reports state every 20 games.
+$dropNoise = {
+    param($l)
+    $l = "$l"
+    if ($l -match '^\s*Started game \d+ of') { return $true }
+    if ($l -match '^\s*Score of .+ vs .+:\s*\d+ - \d+ - \d+') { return $true }
+    # Drop only NORMAL game finishes; keep anomalies (time loss / disconnect /
+    # illegal / crash / forfeit) so a poisoned SPRT is still visible on console.
+    if (($l -match '^\s*Finished game \d') -and
+        ($l -notmatch '(?i)(on time|timeout|disconnect|illegal|crash|forfeit|stall)')) { return $true }
+    return $false
+}
 
 # NOTE: flag names follow the fastchess man page (man.md). If your installed
 # fastchess build rejects a flag, run `fastchess --help` and adjust here.
 & $fastchess `
-    -engine "cmd=$EngineA" "name=$NameA" "option.Hash=$Hash" "option.Threads=1" `
-    -engine "cmd=$EngineB" "name=$NameB" "option.Hash=$Hash" "option.Threads=1" `
+    -engine "cmd=$EngineA" "name=$NameA" "option.Hash=$Hash" "option.Threads=$ThreadsA" @optArgsA `
+    -engine "cmd=$EngineB" "name=$NameB" "option.Hash=$Hash" "option.Threads=$ThreadsB" @optArgsB `
     -each $tcArg "timemargin=$TimeMargin" `
-    -openings "file=$Book" format=pgn order=random `
-    -rounds 50000 -games 2 -repeat `
+    -openings "file=$Book" "format=$bookFormat" order=random `
+    -rounds $rounds -games 2 -repeat `
     -concurrency $Concurrency `
-    -sprt "elo0=$Elo0" "elo1=$Elo1" "alpha=$Alpha" "beta=$Beta" model=normalized `
+    @affinityArgs `
+    -srand $Seed `
+    -ratinginterval 20 `
+    @sprtArgs `
     -draw movenumber=40 movecount=8 score=10 `
     -resign movecount=3 score=600 twosided=true `
     -pgnout "file=$pgnOut" `
-    -output format=fastchess   # console ticker format (not the PGN path)
+    -output format=fastchess 2>&1 |    # console ticker format (not the PGN path)
+    Tee-Object -FilePath $logOut |
+    Where-Object { -not (& $dropNoise $_) }
+# $LASTEXITCODE reflects fastchess (Tee-Object/Where-Object are cmdlets and do
+# not touch it), so the exit check below stays valid.
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
     Write-Error "fastchess exited with code $LASTEXITCODE — no games were played."
 } else {
+    Assert-NoAffinityFailure -LogPath $logOut
     Write-Host ""
-    Write-Host "Match finished. PGN saved to: $pgnOut"
+    Write-Host "Match finished. PGN: $pgnOut"
+    Write-Host "Full console log (all per-game lines): $logOut"
+
+    if ($Mode -eq "calibrate") {
+        $calibrationAnomaly = Select-String -LiteralPath $logOut `
+            -Pattern '(?i)(loses on time|timeouts:\s*[1-9]|crashed:\s*[1-9]|disconnect|illegal move)' `
+            -ErrorAction SilentlyContinue
+        if ($calibrationAnomaly) {
+            throw "Calibration contained a timeout/crash/protocol anomaly and is invalid. See '$logOut'."
+        }
+
+        $eloLine = Select-String -LiteralPath $logOut `
+            -Pattern '\bnElo:\s*(?<estimate>[+-]?\d+(?:\.\d+)?)\s*\+/-\s*(?<error>\d+(?:\.\d+)?)' |
+            Select-Object -Last 1
+        if (-not $eloLine) { throw "Could not parse the final Elo confidence interval from '$logOut'." }
+
+        $estimate = [double]$eloLine.Matches[0].Groups['estimate'].Value
+        $error = [double]$eloLine.Matches[0].Groups['error'].Value
+        $lower = $estimate - $error
+        $upper = $estimate + $error
+        $passes = $lower -ge -$CalibrationTolerance -and $upper -le $CalibrationTolerance
+        Write-Host ""
+        Write-Host ("Calibration 95% nElo CI: [{0:F2}, {1:F2}]; required inside [-{2:F2}, +{2:F2}]" -f $lower, $upper, $CalibrationTolerance)
+        if ($passes) {
+            Write-Host "CALIBRATION PASS" -ForegroundColor Green
+        } else {
+            throw "CALIBRATION INCONCLUSIVE/FAIL: the confidence interval does not establish the requested bias bound. Increase -Games only after resolving anomalies."
+        }
+    }
 }

@@ -11,6 +11,7 @@
 //! cached for the process lifetime, so positions that never reach KPK (e.g. the
 //! `bench` suite) never pay for it.
 
+use crate::infra;
 use std::sync::OnceLock;
 
 // Result flags, OR-combined while classifying successors.
@@ -40,14 +41,14 @@ fn bit(sq: usize) -> u64 {
 
 #[inline]
 fn dist(a: usize, b: usize) -> usize {
-    let dr = (rank_of(a) as i32 - rank_of(b) as i32).abs();
-    let df = ((a % 8) as i32 - (b % 8) as i32).abs();
-    dr.max(df) as usize
+    let dr = (infra::to_i32(rank_of(a)) - infra::to_i32(rank_of(b))).abs();
+    let df = (infra::to_i32(a % 8) - infra::to_i32(b % 8)).abs();
+    infra::to_usize(dr.max(df))
 }
 
 fn king_attacks(sq: usize) -> u64 {
-    let r = rank_of(sq) as i32;
-    let f = (sq % 8) as i32;
+    let r = infra::to_i32(rank_of(sq));
+    let f = infra::to_i32(sq % 8);
     let mut bb = 0u64;
     for dr in -1..=1 {
         for df in -1..=1 {
@@ -57,7 +58,7 @@ fn king_attacks(sq: usize) -> u64 {
             let nr = r + dr;
             let nf = f + df;
             if (0..8).contains(&nr) && (0..8).contains(&nf) {
-                bb |= bit((nr * 8 + nf) as usize);
+                bb |= bit(infra::to_usize(nr * 8 + nf));
             }
         }
     }
@@ -65,14 +66,14 @@ fn king_attacks(sq: usize) -> u64 {
 }
 
 fn white_pawn_attacks(sq: usize) -> u64 {
-    let r = rank_of(sq) as i32;
-    let f = (sq % 8) as i32;
+    let r = infra::to_i32(rank_of(sq));
+    let f = infra::to_i32(sq % 8);
     let mut bb = 0u64;
     for df in [-1i32, 1] {
         let nr = r + 1;
         let nf = f + df;
         if (0..8).contains(&nr) && (0..8).contains(&nf) {
-            bb |= bit((nr * 8 + nf) as usize);
+            bb |= bit(infra::to_usize(nr * 8 + nf));
         }
     }
     bb

@@ -11,6 +11,13 @@ use super::square::Square;
 #[derive(Copy, Clone, PartialEq, Eq, Default, Hash, Debug)]
 pub struct Move(pub u16);
 
+// 9.0 KEEP-UNSAFE (measured): a plain `[Move; 256]` with `Move::NULL` init
+// (and the analogous ScoredMove/BadCapture lists) was tried on 2026-07-19 and
+// cost −10% NPS on both the pext and magic builds — the per-node
+// initialization of ~5 KB of list memory is exactly what the MaybeUninit
+// pattern avoids. The unsafe is confined to `as_slice`, whose invariant is
+// local: only the `..len` prefix is exposed and every element below `len` was
+// written by `push`.
 pub struct MoveList {
     moves: [MaybeUninit<Move>; 256],
     len: usize,
@@ -20,7 +27,7 @@ impl MoveList {
     #[inline(always)]
     pub fn new() -> Self {
         Self {
-            moves: uninit_array(),
+            moves: [const { MaybeUninit::uninit() }; 256],
             len: 0,
         }
     }
@@ -49,8 +56,8 @@ impl MoveList {
 
     #[inline(always)]
     pub fn as_slice(&self) -> &[Move] {
-        // Only the prefix below `len` is ever exposed and each element is
-        // initialized by `push`.
+        // SAFETY: only the prefix below `len` is exposed and each element
+        // below `len` was initialized by `push`.
         unsafe { slice::from_raw_parts(self.moves.as_ptr().cast::<Move>(), self.len) }
     }
 }
@@ -81,12 +88,6 @@ impl<'a> IntoIterator for &'a MoveList {
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
-}
-
-#[inline(always)]
-fn uninit_array<T, const N: usize>() -> [MaybeUninit<T>; N] {
-    // An array of `MaybeUninit<T>` is valid without initializing its elements.
-    unsafe { MaybeUninit::<[MaybeUninit<T>; N]>::uninit().assume_init() }
 }
 
 // Move flag constants (upper 4 bits of a Move)

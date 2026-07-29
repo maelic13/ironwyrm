@@ -38,11 +38,16 @@
     concurrency) to reduce scheduling jitter for the time-sensitive old
     engines.
 
+.PARAMETER Seed
+    Opening randomization seed. Default 0 generates and reports a seed.
+
 .PARAMETER Hash
     Hash size in MB for every engine. Default 64.
 
 .PARAMETER Book
-    Opening book PGN. Default tools\books\SuperGM_4mvs.pgn.
+    Opening book, PGN or EPD (format auto-detected from the extension).
+    Default tools\books\UHO_Lichess_4852_v1.epd; use IM_4mvs.pgn for a
+    CCRL-comparable balanced-book run.
 
 .PARAMETER FastchessPath
     Path to fastchess.exe. Default tools\bin\fastchess.exe (or found on PATH).
@@ -59,13 +64,20 @@ param(
     [int]$Rounds = 150,
     [int]$TimeMargin = 1000,
     [int]$Concurrency = 8,
+    [int]$Seed = 0,
     [int]$Hash = 64,
-    [string]$Book = "$PSScriptRoot\books\SuperGM_4mvs.pgn",
+    [string]$Book = "$PSScriptRoot\books\UHO_Lichess_4852_v1.epd",
     [string]$FastchessPath = "$PSScriptRoot\bin\fastchess.exe",
     [string]$EnginesDir = "D:\chess\engines"
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "harness_common.ps1")
+
+$concurrencyInfo = Resolve-HarnessConcurrency -Requested $Concurrency
+$Concurrency = $concurrencyInfo.Concurrency
+$AffinityCpus = Get-HarnessAffinityCpuList -Concurrency $Concurrency
+$Seed = New-HarnessSeed -Requested $Seed
 
 # Locate fastchess.
 $fastchess = $FastchessPath
@@ -78,6 +90,14 @@ if (-not (Test-Path $fastchess)) {
     }
 }
 if (-not (Test-Path $Book)) { throw "Not found: $Book" }
+$Book = (Resolve-Path $Book).Path
+$fcInfo = Assert-AffinityFastchess -Path $fastchess
+
+# Book format auto-detected from the extension (.epd -> format=epd, else pgn).
+# NOTE: gauntlet numbers on the UHO book are for RELATIVE progress (release vs
+# prior release / siblings). For a CCRL-comparable absolute estimate, pass
+# -Book "$PSScriptRoot\books\IM_4mvs.pgn" — CCRL uses balanced openings.
+$bookFormat = if ([System.IO.Path]::GetExtension($Book) -ieq ".epd") { "epd" } else { "pgn" }
 
 # Candidate (gauntlet seed) + field, mirroring engines_fast.lbe.
 $rarog22 = Join-Path $EnginesDir "rarog-v2.2.0-windows-pext-pgo.exe"
@@ -97,6 +117,7 @@ $resultsDir = Join-Path $PSScriptRoot "results"
 New-Item -ItemType Directory -Force -Path $resultsDir | Out-Null
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
 $pgnOut    = Join-Path $resultsDir "gauntlet_rarog220_${timestamp}.pgn"
+$logOut    = [System.IO.Path]::ChangeExtension($pgnOut, ".log")
 
 Write-Host ""
 Write-Host "======================================================="
@@ -104,7 +125,8 @@ Write-Host "  GAUNTLET: Rarog 2.2.0  vs  field (9 opponents)"
 Write-Host "  TC: tc=$TC   Margin: ${TimeMargin} ms   Hash: ${Hash} MB   Conc: $Concurrency"
 Write-Host "  Rounds: $Rounds (games=2 -> $($Rounds * 2) games/opponent, $($Rounds * 2 * 9) total)"
 Write-Host "  Book: $(Split-Path $Book -Leaf)"
-Write-Host "  Runner: $fastchess"
+Write-Host "  Seed: $Seed   CPUs: $AffinityCpus"
+Write-Host "  Runner: $($fcInfo.Text)"
 Write-Host "  PGN:  $pgnOut"
 Write-Host "======================================================="
 Write-Host ""
@@ -121,18 +143,22 @@ Write-Host ""
     -engine "cmd=$critter" "name=Critter 1.6a" "option.Hash=$Hash" "option.Threads=1" `
     -engine "cmd=$fruit" "name=Fruit 2.1" "option.Hash=$Hash" "option.Threads=1" `
     -each "tc=$TC" "timemargin=$TimeMargin" `
-    -openings "file=$Book" format=pgn order=random `
+    -openings "file=$Book" "format=$bookFormat" order=random `
     -tournament gauntlet -rounds $Rounds -games 2 -repeat `
     -concurrency $Concurrency `
+    -use-affinity $AffinityCpus `
+    -srand $Seed `
     -draw movenumber=40 movecount=8 score=10 `
     -resign movecount=3 score=600 twosided=true `
     -pgnout "file=$pgnOut" `
-    -output format=fastchess
+    -output format=fastchess 2>&1 |
+    Tee-Object -FilePath $logOut
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
     Write-Error "fastchess exited with code $LASTEXITCODE — no games were played."
 } else {
+    Assert-NoAffinityFailure -LogPath $logOut
     Write-Host ""
     Write-Host "Gauntlet finished. PGN: $pgnOut"
     Write-Host "Next: ordo-win64.exe -p `"$pgnOut`" -o ratings.txt -a 2780 -A `"Fruit 2.1`""

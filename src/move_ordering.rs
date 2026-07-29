@@ -1,6 +1,7 @@
 use std::{mem::MaybeUninit, slice};
 
 use crate::board::{Move, Piece};
+use crate::infra;
 
 pub const HISTORY_MAX: i32 = 16_384;
 pub const CAP_HISTORY_MAX: i32 = 16_384;
@@ -18,6 +19,9 @@ pub(crate) struct ScoredMove {
     pub quiet_history: i32,
 }
 
+// 9.0 KEEP-UNSAFE (measured): see MoveList in board/moves.rs — plain
+// initialized arrays cost −10% NPS (2026-07-19). Unsafe confined to the
+// slice accessors with a local prefix-initialization invariant.
 pub(crate) struct ScoredMoveList {
     moves: [MaybeUninit<ScoredMove>; 256],
     len: usize,
@@ -27,7 +31,7 @@ impl ScoredMoveList {
     #[inline(always)]
     pub fn new() -> Self {
         Self {
-            moves: uninit_array(),
+            moves: [const { MaybeUninit::uninit() }; 256],
             len: 0,
         }
     }
@@ -43,7 +47,7 @@ impl ScoredMoveList {
         self.moves[self.len].write(ScoredMove {
             mv,
             score,
-            see: see.clamp(i16::MIN as i32, i16::MAX as i32) as i16,
+            see: crate::infra::saturating_i16(see),
             quiet_history,
         });
         self.len += 1;
@@ -56,7 +60,7 @@ impl ScoredMoveList {
 
     #[inline(always)]
     pub fn as_mut_slice(&mut self) -> &mut [ScoredMove] {
-        // Only the initialized prefix is exposed.
+        // SAFETY: only the initialized prefix below `len` is exposed.
         unsafe { slice::from_raw_parts_mut(self.moves.as_mut_ptr().cast::<ScoredMove>(), self.len) }
     }
 }
@@ -77,7 +81,7 @@ impl BadCaptureList {
     #[inline(always)]
     pub fn new() -> Self {
         Self {
-            items: uninit_array(),
+            items: [const { MaybeUninit::uninit() }; 256],
             len: 0,
         }
     }
@@ -95,24 +99,36 @@ impl BadCaptureList {
 
     #[inline(always)]
     pub fn as_slice(&self) -> &[BadCapture] {
-        // Only the initialized prefix is exposed.
+        // SAFETY: only the initialized prefix below `len` is exposed.
         unsafe { slice::from_raw_parts(self.items.as_ptr().cast::<BadCapture>(), self.len) }
     }
 }
 
+/// Selection step: move the highest-scored entry of `moves[index..]` into
+/// `moves[index]` and return it.
+///
+/// 10.3(8d): scans a `split_at_mut` tail by iterator and carries the running
+/// best SCORE in a local. The old form indexed `moves[current]` and
+/// `moves[best]` per iteration — two loads where one suffices, plus an index
+/// LLVM cannot bound-check away (`best` is only provably `< len` by induction
+/// through the loop). Ties still resolve to the earliest entry: the comparison
+/// stays strictly `>`.
 pub(crate) fn pick_next(moves: &mut [ScoredMove], index: usize) -> ScoredMove {
-    let mut best = index;
-    for current in index + 1..moves.len() {
-        if moves[current].score > moves[best].score {
-            best = current;
+    let tail = &mut moves[index..];
+    let mut best = 0;
+    let mut best_score = tail[0].score;
+    for (offset, candidate) in tail.iter().enumerate().skip(1) {
+        if candidate.score > best_score {
+            best = offset;
+            best_score = candidate.score;
         }
     }
-    moves.swap(index, best);
-    moves[index]
+    tail.swap(0, best);
+    tail[0]
 }
 
 pub(crate) fn diversify_root_scores(moves: &mut [ScoredMove], offset: usize) {
-    moves.sort_unstable_by(|left, right| right.score.cmp(&left.score));
+    moves.sort_unstable_by_key(|m| std::cmp::Reverse(m.score));
     if offset < moves.len() {
         moves[offset].score = moves[0].score.saturating_add(1_000_000);
     }
@@ -121,35 +137,93 @@ pub(crate) fn diversify_root_scores(moves: &mut [ScoredMove], offset: usize) {
 pub(crate) fn update_hist_entry(entry: &mut i16, bonus: i32, max_value: i32) {
     let current = *entry as i32;
     let updated = current + bonus - current * bonus.abs() / max_value;
-    *entry = updated.clamp(i16::MIN as i32, i16::MAX as i32) as i16;
+    *entry = crate::infra::saturating_i16(updated);
 }
 
-pub(crate) fn history_bonus(depth: i32) -> i32 {
-    (depth * depth + 2 * depth).min(1_200)
-}
-
+/// Flat index into a continuation-history table.
+///
+/// 9.0a: the inputs are structurally bounded — `piece`/`prev_piece` come from
+/// a 6-variant `Piece` cast and the squares from `Square::index()` (masked to
+/// 0..=63), so the result is always < `CONT_SIZE`. The `.min()` remains as the
+/// release-mode backstop (it keeps the function total), but it used to be the
+/// ONLY thing here: an out-of-range index was silently folded into the last
+/// bucket, so a logic bug would quietly corrupt one history cell instead of
+/// surfacing. The `debug_assert!`s now state the invariant and fail loudly in
+/// debug and under `cargo test`.
+///
+/// NB `CONT_SIZE` (147,456) and `PIECE_TO_SIZE` (384) are NOT powers of two,
+/// so `& (SIZE - 1)` is *not* a valid substitute for `.min()` here — masking
+/// would remap valid in-range indices (65,536 would fold to 0). Only
+/// `pawn_history_index`'s 4,096-entry slot table may use a mask.
 pub(crate) fn cont_index(prev_piece: usize, prev_to: usize, piece: usize, to: usize) -> usize {
+    debug_assert!(prev_piece < 6 && piece < 6, "piece index out of range");
+    debug_assert!(prev_to < 64 && to < 64, "square index out of range");
     (((prev_piece * 64 + prev_to) * 6 + piece) * 64 + to).min(CONT_SIZE - 1)
 }
 
+/// Node-invariant prefix of [`cont_index`]: the row base for a
+/// `(prev_piece, prev_to)` pair, such that
+/// `cont_index(pp, pt, piece, to) == (cont_row_base(pp, pt) + piece_to_index(piece, to)).min(CONT_SIZE - 1)`
+/// (equivalence pinned by a test below). Move scoring resolves this once per
+/// node instead of once per quiet move — the 8.12(g2) hoist from the Basilisk
+/// cross-review (its 8.7.6(b+d), +3.03% NPS there).
+pub(crate) fn cont_row_base(prev_piece: usize, prev_to: usize) -> usize {
+    debug_assert!(prev_piece < 6, "piece index out of range");
+    debug_assert!(prev_to < 64, "square index out of range");
+    (prev_piece * 64 + prev_to) * PIECE_TO_SIZE
+}
+
+/// Node-invariant prefix of [`pawn_history_index`]: the pawn-key row base,
+/// same per-node hoist as [`cont_row_base`].
+pub(crate) fn pawn_row_base(pawn_key: u64) -> usize {
+    (infra::index(pawn_key) & (PAWN_HISTORY_SIZE - 1)) * PIECE_TO_SIZE
+}
+
+/// Flat `(piece, square)` index. Same reasoning as [`cont_index`].
 pub(crate) fn piece_to_index(piece: usize, to: usize) -> usize {
+    debug_assert!(piece < 6, "piece index out of range");
+    debug_assert!(to < 64, "square index out of range");
     (piece * 64 + to).min(PIECE_TO_SIZE - 1)
 }
 
 pub(crate) fn pawn_history_index(pawn_key: u64, piece: usize, to: usize) -> usize {
-    let slot = pawn_key as usize & (PAWN_HISTORY_SIZE - 1);
+    let slot = infra::index(pawn_key) & (PAWN_HISTORY_SIZE - 1);
     slot * PIECE_TO_SIZE + piece_to_index(piece, to)
-}
-
-#[inline(always)]
-fn uninit_array<T, const N: usize>() -> [MaybeUninit<T>; N] {
-    // An array of `MaybeUninit<T>` is valid without initializing its elements.
-    unsafe { MaybeUninit::<[MaybeUninit<T>; N]>::uninit().assume_init() }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The hoisted row-base + per-move offset decomposition must agree with
+    /// the original single-shot index everywhere — this is what makes the
+    /// 8.12(g2) scoring hoist a pure refactor.
+    #[test]
+    fn row_base_decomposition_matches_cont_and_pawn_indexes() {
+        for prev_piece in 0..6 {
+            for prev_to in (0..64).step_by(7) {
+                for piece in 0..6 {
+                    for to in (0..64).step_by(5) {
+                        assert_eq!(
+                            (cont_row_base(prev_piece, prev_to) + piece_to_index(piece, to))
+                                .min(CONT_SIZE - 1),
+                            cont_index(prev_piece, prev_to, piece, to),
+                        );
+                    }
+                }
+            }
+        }
+        for key in [0u64, 1, 0xFFFF, 0xDEAD_BEEF_CAFE_F00D, u64::MAX] {
+            for piece in 0..6 {
+                for to in (0..64).step_by(9) {
+                    assert_eq!(
+                        pawn_row_base(key) + piece_to_index(piece, to),
+                        pawn_history_index(key, piece, to),
+                    );
+                }
+            }
+        }
+    }
 
     #[test]
     fn bad_capture_struct_stays_shrunk() {

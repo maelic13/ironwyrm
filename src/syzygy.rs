@@ -188,6 +188,9 @@ pub fn initialize(path: &str) -> usize {
 
     if path.is_empty() {
         let empty = CString::new("").expect("empty string has no NUL");
+        // SAFETY: FFI into Fathom. `empty` outlives the call and `as_ptr`
+        // yields a valid NUL-terminated C string; `tb_init` copies what it
+        // needs and does not retain the pointer.
         unsafe {
             tb_init(empty.as_ptr());
         }
@@ -202,8 +205,13 @@ pub fn initialize(path: &str) -> usize {
         return 0;
     };
 
+    // SAFETY: FFI into Fathom. `c_path` is a live NUL-terminated CString that
+    // outlives the call; `tb_init` does not retain the pointer.
     let ok = unsafe { tb_init(c_path.as_ptr()) };
     let largest = if ok {
+        // SAFETY: reading an `extern "C"` global that `tb_init` just
+        // initialised; single-threaded at this point (guarded by the path
+        // mutex held by the caller).
         unsafe { TB_LARGEST as usize }
     } else {
         0
@@ -257,6 +265,8 @@ pub fn probe_wdl(board: &Board, use_rule50: bool) -> Option<Wdl> {
     }
 
     let pos = tb_position(board);
+    // SAFETY: FFI into Fathom with by-value bitboards from `tb_position`; no
+    // pointers are passed and the tables were initialised by `tb_init`.
     let result = unsafe {
         tb_probe_wdl_impl(
             pos.white,
@@ -280,6 +290,7 @@ pub fn probe_root(board: &Board, use_rule50: bool) -> Option<RootProbe> {
     }
 
     let pos = tb_position(board);
+    // SAFETY: FFI into Fathom, by-value position only (see `probe_wdl`).
     let result = unsafe {
         tb_probe_root_impl(
             pos.white,
@@ -318,6 +329,8 @@ pub fn probe_root_moves(
 
     let pos = tb_position(board);
     let mut results = TbRootMovesRaw::default();
+    // SAFETY: FFI into Fathom. `results` is a live, default-initialised
+    // `TbRootMovesRaw` that outlives the call and is only written by Fathom.
     let dtz_ok = unsafe {
         tb_probe_root_dtz(
             pos.white,
@@ -340,6 +353,7 @@ pub fn probe_root_moves(
     let used_dtz = dtz_ok != 0;
     if !used_dtz {
         results = TbRootMovesRaw::default();
+        // SAFETY: see the DTZ probe above — same live `results` buffer.
         let wdl_ok = unsafe {
             tb_probe_root_wdl(
                 pos.white,

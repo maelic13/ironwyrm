@@ -1,3 +1,4 @@
+use crate::infra;
 use std::fmt;
 use std::ops::{
     BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Mul, Not, Shl, Shr, Sub,
@@ -60,14 +61,14 @@ impl Bitboard {
     #[inline(always)]
     pub fn lsb(self) -> Square {
         debug_assert!(self.0 != 0);
-        Square(self.0.trailing_zeros() as u8)
+        Square(infra::to_u8(self.0.trailing_zeros()))
     }
 
     /// Index of the most significant set bit (square index).
     #[inline(always)]
     pub fn msb(self) -> Square {
         debug_assert!(self.0 != 0);
-        Square(63 - self.0.leading_zeros() as u8)
+        Square(63 - infra::to_u8(self.0.leading_zeros()))
     }
 
     /// Remove and return the LSB square (used in iteration).

@@ -1,0 +1,243 @@
+# Development CI (Phase 9.2).
+#
+# TRIGGERS: push to master (the release gate — master is what becomes a
+# release) and manual dispatch on any branch. Deliberately NOT on push to
+# development: the local dev loop already verifies fmt/clippy/tests/bench on
+# Windows x86-64 every commit, so per-commit CI there would mostly re-check
+# what is already known. Use the manual button before merging.
+#
+# Both triggers run the IDENTICAL job set. That is the point: a manual run is
+# only useful as a pre-merge check if it is a faithful preview of the master
+# gate. A subset would hand out false confidence.
+#
+# The toolchain is NOT specified here — rustup reads rust-toolchain.toml and
+# installs the pinned compiler (9.1). CI therefore builds with the exact same
+# rustc the developer does, which is the whole point of the pin.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+# A newer run supersedes an in-flight one on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: fmt + clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Show pinned toolchain
+        run: |
+          rustup show active-toolchain
+          rustc -vV
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: cargo fmt --check
+        run: cargo fmt --all -- --check
+
+      # The 9.0a/9.0b lint wall (deny on unsafe_op_in_unsafe_fn, the three cast
+      # lints, and eight more) only binds where it is actually run. This is what
+      # makes it structural rather than a local habit.
+      # Run per feature set on purpose. A single `--workspace` run compiles
+      # rarog ONCE with `texel` unified in (texel-tuner depends on it that
+      # way), so `#[cfg(not(feature = "texel"))]` paths would never be linted
+      # — and conversely, default-only runs never lint the texel code at all.
+      # That blind spot was real: writing this workflow surfaced five
+      # violations (4 casts + a needless Box allocation) that had been sitting
+      # unlinted in texel-gated code through the entire 9.0 clean-up.
+      - name: cargo clippy (default features)
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: cargo clippy (--features tune)
+        run: cargo clippy --all-targets --features tune -- -D warnings
+
+      - name: cargo clippy (--features diag)
+        run: cargo clippy --all-targets --features diag -- -D warnings
+
+      - name: cargo clippy (workspace — covers texel, xtask, texel-tuner)
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+  test:
+    name: test ${{ matrix.os }} / ${{ matrix.profile }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # macos-latest is arm64 — the only shipped platform that previously had
+        # NO coverage at all, and the one that exercises the AArch64 codegen
+        # path the three arm64 assets are built from. windows-11-arm and
+        # ubuntu-24.04-arm are covered by bench-fingerprint below: that job
+        # proves every shipped platform agrees on the node count, which is the
+        # cross-platform invariant that matters, and running the whole suite on
+        # three more ARM runners would be largely redundant codegen coverage.
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        profile: [debug, release]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Show pinned toolchain
+        shell: bash
+        run: |
+          rustup show active-toolchain
+          rustc -vV
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.profile }}
+
+      # The debug run is not redundant with release: every debug_assert! in
+      # infra's checked conversions, cont_index and piece_to_index compiles out
+      # of release entirely. That suite was silently DEAD until 9.0a revived it
+      # (stack overflow — no assert had ever executed), so it gets a real job.
+      # `-p rarog`, NOT `--workspace`: a workspace test run unifies features
+      # and silently switches the engine to `texel`, which bypasses the
+      # whole-eval cache and therefore changes the search path. The strength
+      # tests assert PRODUCTION behaviour, so they must run on production
+      # features. (Discovered building this workflow — `cargo test --workspace`
+      # fails at HEAD for exactly this reason, and did so before any of
+      # today's changes.)
+      - name: cargo test — engine, default features (${{ matrix.profile }})
+        shell: bash
+        run: |
+          if [ "${{ matrix.profile }}" = "release" ]; then
+            cargo test -p rarog --release
+          else
+            cargo test -p rarog
+          fi
+
+      - name: cargo test — tooling crates
+        shell: bash
+        run: cargo test -p xtask -p texel-tuner
+
+  bench-fingerprint:
+    name: bench ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux-x86-64
+            ext: ""
+          - os: windows-latest
+            label: windows-x86-64
+            ext: ".exe"
+          - os: ubuntu-24.04-arm
+            label: linux-arm64
+            ext: ""
+          - os: windows-11-arm
+            label: windows-arm64
+            ext: ".exe"
+          - os: macos-latest
+            label: macos-arm64
+            ext: ""
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Show pinned toolchain
+        shell: bash
+        run: |
+          rustup show active-toolchain
+          rustc -vV
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build release
+        run: cargo build --release
+
+      # NOTE: no expected value is hardcoded anywhere. The invariant checked in
+      # the next job is that all platforms AGREE, not that they produce some
+      # frozen number — bench output legitimately changes on every behavioural
+      # commit, and a hardcoded constant would need editing constantly until
+      # somebody just deleted the check. Cross-platform agreement, by contrast,
+      # must hold forever regardless of what we change.
+      - name: Run bench and record node count
+        shell: bash
+        run: |
+          echo bench | ./target/release/rarog${{ matrix.ext }} | tee bench.log
+          nodes=$(sed -n 's/.*Nodes searched *: *\([0-9][0-9]*\).*/\1/p' bench.log | head -1)
+          if [ -z "$nodes" ]; then
+            echo "::error::could not parse a node count out of bench output"
+            exit 1
+          fi
+          echo "${{ matrix.label }} $nodes" > "nodes-${{ matrix.label }}.txt"
+          echo "$nodes nodes on ${{ matrix.label }}"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: nodes-${{ matrix.label }}
+          path: nodes-${{ matrix.label }}.txt
+
+  bench-agreement:
+    name: cross-platform determinism
+    runs-on: ubuntu-latest
+    needs: bench-fingerprint
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: nodes-*
+          merge-multiple: true
+
+      # The single check local development CANNOT perform. Node count is
+      # decided by deterministic integer search logic, so every platform and
+      # architecture must reach the identical number. A disagreement is a real
+      # bug — an unsound unsafe block (17 remain), a data race in lazy SMP, or
+      # float non-determinism — never a benign platform quirk.
+      - name: All platforms must report the same node count
+        run: |
+          cat nodes-*.txt
+          counts=$(awk '{print $2}' nodes-*.txt | sort -u | wc -l)
+          if [ "$counts" -ne 1 ]; then
+            echo "::error::platforms disagree on bench node count — see the table above"
+            exit 1
+          fi
+          echo "all platforms agree: $(awk '{print $2}' nodes-*.txt | sort -u)"
+
+  features:
+    name: feature builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Show pinned toolchain
+        run: |
+          rustup show active-toolchain
+          rustc -vV
+
+      - uses: Swatinem/rust-cache@v2
+
+      # None of these are in the default build, so all three can rot unnoticed
+      # — and `tune` is what the SPSA runs on, so its rotting would be found at
+      # the worst possible moment.
+      - name: Build --features tune
+        run: cargo build --release --features tune
+
+      - name: Build --features diag
+        run: cargo build --release --features diag
+
+      - name: Build the texel tuner (uses --features texel)
+        run: cargo build --release -p texel-tuner
+
+      - name: Build xtask and benches
+        run: cargo build --release -p xtask --all-targets

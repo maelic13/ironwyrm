@@ -5,7 +5,14 @@ use rarog::board::{Board, generate_captures, generate_legal_moves, perft};
 use rarog::eval::Evaluator;
 
 const WARMUP: Duration = Duration::from_millis(150);
-const MEASURE: Duration = Duration::from_millis(750);
+// 9.7: N shorter samples instead of one 750 ms shot. A single sample on a
+// desktop is hostage to whatever the OS scheduler did during those 750 ms —
+// we have measured several-percent swings on IDENTICAL binaries — so one
+// number cannot distinguish a real 2% change from noise. The median resists
+// scheduler outliers; the MAD is printed beside it so the output itself says
+// whether a difference between two runs is resolvable or inside the noise.
+const SAMPLES: usize = 9;
+const SAMPLE_TIME: Duration = Duration::from_millis(150);
 
 const BENCHMARK_FENS: &[(&str, &str)] = &[
     (
@@ -30,14 +37,31 @@ const BENCHMARK_FENS: &[(&str, &str)] = &[
 struct BenchResult {
     label: &'static str,
     unit: &'static str,
-    ops: u64,
+    /// Per-sample throughput (ops/s), one entry per sample, unsorted.
+    samples: Vec<f64>,
     iterations: u64,
-    elapsed: Duration,
 }
 
 impl BenchResult {
-    fn ops_per_second(&self) -> f64 {
-        self.ops as f64 / self.elapsed.as_secs_f64()
+    /// Median throughput across samples — the robust point estimate.
+    fn median(&self) -> f64 {
+        let mut sorted = self.samples.clone();
+        sorted.sort_by(f64::total_cmp);
+        sorted[sorted.len() / 2]
+    }
+
+    /// Median absolute deviation, same units as the median. A rough 1-sigma
+    /// analogue that ignores scheduler outliers entirely.
+    fn mad(&self) -> f64 {
+        let med = self.median();
+        let mut dev: Vec<f64> = self.samples.iter().map(|s| (s - med).abs()).collect();
+        dev.sort_by(f64::total_cmp);
+        dev[dev.len() / 2]
+    }
+
+    /// MAD as a percentage of the median — the at-a-glance noise figure.
+    fn spread_pct(&self) -> f64 {
+        100.0 * self.mad() / self.median()
     }
 }
 
@@ -73,22 +97,26 @@ fn main() {
     println!("Rarog board benchmark");
     println!("positions: {}", BENCHMARK_FENS.len());
     println!("warmup: {} ms", WARMUP.as_millis());
-    println!("measure: {} ms per workload", MEASURE.as_millis());
+    println!(
+        "samples: {SAMPLES} x {} ms per workload (median +- MAD)",
+        SAMPLE_TIME.as_millis()
+    );
     println!();
     println!(
-        "{:<20} {:>16} {:<10} {:>12} {:>12}",
-        "workload", "throughput", "unit", "iterations", "time ms"
+        "{:<20} {:>16} {:>13} {:<10} {:>12}",
+        "workload", "median", "MAD (noise)", "unit", "iterations"
     );
-    println!("{}", "-".repeat(76));
+    println!("{}", "-".repeat(78));
 
     for result in &results {
         println!(
-            "{:<20} {:>16.0} {:<10} {:>12} {:>12}",
+            "{:<20} {:>16.0} {:>9.0} ({:>4.1}%) {:<10} {:>12}",
             result.label,
-            result.ops_per_second(),
+            result.median(),
+            result.mad(),
+            result.spread_pct(),
             result.unit,
-            result.iterations,
-            result.elapsed.as_millis()
+            result.iterations
         );
     }
 }
@@ -102,21 +130,23 @@ where
         black_box(workload());
     }
 
-    let start = Instant::now();
-    let mut ops = 0u64;
+    let mut samples = Vec::with_capacity(SAMPLES);
     let mut iterations = 0u64;
-
-    while start.elapsed() < MEASURE {
-        ops += black_box(workload());
-        iterations += 1;
+    for _ in 0..SAMPLES {
+        let start = Instant::now();
+        let mut ops = 0u64;
+        while start.elapsed() < SAMPLE_TIME {
+            ops += black_box(workload());
+            iterations += 1;
+        }
+        samples.push(ops as f64 / start.elapsed().as_secs_f64());
     }
 
     BenchResult {
         label,
         unit,
-        ops,
+        samples,
         iterations,
-        elapsed: start.elapsed(),
     }
 }
 

@@ -3,11 +3,12 @@
 //! Protects the scale-factor framework (insufficient-material draws) and the
 //! KBNK corner-drive mate against future eval/search changes. The position
 //! list lives in `tests/endgames.epd`; this harness loads it and asserts:
-//!   * `draw`      positions evaluate to exactly 0 statically,
-//!   * `win`       positions evaluate clearly for the side to move (the winning
-//!                 side), confirming a won ending is not zeroed by a draw rule, and
-//!   * `kbnk-mate` positions are driven to checkmate within a move budget by a
-//!     fixed-depth search loop.
+//! * `draw` positions evaluate to exactly 0 statically.
+//! * `win` positions evaluate clearly for the side to move (the winning side),
+//!   confirming a won ending is not zeroed by a draw rule.
+//! * `kbnk-mate` positions are driven to checkmate within a move budget by a
+//!   fixed-depth search loop.
+//!
 //! It also unit-tests the corner-drive *direction* (right-coloured corner is
 //! scored better than the wrong-coloured one) so the term can't silently flip.
 //!
@@ -27,7 +28,7 @@ const ENDGAMES_EPD: &str = include_str!("endgames.epd");
 const KBNK_MOVE_BUDGET: usize = 40;
 /// Fixed search depth per move during a KBNK playout. KBNK trees are tiny, so
 /// this stays fast even under heavy CPU load.
-const KBNK_SEARCH_DEPTH: usize = 10;
+const KBNK_SEARCH_DEPTH: u32 = 10;
 
 struct Case {
     fen: String,
@@ -64,11 +65,11 @@ fn static_eval(fen: &str) -> i32 {
     evaluator.evaluate(&board)
 }
 
-fn search_bestmove(board: Board, depth: usize) -> Move {
+fn search_bestmove(board: Board, depth: u32) -> Move {
     let mut searcher = Searcher::default();
     let mut options = SearchOptions::default();
     options.position.board = board.clone();
-    options.limits.depth = depth as f64;
+    options.limits.depth = Some(depth);
     options.engine.threads = 1;
     searcher
         .search(board, &options, false, || SearchEvent::None)

@@ -5,6 +5,79 @@ All notable changes to Rarog are documented in this file.
 Rarog was released as Lynx through version `1.4.3`. The project was renamed
 starting with version `2.0.0` to avoid confusion with an existing chess engine.
 
+## [2.3.0] - 2026-07-28
+
+The correctness-and-search release: long-standing evaluation and search bugs
+fixed, move ordering and in-check selectivity reworked, the parallel search
+rebuilt, and every published binary now profile-guided-optimized.
+
+Measured against `2.2.0` over roughly 19,000 games against a pool of established
+engines:
+
+| Condition | Gain over 2.2.0 |
+|---|--:|
+| 1 thread, 3s+30ms | **+76 Elo** |
+| 1 thread, 10s+100ms | **+78 Elo** |
+| 4 threads, 10s+100ms | **+194 Elo** |
+
+Search speed rose about **11%**. The four-thread figure is larger because the
+parallel-search rework only applies there. No losses on time occurred in any
+condition tested.
+
+The `bench 13` search fingerprint is `5,173,540` nodes.
+
+### Added
+
+- Parallel-search rework: threads publish per-root-move `(depth, score, bound)`
+  to a shared pool and order their root lists from the pool's view; the soft
+  stop is a symmetric majority vote across threads rather than the main
+  thread's single estimate; per-thread reduction jitter decorrelates the
+  search trees.
+- Shared transposition table repacked to 10-byte slots with 16-bit key
+  verification, restoring full entry density at `Threads > 1`.
+- History bonus and malus are separately parameterised, and history coverage
+  was extended across the capture, continuation, pawn and correction tables.
+- Profile-guided optimisation for every published release binary, and a pinned
+  Rust toolchain so a given release can be rebuilt exactly.
+- Additional internal consistency checking in debug builds, and expanded
+  regression test coverage.
+
+### Changed
+
+- Checking moves are always extended, replacing the previous conditional rule.
+- Static-exchange evaluation is pin-aware; its consumers were re-tuned to match
+  the more accurate result.
+- Time management compares the current score against the average of prior
+  iterations when deciding to extend on a falling evaluation.
+- Search parameters now have a single source of truth, removing a class of
+  configuration drift.
+- Evaluation and move-ordering hot paths hoist node-invariant work out of
+  per-move and per-piece loops.
+- Build tooling: CPU tuning is now independent of the instruction-set choice.
+  `cargo xtask build --arch {base|avx2|pext|arm64}` selects the instruction-set
+  contract and the new `--native` flag additionally tunes for the building
+  machine, so the two combine freely. Previously `native` was itself an `--arch`
+  value that forced the BMI2/PEXT code path, which meant a CPU without BMI2
+  could not produce a native build at all.
+- A plain `cargo build --release` no longer applies `target-cpu=native`. Native
+  tuning is opt-in via `cargo xtask build --arch <arch> --native`, and such
+  binaries are marked `-native` and are not portable.
+
+### Fixed
+
+- Aspiration-window re-search could fail to terminate on sudden mate scores.
+- A capture beta cutoff could train correction history on tactical results.
+- Several evaluation terms had incorrect side-to-move or scaling semantics.
+- Multi-threaded diagnostic counters were reset and dumped by every thread,
+  making all multi-thread diagnostic output unreliable.
+- Asking for a native build on a CPU without BMI2/PEXT produced a binary that
+  executed an unsupported instruction. Requesting `--arch pext --native` now
+  verifies the CPU reports BMI2 and refuses up front.
+
+### Removed
+
+- The 32-bit x86 build path; the engine is 64-bit only.
+
 ## [2.2.0] - 2026-06-24
 
 The eval release. Phase 3 rebuilt the evaluation as a fully parameterised,

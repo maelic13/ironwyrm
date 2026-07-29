@@ -1,10 +1,7 @@
-/// Legal move generation and perft.
-///
-/// Strategy:
-///   1. Find the king square, compute checkers and pinned pieces.
-///   2. In double check: generate only king evasions.
-///   3. In single check: generate king moves + interpositions/captures of checker.
-///   4. No check: generate all moves for each piece, respecting pins.
+// `clippy::too_many_arguments` accepted crate-wide — see Cargo.toml. Here it
+// covers `gen_pawn_moves`, which receives position facts its siblings already
+// computed once rather than recomputing them.
+
 use super::attacks::ATTACKS;
 use super::bitboard::Bitboard;
 use super::board::Board;
@@ -15,6 +12,14 @@ use super::moves::{
 };
 use super::piece::{CastlingRights, Color, Piece};
 use super::square::{Rank, Square};
+/// Legal move generation and perft.
+///
+/// Strategy:
+///   1. Find the king square, compute checkers and pinned pieces.
+///   2. In double check: generate only king evasions.
+///   3. In single check: generate king moves + interpositions/captures of checker.
+///   4. No check: generate all moves for each piece, respecting pins.
+use crate::infra;
 
 // -----------------------------------------------------------------------
 // Public API
@@ -41,7 +46,23 @@ pub fn generate_quiets(board: &Board) -> MoveList {
     moves
 }
 
+/// [`generate_quiets`] reusing a pinned set computed earlier at the same node
+/// (10.3 speed pass — see [`gen_moves_pinned`]).
+pub fn generate_quiets_pinned(board: &Board, pinned: Bitboard) -> MoveList {
+    let mut moves = MoveList::new();
+    gen_moves_pinned::<false, true, _>(board, pinned, &mut moves);
+    moves
+}
+
 /// Generate only legal captures (for quiescence search).
+///
+/// Captures-only terminal callers (qsearch, ProbCut) keep the
+/// [`has_pseudo_capture`] pre-scan: nothing else runs at this node, so a
+/// negative answer really does save the pin computation and the whole
+/// generation pass. 10.3(7) measured the pre-scan firing on **19.1%** of these
+/// calls, and the 80.9% that do find a capture exit the scan early (king/pawn
+/// tests come first), so the pre-scan is cheap when it fails and pays a full
+/// generation when it succeeds.
 pub fn generate_captures(board: &mut Board) -> MoveList {
     let mut moves = MoveList::new();
     let us = board.side_to_move;
@@ -53,16 +74,52 @@ pub fn generate_captures(board: &mut Board) -> MoveList {
 
     let king_sq = board.king_sq(us);
     let pinned = compute_pinned(board, king_sq, us, them);
-
-    if pinned.is_empty() {
-        gen_unpinned_captures(board, us, them, king_sq, board.checkers(), &mut moves);
-    } else {
-        gen_moves::<true, false, _>(board, &mut moves);
-    }
-
+    gen_captures_with_pin(board, us, them, king_sq, pinned, &mut moves);
     moves
 }
 
+/// [`generate_captures`], also handing back the pinned set it computed so a
+/// staged move picker can feed it to [`generate_quiets_pinned`] later at the
+/// same node (10.3 speed pass).
+///
+/// Deliberately does NOT run the [`has_pseudo_capture`] pre-scan, unlike its
+/// captures-only sibling (10.3(7)). A staged node usually goes on to generate
+/// quiets, and the pre-scan's saving is then illusory: `compute_pinned` is four
+/// slider lookups plus a short sniper walk, while a *failing* pre-scan is a
+/// full attack pass over every one of our pieces — and 78.5% of the nodes where
+/// it fired then paid for the pins anyway in `generate_quiets`. Computing pins
+/// unconditionally is therefore less work in the common case and lets every
+/// stage at this node share one pinned set.
+pub fn generate_captures_pinned(board: &mut Board) -> (MoveList, Bitboard) {
+    let mut moves = MoveList::new();
+    let us = board.side_to_move;
+    let them = !us;
+    let king_sq = board.king_sq(us);
+    let pinned = compute_pinned(board, king_sq, us, them);
+
+    gen_captures_with_pin(board, us, them, king_sq, pinned, &mut moves);
+    (moves, pinned)
+}
+
+fn gen_captures_with_pin(
+    board: &Board,
+    us: Color,
+    them: Color,
+    king_sq: Square,
+    pinned: Bitboard,
+    moves: &mut MoveList,
+) {
+    if pinned.is_empty() {
+        gen_unpinned_captures(board, us, them, king_sq, board.checkers(), moves);
+    } else {
+        gen_moves_pinned::<true, false, _>(board, pinned, moves);
+    }
+}
+
+/// Conservative "is there anything to capture at all" pre-scan: it may only
+/// return `false` when capture generation would produce an empty list (EP and
+/// promotion-captures are pawn attacks, so both are covered). Skipping
+/// generation on `false` is therefore behavior-preserving.
 fn has_pseudo_capture(board: &Board, us: Color, them: Color) -> bool {
     let atk = &*ATTACKS;
     let their_occ = board.color_occ(them) & !board.pieces(them, Piece::King);
@@ -161,6 +218,35 @@ impl MoveSink for MoveList {
 
 fn gen_moves<const CAPTURES: bool, const QUIETS: bool, S: MoveSink>(board: &Board, moves: &mut S) {
     let us = board.side_to_move;
+    let king_sq = board.king_sq(us);
+    let pinned = compute_pinned(board, king_sq, us, !us);
+    gen_moves_pinned::<CAPTURES, QUIETS, S>(board, pinned, moves);
+}
+
+/// [`gen_moves`] for callers that already hold the pinned set for this
+/// position (10.3 speed pass).
+///
+/// `compute_pinned` is two slider lookups plus a per-sniper `between` scan, and
+/// it was being repeated: `generate_captures` computed it and then handed off
+/// to `gen_moves`, which computed the very same thing again; and a staged node
+/// paid for it once more when quiets were finally generated. Pins are a pure
+/// function of the position, so one computation per node serves every stage.
+fn gen_moves_pinned<const CAPTURES: bool, const QUIETS: bool, S: MoveSink>(
+    board: &Board,
+    pinned: Bitboard,
+    moves: &mut S,
+) {
+    debug_assert_eq!(
+        pinned,
+        compute_pinned(
+            board,
+            board.king_sq(board.side_to_move),
+            board.side_to_move,
+            !board.side_to_move
+        ),
+        "stale pinned set handed to gen_moves_pinned"
+    );
+    let us = board.side_to_move;
     let them = !us;
     let atk = &*ATTACKS;
 
@@ -173,9 +259,6 @@ fn gen_moves<const CAPTURES: bool, const QUIETS: bool, S: MoveSink>(board: &Boar
     // Cached by Board; refreshed lazily after make/unmake.
     let checkers = board.checkers();
     let in_double_check = checkers.more_than_one();
-
-    // Compute pinned pieces (sliders aligned with our king on both sides)
-    let pinned = compute_pinned(board, king_sq, us, them);
 
     // --- King moves (always generated) ---
     let king_targets = atk.king(king_sq) & !our_occ;
@@ -318,20 +401,19 @@ fn gen_unpinned_captures(
             push_pawn_move_flags(from, to, true, moves);
         }
 
-        if let Some(ep_sq) = board.ep_square() {
-            if (atk.pawn(us, from) & Bitboard::from(ep_sq)).any() {
-                let ep_cap_sq = if us == Color::White {
-                    Square(ep_sq.0 - 8)
-                } else {
-                    Square(ep_sq.0 + 8)
-                };
-                let captures_checker =
-                    checkers.is_empty() || (checkers & Bitboard::from(ep_cap_sq)).any();
+        if let Some(ep_sq) = board.ep_square()
+            && (atk.pawn(us, from) & Bitboard::from(ep_sq)).any()
+        {
+            let ep_cap_sq = if us == Color::White {
+                Square(ep_sq.0 - 8)
+            } else {
+                Square(ep_sq.0 + 8)
+            };
+            let captures_checker =
+                checkers.is_empty() || (checkers & Bitboard::from(ep_cap_sq)).any();
 
-                if captures_checker && ep_capture_is_legal(board, us, them, from, ep_sq, ep_cap_sq)
-                {
-                    moves.push_move(Move::new(from, ep_sq, EN_PASSANT));
-                }
+            if captures_checker && ep_capture_is_legal(board, us, them, from, ep_sq, ep_cap_sq) {
+                moves.push_move(Move::new(from, ep_sq, EN_PASSANT));
             }
         }
     }
@@ -476,27 +558,25 @@ fn gen_pawn_moves<const CAPTURES: bool, const QUIETS: bool, S: MoveSink>(
         }
     }
 
-    if CAPTURES {
-        if let Some(ep_sq) = board.ep_square() {
-            let ep_cap_sq = if us == Color::White {
-                Square(ep_sq.0 - 8)
-            } else {
-                Square(ep_sq.0 + 8)
-            };
-            let ep_resolves = (check_mask & Bitboard::from(ep_sq)).any()
-                || (check_mask & Bitboard::from(ep_cap_sq)).any()
-                || check_mask.0 == u64::MAX;
+    if CAPTURES && let Some(ep_sq) = board.ep_square() {
+        let ep_cap_sq = if us == Color::White {
+            Square(ep_sq.0 - 8)
+        } else {
+            Square(ep_sq.0 + 8)
+        };
+        let ep_resolves = (check_mask & Bitboard::from(ep_sq)).any()
+            || (check_mask & Bitboard::from(ep_cap_sq)).any()
+            || check_mask.0 == u64::MAX;
 
-            if ep_resolves {
-                let mut attackers = atk.pawn(them, ep_sq) & pawns;
-                while attackers.any() {
-                    let from = attackers.pop_lsb();
-                    if (pinned & Bitboard::from(from)).any() && !on_same_ray(from, ep_sq, king_sq) {
-                        continue;
-                    }
-                    if ep_capture_is_legal(board, us, them, from, ep_sq, ep_cap_sq) {
-                        moves.push_move(Move::new(from, ep_sq, EN_PASSANT));
-                    }
+        if ep_resolves {
+            let mut attackers = atk.pawn(them, ep_sq) & pawns;
+            while attackers.any() {
+                let from = attackers.pop_lsb();
+                if (pinned & Bitboard::from(from)).any() && !on_same_ray(from, ep_sq, king_sq) {
+                    continue;
+                }
+                if ep_capture_is_legal(board, us, them, from, ep_sq, ep_cap_sq) {
+                    moves.push_move(Move::new(from, ep_sq, EN_PASSANT));
                 }
             }
         }
@@ -534,7 +614,7 @@ fn gen_unpinned_pawn_quiets<S: MoveSink>(
     while targets.any() {
         let to = targets.pop_lsb();
         moves.push_move(Move::new(
-            Square((to.0 as i16 - push_offset) as u8),
+            Square(infra::to_u8(to.0 as i16 - push_offset)),
             to,
             QUIET,
         ));
@@ -549,7 +629,7 @@ fn gen_unpinned_pawn_quiets<S: MoveSink>(
     while targets.any() {
         let to = targets.pop_lsb();
         moves.push_move(Move::new(
-            Square((to.0 as i16 - double_offset) as u8),
+            Square(infra::to_u8(to.0 as i16 - double_offset)),
             to,
             DOUBLE_PUSH,
         ));
@@ -563,7 +643,12 @@ fn gen_unpinned_pawn_quiets<S: MoveSink>(
     let mut targets = promo;
     while targets.any() {
         let to = targets.pop_lsb();
-        push_pawn_move_flags(Square((to.0 as i16 - push_offset) as u8), to, false, moves);
+        push_pawn_move_flags(
+            Square(infra::to_u8(to.0 as i16 - push_offset)),
+            to,
+            false,
+            moves,
+        );
     }
 }
 
@@ -582,13 +667,23 @@ fn gen_unpinned_pawn_captures<S: MoveSink>(
     let mut targets = east_targets & their_occ & check_mask;
     while targets.any() {
         let to = targets.pop_lsb();
-        push_pawn_move_flags(Square((to.0 as i16 - east_offset) as u8), to, true, moves);
+        push_pawn_move_flags(
+            Square(infra::to_u8(to.0 as i16 - east_offset)),
+            to,
+            true,
+            moves,
+        );
     }
 
     let mut targets = west_targets & their_occ & check_mask;
     while targets.any() {
         let to = targets.pop_lsb();
-        push_pawn_move_flags(Square((to.0 as i16 - west_offset) as u8), to, true, moves);
+        push_pawn_move_flags(
+            Square(infra::to_u8(to.0 as i16 - west_offset)),
+            to,
+            true,
+            moves,
+        );
     }
 }
 
@@ -757,7 +852,7 @@ pub fn ray_through(a: Square, b: Square) -> Bitboard {
 
 /// Returns true if `from`, `to`, and `king` are all on the same rank/file/diagonal.
 #[inline]
-fn on_same_ray(from: Square, to: Square, king: Square) -> bool {
+pub fn on_same_ray(from: Square, to: Square, king: Square) -> bool {
     (ray_through(from, to) & Bitboard::from(king)).any()
 }
 
@@ -765,8 +860,8 @@ fn on_same_ray(from: Square, to: Square, king: Square) -> bool {
 // Precomputed between / line tables
 // -----------------------------------------------------------------------
 
-const BETWEEN: [[Bitboard; 64]; 64] = init_between();
-const LINE: [[Bitboard; 64]; 64] = init_line();
+static BETWEEN: [[Bitboard; 64]; 64] = init_between();
+static LINE: [[Bitboard; 64]; 64] = init_line();
 
 const fn abs_i8(v: i8) -> i8 {
     if v < 0 { -v } else { v }
@@ -786,6 +881,9 @@ const fn aligned(ar: i8, af: i8, br: i8, bf: i8) -> bool {
     ar == br || af == bf || abs_i8(br - ar) == abs_i8(bf - af)
 }
 
+// Const-evaluated init — helpers are non-const; any out-of-range would fail
+// the compile-time evaluation itself, so plain casts are sound here.
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 const fn init_between() -> [[Bitboard; 64]; 64] {
     let mut table = [[Bitboard::EMPTY; 64]; 64];
     let mut a = 0usize;
@@ -819,6 +917,9 @@ const fn init_between() -> [[Bitboard; 64]; 64] {
     table
 }
 
+// Const-evaluated init — helpers are non-const; any out-of-range would fail
+// the compile-time evaluation itself, so plain casts are sound here.
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 const fn init_line() -> [[Bitboard; 64]; 64] {
     let mut table = [[Bitboard::EMPTY; 64]; 64];
     let mut a = 0usize;

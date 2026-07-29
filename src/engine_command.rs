@@ -143,6 +143,11 @@ pub struct EngineCommand {
     pub stop: bool,
     pub quit: bool,
     pub bench_depth: Option<u16>,
+    /// Number of times to repeat the whole bench suite (best-of-N NPS). Only
+    /// meaningful when `bench_depth` is `Some`; defaults to 1.
+    pub bench_repeats: u16,
+    /// Fixed depth for the WAC tactical suite (`wac [depth]`).
+    pub wac_depth: Option<u16>,
     pub configure: Option<SearchOptions>,
     pub new_game: bool,
     pub ponderhit: bool,
@@ -157,6 +162,8 @@ impl EngineCommand {
             stop: false,
             quit: false,
             bench_depth: None,
+            bench_repeats: 1,
+            wac_depth: None,
             configure: None,
             new_game: false,
             ponderhit: false,
@@ -171,6 +178,8 @@ impl EngineCommand {
             stop: true,
             quit: false,
             bench_depth: None,
+            bench_repeats: 1,
+            wac_depth: None,
             configure: None,
             new_game: false,
             ponderhit: false,
@@ -185,6 +194,8 @@ impl EngineCommand {
             stop: true,
             quit: true,
             bench_depth: None,
+            bench_repeats: 1,
+            wac_depth: None,
             configure: None,
             new_game: false,
             ponderhit: false,
@@ -193,12 +204,30 @@ impl EngineCommand {
         }
     }
 
-    pub fn bench(depth: u16, options: SearchOptions, epoch: u64) -> EngineCommand {
+    pub fn bench(depth: u16, repeats: u16, options: SearchOptions, epoch: u64) -> EngineCommand {
         EngineCommand {
             search_options: options,
             stop: false,
             quit: false,
             bench_depth: Some(depth),
+            bench_repeats: repeats,
+            wac_depth: None,
+            configure: None,
+            new_game: false,
+            ponderhit: false,
+            ready: None,
+            epoch,
+        }
+    }
+
+    pub fn wac(depth: u16, options: SearchOptions, epoch: u64) -> EngineCommand {
+        EngineCommand {
+            search_options: options,
+            stop: false,
+            quit: false,
+            bench_depth: None,
+            bench_repeats: 1,
+            wac_depth: Some(depth),
             configure: None,
             new_game: false,
             ponderhit: false,
@@ -213,6 +242,8 @@ impl EngineCommand {
             stop: false,
             quit: false,
             bench_depth: None,
+            bench_repeats: 1,
+            wac_depth: None,
             configure: Some(options),
             new_game: false,
             ponderhit: false,
@@ -227,6 +258,8 @@ impl EngineCommand {
             stop: false,
             quit: false,
             bench_depth: None,
+            bench_repeats: 1,
+            wac_depth: None,
             configure: None,
             new_game: true,
             ponderhit: false,
@@ -241,6 +274,8 @@ impl EngineCommand {
             stop: false,
             quit: false,
             bench_depth: None,
+            bench_repeats: 1,
+            wac_depth: None,
             configure: None,
             new_game: false,
             ponderhit: true,
@@ -255,6 +290,8 @@ impl EngineCommand {
             stop: false,
             quit: false,
             bench_depth: None,
+            bench_repeats: 1,
+            wac_depth: None,
             configure: None,
             new_game: false,
             ponderhit: false,

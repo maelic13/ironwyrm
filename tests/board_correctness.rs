@@ -582,6 +582,9 @@ struct Snapshot {
     hash: u64,
     in_check: bool,
     checkers: Bitboard,
+    pawn_key: u64,
+    minor_key: u64,
+    non_pawn_keys: [u64; 2],
 }
 
 impl Snapshot {
@@ -591,6 +594,15 @@ impl Snapshot {
             hash: board.hash,
             in_check: board.is_in_check(),
             checkers: board.checkers(),
+            // 9.5: these four are incrementally maintained CACHE KEYS (pawn
+            // cache, correction history, pawn history) that `to_fen()` cannot
+            // express, so nothing checked them before.
+            pawn_key: board.pawn_key(),
+            minor_key: board.minor_key(),
+            non_pawn_keys: [
+                board.non_pawn_key(Color::White),
+                board.non_pawn_key(Color::Black),
+            ],
         }
     }
 
@@ -607,6 +619,27 @@ impl Snapshot {
             self.checkers,
             "{context} changed checker bitboard"
         );
+        assert_eq!(
+            board.pawn_key(),
+            self.pawn_key,
+            "{context} changed pawn key"
+        );
+        assert_eq!(
+            board.minor_key(),
+            self.minor_key,
+            "{context} changed minor key"
+        );
+        assert_eq!(
+            [
+                board.non_pawn_key(Color::White),
+                board.non_pawn_key(Color::Black)
+            ],
+            self.non_pawn_keys,
+            "{context} changed a non-pawn key"
+        );
+        board
+            .check_consistency()
+            .unwrap_or_else(|e| panic!("{context} left the board inconsistent: {e}"));
     }
 }
 

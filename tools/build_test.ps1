@@ -10,7 +10,7 @@
     hot-path timing enough to affect measured Elo comparisons; always use this
     for match testing.
 
-    Native (-Native switch): runs `cargo xtask build --arch native --pgo` —
+    Native (-Native switch): runs `cargo xtask build --arch pext --native --pgo` —
     produces a PGO-optimised binary built with `-C target-cpu=native` for the
     exact host CPU (e.g. znver3 on a 5950X), instead of the portable
     x86-64-v3 baseline.  Use for local/own-match testing and deployment on the
@@ -33,7 +33,8 @@
     Tune:    rarog-<Suffix>-tune.exe
 
 .PARAMETER Native
-    Build with `--arch native --pgo` instead of `--arch pext --pgo`.  Local-only.
+    Build with `--arch pext --native --pgo` instead of `--arch pext --pgo`.
+    Same PEXT code path; only the codegen baseline changes.  Local-only.
 
 .PARAMETER Tune
     Build with --features tune instead of PGO.  Use for SPSA binaries only.
@@ -66,6 +67,60 @@ if ($Tune -and $Native) {
 
 $ErrorActionPreference = "Stop"
 
+# --- 9.7 provenance manifest -------------------------------------------------
+# Every test binary gets a sidecar JSON next to it: git SHA + dirty flag,
+# branch, rustc, and a bench fingerprint VERIFIED by running the binary just
+# built (which doubles as a smoke test — a broken build fails here, not in an
+# SPRT). sprt.ps1 copies both engines' manifests into the result dir, so every
+# result is permanently self-describing.
+#
+# LOCAL-ONLY BY DESIGN (user decision 2026-07-20): manifests exist for
+# development provenance. tools/test_engines/ and tools/results/ are
+# gitignored, and the release workflow (build.yml) has NO manifest step —
+# nothing here can ever appear on the GitHub release page.
+function Write-EngineManifest {
+    param(
+        [Parameter(Mandatory)][string]$BinaryPath,
+        [Parameter(Mandatory)][string]$Suffix,
+        [Parameter(Mandatory)][string]$Flavor
+    )
+
+    $sha    = (git rev-parse HEAD).Trim()
+    $branch = (git rev-parse --abbrev-ref HEAD).Trim()
+    $dirty  = [bool](git status --porcelain)
+    $rustc  = (rustc -V).Trim()
+
+    Write-Host "Verifying bench fingerprint of $([IO.Path]::GetFileName($BinaryPath)) ..."
+    $benchOut  = "bench" | & $BinaryPath 2>&1 | Out-String
+    $benchLine = ($benchOut -split "`n" | Where-Object { $_ -match "Nodes searched" }) -join ""
+    if ($benchLine -notmatch "([0-9][0-9,]*)\s*$") {
+        throw "Could not parse a bench node count from the built binary — refusing to write a manifest for an unverified engine."
+    }
+    $nodes = [int64]($Matches[1] -replace ",", "")
+    if ($nodes -le 0) { throw "Bench reported $nodes nodes — broken binary." }
+
+    $manifest = [ordered]@{
+        engine        = [IO.Path]::GetFileName($BinaryPath)
+        suffix        = $Suffix
+        flavor        = $Flavor
+        git_sha       = $sha
+        git_branch    = $branch
+        git_dirty     = $dirty
+        rustc         = $rustc
+        bench_nodes   = $nodes
+        pgo_workload  = if ($Flavor -like "*-pgo") { "bench 13 (xtask default)" } else { $null }
+        built_utc     = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    }
+
+    $manifestPath = [IO.Path]::ChangeExtension($BinaryPath, ".json")
+    $manifest | ConvertTo-Json | Out-File -FilePath $manifestPath -Encoding utf8
+    Write-Host "Manifest: $manifestPath  (bench $nodes$(if ($dirty) { ', DIRTY WORKING TREE' }))"
+    if ($dirty) {
+        Write-Host "WARNING: built from a DIRTY working tree — this binary is not reproducible from git_sha alone." -ForegroundColor Yellow
+    }
+}
+
+
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Push-Location $repoRoot
 try {
@@ -90,16 +145,26 @@ try {
 
         $dest = Join-Path $TestEnginesDir "rarog-$Suffix-tune.exe"
         Copy-Item $src $dest -Force
+        Write-EngineManifest -BinaryPath $dest -Suffix $Suffix -Flavor "tune"
         Write-Host ""
         Write-Host "Done: $dest"
         Write-Host ""
     } else {
-        $arch = if ($Native) { "native" } else { "pext" }
+        # 2.3.0: `--native` is now ORTHOGONAL to `--arch`. Both flavours build
+        # the PEXT code path; -Native only swaps the portable x86-64-v3 baseline
+        # for `target-cpu=native`. Gate binaries deliberately stay portable, so
+        # what we SPRT matches the shipped pext asset (PLAN S3).
+        $arch = "pext"
+        $label = if ($Native) { "pext+native" } else { "pext" }
         Write-Host ""
-        Write-Host "Building $arch+PGO binary (suffix: $Suffix) ..."
+        Write-Host "Building $label+PGO binary (suffix: $Suffix) ..."
         Write-Host ""
 
-        cargo xtask build --arch $arch --pgo
+        if ($Native) {
+            cargo xtask build --arch $arch --native --pgo
+        } else {
+            cargo xtask build --arch $arch --pgo
+        }
         if ($LASTEXITCODE -ne 0) { throw "xtask build failed (exit $LASTEXITCODE)" }
 
         $dist = Get-ChildItem "target/dist/rarog-*-$arch-pgo.exe" |
@@ -116,6 +181,7 @@ try {
 
         $dest = Join-Path $TestEnginesDir "rarog-$Suffix-$arch-pgo.exe"
         Copy-Item $dist.FullName $dest -Force
+        Write-EngineManifest -BinaryPath $dest -Suffix $Suffix -Flavor "$arch-pgo"
         Write-Host ""
         Write-Host "Done: $dest"
         Write-Host ""

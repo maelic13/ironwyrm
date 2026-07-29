@@ -6,6 +6,7 @@ use crate::bench::DEFAULT_BENCH_DEPTH;
 use crate::engine_command::{EngineCommand, EngineCommandQueue, EngineControl};
 use crate::infra::capitalize_first_letter;
 use crate::search_options::SearchOptions;
+use crate::wac::DEFAULT_WAC_DEPTH;
 
 pub struct UciProtocol {
     search_options: SearchOptions,
@@ -25,9 +26,10 @@ impl UciProtocol {
     pub fn uci_loop(&mut self) {
         loop {
             let mut input = String::new();
-            let bytes_read = io::stdin()
-                .read_line(&mut input)
-                .expect("error: unable to read user input");
+            // 9.0a: a read error means stdin is gone (pipe closed / GUI
+            // exited) — treated exactly like EOF, which the next branch
+            // already handles, rather than panicking.
+            let bytes_read = io::stdin().read_line(&mut input).unwrap_or_default();
             if bytes_read == 0 {
                 self.commands.push(EngineCommand::quit(0));
                 break;
@@ -52,6 +54,7 @@ impl UciProtocol {
                 "ucinewgame" => self.new_game(),
                 "position" => self.position_with_command(args, &command_line),
                 "bench" => self.bench(args),
+                "wac" => self.wac(args),
                 #[cfg(feature = "tune")]
                 "dumpeval" => self.dump_eval(),
                 "ponderhit" => self.ponderhit(),
@@ -72,7 +75,7 @@ impl UciProtocol {
         );
         println!("id author {}", env!("CARGO_PKG_AUTHORS").replace(':', ", "));
         for option in SearchOptions::get_uci_options() {
-            println!("{}", option);
+            println!("{option}");
         }
         println!("uciok");
         flush_stdout();
@@ -135,10 +138,36 @@ impl UciProtocol {
             .first()
             .and_then(|depth| depth.parse::<u16>().ok())
             .unwrap_or(DEFAULT_BENCH_DEPTH);
+        // Optional second arg: repeat the whole suite N times for a best-of-N
+        // NPS read (`bench <depth> <repeats>`). The fingerprint is identical
+        // every repeat; only NPS varies (machine noise). Default 1.
+        let repeats = args
+            .get(1)
+            .and_then(|r| r.parse::<u16>().ok())
+            .unwrap_or(1)
+            .max(1);
 
         let epoch = self.control.start_replacing_search();
         self.commands.push(EngineCommand::stop(epoch));
         self.commands.push(EngineCommand::bench(
+            depth,
+            repeats,
+            self.search_options.clone(),
+            epoch,
+        ));
+    }
+
+    /// `wac [depth]` — run the WAC tactical suite at a fixed depth (default
+    /// 10) and report the solved count. A diagnostic like `bench`, not a gate.
+    fn wac(&mut self, args: &[String]) {
+        let depth = args
+            .first()
+            .and_then(|depth| depth.parse::<u16>().ok())
+            .unwrap_or(DEFAULT_WAC_DEPTH);
+
+        let epoch = self.control.start_replacing_search();
+        self.commands.push(EngineCommand::stop(epoch));
+        self.commands.push(EngineCommand::wac(
             depth,
             self.search_options.clone(),
             epoch,
@@ -183,11 +212,15 @@ impl UciProtocol {
 }
 
 fn flush_stdout() {
-    io::stdout().flush().expect("stdout flush failed");
+    // 9.0a: a failed flush means the GUI closed the pipe — a normal way for a
+    // UCI session to end, not a bug. Panicking here aborted the process
+    // (release sets `panic = "abort"`), turning an ordinary disconnect into a
+    // crash; the write is simply dropped instead.
+    let _ = io::stdout().flush();
 }
 
 fn terminate_on_critical_error(full_command: &str, message: &str) -> ! {
-    println!("info string CRITICAL ERROR: Command `{full_command}` failed. Reason: {message}");
+    crate::info_string!("CRITICAL ERROR: Command `{full_command}` failed. Reason: {message}");
     flush_stdout();
     process::exit(1);
 }
@@ -222,7 +255,7 @@ mod tests {
         assert!(!command.stop);
         assert!(!command.quit);
         assert!(command.epoch > 0);
-        assert_eq!(command.search_options.limits.depth, 3.0);
+        assert_eq!(command.search_options.limits.depth, Some(3));
         assert_eq!(command.search_options.limits.nodes, 123);
         assert_eq!(
             command.search_options.position.board.side_to_move(),

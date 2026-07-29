@@ -14,6 +14,11 @@ pub(crate) struct RuntimeLimits {
     pub maximum_ms: f64,
     /// True when the `go movetime T` command was used.
     pub movetime_mode: bool,
+    /// True for `go infinite` / `go ponder`: the caller wants an EVALUATION,
+    /// not a move, so search shortcuts that trade score quality for clock
+    /// time must not fire. Set from `SearchLimits`, which the searcher
+    /// otherwise never sees.
+    pub analysis_mode: bool,
 }
 
 /// Compute time limits for one search.
@@ -29,14 +34,14 @@ pub(crate) fn compute_runtime_limits(
     game_ply: u32,
     max_depth: usize,
 ) -> RuntimeLimits {
-    let depth = if options.depth.is_finite() {
-        options.depth.max(1.0) as usize
-    } else {
-        max_depth
-    };
+    // 9.0: `None` = no depth limit (was the f64::INFINITY sentinel).
+    let depth = options
+        .depth
+        .map_or(max_depth, |d| (d as usize).clamp(1, max_depth));
     let mut optimum_ms = f64::INFINITY;
     let mut maximum_ms = f64::INFINITY;
     let mut movetime_mode = false;
+    let analysis_mode = options.infinite || options.ponder;
 
     if options.move_time > 0 {
         // Fixed movetime: use the full budget as the hard limit (the
@@ -115,7 +120,24 @@ pub(crate) fn compute_runtime_limits(
             // (≈520 ms at the default 10 ms overhead) — i.e. only in genuine
             // time scrambles, where playing a hair faster costs ~no Elo — and
             // leaves normal-time allocation (the +81 Elo from 2.2) untouched.
-            let min_reserve = 2.0 * overhead;
+            // 8.13(e): the reserve must also cover SCHEDULER STARVATION when
+            // running multi-threaded. Measured in real Threads=4 games
+            // (latency sidecar over an instrumented null match): the search's
+            // own 2048-node time poll, normally ≤1 ms apart, stretches to
+            // 50–100 ms under 12-threads-plus-runner contention, so the hard
+            // cap gets overrun by up to ~34 ms. With the 2·overhead = 20 ms
+            // reserve that is a time forfeit whenever the clock is low —
+            // ~1.3% of Threads=4 games, vs 0/3,460 at Threads=1. Reserve an
+            // extra 30 ms in multi-threaded searches only: Threads=1 keeps
+            // the exact tuned behaviour (the +81 Elo TM and its 2.9.1
+            // reserve), and the extra only binds below ~250 ms of clock,
+            // where SMP strength is irrelevant next to not forfeiting.
+            let smp_reserve = if engine_options.threads > 1 {
+                30.0
+            } else {
+                0.0
+            };
+            let min_reserve = 2.0 * overhead + smp_reserve;
             let hard_ceiling = (time as f64 - min_reserve).max(1.0);
             maximum_ms = maximum_ms.min(hard_ceiling);
             optimum_ms = optimum_ms.min(maximum_ms);
@@ -128,6 +150,7 @@ pub(crate) fn compute_runtime_limits(
         optimum_ms,
         maximum_ms,
         movetime_mode,
+        analysis_mode,
     }
 }
 
@@ -135,9 +158,9 @@ pub(crate) fn compute_runtime_limits(
 mod tests {
     use super::*;
 
-    fn limits(game_ply: u32, options: SearchLimits) -> RuntimeLimits {
+    fn limits(game_ply: u32, options: &SearchLimits) -> RuntimeLimits {
         compute_runtime_limits(
-            &options,
+            options,
             &EngineOptions::default(),
             Color::White,
             game_ply,
@@ -150,8 +173,10 @@ mod tests {
         // Fixed movetime uses the entire budget (SF/Reckless default); the
         // MoveOverhead is NOT subtracted in movetime mode (the 2.9.1 forfeit
         // fix lives in the clock path, not here).
-        let mut engine = EngineOptions::default();
-        engine.move_overhead = 25.0;
+        let engine = EngineOptions {
+            move_overhead: 25.0,
+            ..EngineOptions::default()
+        };
         let options = SearchLimits {
             move_time: 250,
             ..SearchLimits::default()
@@ -167,8 +192,10 @@ mod tests {
     fn movetime_ignores_move_overhead() {
         // A large MoveOverhead must not shrink the movetime budget: `go
         // movetime T` is an explicit "think exactly this long" instruction.
-        let mut engine = EngineOptions::default();
-        engine.move_overhead = 200.0;
+        let engine = EngineOptions {
+            move_overhead: 200.0,
+            ..EngineOptions::default()
+        };
         let options = SearchLimits {
             move_time: 100,
             ..SearchLimits::default()
@@ -181,8 +208,10 @@ mod tests {
 
     #[test]
     fn movetime_tiny_budget_is_at_least_one_ms() {
-        let mut engine = EngineOptions::default();
-        engine.move_overhead = 10.0;
+        let engine = EngineOptions {
+            move_overhead: 10.0,
+            ..EngineOptions::default()
+        };
         let options = SearchLimits {
             move_time: 1,
             ..SearchLimits::default()
@@ -202,7 +231,7 @@ mod tests {
             white_increment: 100,
             ..SearchLimits::default()
         };
-        let lim = limits(0, options);
+        let lim = limits(0, &options);
 
         assert!(lim.optimum_ms < lim.maximum_ms);
         assert!(!lim.movetime_mode);
@@ -215,7 +244,7 @@ mod tests {
             white_increment: 100,
             ..SearchLimits::default()
         };
-        let lim = limits(0, options);
+        let lim = limits(0, &options);
 
         assert!(lim.optimum_ms < 150.0, "optimum_ms={}", lim.optimum_ms);
         assert!(lim.maximum_ms < 1000.0, "maximum_ms={}", lim.maximum_ms);
@@ -266,8 +295,10 @@ mod tests {
         // keep maximum_ms at or below `time - 2*overhead` so startup/output
         // latency under load cannot flag. Chosen so the reserve actually
         // binds (low time, sizeable optimum via a large increment).
-        let mut engine = EngineOptions::default();
-        engine.move_overhead = 10.0;
+        let engine = EngineOptions {
+            move_overhead: 10.0,
+            ..EngineOptions::default()
+        };
         let options = SearchLimits {
             white_time: 50,
             white_increment: 50,
@@ -290,8 +321,10 @@ mod tests {
         // At normal remaining time the `2*overhead` reserve must NOT bind:
         // maximum_ms stays at the SF percentage cap (0.8097*time - overhead),
         // which is the smaller (binding) limit whenever time > ~52*overhead.
-        let mut engine = EngineOptions::default();
-        engine.move_overhead = 10.0;
+        let engine = EngineOptions {
+            move_overhead: 10.0,
+            ..EngineOptions::default()
+        };
         let options = SearchLimits {
             white_time: 3_000,
             white_increment: 30,
@@ -315,8 +348,10 @@ mod tests {
     fn depth_is_clamped_and_absent_clock_is_unbounded() {
         let shallow = limits(
             0,
-            SearchLimits {
-                depth: 0.25,
+            &SearchLimits {
+                // 9.0: a fractional depth is now unrepresentable (Option<u32>);
+                // Some(0) exercises the same lower clamp this test was written for.
+                depth: Some(0),
                 ..SearchLimits::default()
             },
         );

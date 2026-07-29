@@ -6,6 +6,28 @@ use std::time::{Duration, Instant};
 
 use rarog::board::Board;
 
+/// Budget for waiting on engine output, scaled for the build profile.
+///
+/// A debug build searches roughly an order of magnitude slower than release,
+/// and a CI runner is slower again than a dev box — so budgets calibrated
+/// against `cargo test --release` locally are not safe in the CI debug matrix.
+/// `long_endgame_search_does_not_overflow_engine_thread_stack` is the one that
+/// caught us: `go movetime 100` with a flat 2 s budget passed in release for
+/// months and failed the first CI debug run with `seen: []`, having produced no
+/// output at all inside the window.
+///
+/// **This never weakens an assertion.** Every call site guarded by this helper
+/// asserts that the engine eventually *does* something — emits `bestmove`,
+/// reports `info depth` — never that it does so quickly. The two places that
+/// genuinely assert timing are deliberately NOT scaled and say so at their call
+/// site: `assert_no_line_containing` (where a longer window is stricter), and
+/// the two ponderhit budgets that must stay below the ~1 s a restarted
+/// `movetime` clock would take, since that is the bug they exist to detect.
+fn wait(secs: u64) -> Duration {
+    let scale = if cfg!(debug_assertions) { 8 } else { 1 };
+    Duration::from_secs(secs * scale)
+}
+
 fn run_rarog(input: &str) -> Output {
     let mut child = Command::new(env!("CARGO_BIN_EXE_rarog"))
         .stdin(Stdio::piped())
@@ -152,15 +174,15 @@ fn uci_advertises_ponder_and_core_options() {
 fn completed_ponder_search_waits_for_ponderhit_before_bestmove() {
     let mut session = UciSession::start();
     session.send("uci");
-    session.expect_line_containing("uciok", Duration::from_secs(15));
+    session.expect_line_containing("uciok", wait(15));
     session.send("position startpos moves e2e4");
     session.send("go ponder depth 1");
 
-    session.expect_line_containing("info depth 1", Duration::from_secs(2));
+    session.expect_line_containing("info depth 1", wait(2));
     session.assert_no_line_containing("bestmove", Duration::from_millis(200));
 
     session.send("ponderhit");
-    session.expect_line_containing("bestmove", Duration::from_secs(2));
+    session.expect_line_containing("bestmove", wait(2));
     session.quit();
 }
 
@@ -168,15 +190,15 @@ fn completed_ponder_search_waits_for_ponderhit_before_bestmove() {
 fn completed_ponder_search_waits_for_stop_before_bestmove() {
     let mut session = UciSession::start();
     session.send("uci");
-    session.expect_line_containing("uciok", Duration::from_secs(15));
+    session.expect_line_containing("uciok", wait(15));
     session.send("position startpos moves e2e4");
     session.send("go ponder depth 1");
 
-    session.expect_line_containing("info depth 1", Duration::from_secs(2));
+    session.expect_line_containing("info depth 1", wait(2));
     session.assert_no_line_containing("bestmove", Duration::from_millis(200));
 
     session.send("stop");
-    session.expect_line_containing("bestmove", Duration::from_secs(2));
+    session.expect_line_containing("bestmove", wait(2));
     session.quit();
 }
 
@@ -184,7 +206,7 @@ fn completed_ponder_search_waits_for_stop_before_bestmove() {
 fn ponderhit_after_spent_movetime_does_not_restart_search_clock() {
     let mut session = UciSession::start();
     session.send("uci");
-    session.expect_line_containing("uciok", Duration::from_secs(15));
+    session.expect_line_containing("uciok", wait(15));
     session.send("position startpos moves e2e4");
     session.send("go ponder movetime 1000");
 
@@ -199,11 +221,11 @@ fn ponderhit_after_spent_movetime_does_not_restart_search_clock() {
 fn movetime_100_completes_at_least_one_depth() {
     let mut session = UciSession::start();
     session.send("uci");
-    session.expect_line_containing("uciok", Duration::from_secs(15));
+    session.expect_line_containing("uciok", wait(15));
     session.send("position startpos");
     session.send("go movetime 100");
 
-    let lines = session.collect_until_line_containing("bestmove", Duration::from_secs(2));
+    let lines = session.collect_until_line_containing("bestmove", wait(2));
 
     assert!(
         lines.iter().any(|line| line.starts_with("info depth 1 ")),
@@ -222,11 +244,11 @@ fn movetime_100_completes_at_least_one_depth() {
 fn long_endgame_search_does_not_overflow_engine_thread_stack() {
     let mut session = UciSession::start();
     session.send("uci");
-    session.expect_line_containing("uciok", Duration::from_secs(15));
+    session.expect_line_containing("uciok", wait(15));
     session.send("position fen 8/2Pq4/5K2/7k/8/6Q1/8/8 b - - 0 80");
     session.send("go movetime 100");
 
-    let lines = session.collect_until_line_containing("bestmove", Duration::from_secs(2));
+    let lines = session.collect_until_line_containing("bestmove", wait(2));
 
     assert!(
         lines.iter().any(|line| line.starts_with("info depth ")),
@@ -239,14 +261,24 @@ fn long_endgame_search_does_not_overflow_engine_thread_stack() {
 fn threaded_go_nodes_returns_bestmove_and_reports_nodes() {
     let mut session = UciSession::start();
     session.send("uci");
-    session.expect_line_containing("uciok", Duration::from_secs(15));
+    session.expect_line_containing("uciok", wait(15));
     session.send("setoption name Threads value 4");
     session.send("isready");
-    session.expect_line_containing("readyok", Duration::from_secs(5));
+    session.expect_line_containing("readyok", wait(5));
     session.send("position startpos");
-    session.send("go nodes 4096");
+    // Budget deliberately far above one iteration's cost. `info depth` is only
+    // emitted when an iteration COMPLETES, and the node limit is shared across
+    // threads — so at Threads=4 a 4096-node budget was consumed in ~1024 nodes
+    // per thread, which is around what depth 1 costs from the start position.
+    // Whether the iteration finished first was then a scheduling race, and it
+    // lost on a windows release runner: the search returned `bestmove` having
+    // emitted no `info` line at all. The assertion below is about node-limited
+    // search WORKING under threads, not about the budget being tight, so the
+    // fix is to stop racing. (Whether the engine should guarantee at least one
+    // `info` line before every `bestmove` is a real question — filed as 10.6.)
+    session.send("go nodes 200000");
 
-    let lines = session.collect_until_line_containing("bestmove", Duration::from_secs(5));
+    let lines = session.collect_until_line_containing("bestmove", wait(5));
     assert!(
         lines
             .iter()
@@ -267,16 +299,16 @@ fn threaded_go_nodes_returns_bestmove_and_reports_nodes() {
 fn threaded_infinite_search_stops_cleanly() {
     let mut session = UciSession::start();
     session.send("uci");
-    session.expect_line_containing("uciok", Duration::from_secs(15));
+    session.expect_line_containing("uciok", wait(15));
     session.send("setoption name Threads value 4");
     session.send("isready");
-    session.expect_line_containing("readyok", Duration::from_secs(5));
+    session.expect_line_containing("readyok", wait(5));
     session.send("position startpos");
     session.send("go infinite");
 
-    session.expect_line_containing("info depth 1", Duration::from_secs(5));
+    session.expect_line_containing("info depth 1", wait(5));
     session.send("stop");
-    session.expect_line_containing("bestmove", Duration::from_secs(5));
+    session.expect_line_containing("bestmove", wait(5));
     session.quit();
 }
 
@@ -284,10 +316,10 @@ fn threaded_infinite_search_stops_cleanly() {
 fn threaded_ponderhit_after_spent_movetime_does_not_restart_search_clock() {
     let mut session = UciSession::start();
     session.send("uci");
-    session.expect_line_containing("uciok", Duration::from_secs(15));
+    session.expect_line_containing("uciok", wait(15));
     session.send("setoption name Threads value 4");
     session.send("isready");
-    session.expect_line_containing("readyok", Duration::from_secs(5));
+    session.expect_line_containing("readyok", wait(5));
     session.send("position startpos moves e2e4");
     session.send("go ponder movetime 1000");
 
@@ -307,18 +339,18 @@ fn emitted_pvs_are_legal_for_tournament_positions_with_threads() {
     ];
     let mut session = UciSession::start();
     session.send("uci");
-    session.expect_line_containing("uciok", Duration::from_secs(15));
+    session.expect_line_containing("uciok", wait(15));
 
     for threads in [1, 8] {
         session.send(&format!("setoption name Threads value {threads}"));
         session.send("isready");
-        session.expect_line_containing("readyok", Duration::from_secs(5));
+        session.expect_line_containing("readyok", wait(5));
 
         for fen in fens {
             session.send(&format!("position fen {fen}"));
             session.send("go depth 4");
 
-            let lines = session.collect_until_line_containing("bestmove", Duration::from_secs(10));
+            let lines = session.collect_until_line_containing("bestmove", wait(10));
             assert_uci_pv_lines_are_legal(fen, &lines);
         }
     }

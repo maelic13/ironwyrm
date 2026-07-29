@@ -3,6 +3,18 @@ name: Build And Attach Executables
 on:
   release:
     types: [published]
+  # A release-triggered run checks out the TAG, so a fix landed after the tag
+  # cannot be picked up by re-running the failed job. Dispatch instead: it
+  # builds the ref you select (normally master) and uploads to the tag you
+  # name, which is how a single missing asset gets attached to a published
+  # release without re-cutting it. Only ever dispatch a ref whose engine
+  # sources match the tag — check the bench node count in the job log.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to attach the built assets to"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -15,79 +27,152 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # `pgo` is stated on every cell rather than defaulted, so this table
+          # answers "is this asset profile-guided?" without reading anything
+          # else. Exactly one cell says false, and says why.
           - runner: ubuntu-latest
             os_name: linux
             asset_arch: x86-64
             target: x86_64-unknown-linux-gnu
             ext: ""
+            pgo: true
           - runner: ubuntu-latest
             os_name: linux
             asset_arch: avx2
             target: x86_64-unknown-linux-gnu
             ext: ""
+            pgo: true
           - runner: ubuntu-latest
             os_name: linux
             asset_arch: pext
             target: x86_64-unknown-linux-gnu
             ext: ""
+            pgo: true
           - runner: ubuntu-24.04-arm
             os_name: linux
             asset_arch: arm64
             target: aarch64-unknown-linux-gnu
             ext: ""
+            pgo: true
           - runner: windows-latest
             os_name: windows
             asset_arch: x86-64
             target: x86_64-pc-windows-msvc
             ext: ".exe"
+            pgo: true
           - runner: windows-latest
             os_name: windows
             asset_arch: avx2
             target: x86_64-pc-windows-msvc
             ext: ".exe"
+            pgo: true
           - runner: windows-latest
             os_name: windows
             asset_arch: pext
             target: x86_64-pc-windows-msvc
             ext: ".exe"
+            pgo: true
+          # PGO is impossible here, not merely unconfigured: the instrumented
+          # binary builds and trains correctly (the bench node count is right),
+          # but the profiling runtime writes .profraw files with an empty
+          # symbol-name table, so llvm-profdata rejects them with "malformed
+          # instrumentation profile data: symbol name is empty" and then "no
+          # profile can be merged". Seen on rustc 1.97.1 / LLVM 22.1.6. This
+          # asset therefore ships correct but slower than the other eight.
+          # Re-test on every toolchain bump and flip this back to true the
+          # moment the merge succeeds.
           - runner: windows-11-arm
             os_name: windows
             asset_arch: arm64
             target: aarch64-pc-windows-msvc
             ext: ".exe"
+            pgo: false
           - runner: macos-latest
             os_name: macos
             asset_arch: arm64
             target: aarch64-apple-darwin
             ext: ""
+            pgo: true
+
+    # One resolved tag for both triggers: the release payload is empty on a
+    # manual dispatch, and the dispatch input is empty on a release.
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
+      # No toolchain action: rustup reads rust-toolchain.toml (9.1) and
+      # installs the PINNED compiler plus llvm-tools-preview, which PGO needs.
+      # A `@stable` action here would download a second toolchain that the pin
+      # then overrides anyway, so the workflow would claim stable while
+      # actually building with the pin.
+      - name: Show pinned toolchain
+        shell: bash
+        run: |
+          rustup show active-toolchain
+          rustc -vV
 
-      - name: Install Rust target (fallback)
+      - name: Install Rust target
         run: rustup target add ${{ matrix.target }}
 
+      # 9.3: ship what we actually measure. Every cell above is a NATIVE
+      # runner (host triple == matrix.target), which is what PGO requires —
+      # the instrumented binary has to run its training bench locally — so the
+      # only cell built without PGO is the one where the toolchain cannot
+      # produce a mergeable profile at all (see the matrix comment).
       - name: Build release binary
-        run: cargo xtask build --arch ${{ matrix.asset_arch }} --target ${{ matrix.target }}
+        run: >
+          cargo xtask build --arch ${{ matrix.asset_arch }}
+          --target ${{ matrix.target }}
+          ${{ matrix.pgo && '--pgo' || '' }}
 
+      # xtask appends `-pgo` to the local dist filename so PGO and non-PGO
+      # builds can coexist on a dev machine. Released assets are NOT labelled
+      # — every shipped binary is PGO, so a suffix would carry no information
+      # and would break every existing download URL and script. Rename here.
       - name: Prepare asset name
         id: prepare-asset
         shell: bash
         run: |
-          asset_name="rarog-${{ github.event.release.tag_name }}-${{ matrix.os_name }}-${{ matrix.asset_arch }}${{ matrix.ext }}"
+          version="$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)"
+          pgo_suffix="${{ matrix.pgo && '-pgo' || '' }}"
+          built="target/dist/rarog-v${version}-${{ matrix.os_name }}-${{ matrix.asset_arch }}${pgo_suffix}${{ matrix.ext }}"
+          asset_name="rarog-${RELEASE_TAG}-${{ matrix.os_name }}-${{ matrix.asset_arch }}${{ matrix.ext }}"
+          if [ ! -f "$built" ]; then
+            echo "::error::expected artifact not found: $built"
+            ls -la target/dist || true
+            exit 1
+          fi
+          mv "$built" "target/dist/${asset_name}"
           echo "asset_name=${asset_name}" >> "$GITHUB_OUTPUT"
 
+      # A broken artifact would otherwise upload silently and a user finds out.
+      # Every cell is a native runner, so the real binary can be executed here.
+      - name: Smoke-test the artifact
+        shell: bash
+        run: |
+          bin="target/dist/${{ steps.prepare-asset.outputs.asset_name }}"
+          chmod +x "$bin" 2>/dev/null || true
+          out="$({ echo uci; echo quit; } | "$bin")"
+          echo "$out"
+          echo "$out" | grep -q "^uciok" || { echo "::error::no uciok in UCI handshake"; exit 1; }
+          echo "$out" | grep -q "^id name Rarog" || { echo "::error::missing id name"; exit 1; }
+          nodes="$(echo bench | "$bin" | grep -i "Nodes searched" | grep -oE "[0-9]+" | head -1)"
+          if [ -z "$nodes" ] || [ "$nodes" -le 0 ]; then
+            echo "::error::bench produced no node count"
+            exit 1
+          fi
+          echo "smoke OK - uciok, id name, bench $nodes nodes"
+
       - name: Upload binary to GitHub release
+        # bash, not the Windows default pwsh: `${RELEASE_TAG}` is POSIX syntax.
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: >
-          gh release upload "${{ github.event.release.tag_name }}"
+          gh release upload "${RELEASE_TAG}"
           "target/dist/${{ steps.prepare-asset.outputs.asset_name }}" --clobber

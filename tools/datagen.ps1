@@ -38,7 +38,9 @@
     Default: tools\texel\data\selfplay.pgn
 
 .PARAMETER Book
-    Opening book PGN/EPD. Default: tools\books\SuperGM_4mvs.pgn
+    Opening book PGN/EPD. Default: tools\texel\data\beast_seed.epd (diverse,
+    for training-position yield — NOT the unbalanced UHO SPRT book). When this
+    default is used, -BookFormat defaults to epd unless you pass it explicitly.
 
 .PARAMETER BookFormat
     Opening book format passed to fastchess: pgn or epd. Default: pgn.
@@ -75,7 +77,16 @@ Push-Location $repoRoot
 
 try {
     # ---- Defaults resolved relative to repo root ----
-    if (-not $Book)          { $Book          = "$PSScriptRoot\books\SuperGM_4mvs.pgn" }
+    # Datagen deliberately does NOT use the UHO SPRT/SPSA book: UHO openings are
+    # curated to a ~+0.5-pawn White edge, which would bias the training-position
+    # distribution. Training data wants DIVERSE, representative coverage, so the
+    # default is beast_seed.epd (1.73M unique positions; the diversity guard
+    # below recommends it and it is what Phase-6.2 used). Override -Book for
+    # experiments.
+    if (-not $Book) {
+        $Book = "$PSScriptRoot\texel\data\beast_seed.epd"
+        if (-not $PSBoundParameters.ContainsKey('BookFormat')) { $BookFormat = "epd" }
+    }
     if (-not $FastchessPath) { $FastchessPath = "$PSScriptRoot\bin\fastchess.exe" }
     if (-not $OutputPgn)     { $OutputPgn     = "$PSScriptRoot\texel\data\selfplay.pgn" }
 
@@ -94,6 +105,21 @@ try {
         if (-not $logical -or $logical -lt 1) { $logical = 1 }
         $Concurrency = [Math]::Max(1, $logical - 1)
     }
+
+    # Book-diversity guard (Phase 6.2.0, lesson 5): fixed-node self-play from a
+    # small book replays near-identical games — Basilisk got 31,880 unique
+    # positions from 200k games off SuperGM_4mvs vs 1.73M off beast_seed.epd.
+    try {
+        if ($BookFormat -eq "epd") {
+            $openings = (Get-Content $Book -ReadCount 1000 | Measure-Object -Line).Lines
+        } else {
+            $openings = (Select-String -Path $Book -Pattern '^\[Event ' -SimpleMatch:$false).Count
+        }
+        if ($openings -gt 0 -and $openings -lt $Rounds) {
+            Write-Warning ("Book has only {0:N0} openings for {1:N0} rounds — games will repeat " -f $openings, $Rounds)
+            Write-Warning "and unique-position yield collapses. Use tools\texel\data\beast_seed.epd (-BookFormat epd)."
+        }
+    } catch { }
 
     # Ensure output directory exists
     $outDir = Split-Path -Parent $OutputPgn
@@ -118,6 +144,12 @@ try {
     & $FastchessPath `
         -engine "cmd=$enginePath" "name=A" "option.Hash=$Hash" "option.Threads=1" `
         -engine "cmd=$enginePath" "name=B" "option.Hash=$Hash" "option.Threads=1" `
+        # NOTE (2026-07-22): datagen deliberately has NO -use-affinity and keeps
+        # oversubscribed concurrency. Games are NODE-limited (tc=inf), so every
+        # search decision and label is placement- and speed-independent by
+        # construction: the scheduler lottery that biased clock-TC SPRTs (see
+        # sprt.ps1 header) cannot change a single move here, and throughput is
+        # all that matters. Do not "fix" this.
         -each "tc=inf" "nodes=$Nodes" `
         -openings "file=$Book" "format=$BookFormat" order=random `
         -rounds $Rounds -games 2 -repeat `

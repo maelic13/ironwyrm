@@ -4,7 +4,7 @@ use rarog::eval::{Evaluator, MATE_SCORE, piece_value};
 use rarog::search::{SearchEvent, SearchExit, Searcher};
 use rarog::search_options::SearchOptions;
 use rarog::syzygy;
-use rarog::tt::{Bound, TranspositionTable, score_from_tt, score_to_tt};
+use rarog::tt::{Bound, TranspositionTable, TtStore, score_from_tt, score_to_tt};
 
 fn args(parts: &[&str]) -> Vec<String> {
     parts.iter().map(|part| (*part).to_string()).collect()
@@ -60,7 +60,7 @@ fn search_options_parse_startpos_moves_and_go_limits() {
     assert_eq!(options.limits.black_increment, 200);
     assert_eq!(options.limits.movestogo, 20);
     assert_eq!(options.limits.nodes, 12_345);
-    assert_eq!(options.limits.depth, 7.0);
+    assert_eq!(options.limits.depth, Some(7));
     assert!(options.limits.search_moves.is_empty());
     assert!(options.limits.ponder);
     assert!(!options.limits.infinite);
@@ -68,15 +68,15 @@ fn search_options_parse_startpos_moves_and_go_limits() {
     options.set_search_parameters(&args(&["ponder", "infinite"]));
     assert!(options.limits.ponder);
     assert!(options.limits.infinite);
-    assert_eq!(options.limits.depth, f64::INFINITY);
+    assert_eq!(options.limits.depth, None);
 
     options.set_search_parameters(&args(&["depth", "3"]));
     assert!(!options.limits.ponder);
     assert!(!options.limits.infinite);
-    assert_eq!(options.limits.depth, 3.0);
+    assert_eq!(options.limits.depth, Some(3));
 
     options.set_search_parameters(&args(&["mate", "2", "searchmoves", "e2e4", "g1f3"]));
-    assert_eq!(options.limits.depth, 3.0);
+    assert_eq!(options.limits.depth, Some(3));
     assert_eq!(options.limits.search_moves.len(), 2);
 }
 
@@ -101,7 +101,7 @@ fn search_options_default_go_and_invalid_limits_are_bounded() {
 
     options.set_search_parameters(&[]);
 
-    assert_eq!(options.limits.depth, f64::INFINITY);
+    assert_eq!(options.limits.depth, None);
     assert_eq!(options.limits.nodes, 0);
     assert_eq!(options.limits.perft, 0);
     assert!(!options.limits.infinite);
@@ -122,7 +122,7 @@ fn search_options_default_go_and_invalid_limits_are_bounded() {
         "oops",
     ]));
 
-    assert_eq!(options.limits.depth, 2.0);
+    assert_eq!(options.limits.depth, Some(2));
     assert_eq!(options.limits.nodes, 0);
     assert_eq!(options.limits.perft, 0);
     assert_eq!(options.limits.move_time, 0);
@@ -138,7 +138,7 @@ fn search_options_parse_uci_go_perft() {
     options.set_search_parameters(&args(&["perft", "3"]));
 
     assert_eq!(options.limits.perft, 3);
-    assert_eq!(options.limits.depth, f64::INFINITY);
+    assert_eq!(options.limits.depth, None);
 }
 
 #[test]
@@ -173,7 +173,7 @@ fn search_options_setoption_and_reset_cover_engine_configuration() {
     ]));
     options.reset();
 
-    assert_eq!(options.limits.depth, f64::INFINITY);
+    assert_eq!(options.limits.depth, None);
     assert_eq!(options.limits.nodes, 0);
     assert_eq!(options.limits.move_time, 0);
     assert!(options.limits.search_moves.is_empty());
@@ -326,8 +326,9 @@ fn engine_command_constructors_set_expected_flags() {
     assert!(quit.stop);
     assert_eq!(quit.epoch, 13);
 
-    let bench = EngineCommand::bench(7, SearchOptions::default(), 14);
+    let bench = EngineCommand::bench(7, 3, SearchOptions::default(), 14);
     assert_eq!(bench.bench_depth, Some(7));
+    assert_eq!(bench.bench_repeats, 3);
     assert_eq!(bench.epoch, 14);
 
     let configure = EngineCommand::configure(SearchOptions::default());
@@ -346,7 +347,16 @@ fn transposition_table_store_probe_replace_clear_and_mate_scores() {
     let key = 0x1234_0000_0000_0000;
     let best = Move::from_uci("e2e4").expect("valid UCI move");
 
-    table.store(key, 5, 123, Bound::Exact, best, 0, 42, false);
+    table.store(TtStore {
+        key,
+        depth: 5,
+        score: 123,
+        bound: Bound::Exact,
+        mv: best,
+        ply: 0,
+        static_eval: 42,
+        is_pv: false,
+    });
     let entry = table.probe(key).expect("entry must be stored");
     assert_eq!(entry.score, 123);
     assert_eq!(entry.static_eval, 42);
@@ -354,7 +364,16 @@ fn transposition_table_store_probe_replace_clear_and_mate_scores() {
     assert_eq!(entry.bound(), Some(Bound::Exact));
     assert_eq!(entry.best_move(), Some(best));
 
-    table.store(0x5678_0000_0000_0001, 1, 1, Bound::Exact, best, 0, 0, false);
+    table.store(TtStore {
+        key: 0x5678_0000_0000_0001,
+        depth: 1,
+        score: 1,
+        bound: Bound::Exact,
+        mv: best,
+        ply: 0,
+        static_eval: 0,
+        is_pv: false,
+    });
     assert!(table.hashfull() > 0);
 
     assert!(!table.resize(usize::MAX));
@@ -363,24 +382,49 @@ fn transposition_table_store_probe_replace_clear_and_mate_scores() {
         "failed resize must keep the current table"
     );
 
-    table.make_shared();
+    table.make_shared(1);
     assert!(
         table.probe(key).is_none(),
         "shared TT should not import local key16-only entries"
     );
-    table.store(key, 5, 123, Bound::Exact, best, 0, 42, false);
+    table.store(TtStore {
+        key,
+        depth: 5,
+        score: 123,
+        bound: Bound::Exact,
+        mv: best,
+        ply: 0,
+        static_eval: 42,
+        is_pv: false,
+    });
     let shared_entry = table
         .probe(key)
         .expect("entry must be stored in shared table");
     assert_eq!(shared_entry.score, 123);
     assert_eq!(shared_entry.bound(), Some(Bound::Exact));
     assert_eq!(shared_entry.best_move(), Some(best));
+    // Verification is the top-16 tag, NOT the full 64-bit key. The shared
+    // table used to store `key ^ data` alongside `data` — 16 B per slot — to
+    // verify all 64 bits. That bought a guarantee the single-threaded table
+    // has never had (it compares a plain `key16`) at the price of 60% more
+    // memory per entry, which halved the positions a multi-threaded search
+    // could remember. The slot is now 10 B and verifies 16 bits, matching the
+    // local backend exactly; a differing tag must still be rejected.
     assert!(
-        table.probe(key ^ 0x0000_8000_0000_0000).is_none(),
-        "shared TT must validate the full key"
+        table.probe(key ^ 0x8000_0000_0000_0000).is_none(),
+        "shared TT must reject a key whose verification tag differs"
     );
 
-    table.store(key, 4, 90, Bound::Upper, Move::NULL, 0, 11, false);
+    table.store(TtStore {
+        key,
+        depth: 4,
+        score: 90,
+        bound: Bound::Upper,
+        mv: Move::NULL,
+        ply: 0,
+        static_eval: 11,
+        is_pv: false,
+    });
     let replaced = table.probe(key).expect("entry must remain present");
     assert_eq!(replaced.bound(), Some(Bound::Upper));
     assert_eq!(replaced.best_move(), Some(best));
@@ -410,8 +454,26 @@ fn transposition_table_hashfull_counts_only_current_generation_entries() {
     let second_fresh_key = 0xBABE_0000_0000_0004;
 
     let mut table = TranspositionTable::new(1);
-    table.store(key, 6, 12, Bound::Exact, best, 0, 34, false);
-    table.store(second_key, 5, 20, Bound::Upper, best, 0, 10, false);
+    table.store(TtStore {
+        key,
+        depth: 6,
+        score: 12,
+        bound: Bound::Exact,
+        mv: best,
+        ply: 0,
+        static_eval: 34,
+        is_pv: false,
+    });
+    table.store(TtStore {
+        key: second_key,
+        depth: 5,
+        score: 20,
+        bound: Bound::Upper,
+        mv: best,
+        ply: 0,
+        static_eval: 10,
+        is_pv: false,
+    });
     table.prefetch(key);
     assert!(table.hashfull() > 0);
 
@@ -426,14 +488,68 @@ fn transposition_table_hashfull_counts_only_current_generation_entries() {
         "stale hashfull accounting must not make entries unprobeable"
     );
 
-    table.store(fresh_key, 4, -8, Bound::Lower, best, 0, -10, false);
-    table.store(second_fresh_key, 3, -12, Bound::Exact, best, 0, -3, false);
+    table.store(TtStore {
+        key: fresh_key,
+        depth: 4,
+        score: -8,
+        bound: Bound::Lower,
+        mv: best,
+        ply: 0,
+        static_eval: -10,
+        is_pv: false,
+    });
+    table.store(TtStore {
+        key: second_fresh_key,
+        depth: 3,
+        score: -12,
+        bound: Bound::Exact,
+        mv: best,
+        ply: 0,
+        static_eval: -3,
+        is_pv: false,
+    });
     assert!(table.hashfull() > 0);
 
     let mut shared = TranspositionTable::new(1);
-    shared.make_shared();
-    shared.store(key, 5, 99, Bound::Exact, best, 0, 11, false);
-    shared.store(second_key, 4, 88, Bound::Lower, best, 0, 22, false);
+    shared.make_shared(1);
+    shared.store(TtStore {
+        key,
+        depth: 5,
+        score: 99,
+        bound: Bound::Exact,
+        mv: best,
+        ply: 0,
+        static_eval: 11,
+        is_pv: false,
+    });
+    shared.store(TtStore {
+        key: second_key,
+        depth: 4,
+        score: 88,
+        bound: Bound::Lower,
+        mv: best,
+        ply: 0,
+        static_eval: 22,
+        is_pv: false,
+    });
+    // `hashfull` reports per-mille of SLOTS over the sampled clusters, so two
+    // entries in a 1 MiB shared table legitimately round to zero — it only
+    // read non-zero before because the slot count per cluster was small enough
+    // to flatter the integer division. Fill enough of the sampled region (the
+    // cluster index is the key's low bits) to give the generation logic under
+    // test a real reading to move off.
+    for filler in 3..64u64 {
+        shared.store(TtStore {
+            key: 0xCAFE_0000_0000_0000 | filler,
+            depth: 3,
+            score: 5,
+            bound: Bound::Exact,
+            mv: best,
+            ply: 0,
+            static_eval: 5,
+            is_pv: false,
+        });
+    }
     shared.prefetch(key);
     assert!(shared.hashfull() > 0);
     shared.new_search();
@@ -522,7 +638,7 @@ fn search_returns_null_move_for_stalemate() {
     let board = Board::from_fen("4k3/4P3/4K3/8/8/8/8/8 b - - 0 1").expect("valid FEN");
     let mut searcher = Searcher::default();
     let mut options = SearchOptions::default();
-    options.limits.depth = 4.0;
+    options.limits.depth = Some(4);
 
     let result = searcher.search(board, &options, false, || SearchEvent::None);
 
@@ -545,7 +661,7 @@ fn search_returns_legal_root_move_in_drawn_material_positions() {
         let legal_moves = board.generate_legal_movelist();
         let mut searcher = Searcher::default();
         let mut options = SearchOptions::default();
-        options.limits.depth = 1.0;
+        options.limits.depth = Some(1);
 
         let result = searcher.search(board, &options, false, || SearchEvent::None);
 
@@ -568,7 +684,7 @@ fn search_returns_legal_move_in_root_fifty_move_claim_position() {
     let legal_moves = board.generate_legal_movelist();
     let mut searcher = Searcher::default();
     let mut options = SearchOptions::default();
-    options.limits.depth = 1.0;
+    options.limits.depth = Some(1);
 
     let result = searcher.search(board, &options, false, || SearchEvent::None);
 
@@ -593,7 +709,7 @@ fn search_returns_legal_moves_from_little_blitzer_illegal_artifacts() {
         let legal_moves = board.generate_legal_movelist();
         let mut searcher = Searcher::default();
         let mut options = SearchOptions::default();
-        options.limits.depth = 4.0;
+        options.limits.depth = Some(4);
 
         let result = searcher.search(board, &options, false, || SearchEvent::None);
 
@@ -651,7 +767,7 @@ fn search_falls_back_when_searchmoves_match_no_root_move() {
 fn search_respects_node_limit() {
     let mut searcher = Searcher::default();
     let mut options = SearchOptions::default();
-    options.limits.depth = 99.0;
+    options.limits.depth = Some(99);
     options.limits.nodes = 512;
 
     let result = searcher.search(options.position.board.clone(), &options, false, || {
@@ -668,7 +784,7 @@ fn search_respects_node_limit() {
 fn threaded_search_uses_aggregate_node_limit() {
     let mut searcher = Searcher::default();
     let mut options = SearchOptions::default();
-    options.limits.depth = 99.0;
+    options.limits.depth = Some(99);
     options.limits.nodes = 512;
     options.engine.threads = 8;
 
@@ -690,7 +806,7 @@ fn threaded_search_uses_aggregate_node_limit() {
 fn search_quit_event_exits_search() {
     let mut searcher = Searcher::default();
     let mut options = SearchOptions::default();
-    options.limits.depth = 99.0;
+    options.limits.depth = Some(99);
 
     let mut polls = 0;
     let result = searcher.search(options.position.board.clone(), &options, false, || {
@@ -708,7 +824,7 @@ fn search_quit_event_exits_search() {
 fn search_result_records_ponderhit_conversion() {
     let mut searcher = Searcher::default();
     let mut options = SearchOptions::default();
-    options.limits.depth = 99.0;
+    options.limits.depth = Some(99);
     options.limits.nodes = 4_096;
     options.limits.ponder = true;
 

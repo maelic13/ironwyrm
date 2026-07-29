@@ -7,7 +7,10 @@
 //! that the engine's `RAROG_EVAL_FILE` loader (Phase 3.2) reads back.
 //!
 //! Dataset format: one `FEN;target` per line; `target` is the White-POV
-//! expected score (`1-0`/`0-1`/`1/2-1/2`, or a float in `[0,1]`).
+//! expected score (`1-0`/`0-1`/`1/2-1/2`, or a float in `[0,1]`). With
+//! `--from-cp` (Phase 6.1 SF-distillation), `target` is instead a White-POV
+//! centipawn integer (e.g. Hydra's `sf_train.csv`), squashed at load with
+//! `1/(1+10^(-cp/400))`.
 //!
 //! Build/run (from repo root):
 //!   cargo run --release -p texel-tuner -- --verify tools/texel/data/holdout.csv
@@ -17,6 +20,7 @@
 use std::fs;
 use std::process::exit;
 use std::sync::OnceLock;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::thread;
 
 use rarog::board::{Board, Color, Piece};
@@ -62,6 +66,9 @@ const PAWNSTRUCT: &[&str] = &[
     "pawn_lever_eg",
     "pawn_doubled_isolated_mg",
     "pawn_doubled_isolated_eg",
+    // Phase 7.4: same-rank phalanx (seeded 0, activated by this refit).
+    "pawn_phalanx_mg",
+    "pawn_phalanx_eg",
 ];
 const PASSERS: &[&str] = &[
     "passed_mg",
@@ -72,6 +79,10 @@ const PASSERS: &[&str] = &[
     "passed_freestop_mg_per_rank",
     "passed_freestop_eg_per_rank",
     "passed_safestop_eg_per_rank",
+    // Phase 6.2.1 whole-path weighting.
+    "passed_freepath_mg_per_rank",
+    "passed_freepath_eg_per_rank",
+    "passed_safepath_eg_per_rank",
     "passed_candidate_mg",
     "passed_candidate_eg",
     "passer_proximity_base",
@@ -159,6 +170,14 @@ const GAUNTLET: &[&str] = &[
     "king_protector_mg",
     "king_protector_eg",
     "space_piece_mg",
+    // Phase 6.2.1 refresh structure.
+    "space_behind_piece_mg",
+    "bishop_xray_pawns_mg",
+    "bishop_xray_pawns_eg",
+    "queen_battery_mg",
+    "queen_battery_eg",
+    "slider_on_queen_mg",
+    "slider_on_queen_eg",
 ];
 const KINGSAFETY: &[&str] = &[
     "king_safety_table",
@@ -204,6 +223,17 @@ fn active_indices_for_group(group: &str) -> Vec<usize> {
         "minors" => push_all(&mut active, MINORS),
         "mobility" => push_all(&mut active, MOBILITY),
         "threats" => push_all(&mut active, THREATS),
+        // Phase 7.4: narrow affected-family refit for the HCE semantics bundle
+        // — the pawn tables (support + new phalanx), passers, the rook-behind
+        // pair, the attacked2-affected threats, and the square-rule scalar.
+        // Nothing else (lesson 1: no all-parameter fit).
+        "p74" => {
+            push_all(&mut active, PAWNSTRUCT);
+            push_all(&mut active, PASSERS);
+            push_all(&mut active, ROOKS);
+            push_all(&mut active, THREATS);
+            push_field(&mut active, "unstoppable_passer_eg");
+        }
         // Stage 4.4: the remaining positional scalars — pawn structure, passers,
         // rook files/7th, minors (bishop pair, outposts), space/tempo, small
         // positional terms, and the gauntlet additions. Excludes mobility /
@@ -351,6 +381,9 @@ fn clamp_weights(w: &mut [f64]) {
     }
     clamp_field(w, "pawn_connected_mg", 0.0, 200.0);
     clamp_field(w, "pawn_connected_eg", 0.0, 200.0);
+    // Phase 7.4: phalanx bonus (same range as support).
+    clamp_field(w, "pawn_phalanx_mg", 0.0, 200.0);
+    clamp_field(w, "pawn_phalanx_eg", 0.0, 200.0);
     // Phase 3.8: lever bonus and doubled-isolated penalty magnitude.
     clamp_field(w, "pawn_lever_mg", 0.0, 100.0);
     clamp_field(w, "pawn_lever_eg", 0.0, 100.0);
@@ -474,6 +507,7 @@ fn clamp_weights(w: &mut [f64]) {
         "ks_safe_check_queen",
         "ks_flank_attack",
         "ks_pawnless_flank",
+        "ks_shelter_storm",
         "ks_queen_relief",
     ] {
         clamp_field(w, f, 0.0, 20.0);
@@ -671,7 +705,40 @@ impl TuneSet {
     }
 }
 
+/// `--from-cp` mode (Phase 6.1 SF-distillation): targets are White-POV
+/// centipawns (Hydra `annotate_sf.py` output), squashed to `[0,1]` at load.
+static FROM_CP: AtomicBool = AtomicBool::new(false);
+
+/// `--fix-k <v>` (Phase 6.1): pin the sigmoid K instead of golden-section
+/// fitting it. Stored as f64 bits; 0 = unset (K=0 is never a valid pin).
+static FIX_K: AtomicU64 = AtomicU64::new(0);
+
+fn fixed_k() -> Option<f64> {
+    let bits = FIX_K.load(Ordering::Relaxed);
+    if bits == 0 {
+        None
+    } else {
+        Some(f64::from_bits(bits))
+    }
+}
+
+fn k_label(k: f64) -> String {
+    if fixed_k().is_some() {
+        format!("{k:.5} (fixed via --fix-k)")
+    } else {
+        format!("{k:.5} (fitted)")
+    }
+}
+
 fn parse_target(text: &str) -> Option<f32> {
+    if FROM_CP.load(Ordering::Relaxed) {
+        // Raw centipawn label (already White-POV; Hydra clamps mates/limits to
+        // ±2000, but clamp again defensively). Squash with the standard Texel
+        // logistic at cp/400 — the same shape the tuner's own sigmoid uses.
+        let cp: f64 = text.trim().parse().ok()?;
+        let cp = cp.clamp(-2000.0, 2000.0);
+        return Some((1.0 / (1.0 + 10f64.powf(-cp / 400.0))) as f32);
+    }
     match text {
         "1-0" => return Some(1.0),
         "0-1" => return Some(0.0),
@@ -738,6 +805,12 @@ fn process_line(
     Some((result, base_white as f32, row, buckets))
 }
 
+/// One worker chunk's contribution to the sparse dataset: the mg feature
+/// weights, the eg feature weights, the per-position phase factors, and the
+/// index of each active feature. Kept as four parallel `Vec`s (rather than a
+/// `Vec` of structs) because the fitter consumes them as flat columns.
+type ChunkColumns = (Vec<f32>, Vec<f32>, Vec<f32>, Vec<u32>);
+
 fn load_tune_dataset(path: &str, active: &[usize], max_positions: usize) -> TuneSet {
     let mut lines = read_lines(path);
     if max_positions > 0 && lines.len() > max_positions {
@@ -748,7 +821,7 @@ fn load_tune_dataset(path: &str, active: &[usize], max_positions: usize) -> Tune
     let chunk = lines.len().div_ceil(threads.max(1));
 
     let defaults = EvalParams::default();
-    let parts: Vec<(Vec<f32>, Vec<f32>, Vec<f32>, Vec<u32>)> = thread::scope(|s| {
+    let parts: Vec<ChunkColumns> = thread::scope(|s| {
         let handles: Vec<_> = lines
             .chunks(chunk.max(1))
             .map(|slice| {
@@ -791,6 +864,20 @@ fn load_tune_dataset(path: &str, active: &[usize], max_positions: usize) -> Tune
     }
     if set.len() == 0 {
         eprintln!("No positions loaded from {path}.");
+        exit(1);
+    }
+    // Guard against a silently mis-read dataset: a cp-labelled file loaded
+    // WITHOUT --from-cp keeps only rows whose cp happens to be 0 or 1 (they
+    // parse as valid WDL floats) and drops everything else. A WDL file loaded
+    // WITH --from-cp squashes 0..1 to ~0.500 (harmless but wrong). The first
+    // case shows up as a huge rejected fraction — refuse to continue.
+    let rejected = lines.len().saturating_sub(set.len());
+    if rejected * 2 > lines.len() {
+        eprintln!(
+            "ERROR: {rejected}/{} lines of {path} were rejected. If the targets \
+             are centipawns (e.g. Hydra sf_*.csv), pass --from-cp.",
+            lines.len()
+        );
         exit(1);
     }
     set
@@ -852,6 +939,9 @@ fn traced_loss(set: &TuneSet, active: &[usize], base_w: &[f64], w: &[f64], k: f6
 }
 
 fn fit_k(set: &TuneSet) -> f64 {
+    if let Some(k) = fixed_k() {
+        return k;
+    }
     let (mut lo, mut hi) = (0.5f64, 2.5f64);
     for _ in 0..50 {
         let m1 = lo + (hi - lo) / 3.0;
@@ -922,7 +1012,7 @@ fn report_bucket_table(set: &TuneSet, active: &[usize], base_w: &[f64], final_w:
         .iter()
         .zip(final_w)
         .any(|(a, b)| (a - b).abs() > 1e-9);
-    println!("\nPer-bucket holdout loss:");
+    println!("\nPer-bucket loss:");
     if changed {
         println!(
             "{:<13} {:>9} {:>11} {:>11} {:>11}",
@@ -1076,6 +1166,14 @@ struct TuneOpts {
     group: String,
     train: String,
     holdout: String,
+    /// 9.6(a): optional FROZEN TEST set. Three data roles: train updates the
+    /// weights, the holdout is the VALIDATION set (it selects K and the best
+    /// epoch — i.e. it steers the fit), and this set selects NOTHING. It is
+    /// loaded after training ends and read exactly once, so the number it
+    /// reports is an unbiased estimate. The holdout's own report is
+    /// optimistically biased by construction: it is the best of N epochs on
+    /// the very data that picked them.
+    test: Option<String>,
     out: String,
     epochs: usize,
     lr: f64,
@@ -1107,7 +1205,7 @@ fn cmd_tune(opts: &TuneOpts) {
     println!("  {} holdout positions", holdout.len());
 
     let k = fit_k(&holdout);
-    println!("Fitted K = {k:.5}");
+    println!("K = {}", k_label(k));
 
     let base_w = EvalParams::default().to_flat();
     let mut w = base_w.clone();
@@ -1191,8 +1289,30 @@ fn cmd_tune(opts: &TuneOpts) {
     }
 
     w.copy_from_slice(&best_w);
-    println!("Best holdout epoch {best_epoch} (holdout={best_holdout:.8}).");
+    println!("Best validation epoch {best_epoch} (validation={best_holdout:.8}).");
+    println!("NOTE: the validation loss above SELECTED the epoch, so it is an");
+    println!("optimistic estimate. Pass --test <frozen.csv> for an unbiased one.");
     report_bucket_table(&holdout, &active, &base_w, &w, k);
+
+    // 9.6(a): the frozen test set is loaded only now — after every selection
+    // decision (K, best epoch) has been made — and evaluated exactly once.
+    if let Some(test_path) = &opts.test {
+        println!(
+            "
+Loading FROZEN TEST set from {test_path} ..."
+        );
+        let test = load_tune_dataset(test_path, &active, opts.max_positions);
+        println!("  {} test positions", test.len());
+        let base_test = traced_loss(&test, &active, &base_w, &base_w, k);
+        let test_loss = traced_loss(&test, &active, &base_w, &w, k);
+        println!(
+            "Frozen test loss = {test_loss:.8} (base {base_test:.8}, delta {:+.8})",
+            test_loss - base_test
+        );
+        println!("(one-shot residual report; this set selected nothing)");
+        report_bucket_table(&test, &active, &base_w, &w, k);
+    }
+
     print_active_deltas(&active, &base_w, &w);
     write_eval_file(&opts.out, &w);
     println!("Tuned weights written to {}", opts.out);
@@ -1217,6 +1337,8 @@ const KS_DANGER_INPUTS: &[&str] = &[
     "ks_safe_check_queen",
     "ks_flank_attack",
     "ks_pawnless_flank",
+    // Phase 6.2.1: shelter/storm pawn-cover deficit folded into the danger index.
+    "ks_shelter_storm",
     "ks_queen_relief",
 ];
 
@@ -1279,6 +1401,16 @@ fn load_raw_dataset(path: &str, max_positions: usize) -> Vec<RawPos> {
     }
     if all.is_empty() {
         eprintln!("No positions loaded from {path}.");
+        exit(1);
+    }
+    // Same silent-misread guard as load_tune_dataset (see comment there).
+    let rejected = lines.len().saturating_sub(all.len());
+    if rejected * 2 > lines.len() {
+        eprintln!(
+            "ERROR: {rejected}/{} lines of {path} were rejected. If the targets \
+             are centipawns (e.g. Hydra sf_*.csv), pass --from-cp.",
+            lines.len()
+        );
         exit(1);
     }
     all
@@ -1378,7 +1510,7 @@ fn ks_bucket_losses(
 }
 
 fn ks_report_buckets(base: &[(f64, u64)], fin: &[(f64, u64)]) {
-    println!("\nPer-bucket holdout loss:");
+    println!("\nPer-bucket loss:");
     println!(
         "{:<13} {:>9} {:>11} {:>11} {:>11}",
         "bucket", "n", "base", "final", "delta"
@@ -1400,6 +1532,9 @@ fn ks_report_buckets(base: &[(f64, u64)], fin: &[(f64, u64)]) {
 /// Fit K once from base-parameter scores (ternary search), so the K-fit does
 /// not re-evaluate the dataset per iteration.
 fn ks_fit_k(boards: &[RawPos], evs: &mut [Evaluator], base: &EvalParams) -> f64 {
+    if let Some(k) = fixed_k() {
+        return k;
+    }
     for e in evs.iter_mut() {
         e.set_params(base.clone());
     }
@@ -1472,7 +1607,7 @@ fn cmd_tune_kingsafety(opts: &TuneOpts) {
 
     let base_params = EvalParams::default();
     let k = ks_fit_k(&holdout, &mut evs, &base_params);
-    println!("Fitted K = {k:.5}");
+    println!("K = {}", k_label(k));
 
     let base_w = base_params.to_flat();
     let mut w = base_w.clone();
@@ -1544,6 +1679,33 @@ fn cmd_tune_kingsafety(opts: &TuneOpts) {
     params.set_from_flat(&w);
     let fin_buckets = ks_bucket_losses(&holdout, &mut evs, &params, k);
     ks_report_buckets(&base_buckets, &fin_buckets);
+
+    // 9.6(a): one-shot frozen-test residual, evaluated only after the fit and
+    // its epoch selection are complete. See TuneOpts::test.
+    if let Some(test_path) = &opts.test {
+        println!(
+            "
+Loading FROZEN TEST set from {test_path} ..."
+        );
+        let test = load_raw_dataset(test_path, opts.max_positions);
+        println!("  {} test positions", test.len());
+        params.set_from_flat(&base_w);
+        let base_test = ks_mse(&test, &mut evs, &params, k);
+        params.set_from_flat(&w);
+        let test_loss = ks_mse(&test, &mut evs, &params, k);
+        println!(
+            "Frozen test loss = {test_loss:.8} (base {base_test:.8}, delta {:+.8})",
+            test_loss - base_test
+        );
+        println!("(one-shot residual report; this set selected nothing)");
+        let base_b = {
+            params.set_from_flat(&base_w);
+            ks_bucket_losses(&test, &mut evs, &params, k)
+        };
+        params.set_from_flat(&w);
+        let fin_b = ks_bucket_losses(&test, &mut evs, &params, k);
+        ks_report_buckets(&base_b, &fin_b);
+    }
 
     print_active_deltas(&active, &base_w, &w);
     write_eval_file(&opts.out, &w);
@@ -1743,7 +1905,7 @@ fn cmd_buckets(path: &str, max_positions: usize) {
     let set = load_tune_dataset(path, &active, max_positions);
     println!("  {} positions", set.len());
     let k = fit_k(&set);
-    println!("Fitted K = {k:.5}");
+    println!("K = {}", k_label(k));
     println!("Aggregate loss = {:.8}", default_loss(&set, k));
     let base_w = EvalParams::default().to_flat();
     report_bucket_table(&set, &active, &base_w, &base_w, k);
@@ -1753,14 +1915,48 @@ fn usage(exe: &str) {
     eprintln!("Usage:");
     eprintln!("  {exe} --verify <dataset.csv>");
     eprintln!("  {exe} --feature-support <dataset.csv> [--max-positions N]");
-    eprintln!("  {exe} --buckets <dataset.csv> [--max-positions N]");
+    eprintln!("  {exe} --buckets <dataset.csv> [--max-positions N] [--from-cp] [--fix-k K]");
     eprintln!(
-        "  {exe} --tune <group> <train.csv> <holdout.csv> [out.txt] [--epochs N] [--lr X] [--l2 X] [--max-positions N]"
+        "  {exe} --tune <group> <train.csv> <validation.csv> [out.txt] [--test frozen.csv] [--epochs N] [--lr X] [--l2 X] [--max-positions N] [--from-cp] [--fix-k K]"
     );
     eprintln!(
-        "  {exe} --tune-kingsafety <train.csv> <holdout.csv> [out.txt] [--epochs N] [--max-positions N]"
+        "  {exe} --tune-kingsafety <train.csv> <validation.csv> [out.txt] [--test frozen.csv] [--epochs N] [--max-positions N] [--from-cp] [--fix-k K]"
     );
+    eprintln!();
+    eprintln!("  --test      FROZEN test set: loaded after the fit, read once,");
+    eprintln!("              selects nothing. The validation set picks K and the");
+    eprintln!("              best epoch, so its loss is optimistically biased;");
+    eprintln!("              only the frozen-test number is an honest residual.");
+    eprintln!("  --from-cp   targets are White-POV centipawns (e.g. Hydra sf_*.csv),");
+    eprintln!("              squashed 1/(1+10^(-cp/400)) at load (Phase 6.1 SF-distill)");
+    eprintln!("  --fix-k K   pin sigmoid K instead of fitting it (e.g. --fix-k 1)");
     print_groups();
+}
+
+/// Parse the global `--from-cp` / `--fix-k` flags shared by several
+/// subcommands. Returns true (and advances `*i` past any value) if `flag`
+/// was consumed.
+fn parse_global_flag(flag: &str, args: &[String], i: &mut usize) -> bool {
+    match flag {
+        "--from-cp" => {
+            FROM_CP.store(true, Ordering::Relaxed);
+            true
+        }
+        "--fix-k" => {
+            let v: f64 = args
+                .get(*i)
+                .and_then(|v| v.parse().ok())
+                .filter(|v| *v > 0.0)
+                .unwrap_or_else(|| {
+                    eprintln!("Bad --fix-k (must be a positive number)");
+                    exit(1)
+                });
+            FIX_K.store(v.to_bits(), Ordering::Relaxed);
+            *i += 1;
+            true
+        }
+        _ => false,
+    }
 }
 
 fn main() {
@@ -1786,6 +1982,7 @@ fn main() {
                 group: args[2].clone(),
                 train: args[3].clone(),
                 holdout: args[4].clone(),
+                test: None,
                 out: "tools/texel/out/eval_params.txt".to_string(),
                 epochs: 200,
                 lr: 0.3,
@@ -1807,6 +2004,10 @@ fn main() {
                     })
                 };
                 match flag.as_str() {
+                    "--test" => {
+                        opts.test = Some(val().clone());
+                        i += 1;
+                    }
                     "--epochs" => {
                         opts.epochs = val().parse().unwrap_or_else(|_| {
                             eprintln!("Bad --epochs");
@@ -1836,9 +2037,11 @@ fn main() {
                         i += 1;
                     }
                     other => {
-                        eprintln!("Unknown option {other}");
-                        usage(&args[0]);
-                        exit(1);
+                        if !parse_global_flag(other, &args, &mut i) {
+                            eprintln!("Unknown option {other}");
+                            usage(&args[0]);
+                            exit(1);
+                        }
                     }
                 }
             }
@@ -1857,6 +2060,7 @@ fn main() {
                 group: "kingsafety-nonlinear".to_string(),
                 train: args[2].clone(),
                 holdout: args[3].clone(),
+                test: None,
                 out: "tools/texel/out/king_safety.txt".to_string(),
                 epochs: 40,
                 lr: 0.0,
@@ -1878,6 +2082,10 @@ fn main() {
                     })
                 };
                 match flag.as_str() {
+                    "--test" => {
+                        opts.test = Some(val().clone());
+                        i += 1;
+                    }
                     "--epochs" => {
                         opts.epochs = val().parse().unwrap_or_else(|_| {
                             eprintln!("Bad --epochs");
@@ -1893,9 +2101,11 @@ fn main() {
                         i += 1;
                     }
                     other => {
-                        eprintln!("Unknown option {other}");
-                        usage(&args[0]);
-                        exit(1);
+                        if !parse_global_flag(other, &args, &mut i) {
+                            eprintln!("Unknown option {other}");
+                            usage(&args[0]);
+                            exit(1);
+                        }
                     }
                 }
             }
@@ -1925,6 +2135,22 @@ fn main() {
                             });
                         i += 2;
                     }
+                    "--from-cp" => {
+                        FROM_CP.store(true, Ordering::Relaxed);
+                        i += 1;
+                    }
+                    "--fix-k" => {
+                        let v: f64 = args
+                            .get(i + 1)
+                            .and_then(|v| v.parse().ok())
+                            .filter(|v| *v > 0.0)
+                            .unwrap_or_else(|| {
+                                eprintln!("Bad --fix-k (must be a positive number)");
+                                exit(1)
+                            });
+                        FIX_K.store(v.to_bits(), Ordering::Relaxed);
+                        i += 2;
+                    }
                     other => {
                         eprintln!("Unknown option {other}");
                         usage(&args[0]);
@@ -1952,6 +2178,22 @@ fn main() {
                                 eprintln!("Bad --max-positions");
                                 exit(1)
                             });
+                        i += 2;
+                    }
+                    "--from-cp" => {
+                        FROM_CP.store(true, Ordering::Relaxed);
+                        i += 1;
+                    }
+                    "--fix-k" => {
+                        let v: f64 = args
+                            .get(i + 1)
+                            .and_then(|v| v.parse().ok())
+                            .filter(|v| *v > 0.0)
+                            .unwrap_or_else(|| {
+                                eprintln!("Bad --fix-k (must be a positive number)");
+                                exit(1)
+                            });
+                        FIX_K.store(v.to_bits(), Ordering::Relaxed);
                         i += 2;
                     }
                     other => {

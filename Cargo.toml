@@ -1,8 +1,12 @@
 [package]
 name = "rarog"
 authors = ["Miloslav Macurek"]
-version = "2.2.0"
+version = "2.3.0"
 edition = "2024"
+# MSRV = the pinned toolchain (rust-toolchain.toml). Kept in lockstep so a
+# stale local toolchain fails with a clear cargo message, not a confusing
+# mid-compile error about an unstable feature.
+rust-version = "1.97"
 description = "A UCI-compatible chess engine written in Rust"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/maelic13/rarog"
@@ -22,6 +26,11 @@ resolver = "3"
 # Build: cargo xtask build --arch pext --pgo (+ add --features tune to the xtask or
 # pass CARGO_ENCODED_RUSTFLAGS directly if needed).
 tune = []
+# Phase 7.6 search diagnostics: process-global counters dumped as `info string
+# diag ...` at search end (check-node share, tt_pv veto, prune families, LMR
+# re-search rate, learning events). Diagnostic-only — never in a shipped or
+# SPRT binary. bench is identical with this OFF (the gate for the feature).
+diag = []
 
 # Exposes the Texel trace machinery (EvalTrace, reconstruct, flat-param helpers)
 # used by the offline tuner in tools/texel-tuner (Phase 3.3). Never enabled in
@@ -29,10 +38,58 @@ tune = []
 # per-position feature trace, so it must NOT be used for playing strength.
 texel = []
 
+# ─── Lint wall (Phase 9.0a, 2026-07-19) ──────────────────────────────────────
+# PLAN.md guiding principle #8: clean, idiomatic Rust only — no new violations,
+# real or spirit-level. This section makes that a BUILD property rather than a
+# habit; the 9.2 CI job runs clippy with `-D warnings` so a violation fails the
+# build. Every entry below is either already at zero (kept there by `deny`) or
+# carries a written burn-down plan.
+[lints.rust]
+# Unsafe inside an `unsafe fn` must still be an explicit `unsafe {}` block.
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+# Baseline: the whole `clippy::all` set is at zero as of 9.0f and stays there.
+all = { level = "warn", priority = -1 }
+
+# Principle-#8 hard rules. All currently zero — `deny` keeps them that way.
+undocumented_unsafe_blocks = "deny"   # every unsafe carries a SAFETY: note (9.0a)
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+mem_forget = "deny"
+redundant_clone = "deny"
+uninlined_format_args = "deny"
+semicolon_if_nothing_returned = "deny"
+
+# ACCEPTED, permanently (user decision 2026-07-19): search kernels legitimately
+# take many parameters. The cohesive groups were already extracted -- `TtStore`
+# carries the nine TT-store fields, which was a real fix (six were i32/usize,
+# so a swapped pair compiled silently). What remains is search CONTROL FLOW:
+# negamax's (depth, alpha, beta, ply, is_pv, allow_null, excluded, cut_node)
+# are independent knobs, several mutated in place, not a noun. Bundling them
+# means either `&mut Ctx` aliasing in the hottest recursion in the engine or a
+# per-call copy -- real risk for a style lint whose default threshold of 7 is
+# calibrated for application code, not search kernels. Top Rust engines carry
+# the same suppression. Revisit only if 8.9's unified lmr_depth model creates a
+# genuinely cohesive group.
+too_many_arguments = "allow"
+
+# 9.0b COMPLETE (2026-07-19): the 245 measured cast warnings are at ZERO.
+# Every numeric narrowing now goes through `infra`'s checked conversions
+# (`index`, `to_i32`, `to_usize`, `to_u8`, `to_i8`, `saturating_i16/i8` —
+# debug-asserted, tested, 64-bit-guarded), or sits under a scoped fn-level
+# `#[allow]` with its reason written down (const-evaluated init tables, the
+# TT entry's bit-exact pack/unpack where truncation IS the design, the LMR
+# table's intentional float floor, `key16_of`). DENY keeps it that way.
+cast_possible_truncation = "deny"
+cast_sign_loss = "deny"
+cast_possible_wrap = "deny"
+
 [dependencies]
 
 [build-dependencies]
-cc = "1.0"
+cc = "1.3"
 
 [profile.release]
 opt-level = 3

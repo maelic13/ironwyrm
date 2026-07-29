@@ -2,7 +2,8 @@
 # will have compiled files and executables
 debug/
 target/
-Cargo.lock
+# Cargo.lock IS committed (9.1): the workspace is an application, not a
+# library, and reproducible release builds require the exact dependency set.
 *.profraw
 *.profdata
 
@@ -61,3 +62,9 @@ venv/
 tools/texel/data/*
 !tools/texel/data/.gitkeep
 tools/texel/out/
+tools/profile/rarog.exe
+tools/profile/rarog.pdb
+tools/profile/*.etl
+tools/profile/profile_*.txt
+tools/profile/rarog.json
+tools/profile/butterfly.txt

@@ -47,27 +47,27 @@ impl Default for EngineOptions {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct PositionState {
     pub board: Board,
 }
 
-impl Default for PositionState {
-    fn default() -> Self {
-        Self {
-            board: Board::default(),
-        }
-    }
-}
-
-#[derive(Clone)]
+// 9.0: derivable now that `depth` is `Option<u32>` — the old
+// `f64::INFINITY` sentinel was the only field whose default differed from
+// `Default::default()`, which is precisely the smell that motivated the change.
+#[derive(Clone, Default)]
 pub struct SearchLimits {
     pub move_time: usize,
     pub white_time: usize,
     pub white_increment: usize,
     pub black_time: usize,
     pub black_increment: usize,
-    pub depth: f64,
+    /// Fixed-depth limit from `go depth N` / `go mate N`. `None` = no depth
+    /// limit (the search runs to the internal MAX_DEPTH ceiling). 9.0: was
+    /// `f64` with `f64::INFINITY` as the no-limit sentinel — an integer
+    /// quantity in a float, where the "unlimited" case was a magic value the
+    /// type system could not enforce a check for.
+    pub depth: Option<u32>,
     pub movestogo: usize,
     pub nodes: u64,
     pub perft: u32,
@@ -83,32 +83,13 @@ impl SearchLimits {
         self.white_increment = 0;
         self.black_time = 0;
         self.black_increment = 0;
-        self.depth = f64::INFINITY;
+        self.depth = None;
         self.movestogo = 0;
         self.nodes = 0;
         self.perft = 0;
         self.infinite = false;
         self.ponder = false;
         self.search_moves.clear();
-    }
-}
-
-impl Default for SearchLimits {
-    fn default() -> Self {
-        Self {
-            move_time: 0,
-            white_time: 0,
-            white_increment: 0,
-            black_time: 0,
-            black_increment: 0,
-            depth: f64::INFINITY,
-            movestogo: 0,
-            nodes: 0,
-            perft: 0,
-            infinite: false,
-            ponder: false,
-            search_moves: Vec::new(),
-        }
     }
 }
 
@@ -137,36 +118,11 @@ impl SearchOptions {
         // Tunable search parameters — only exposed when compiled with --features tune.
         // weather-factory sets these via UCI setoption; production builds omit them
         // so they don't pollute the option list shown to GUIs.
+        // 9.0a: generated from the single `search_params!` declaration in
+        // params.rs — the strings can no longer drift from the defaults and
+        // clamps (12 of them had, before this).
         #[cfg(feature = "tune")]
-        opts.extend([
-            String::from("option name AspirationDelta type spin default 31 min 5 max 100"),
-            String::from("option name FutilityBase type spin default 86 min 20 max 200"),
-            String::from("option name FutilityNotImproving type spin default 49 min 0 max 80"),
-            String::from("option name RazoringCoeff type spin default 191 min 50 max 300"),
-            String::from("option name NullMoveDepthCoeff type spin default 15 min 2 max 40"),
-            String::from("option name NullMoveImprovingBonus type spin default 25 min 0 max 80"),
-            String::from("option name LmpBase type spin default 115 min 30 max 200"),
-            String::from("option name LmpNotImproving type spin default 57 min 0 max 80"),
-            String::from(
-                "option name QuietHistPruneCoeff type spin default 4419 min 1000 max 10000",
-            ),
-            String::from("option name SeePruningCoeff type spin default 81 min 20 max 200"),
-            String::from("option name SeePruningMax type spin default 811 min 200 max 1600"),
-            String::from("option name SingularBetaMult type spin default 4 min 1 max 8"),
-            String::from("option name LmpCountBase type spin default 2 min 1 max 12"),
-            // LMR weighted adjustments (1024ths of a ply).
-            String::from("option name LmrTtPvAdj type spin default 887 min 0 max 2048"),
-            String::from("option name LmrExactBound type spin default 109 min 0 max 2048"),
-            String::from("option name LmrShallowTt type spin default 656 min 0 max 2048"),
-            String::from("option name LmrCutNode type spin default 780 min 0 max 2048"),
-            // LMR table formula coefficients (1024ths).
-            String::from("option name LmrTableBase type spin default 646 min 512 max 1024"),
-            String::from("option name LmrTableDiv type spin default 2335 min 1536 max 3072"),
-            String::from("option name LmrHistDiv type spin default 8395 min 4096 max 16384"),
-            // Per-move quiet futility pruning (Phase 2.7).
-            String::from("option name FpBase type spin default 184 min 0 max 400"),
-            String::from("option name FpCoeff type spin default 117 min 0 max 300"),
-        ]);
+        opts.extend(SearchParams::uci_option_strings());
         opts
     }
 
@@ -224,7 +180,7 @@ impl SearchOptions {
 
         let infinite_index = args.iter().position(|r| r == "infinite");
         if infinite_index.is_some() {
-            self.limits.depth = f64::INFINITY;
+            self.limits.depth = None;
             self.limits.infinite = true;
         }
 
@@ -257,12 +213,24 @@ impl SearchOptions {
             self.limits.black_increment = Self::parse_usize(args, index, "binc");
         }
         if let Some(index) = depth_index {
-            self.limits.depth = Self::parse_f64(args, index, "depth");
+            // 9.0: preserves the historical fallback exactly — the previous
+            // `parse_f64` returned 2.0 for an unparseable depth, so an invalid
+            // `go depth x` still yields 2, not parse_u32's generic 0.
+            let parsed = args
+                .get(index + 1)
+                .and_then(|value| value.parse::<u32>().ok())
+                .unwrap_or_else(|| {
+                    crate::info_string!("Invalid depth value.");
+                    2
+                });
+            self.limits.depth = Some(parsed.max(1));
         }
         if let Some(index) = mate_index {
             let mate = Self::parse_usize(args, index, "mate");
             if mate > 0 {
-                self.limits.depth = mate.saturating_mul(2).saturating_sub(1) as f64;
+                // Mate in N -> search 2N-1 plies.
+                let plies = mate.saturating_mul(2).saturating_sub(1);
+                self.limits.depth = Some(u32::try_from(plies).unwrap_or(u32::MAX).max(1));
             }
         }
         if let Some(index) = movestogo_index {
@@ -282,7 +250,7 @@ impl SearchOptions {
                 if let Some(mv) = Move::from_uci(token) {
                     self.limits.search_moves.push(mv);
                 } else {
-                    println!("info string Invalid searchmoves move: {token}");
+                    crate::info_string!("Invalid searchmoves move: {token}");
                     break;
                 }
             }
@@ -320,7 +288,7 @@ impl SearchOptions {
                 if let Ok(hash_mb) = value.parse::<usize>() {
                     self.engine.hash_mb = hash_mb.clamp(1, 33_554_432);
                 } else {
-                    println!("info string Invalid Hash value.");
+                    crate::info_string!("Invalid Hash value.");
                 }
                 true
             }
@@ -338,7 +306,7 @@ impl SearchOptions {
                     true
                 }
                 _ => {
-                    println!("info string Invalid Ponder value.");
+                    crate::info_string!("Invalid Ponder value.");
                     true
                 }
             },
@@ -349,7 +317,7 @@ impl SearchOptions {
                 {
                     self.engine.move_overhead = move_overhead;
                 } else {
-                    println!("info string Invalid Move Overhead value.");
+                    crate::info_string!("Invalid Move Overhead value.");
                 }
                 true
             }
@@ -357,7 +325,7 @@ impl SearchOptions {
                 if let Ok(threads) = value.parse::<usize>() {
                     self.engine.threads = threads.clamp(1, MAX_THREADS);
                 } else {
-                    println!("info string Invalid Threads value.");
+                    crate::info_string!("Invalid Threads value.");
                 }
                 true
             }
@@ -369,7 +337,7 @@ impl SearchOptions {
                 if let Ok(depth) = value.parse::<i32>() {
                     self.engine.syzygy.probe_depth = depth.clamp(1, 100);
                 } else {
-                    println!("info string Invalid SyzygyProbeDepth value.");
+                    crate::info_string!("Invalid SyzygyProbeDepth value.");
                 }
                 true
             }
@@ -377,7 +345,7 @@ impl SearchOptions {
                 if let Ok(limit) = value.parse::<usize>() {
                     self.engine.syzygy.probe_limit = limit.clamp(0, 7);
                 } else {
-                    println!("info string Invalid SyzygyProbeLimit value.");
+                    crate::info_string!("Invalid SyzygyProbeLimit value.");
                 }
                 true
             }
@@ -391,166 +359,23 @@ impl SearchOptions {
                     true
                 }
                 _ => {
-                    println!("info string Invalid Syzygy50MoveRule value.");
+                    crate::info_string!("Invalid Syzygy50MoveRule value.");
                     true
                 }
             },
             // Tunable search parameters — only active when compiled with --features tune.
-            #[cfg(feature = "tune")]
-            "aspirationdelta" => {
-                if let Ok(v) = value.parse::<i32>() {
-                    self.engine.search_params.aspiration_delta = v.clamp(5, 100);
-                }
-                true
-            }
-            #[cfg(feature = "tune")]
-            "futilitybase" => {
-                if let Ok(v) = value.parse::<i32>() {
-                    self.engine.search_params.futility_base = v.clamp(20, 200);
-                }
-                true
-            }
-            #[cfg(feature = "tune")]
-            "futilitynotimproving" => {
-                if let Ok(v) = value.parse::<i32>() {
-                    self.engine.search_params.futility_not_improving = v.clamp(0, 80);
-                }
-                true
-            }
-            #[cfg(feature = "tune")]
-            "razoringcoeff" => {
-                if let Ok(v) = value.parse::<i32>() {
-                    self.engine.search_params.razoring_coeff = v.clamp(50, 300);
-                }
-                true
-            }
-            #[cfg(feature = "tune")]
-            "nullmovedepthcoeff" => {
-                if let Ok(v) = value.parse::<i32>() {
-                    self.engine.search_params.nm_depth_coeff = v.clamp(2, 40);
-                }
-                true
-            }
-            #[cfg(feature = "tune")]
-            "nullmoveimprovingbonus" => {
-                if let Ok(v) = value.parse::<i32>() {
-                    self.engine.search_params.nm_improving_bonus = v.clamp(0, 80);
-                }
-                true
-            }
-            #[cfg(feature = "tune")]
-            "lmpbase" => {
-                if let Ok(v) = value.parse::<i32>() {
-                    self.engine.search_params.lmp_base = v.clamp(30, 200);
-                }
-                true
-            }
-            #[cfg(feature = "tune")]
-            "lmpnotimproving" => {
-                if let Ok(v) = value.parse::<i32>() {
-                    self.engine.search_params.lmp_not_improving = v.clamp(0, 80);
-                }
-                true
-            }
-            #[cfg(feature = "tune")]
-            "quiethistprunecoeff" => {
-                if let Ok(v) = value.parse::<i32>() {
-                    self.engine.search_params.quiet_hist_prune_coeff = v.clamp(1_000, 10_000);
-                }
-                true
-            }
-            #[cfg(feature = "tune")]
-            "seepruningcoeff" => {
-                if let Ok(v) = value.parse::<i32>() {
-                    self.engine.search_params.see_pruning_coeff = v.clamp(20, 200);
-                }
-                true
-            }
-            #[cfg(feature = "tune")]
-            "seepruningmax" => {
-                if let Ok(v) = value.parse::<i32>() {
-                    self.engine.search_params.see_pruning_max = v.clamp(200, 1_600);
-                }
-                true
-            }
-            #[cfg(feature = "tune")]
-            "singularbetamult" => {
-                if let Ok(v) = value.parse::<i32>() {
-                    self.engine.search_params.singular_beta_mult = v.clamp(1, 8);
-                }
-                true
-            }
-            #[cfg(feature = "tune")]
-            "lmpcountbase" => {
-                if let Ok(v) = value.parse::<i32>() {
-                    self.engine.search_params.lmp_count_base = v.clamp(1, 12);
-                }
-                true
-            }
-            #[cfg(feature = "tune")]
-            "lmrttpvadj" => {
-                if let Ok(v) = value.parse::<i32>() {
-                    self.engine.search_params.lmr_tt_pv_adj = v.clamp(0, 2_048);
-                }
-                true
-            }
-            #[cfg(feature = "tune")]
-            "lmrexactbound" => {
-                if let Ok(v) = value.parse::<i32>() {
-                    self.engine.search_params.lmr_exact_bound = v.clamp(0, 2_048);
-                }
-                true
-            }
-            #[cfg(feature = "tune")]
-            "lmrshallowtt" => {
-                if let Ok(v) = value.parse::<i32>() {
-                    self.engine.search_params.lmr_shallow_tt = v.clamp(0, 2_048);
-                }
-                true
-            }
-            #[cfg(feature = "tune")]
-            "lmrcutnode" => {
-                if let Ok(v) = value.parse::<i32>() {
-                    self.engine.search_params.lmr_cut_node = v.clamp(0, 2_048);
-                }
-                true
-            }
-            #[cfg(feature = "tune")]
-            "lmrtablebase" => {
-                if let Ok(v) = value.parse::<i32>() {
-                    self.engine.search_params.lmr_table_base = v.clamp(512, 1_024);
-                }
-                true
-            }
-            #[cfg(feature = "tune")]
-            "lmrtablediv" => {
-                if let Ok(v) = value.parse::<i32>() {
-                    self.engine.search_params.lmr_table_div = v.clamp(1_536, 3_072);
-                }
-                true
-            }
-            #[cfg(feature = "tune")]
-            "lmrhistdiv" => {
-                if let Ok(v) = value.parse::<i32>() {
-                    self.engine.search_params.lmr_hist_div = v.clamp(4_096, 16_384);
-                }
-                true
-            }
-            #[cfg(feature = "tune")]
-            "fpbase" => {
-                if let Ok(v) = value.parse::<i32>() {
-                    self.engine.search_params.fp_base = v.clamp(0, 400);
-                }
-                true
-            }
-            #[cfg(feature = "tune")]
-            "fpcoeff" => {
-                if let Ok(v) = value.parse::<i32>() {
-                    self.engine.search_params.fp_coeff = v.clamp(0, 300);
-                }
-                true
-            }
             _ => {
+                // 9.0a: tunables are matched by the generated
+                // `SearchParams::set_uci_option` (one declaration per param in
+                // params.rs) instead of ~47 hand-written arms.
+                #[cfg(feature = "tune")]
+                if self
+                    .engine
+                    .search_params
+                    .set_uci_option(&option_name, &value)
+                {
+                    return true;
+                }
                 println!("No such option: {option_name_raw}");
                 false
             }
@@ -561,7 +386,7 @@ impl SearchOptions {
         match args.get(index + 1).and_then(|value| value.parse().ok()) {
             Some(value) => value,
             None => {
-                println!("info string Invalid {} value.", name);
+                crate::info_string!("Invalid {name} value.");
                 0
             }
         }
@@ -571,18 +396,8 @@ impl SearchOptions {
         match args.get(index + 1).and_then(|value| value.parse().ok()) {
             Some(value) => value,
             None => {
-                println!("info string Invalid {} value.", name);
+                crate::info_string!("Invalid {name} value.");
                 0
-            }
-        }
-    }
-
-    fn parse_f64(args: &[String], index: usize, name: &str) -> f64 {
-        match args.get(index + 1).and_then(|value| value.parse().ok()) {
-            Some(value) => value,
-            None => {
-                println!("info string Invalid {} value.", name);
-                2.0
             }
         }
     }
@@ -591,7 +406,7 @@ impl SearchOptions {
         match args.get(index + 1).and_then(|value| value.parse().ok()) {
             Some(value) => value,
             None => {
-                println!("info string Invalid {} value.", name);
+                crate::info_string!("Invalid {name} value.");
                 0
             }
         }
