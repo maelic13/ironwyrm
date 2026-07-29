@@ -12,11 +12,11 @@ record, the lessons that must not be re-learned, and the forward plan.
 
 ## S1. Current state
 
-**2.3.0 release is PREPARED and awaiting its boundary gauntlet.** Version is
-2.3.0 in `Cargo.toml` and the engine reports it; CHANGELOG and README carry the
-release notes. Bench 13 = 5,173,540. Phases 7, 8 and 9 (including 9.7.5) are
-complete and measured; **9.8 — the Colosseum gauntlet and the `v2.3.0` tag —
-is the only remaining step**, and it is the user's to run.
+**2.3.1 patch release is PREPARED.** It restores PGO for the Windows ARM64
+release asset by selecting the toolchain's LLD linker for that target. Version,
+CHANGELOG and README are updated; the engine search is unchanged, so bench 13
+remains 5,173,540. The remaining release steps are pushing `master`, waiting
+for its CI gate, tagging `v2.3.1`, and publishing the GitHub release.
 
 Everything after 9.8 belongs to the 2.4.0 cycle (Phase 10: root model,
 aspiration/TM, the 10.2.5 search capstone, and the 10.4.6 SPSA re-fit under the
@@ -374,8 +374,9 @@ Model does 1–6; **the user runs the boundary gauntlet and publishes (7–8)**:
 6. Commit `Version X.Y.Z`.
 7. User: run the external boundary gauntlet and paste the result; do not tag a
    phase release until transfer is acceptable.
-8. User: `git tag vX.Y.Z && git push origin vX.Y.Z`, then publish the GitHub
-   release and its CI-built/smoke-tested assets.
+8. User: `git push origin master`, wait for the master CI run to pass, then
+   `git tag vX.Y.Z && git push origin vX.Y.Z`; publish the GitHub release and
+   let the release workflow build and smoke-test its assets.
 
 **Opponent ladder** (gauntlets, `tc=10+0.1`): Rarog 2.0.2 + 2.2.0 (own history),
 Basilisk 1.5.x/1.8.0 (sibling), **Critter 1.6a** (~3150–3200, the engine to
@@ -423,7 +424,7 @@ PGO build pipeline.
 
 ### 2.3.0 — Phases 7–9 (correctness + search wave + build program)
 
-**RELEASE PREPARED 2026-07-28**, awaiting the 9.8 gauntlet and the tag.
+**RELEASED 2026-07-28** after the 9.8 boundary gauntlet.
 Bench 13 = **5,173,540**, geomean EBF **2.406**.
 
 - **Phase 7 correctness ≈ +4 Elo**, but the value was removing the bug class
@@ -436,7 +437,14 @@ Bench 13 = **5,173,540**, geomean EBF **2.406**.
   is saturated while time allocation is the live lever.
 - **Speed +11%** across the span (10.3's +10.35% plus 9.7.5's ~+1%).
 
-### 2.3.0-dev (current) — Phases 5–6
+### 2.3.1 — Windows ARM64 PGO patch
+
+- Forces the pinned toolchain's `rust-lld` for `aarch64-pc-windows-msvc`,
+  working around rust-lang/rust#156675 so instrumentation profiles merge.
+- Restores PGO for the ninth release asset; measured locally at +8% NPS on
+  Windows ARM64, with unchanged search behaviour and bench fingerprint.
+
+### 2.3.0 development cycle — Phases 5–6
 - **Phase 5 (search-constant wave):** pruning group (13 params, joint)
   **+12.07 H1** — kept. LMR re-tune −2.6 H0; futility re-tune ~0; TM re-tune ~0
   (0 forfeits) — all reverted; the joint pruning tune had captured the entire

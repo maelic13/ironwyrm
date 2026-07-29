@@ -5,6 +5,27 @@ All notable changes to Rarog are documented in this file.
 Rarog was released as Lynx through version `1.4.3`. The project was renamed
 starting with version `2.0.0` to avoid confusion with an existing chess engine.
 
+## [2.3.1] - 2026-07-29
+
+Patch release restoring full release-build optimisation on Windows ARM64.
+
+### Fixed
+
+- **Windows ARM64 binaries are now profile-guided-optimized.** PGO was
+  previously impossible on `aarch64-pc-windows-msvc`: linked with MSVC's
+  `link.exe`, the instrumented binary emitted `.profraw` files with an empty
+  symbol-name table and `llvm-profdata merge` rejected all of them. Linking
+  with LLD instead resolves it, so `xtask` now forces `rust-lld` for that
+  target and the release workflow builds the arm64 Windows asset with `--pgo`
+  like every other cell. Measured locally at **+8%** search speed (3.11 M ->
+  3.37 M nps on `bench 13`). The workaround is marked for removal once
+  rust-lang/rust#156675 is fixed upstream.
+
+  Note: the 2.3.0 notes below claim every published binary was
+  profile-guided-optimized. That was true of the other eight assets but not of
+  the arm64 Windows one, which shipped without PGO. It is accurate from this
+  release onward.
+
 ## [2.3.0] - 2026-07-28
 
 The correctness-and-search release: long-standing evaluation and search bugs

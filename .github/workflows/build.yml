@@ -29,7 +29,8 @@ jobs:
         include:
           # `pgo` is stated on every cell rather than defaulted, so this table
           # answers "is this asset profile-guided?" without reading anything
-          # else. Exactly one cell says false, and says why.
+          # else. Every cell is true; the arm64 Windows one only became true
+          # via a linker workaround, noted at that cell.
           - runner: ubuntu-latest
             os_name: linux
             asset_arch: x86-64
@@ -72,21 +73,19 @@ jobs:
             target: x86_64-pc-windows-msvc
             ext: ".exe"
             pgo: true
-          # PGO is impossible here, not merely unconfigured: the instrumented
-          # binary builds and trains correctly (the bench node count is right),
-          # but the profiling runtime writes .profraw files with an empty
-          # symbol-name table, so llvm-profdata rejects them with "malformed
-          # instrumentation profile data: symbol name is empty" and then "no
-          # profile can be merged". Seen on rustc 1.97.1 / LLVM 22.1.6. This
-          # asset therefore ships correct but slower than the other eight.
-          # Re-test on every toolchain bump and flip this back to true the
-          # moment the merge succeeds.
+          # PGO here depends on a WORKAROUND, not on stock toolchain support:
+          # linked with MSVC link.exe the instrumented binary emits .profraw
+          # files with an empty symbol-name table and llvm-profdata refuses
+          # them ("symbol name is empty" / "no profile can be merged"). xtask
+          # forces LLD for this target, which makes the merge succeed. See
+          # `linker_flags` in xtask/src/main.rs and rust-lang/rust#156675 —
+          # when that lands, drop the override and re-test.
           - runner: windows-11-arm
             os_name: windows
             asset_arch: arm64
             target: aarch64-pc-windows-msvc
             ext: ".exe"
-            pgo: false
+            pgo: true
           - runner: macos-latest
             os_name: macos
             asset_arch: arm64
@@ -121,9 +120,8 @@ jobs:
 
       # 9.3: ship what we actually measure. Every cell above is a NATIVE
       # runner (host triple == matrix.target), which is what PGO requires —
-      # the instrumented binary has to run its training bench locally — so the
-      # only cell built without PGO is the one where the toolchain cannot
-      # produce a mergeable profile at all (see the matrix comment).
+      # the instrumented binary has to run its training bench locally — so
+      # every shipped asset is profile-guided.
       - name: Build release binary
         run: >
           cargo xtask build --arch ${{ matrix.asset_arch }}

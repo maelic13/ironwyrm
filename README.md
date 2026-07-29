@@ -25,8 +25,7 @@ a chess GUI or an engine-testing tool.
   and spends longer on critical positions.
 - **Pondering** — thinks on the opponent's clock when the GUI enables it.
 - **Optimized binaries** — published for Windows, Linux and macOS, on both
-  x86-64 and ARM64, and profile-guided-optimized wherever the toolchain
-  supports it.
+  x86-64 and ARM64, and every one of them profile-guided-optimized.
 - **Built-in benchmark** — a `bench` command for reproducible speed and
   search comparisons.
 
@@ -130,7 +129,8 @@ anywhere else, so it is marked `-native` in the filename and never published.
 
 `--pgo` builds an instrumented engine, trains it with `bench`, then rebuilds
 using the collected profile. It cannot be cross-compiled, because training has
-to run the engine.
+to run the engine. On Windows ARM64, `xtask` automatically selects the linker
+needed for a valid profile; no separate LLVM installation is required.
 
 ### Tests
 

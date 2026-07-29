@@ -12,11 +12,11 @@ of method, history and internal naming — see PLAN §"Documentation audiences".
 
 | | |
 |---|---|
-| Branch / version | `development`; **2.3.0 RELEASED** — ported to `master` as a single commit, awaiting your push + tag |
+| Branch / version | `master`; **2.3.1 PREPARED** — Windows ARM64 PGO restored, awaiting push + CI + tag |
 | Accepted baseline | **p103-gate** (the whole 10.3 speed pass, ACCEPTED 2026-07-22); `bench 13` = **5,480,624**, EBF **2.420** — unchanged from p82a-nocheckext, since every 10.3 item was bench-identical. Future SPRTs gate vs `rarog-p103-gate-pext-pgo.exe`. |
 | Working head | = accepted baseline (p103-gate) |
 | Last strength results | **8.12(g2) index hoist: +3.76% NPS (CI 3.35…3.98) ≈ +7.5 Elo**, pooled PGO, bench-identical, accepted on NPS evidence. **8.13 SMP rework: +102.78 ± 16.38 (nElo +168.85, LOS 100%) at Threads=4** (720 games; 1-thread byte-identical, deployment unaffected). Before them, **8.4 history bundle +6.01 ± 3.57, LOS 99.95%** (15,214 games; carries 8.12's +0.98%), **10.3 speed pass +20.31 ± 7.13** (3,460 games), **8.2(a) +30.75 ± 8.83**, **8.1 +22.13**. 8.1b ❌ −6.6, 8.6 ❌ −7.78, 8.7 ❌ −7.29. |
-| Current work | ▶ **Phases 7–9 are COMPLETE and 2.3.0 is released.** Next cycle starts at **10.0 — search-accuracy decomposition**, which runs before any Phase 10 code (see below; the four-condition gauntlet reshaped its targeting). |
+| Current work | ▶ **2.3.1 patch release prepared.** After publishing it, the next cycle starts at **10.0 — search-accuracy decomposition**, which runs before any Phase 10 code (see below; the four-condition gauntlet reshaped its targeting). |
 | Next release | **2.4.0 at 10.5.** Order: 10.0 decomposition → 10.1 → 10.4.6 re-fit → 10.2.5 capstone → 10.2 → menu → 10.4.3 → release. NNUE 2.5.0 at Phase 12 |
 
 ## Forward tracker
@@ -431,15 +431,12 @@ and its candidate.
       interleaved bench) and RECORD the delta. That is the point of pinning:
       compiler gains become measured, dated events instead of invisible drift
       contaminating the next gate.
-- [ ] Re-test **Windows ARM64 PGO** and flip
-      [build.yml](.github/workflows/build.yml)'s `pgo:` back to `true` the
-      moment it merges. On rustc 1.97.1 / LLVM 22.1.6 that one target trains
-      correctly but writes `.profraw` files with an empty symbol-name table,
-      so `llvm-profdata merge` fails with "no profile can be merged" and the
-      asset ships un-optimized. There is no local repro — no ARM64 Windows
-      box here — so the only test is a dispatch of the build workflow. This
-      is the single asset of nine that is not profile-guided; do not let that
-      quietly become permanent.
+- [ ] Re-test **Windows ARM64 PGO without the LLD workaround** on every
+      toolchain bump. Temporarily remove `linker_flags` in
+      `xtask/src/main.rs` and dispatch the build workflow. If profiles merge,
+      rust-lang/rust#156675 is fixed: remove the override permanently. If
+      `llvm-profdata` still reports an empty symbol name, restore it. All nine
+      assets remain profile-guided either way.
 
 ### Running an SPSA (weather-factory)
 

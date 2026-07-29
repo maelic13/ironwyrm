@@ -310,6 +310,67 @@ fn rustflags(arch: Arch, native: bool) -> Vec<String> {
     }
 }
 
+/// Linker overrides a target needs on top of its codegen flags.
+///
+/// WORKAROUND — REMOVE WHEN FIXED UPSTREAM (rust-lang/rust#156675, open as of
+/// rustc 1.97.1 / LLVM 22.1.6).
+///
+/// `aarch64-pc-windows-msvc` only. Linked with MSVC's `link.exe`, the
+/// instrumented binary runs correctly but writes a `.profraw` whose
+/// symbol-name table is empty, so `llvm-profdata merge` rejects every input
+/// with "malformed instrumentation profile data: symbol name is empty" and
+/// then "no profile can be merged" — PGO cannot complete at all. Linking the
+/// same objects with LLD fixes it outright: the merged profile carries real
+/// mangled Rust symbols and `-C profile-use` consumes it.
+///
+/// `/OPT:NOREF /OPT:NOICF` does NOT help, so this is not link.exe dead-stripping
+/// `__llvm_prf_names` — the names section is present and non-empty in the
+/// failing binary. The two linkers disagree about something else in the
+/// `__llvm_prf` layout; the precise mechanism is unknown here.
+///
+/// On every toolchain bump: delete this function and run
+/// `cargo xtask build --arch arm64 --pgo` on Windows ARM64. If the merge
+/// succeeds, link.exe is fixed and the override is dead weight.
+///
+/// Applied to EVERY build of the target, not just `--pgo` ones, so the PGO and
+/// non-PGO binaries differ in exactly one variable — the profile — and a
+/// performance bisect never has to ask "which linker was that one?".
+fn linker_flags(target: &str) -> Result<Vec<String>> {
+    if target != "aarch64-pc-windows-msvc" {
+        return Ok(Vec::new());
+    }
+    let lld = find_rust_lld().ok_or_else(|| {
+        "rust-lld was not found in the toolchain sysroot. PGO on \
+         `aarch64-pc-windows-msvc` requires it: MSVC link.exe produces \
+         profiles that llvm-profdata cannot merge (rust-lang/rust#156675). \
+         Reinstall the pinned toolchain and retry."
+            .to_string()
+    })?;
+    Ok(vec![
+        "-C".into(),
+        format!("linker={}", lld.display()),
+        "-C".into(),
+        "linker-flavor=lld-link".into(),
+    ])
+}
+
+/// `rust-lld` ships inside the sysroot, so the workaround above adds no
+/// external dependency — in particular it does NOT require a separately
+/// installed LLVM on the CI runner, which `windows-11-arm` does not guarantee.
+/// It is a host executable, so it lives under the HOST triple like the other
+/// bundled LLVM tools, even when linking for a different target.
+fn find_rust_lld() -> Option<PathBuf> {
+    let sysroot = command_output("rustc", &["--print", "sysroot"]).ok()?;
+    let host = host_triple().ok()?;
+    let candidate = PathBuf::from(sysroot)
+        .join("lib")
+        .join("rustlib")
+        .join(host)
+        .join("bin")
+        .join(tool_name("rust-lld"));
+    candidate.exists().then_some(candidate)
+}
+
 fn build_with_pgo(config: &Config) -> Result<()> {
     let host = host_triple()?;
     if config.target != host {
@@ -383,11 +444,16 @@ fn cargo_build(
     target_dir: &Path,
     override_flags: &[String],
 ) -> Result<()> {
-    let flags = if override_flags.is_empty() {
+    let mut flags = if override_flags.is_empty() {
         rustflags(arch, native)
     } else {
         override_flags.to_vec()
     };
+    // Appended here rather than folded into `rustflags` so it reaches the
+    // `override_flags` path too — the PGO generate and use builds both go
+    // through that branch, and the generate build is precisely the one that
+    // must be LLD-linked for the profile to be mergeable.
+    flags.extend(linker_flags(target)?);
 
     println_flush(format_args!(
         "Building Rarog {} for {}{}",
@@ -594,23 +660,21 @@ fn merge_profiles(
     Err(message)
 }
 
-/// Known-broken PGO targets get an actionable hint instead of a bare exit code.
+/// Targets with a known merge failure mode get an actionable hint instead of a
+/// bare exit code.
 ///
-/// On `aarch64-pc-windows-msvc` the instrumented binary builds and runs
-/// correctly — the training bench produces the right node count — but the
-/// profiling runtime writes a `.profraw` whose symbol-name table is empty, so
-/// `llvm-profdata merge` rejects every input with "malformed instrumentation
-/// profile data: symbol name is empty" and then "no profile can be merged".
-/// Nothing in this repo can work around it. Observed with rustc 1.97.1 /
-/// LLVM 22.1.6; re-test on every toolchain bump and drop this hint once the
-/// merge succeeds.
+/// On `aarch64-pc-windows-msvc` a merge failure now means the LLD override in
+/// [`linker_flags`] did not take effect — with it, the merge succeeds; without
+/// it, every `.profraw` has an empty symbol-name table. So point at the
+/// override rather than declaring PGO impossible.
 fn pgo_merge_hint(target: &str) -> String {
     if target.starts_with("aarch64-pc-windows") {
         format!(
-            "\n\nnote: PGO is a known toolchain limitation on `{target}`. The \
-             profiling runtime emits .profraw files with an empty symbol-name \
-             table, so no profile can ever be merged. Build this target \
-             without `--pgo`; the binary is correct, only slower."
+            "\n\nnote: PGO on `{target}` works only when the instrumented \
+             binary is linked with LLD — MSVC link.exe emits .profraw files \
+             with an empty symbol-name table (rust-lang/rust#156675). This \
+             build should have passed `-C linker-flavor=lld-link` via \
+             `linker_flags`; verify rust-lld exists in the toolchain sysroot."
         )
     } else {
         String::new()
@@ -897,14 +961,16 @@ mod tests {
         assert!(f.contains("target-cpu=native"), "{f}");
     }
 
-    /// A bare `llvm-profdata` exit code is unactionable on the one target
-    /// where PGO cannot work at all, so that target — and only that target —
-    /// must name the limitation in the error.
+    /// A bare `llvm-profdata` exit code is unactionable on the one target that
+    /// requires a linker workaround, so that target — and only that target —
+    /// must explain how to verify the LLD override.
     #[test]
     fn pgo_merge_hint_fires_only_for_windows_arm64() {
         let hint = pgo_merge_hint("aarch64-pc-windows-msvc");
         assert!(
-            hint.contains("known toolchain limitation") && hint.contains("--pgo"),
+            hint.contains("linked with LLD")
+                && hint.contains("linker-flavor=lld-link")
+                && hint.contains("rust-lld"),
             "windows-arm64 merge failure must explain itself: {hint}"
         );
         for target in [
