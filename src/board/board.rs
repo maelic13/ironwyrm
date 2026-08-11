@@ -190,6 +190,76 @@ impl Board {
         Self::from_fen(STARTING_FEN).expect("starting FEN is valid")
     }
 
+    /// Construct the position snapshot needed by the standalone HCE adapter.
+    ///
+    /// The hybrid keeps Stockfish's board and search authoritative, then sends
+    /// its twelve colour/piece bitboards through this narrow boundary for a
+    /// Rarog evaluation. En-passant is deliberately absent: no production HCE
+    /// term observes it, while side to move, castling rights and the rule-50
+    /// clock are evaluation inputs and therefore are preserved.
+    ///
+    /// `piece_bitboards` uses Rarog's public order:
+    /// `[WP, WN, WB, WR, WQ, WK, BP, BN, BB, BR, BQ, BK]`.
+    pub fn from_eval_snapshot(
+        piece_bitboards: [u64; 12],
+        side_to_move: Color,
+        castling: CastlingRights,
+        halfmove_clock: u8,
+    ) -> Result<Self, String> {
+        if castling.0 & !CastlingRights::ALL.0 != 0 {
+            return Err(format!("invalid castling mask: {}", castling.0));
+        }
+
+        let mut board = Self {
+            pieces: [Bitboard::EMPTY; 12],
+            occupancy: [Bitboard::EMPTY; 2],
+            all_occ: Bitboard::EMPTY,
+            mailbox: [NO_PIECE; 64],
+            side_to_move,
+            castling,
+            ep_sq: 255,
+            halfmove_clock,
+            fullmove: 1,
+            hash: 0,
+            pawn_hash: 0,
+            minor_hash: 0,
+            non_pawn_hash: [0; 2],
+            checkers: Bitboard::EMPTY,
+            history: Vec::with_capacity(0),
+        };
+
+        let mut seen = 0u64;
+        for color in [Color::White, Color::Black] {
+            for piece in Piece::ALL {
+                let index = color as usize * 6 + piece as usize;
+                let mut bits = piece_bitboards[index];
+                if seen & bits != 0 {
+                    return Err("overlapping hybrid piece bitboards".to_string());
+                }
+                seen |= bits;
+                while bits != 0 {
+                    let sq = Square(infra::to_u8(bits.trailing_zeros()));
+                    bits &= bits - 1;
+                    board.add_piece(color, piece, sq);
+                    board.hash ^= ZOBRIST.piece(color, piece, sq);
+                }
+            }
+        }
+
+        if board.pieces(Color::White, Piece::King).count() != 1
+            || board.pieces(Color::Black, Piece::King).count() != 1
+        {
+            return Err("hybrid snapshot must contain exactly one king per side".to_string());
+        }
+
+        if side_to_move == Color::Black {
+            board.hash ^= ZOBRIST.side();
+        }
+        board.hash ^= ZOBRIST.castling(castling);
+        board.checkers = board.calculate_checkers();
+        Ok(board)
+    }
+
     pub fn from_fen(fen: &str) -> Result<Self, String> {
         let mut board = Self {
             pieces: [Bitboard::EMPTY; 12],

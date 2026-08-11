@@ -13,7 +13,7 @@ repository = "https://github.com/maelic13/rarog"
 readme = "README.md"
 
 [workspace]
-members = [".", "xtask", "tools/texel-tuner"]
+members = [".", "xtask", "tools/texel-tuner", "hybrid/rarog-hce-ffi"]
 default-members = ["."]
 resolver = "3"
 

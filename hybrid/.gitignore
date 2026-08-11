@@ -1,0 +1,10 @@
+/dist/
+/stockfish/src/*.o
+/stockfish/src/*.exe
+/stockfish/src/rarog_hce.dll
+/stockfish/src/.depend
+/stockfish/src/*.gcda
+/stockfish/src/*.gcno
+/stockfish/src/*.profraw
+/stockfish/src/*.profdata
+/stockfish/src/profdir/
