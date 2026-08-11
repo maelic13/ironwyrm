@@ -10,6 +10,12 @@ protocol, time control, compiler and machine population; it does not establish
 a universal chess-programming rule. An experiment from Basilisk is only a
 prior for Rarog and never bypasses Rarog's own gates.
 
+**Numbering note.** Historical rows below cite plan items as `Plan 4.x` or
+`Phase-4.x`. Those refer to the **closed** Phase-4 line that shipped 2.3.2,
+whose item numbers are retired (`PLAN.md` §3). They are not the new Phase 4,
+which is the search-and-evaluation convergence programme in `PLAN.md` §4.
+Forward-looking owner cells in §8 and §9 have been retargeted to current items.
+
 ## Contents
 
 - [1. How to use this ledger](#1-how-to-use-this-ledger)
@@ -17,6 +23,7 @@ prior for Rarog and never bypasses Rarog's own gates.
   - [Recording contract](#recording-contract)
 - [2. Measurement, harness and tuning](#2-measurement-harness-and-tuning)
 - [3. Search and selectivity](#3-search-and-selectivity)
+  - [Search-oracle observations](#search-oracle-observations)
   - [Accepted or retained](#accepted-or-retained)
   - [Rejected, neutral or deferred](#rejected-neutral-or-deferred)
 - [4. Root search, time management and SMP](#4-root-search-time-management-and-smp)
@@ -76,12 +83,30 @@ X is good/bad”. If conditions or artifacts are unknown, say so.
 | RAR-M05 | SPSA schedule audit: iteration/game units, PowerShell `$A`/`$a` collision and integer perturbation resolution. | Several schedule defects were repaired; old runs annealed faster than intended. Accepted bakes remain accepted because independent SPRTs passed. | A plausible SPSA trajectory is not proof of a correct schedule. Assert every emitted derived constant and inspect coordinate observability over the full horizon. | legacy plan at `757e9a3^` |
 | RAR-M06 | Resignation threshold replay against 69,350 historical games. | `400/3` one-sided was too aggressive for Rarog's scale; `600/3` one-sided became `strength-v1`. | Adjudication scores are engine-scale dependent. Recalibrate after a material score-scale change such as NNUE integration. | legacy plan at `757e9a3^`; `PLAN.md` §2 |
 | RAR-M07 | Staged self-play gains were checked in an external engine cohort. | The 2.2 cycle's roughly +316 staged result transferred as about +240 over 2.1.0. The 2.3 boundary measured +76/+78 at 1T and +194 at 4T over 2.2.0. | Self-play gives direction under these conditions, not an additive external forecast. Phase boundaries need direct prior-release and target-engine checks. | `CHANGELOG.md` 2.2.0, 2.3.0; legacy plan |
-| RAR-M08 | The 36,400-game 2026-08-05 rating tournament used a 2.4-dev binary with interim values from an unfinished aspiration SPSA. | **Closed observation:** the last supplied checkpoint was 8,626 games, +11 pool Elo over 2.3.1 and 39 below Basilisk 1.9.3. It was not completed or accepted as a gate. | Under these conditions a mixed unfinished binary located a possible gap but established neither component value nor a new baseline. Do not extrapolate the partial pool ratings. | `PLAN.md` §1, 4.0 |
+| RAR-M08 | The 36,400-game 2026-08-05 rating tournament used a 2.4-dev binary with interim values from an unfinished aspiration SPSA. | **Closed observation:** the last supplied checkpoint was 8,626 games, +11 pool Elo over 2.3.1 and 39 below Basilisk 1.9.3. It was not completed or accepted as a gate. | Under these conditions a mixed unfinished binary located a possible gap but established neither component value nor a new baseline. Do not extrapolate the partial pool ratings. | `PLAN.md` §1, §3 |
 | RAR-M11 | Phase-4 consolidated SPSA go/no-go review. Proposed surface: 30 coordinates, three fixed architecture switches, 10,000 iterations × 32 games (320,000 games), about 79 hours, complete final theta. Setup and resume mechanics were validated; no games started. | **Canceled before launch and removed in 2.3.2.** The architecture bundle had failed to accumulate, its best node-saving pair had no material Elo prior, and the three proposed fixed switches were unaccepted. A valid schedule could at most refine a low-prior HCE surface immediately before NNUE. | Perform the expected-value review before investing in schedule optimization. SPSA is a local constant optimizer, not the missing mechanism for a 50–100 Elo target; clean setup, sunk preparation and a larger coordinate count do not create that prior. The next broad fit is post-NNUE and must select its coordinates/horizon from new activation and curvature evidence. | `PLAN.md` §2–3; `tools/spsa_convergence_model.py`; `tools/spsa_configs/README.md` |
 | RAR-M10 | Calibrating this harness's LLR drift so a game budget can be derived rather than guessed. Fitted on three completed `[0,3]` nElo gates at `3+0.03`, 1T, paired UHO, concurrency 14 with affinity: RAR-S31 (+5.24 nElo, LLR 2.96 in 31,822 games), RAR-S29 (−4.95, −2.95 in 18,436) and RAR-S27 (−2.33, −2.19 in 23,044). | **Retained method tool.** `drift per game ≈ 8.3e-6 × (Elo1 − Elo0) × (true_nElo − midpoint)` predicts all three observed drifts within 1% (9.30e-5 vs 9.30e-5; −1.61e-4 vs −1.60e-4; −9.54e-5 vs −9.50e-5). Applied to the `[3,10]` default it gives ~9,200 games for a true 12 nElo, **~14,500 for a candidate exactly on H1 (10 nElo)**, ~33,700 for 8 nElo, and ~14,500 to H0 for one exactly on H0. That is why the default cap moved from 12,000 to **16,000**: at 12,000 the effective bar was about 12 nElo rather than the stated 10. | Under this harness a cap and its bounds must be checked against each other, or the gate silently becomes stricter than it reads. Use the fit to size a budget **prospectively** only; it is a design tool and never a justification for extending a run whose games have been seen. Recalibrate after any change to adjudication, book, TC or the pentanomial model, since `k` absorbs all of them. Three points spanning +5.2 to −5.0 nElo at one bound pair is a narrow basis — treat predictions outside roughly ±6 nElo, or under different bounds, as extrapolation. | `tools/results/sprt_*`; `tools/sprt.ps1`; `PLAN.md` §2 |
 | RAR-M09 | Phase-4.1 normal versus diagnostic release builds on the Ryzen 9 5950X, non-PGO, `bench 13` plus four depth-10 positions. | **Retained infrastructure:** both builds matched 6,502,902 nodes / EBF 2.449; the four probes matched nodes, scores, PVs and best/ponder moves. Paired best-of-three NPS was 2,585,646 versus 2,301,097 (11.0% diagnostic cost including legacy exact atomics). | Under these conditions, the sampled observers did not alter the tree and their offline cost was bounded. This does not prove equivalence on every ISA/thread count or make counter movement an Elo proxy; repeat the gate after diagnostic control-flow changes. | `src/diag.rs`; `tools/diag_search_quality.ps1`; Plan 4.1 |
 
 ## 3. Search and selectivity
+
+### Search-oracle observations
+
+These experiments identify a development target; they do not accept the hybrid
+as Rarog code or assign Elo to an individual Stockfish mechanism. Pairwise Elo
+below is the ordinary logistic estimate from score and is approximate, not the
+project's paired-pentanomial SPRT estimator. They are the evidence base for the
+Phase-4 convergence programme in `PLAN.md` §4.
+
+| ID | Experiment and conditions | Result / disposition | Conditional lesson | Source |
+|---|---|---|---|---|
+| RAR-O01 | Stage-1 evaluator-isolation experiment. Branch `hybrid` at `75d0d43`: Stockfish `9587eeeb` board/search/TT/time management calls the exact released Rarog 2.3.2 HCE through a checked Rust DLL ABI; the same executable with `Use Rarog HCE=false` is the exact-revision Stockfish HCE control. Colosseum round robin x200, 2,400 games, `3+0.03`, 1T, paired UHO, concurrency 14, tablebases/ponder off; draw adjudication `\|cp\| <= 5` for 10 moves after ply 80 and resign adjudication `\|cp\| >= 1000` for 5 moves. | **Observation, completed.** Hybrid–Rarog 275-111-14, score 82.63%, about **+270.9 Elo**; Hybrid–Basilisk 1.9.3 248-100-52, 74.50%, about **+186.2 Elo**; Stockfish-HCE–Hybrid 309-64-27, 85.25%, about **+304.8 Elo**. Average NPS: control 2.3M, hybrid 1.5M, Basilisk 2.5M, Rarog 2.4M. The extreme ordering is clear, but evaluator-dependent adjudication makes the exact gaps unsuitable as release claims. | The shipped Rarog HCE supports much stronger play under a mature search even while paying substantial adapter/throughput cost. This contradicts the premise that another broad HCE constant fit is the highest-value next step. It does not separate individual search or HCE mechanisms or prove that Stockfish contracts transfer independently. | Colosseum “Rarog Hybrid testing”, 2026-08-11; `hybrid/README.md`; PLAN §4 |
+| RAR-O02 | No-adjudication confirmation of RAR-O01, stopped after 1,238/2,400 games because the architectural decision had already resolved. Same four engines, TC/book/1T/concurrency; max-move, draw and resign adjudication all off, tablebases/ponder off. Roughly 205 games were complete per pair and 982 of 1,238 games ended by natural checkmate. | **Observation, sufficient and deliberately stopped.** Hybrid–Rarog 118-77-12, score 75.60%, about **+196.5 Elo**; Hybrid–Basilisk 134-42-29, 75.61%, about **+196.5 Elo**; Stockfish-HCE–Hybrid 163-32-11, 86.89%, about **+328.6 Elo**; Basilisk–Rarog 77-70-59, 54.37%, about **+30.4 Elo**. No forfeits. Average NPS: control 2.3M, hybrid 1.5M, Basilisk/Rarog 2.4M. | Removing adjudication left decisive reciprocal search- and HCE-oracle signals despite the hybrid's lower NPS. The 74-Elo gap versus RAR-O01 prices the adjudication confounder directly: **cross-evaluator cohorts run with adjudication off**. More games would refine ratings, not change the decision to attempt one bounded native-Rust convergence programme: freeze HCE while reconciling search, freeze the accepted search head, then study HCE contracts under separate gates. | Colosseum “Rarog Hybrid testing” stopped 2026-08-11; PLAN §4; GUIDE convergence step lifecycle |
+
+Frozen local Stage-1 package SHA-256 hashes: executable
+`DA78A1455BAFE222BD6AF7EF243B8C62450B6BC0913C4AF3B09F8C68E14826E8`;
+`rarog_hce.dll`
+`E43B602B994A3A2EB86173675C5687E53415911DB63FA6FC5B1F74DB40A3F6D5`.
 
 ### Accepted or retained
 
@@ -162,9 +187,13 @@ X is good/bad”. If conditions or artifacts are unknown, say so.
 
 ## 5. Evaluation and data experiments
 
-New HCE strength work is frozen. These rows remain relevant to NNUE data,
-teacher and measurement design; they do not authorize Plan-9 HCE work unless
-NNUE is explicitly abandoned.
+HCE strength work is frozen through Phase-4 step 4.10. After 4.10 freezes the
+search head, the bounded HCE track (4.11–4.18) may reopen **structural,
+reference-led evaluator contracts** under its own gates. These rows remain
+relevant to that analysis and to NNUE data, teacher and measurement design, but
+they do not authorize another broad weight refit, do not reopen rejected
+experiments unchanged, and do not authorize Phase-9 fallback work unless NNUE
+is explicitly abandoned.
 
 | ID | Experiment and conditions | Result / disposition | Conditional lesson and retry trigger | Source |
 |---|---|---|---|---|
@@ -172,7 +201,7 @@ NNUE is explicitly abandoned.
 | RAR-E02 | Lazy HCE shortcut after the evaluator expansion. | **Accepted, about +4.4 Elo.** | The shortcut paid under that HCE distribution, but the safety margin is representation/scale dependent and is not a NNUE constant. | legacy plan at `757e9a3^` |
 | RAR-E03 | Stockfish-at-60k off-policy distillation with material scale pinned. | **Rejected, −17.11 Elo,** despite 4.9% lower holdout loss and 9/10 improved buckets. | For this well-fitted HCE/corpus, lower teacher-fit loss did not predict play. Basilisk's +6.75 opposite result reinforces that transfer is engine-state dependent. | legacy plan; `analysis/hce_analysis.md` |
 | RAR-E04 | 500k-game on-policy refresh yielding 2.18M unique positions; pure WDL beat blended labels on the shared holdout. | **Rejected, −1.28 ± 2.79 over 26.8k games;** pipeline and inert parameters retained. | Even on-policy lower validation loss did not improve this unchanged representation. Retry only after representation/policy changes and with a frozen external holdout. | legacy plan at `757e9a3^` |
-| RAR-E05 | Narrow L2-anchored refresh from a stronger label generator, moving 57/1,204 parameters mostly by 1 cp. | **Accepted, +11.56 ± 5.19 Elo;** frozen in 2.3.2. | A narrow anchored refresh differed materially from wholesale re-derivation. This does not reopen general HCE work before NNUE. | `PLAN.md` Phase-4 disposition; legacy plan |
+| RAR-E05 | Narrow L2-anchored refresh from a stronger label generator, moving 57/1,204 parameters mostly by 1 cp. | **Accepted, +11.56 ± 5.19 Elo;** frozen in 2.3.2 and throughout the Phase-4 search track. | A narrow anchored refresh differed materially from wholesale re-derivation. The Phase-4 HCE track may supersede it only through an accepted structural cluster; it is not evidence for another general refit. | `PLAN.md` §3, §4; legacy plan |
 
 ## 6. Throughput, build and platforms
 
@@ -183,8 +212,8 @@ NNUE is explicitly abandoned.
 | RAR-P03 | Post-SMP duplicate-compute/index-hoist cleanup. | **Retained, +0.99% then +1.56% median NPS** in independent pooled passes; search fingerprint unchanged. | Small speed gains became credible only through clean worktrees, pooled builds, self-pair calibration and interleaving. | legacy plan at `757e9a3^` |
 | RAR-P04 | Board-layer perft comparison with Basilisk. | Rarog's board layer was not the main source of the remaining search-strength gap. | A faster primitive benchmark does not identify search quality. Revisit only if a profile attributes material deployed time there. | `analysis/board_perft_compare.md` |
 | RAR-P05 | Pawn-cache enlargement from the profile audit. | A 128× larger table gained about 1.1 hit-rate points but lost 4.5% NPS. | Under that workload, lookup/memory cost dominated the small hit-rate gain. Any future cache size change needs both profile and strength evidence. | `analysis/speed_profile_8_12c.md` |
-| RAR-P06 | `origin/arm_fix` added AArch64 `PRFM PLDL1KEEP` and hoisted two HCE `LazyLock` accesses. | **Unverified on ARM;** branch reported +2.51% on x64 for a combined patch, so causality is not isolated. | Reimplement only the architecture-specific prefetch on current development and require target-native A/B. HCE-only hoists stay frozen. | `PLAN.md` 4.8; branch `origin/arm_fix` |
-| RAR-P07 | `origin/arm_fix` wrapped TT clusters in 128-byte Apple-oriented blocks. | **Unverified:** no ARM timing and existing cluster alignment already prevents the claimed boundary straddle. | Alignment folklore is not evidence. Compare equal-capacity layouts on actual target topology before retaining a wrapper. | `PLAN.md` 4.8; branch `origin/arm_fix` |
+| RAR-P06 | `origin/arm_fix` added AArch64 `PRFM PLDL1KEEP` and hoisted two HCE `LazyLock` accesses. | **Unverified on ARM;** branch reported +2.51% on x64 for a combined patch, so causality is not isolated. | Reimplement only the architecture-specific prefetch on current development and require target-native A/B. HCE-only hoists stay frozen. | `PLAN.md` §3, 4.19; branch `origin/arm_fix` |
+| RAR-P07 | `origin/arm_fix` wrapped TT clusters in 128-byte Apple-oriented blocks. | **Unverified:** no ARM timing and existing cluster alignment already prevents the claimed boundary straddle. | Alignment folklore is not evidence. Compare equal-capacity layouts on actual target topology before retaining a wrapper. | `PLAN.md` §3, 4.19; branch `origin/arm_fix` |
 | RAR-P08 | Windows ARM64 PGO with pinned Rust used `rust-lld` to work around profile-link failure. | **Retained in 2.3.1:** about +8% NPS locally, unchanged bench/search behavior. | Toolchain workarounds are versioned debt. Re-test on each pinned compiler bump and keep behavior/performance claims separate. | `CHANGELOG.md` 2.3.1 |
 | RAR-P15 | Phase-4.8h: first full CI matrix dispatch carrying the 4.8 work — the `verify-isa` steps added in 4.8a and the AArch64 prefetch added in 4.8b had never executed on the five-cell matrix. Manual `workflow_dispatch` of `ci.yml` against `development` at `f7f424a`. | **GREEN, 14/14 jobs, 4m 0s.** All five bench cells pass their ISA contract — linux-x86-64 and windows-x86-64 against `base`, and linux-arm64, windows-arm64 and macos-arm64 against `arm64`, which is what finally proves **`prfm` reaches every ARM64 asset** rather than only the one measured by hand on an M4. Cross-platform determinism passes with the prefetch in, so all five cells still agree on the fingerprint. debug x release tests pass on ubuntu, windows and macos; fmt/clippy and the feature-build job pass. | **The `--default-cpu` correction was load-bearing, and it was found by inspection rather than by this run.** The macOS cell builds with `cargo build --release`, whose default `target-cpu` on `aarch64-apple-darwin` enables aes, sha2 and dotprod against `generic`'s bare neon; holding it to the tier baseline would have failed the cell for instructions it is entitled to emit. Checking that BEFORE dispatching cost minutes and saved a red matrix plus the wrong diagnosis. ⚠ Scope: this is the CI matrix, NOT the production matrix. The bench cells build plain `cargo build --release`, so the tiered PGO release path is still verified on only three cells by hand (Windows x86-64, macOS ARM64, Windows ARM64) and **both Linux cells' PGO builds remain untested at this head** — carried to 4.11, where the production platform/ISA matrix is a formal gate. | `.github/workflows/ci.yml`; Plan 4.8h |
 | RAR-P14 | Phase-4.8g: retest the Windows ARM64 PGO path on the pinned toolchain. PLAN 4.8 item 2 records the `rust-lld` workaround for rust-lang/rust#156675 as toolchain-versioned debt that must be re-verified on every rustc bump; it is what broke Windows ARM64 PGO before 2.3.1 and had never been checked on 1.97.1. Native Windows ARM64 host, `cargo xtask build --arch arm64 --pgo`. | **PASSES — the last release-blocking unknown in 4.8 is cleared.** The instrumented binary trained, `llvm-profdata merge` accepted the profile (`Merging 1 profile file(s)`) and the optimised build linked to `rarog-v2.4.0-windows-arm64-pgo.exe`. Fingerprint **6,502,902 / EBF 2.449**, so **three platforms now agree exactly** — Windows x86-64, macOS ARM64 and Windows ARM64. ⚠ The ISA contract check did NOT run: `verify-isa` looked for the non-PGO asset name while the PGO one sat beside it (tool bug, fixed in `2b6d2c0`), so `prfm` presence on the Windows ARM64 asset is still owed as one command. | **'The workaround still works' is not 'the workaround is still needed.'** `xtask` forces `rust-lld` for `aarch64-pc-windows-msvc` unconditionally, so this run exercised the workaround path and proves it functions on rustc 1.97.1 / LLVM 22.1.6 — it says nothing about whether upstream has fixed the underlying defect. Removing the override and retesting is the cheap way to find out, and is the right move on some future toolchain bump rather than now, since the override costs nothing while it holds. Retry trigger unchanged: re-run this on every pinned-rustc bump. | `xtask/src/main.rs` `linker_flags`; Plan 4.8g |
@@ -211,15 +240,15 @@ listing them here.
 
 | ID | Basilisk evidence | Possible Rarog implication | Existing PLAN coverage |
 |---|---|---|---|
-| RAR-X01 | TT-bound-aware pruning evaluation gained +7.18 Elo while preserving raw/corrected eval for learning. | Strong prior for typed result evidence and producer/consumer capability separation, not for copying its TT layout. | 4.2–4.4 |
-| RAR-X02 | Check-extension removal lost −10.17 ± 6.52 in Basilisk while Rarog's extension had gained +30.75. | Confirms that extensions and their LMR/pruning consumers co-adapt. Rework only inside prospective-depth/refit gates. | 4.4, 4.6, 4.10 |
-| RAR-X03 | Stockfish distillation gained +6.75 in Basilisk but lost −17.11 in Rarog. | Teacher/corpus/representation fit dominates transfer; a sibling success cannot reopen RAR-E03 unchanged. | 5.0, 6.0–6.2, 7.0–7.2 |
+| RAR-X01 | TT-bound-aware pruning evaluation gained +7.18 Elo while preserving raw/corrected eval for learning. | Strong prior for typed result evidence and producer/consumer capability separation, not for copying its TT layout. | 4.6 |
+| RAR-X02 | Check-extension removal lost −10.17 ± 6.52 in Basilisk while Rarog's extension had gained +30.75. | Confirms that extensions and their LMR/pruning consumers co-adapt. Rework only inside prospective-depth/refit gates. | 4.7, 4.8 |
+| RAR-X03 | Stockfish distillation gained +6.75 in Basilisk but lost −17.11 in Rarog. | Teacher/corpus/representation fit dominates transfer; a sibling success cannot reopen RAR-E03 unchanged. | 4.12–4.16 for evaluator contracts; 5.0, 6.0–6.2, 7.0–7.2 for teacher/data |
 | RAR-X04 | A 6-ply continuation-history channel lost −7.70 in Basilisk. | Wider history distance can duplicate existing signals. Rarog should prove unique held-out attribution before adding contexts. | 4.5 |
-| RAR-X05 | Exact/PV reward-only history and surprise scaling jointly reverified at +3.06 ± 4.35. | Result kind and confidence can be useful training inputs when sibling maluses are not misapplied. | 4.2, 4.5 |
-| RAR-X06 | Root instability TM reverified at +6.46 ± 4.12, while Rarog's raw pool-view variant lost −5.54. | Instability may help only when derived from a completed authoritative root snapshot and bounded with other confidence signals. | 4.7 |
-| RAR-X07 | Basilisk's +4.34% NPS wave measured +8.69 ± 6.63 Elo at STC; some cached-check/pin optimizations that helped Rarog were negative there. | Speed-to-Elo direction is corroborated near this TC, but individual hot-path optimizations are profile- and language-specific. | 4.8, 4.9 |
-| RAR-X08 | Basilisk's `arm_fix` independently tried unmeasured TT over-alignment; its shipped build has clearer ISA-tier documentation but also a PEXT documentation/flag mismatch. | Corroborates the need to measure topology and audit the executable asset contract, not the proposed wrapper. | 4.8 |
-| RAR-X09 | Basilisk's SMP safety bundle gained +30.42 ± 8.77 at 4T, smaller than Rarog's five-change +102.78 bundle. | The different gains suggest different baseline defects; compare ownership/clock/TT interactions without assigning Elo to individual components. | 4.7, 4.9, 8.0 |
+| RAR-X05 | Exact/PV reward-only history and surprise scaling jointly reverified at +3.06 ± 4.35. | Result kind and confidence can be useful training inputs when sibling maluses are not misapplied. | 4.5, 4.6 |
+| RAR-X06 | Root instability TM reverified at +6.46 ± 4.12, while Rarog's raw pool-view variant lost −5.54. | Instability may help only when derived from a completed authoritative root snapshot and bounded with other confidence signals. | 4.9 |
+| RAR-X07 | Basilisk's +4.34% NPS wave measured +8.69 ± 6.63 Elo at STC; some cached-check/pin optimizations that helped Rarog were negative there. | Speed-to-Elo direction is corroborated near this TC, but individual hot-path optimizations are profile- and language-specific. | 4.19, 8.1 |
+| RAR-X08 | Basilisk's `arm_fix` independently tried unmeasured TT over-alignment; its shipped build has clearer ISA-tier documentation but also a PEXT documentation/flag mismatch. | Corroborates the need to measure topology and audit the executable asset contract, not the proposed wrapper. | 4.19, 8.1 |
+| RAR-X09 | Basilisk's SMP safety bundle gained +30.42 ± 8.77 at 4T, smaller than Rarog's five-change +102.78 bundle. | The different gains suggest different baseline defects; compare ownership/clock/TT interactions without assigning Elo to individual components. | 4.19, 8.0 |
 
 The cross-review found no additional high-value Basilisk item missing from the
 current Rarog plan. Items above are already covered, contradicted by local
@@ -229,16 +258,16 @@ evidence, or deliberately postponed to the NNUE/scaling phases.
 
 | Prior IDs | Retry condition | PLAN destination |
 |---|---|---|
-| RAR-S11, RAR-S15, RAR-X01 | After NNUE scale freezes, typed provenance consumers remain independently ablatable and diagnostics show material activation. | 7.3 |
-| RAR-S13, RAR-S14, RAR-S19, RAR-X02 | After NNUE, prospective depth or evidence architecture wins a categorical gate before its consumers are tuned. | 7.3 |
-| RAR-S16, RAR-S38–S41, RAR-X04, RAR-X05 | NNUE residuals show a populated, unique correction/history signal; tune graded weights, never restore the rejected all-or-nothing capture guard. | 7.3 |
-| RAR-S17, RAR-R04, RAR-R05, RAR-X06 | Real-clock NNUE telemetry shows the completed root-confidence snapshot discriminates without moving total budget; gap stays excluded unless root searches produce comparable values. | 7.3 |
+| RAR-S11, RAR-S15, RAR-X01 | Phase-4 cluster B reaches these consumers, or NNUE scale freezes and they remain independently ablatable with material activation. | 4.6, else 7.3 |
+| RAR-S13, RAR-S14, RAR-S19, RAR-X02 | Prospective depth or evidence architecture wins a categorical gate before its consumers are tuned, in Phase 4 or after NNUE. | 4.7–4.8, else 7.3 |
+| RAR-S16, RAR-S38–S41, RAR-X04, RAR-X05 | Phase-4 cluster A reaches the correction/history contract, or NNUE residuals show a populated unique signal. Tune graded weights; never restore the rejected all-or-nothing capture guard. | 4.5, else 7.3 |
+| RAR-S17, RAR-R04, RAR-R05, RAR-X06 | Phase-4 cluster E reaches root authority, or real-clock NNUE telemetry shows the completed root-confidence snapshot discriminates without moving total budget. The root gap stays excluded unless root searches produce comparable values. | 4.9, else 7.3 |
 | RAR-R07–R10, RAR-X09 | Representative 4T/8T/16T hardware is available after NNUE; price depth diversity and retained SMP switches directly. | 8.0 |
 | RAR-P01–RAR-P05, RAR-X07 | A new deployed profile identifies a material hotspot; use pooled same-target final-PGO A/B. | 8.0–8.1 |
 | RAR-P06, RAR-P07, RAR-X08 | A new target-native profile identifies a topology/layout cost. The ARM prefetch itself is already accepted; do not retry rejected over-alignment from cache-line folklore. | 8.0–8.1 |
-| RAR-S27, RAR-S29, RAR-S49 | **Closed for the flat TT-refinement depth-floor shape.** Reopen only through a materially different post-NNUE evidence model, not the removed UCI coordinate. | 7.3 |
-| RAR-S31 | Re-evaluate `SingularTtDepthMargin` only after NNUE and only in final PGO. The historical tune-binary H1 (+3.35 ± 2.44 Elo) did not meet the later material/final-PGO policy. | 7.3 |
-| RAR-E03, RAR-E04, RAR-X03 | NNUE data/teacher experiment with changed representation and frozen external holdout—not another HCE refit. | 5.0–7.2 |
+| RAR-S27, RAR-S29, RAR-S49 | **Closed for the flat TT-refinement depth-floor shape.** Reopen only through a materially different evidence model — a Phase-4 cluster-B contract or a post-NNUE fit — never the removed UCI coordinate. | 4.6, else 7.3 |
+| RAR-S31 | Re-evaluate `SingularTtDepthMargin` inside Phase-4 cluster D or after NNUE, in final PGO only. The historical tune-binary H1 (+3.35 ± 2.44 Elo) did not meet the later material/final-PGO policy. | 4.8, else 7.3 |
+| RAR-E03, RAR-E04, RAR-X03 | NNUE data/teacher experiment with changed representation and a frozen external holdout — not another HCE refit. The Phase-4 HCE track may study evaluator contracts but does not retry this distillation. | 4.12–4.16 for contracts; 5.0–7.2 for teacher/data |
 
 Anything not meeting its trigger stays closed. A retry is a new experiment with
 a new ID and manifest; it does not overwrite the historical row.

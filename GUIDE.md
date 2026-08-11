@@ -1,29 +1,558 @@
 # Rarog development workflow guide
 
-This is the operational handover for maintainers and coding agents. The roadmap
-is in `PLAN.md`; evidence and failed attempts are in `EXPERIMENTS.md`.
+This is the short operational view: where Rarog stands, what is running and
+what to do next. Detailed rationale, contracts, gates and phase items live in
+[`PLAN.md`](PLAN.md); evidence and failed attempts live in
+[`EXPERIMENTS.md`](EXPERIMENTS.md).
+
+**This file and `PLAN.md` are the maintainer-facing pair.** `README.md`,
+`CHANGELOG.md` and the GitHub release notes are user-facing and must stay free
+of method, history, phase numbers and internal naming — see PLAN §2
+"Documentation audiences".
 
 ## Current checkpoint
 
 | Item | Value |
 |---|---|
-| Version being prepared | **2.3.2** |
+| Released baseline | **2.3.2** at `f931722` on `master` |
 | Accepted fingerprint | **6,519,711 nodes / EBF 2.449** at `bench 13`, 1T |
+| Integration branch | `dev`, reset to `master` and carrying this plan |
+| Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
 | Active experiment | None |
-| Current action | Finish local release verification, then hosted CI/release matrix |
-| Next development work | PLAN Phase 5.0, frozen NNUE measurement corpus |
+| Current action | PLAN 4.0, then execute Phase-4 steps one at a time |
+| Evaluation | HCE frozen through 4.10. Structural convergence unfreezes at 4.11 only. No broad Texel or SPSA refit anywhere in Phase 4 |
+| Reference | Stockfish `9587eeeb`, the last pure-HCE master commit before NNUE. A specification, never a transcription source |
+| Next releases | **2.4.0 at 4.19** if convergence transfers (higher minor if the gain is large); baseline NNUE then **2.5.0 at 6.7** |
+| Work after Phase 4 | PLAN 5.0, the frozen NNUE measurement corpus |
 
-Do not run `./tools/spsa.ps1 -ConfigGroup phase4 -LaunchOnly`. The Phase-4
-configuration was canceled and removed before any games. Do not resume the
+**Phase 4 changed scope on 2026-08-12.** The old Phase 4 closed with 2.3.2 and
+a cancelled SPSA; the number is reused for a different programme. The
+search-oracle experiments RAR-O01/RAR-O02 measured Stockfish's last pure-HCE
+search — driving Rarog's own evaluator, at 1.5M NPS against our 2.4M — beating
+Rarog 2.3.2 by about **+196.5 Elo**, and the matching Stockfish HCE beating
+that hybrid by another **+328.6**. So the largest measurable deficit is search
+coordination, with a second in HCE feature coverage, and both can be converged
+against a public reference instead of redesigned blindly.
+
+Those are logistic point estimates from a deliberately stopped run. They size
+a target and order the work; they never accept a change and are never quoted
+as a release claim. Search convergence is evaluator-agnostic, so it survives
+NNUE intact — this is not work spent on a surface NNUE will replace. HCE
+convergence also pays forward as a better NNUE teacher at 6.1.
+
+Do not run `./tools/spsa.ps1 -ConfigGroup phase4 -LaunchOnly`. That
+configuration was cancelled and removed before any games. Do not resume the
 interrupted mate-clamp SPRT; the clamp is retained as a correctness decision.
 
-## 2.3.2 release workflow
+## Closed work through 2.3.2
 
-From a clean `development` worktree:
+Phases 0–3 built the engine, the harness, the correctness programme, the
+search wave and the reproducible build/CI/PGO line, through 2.3.0 and the
+2.3.1 ARM64 patch. The closed Phase-4 line shipped 2.3.2: broad selectivity
+fit **+15.33 ± 7.34 nElo**, zero-reduction LMR floor **+9.13 ± 5.45 nElo**,
+anchored Texel refresh **+11.56 ± 5.19 Elo**, the NMP mate-score clamp as a
+correctness repair, AArch64 TT prefetch at **+1.42% NPS**, and the executable
+ISA contract. Those three strength results used different estimators and are
+not additive.
+
+**Its item numbers 4.0–4.10 are retired** and are not reused by the tracker
+below. Ten abandoned parameters were removed with their accepted defaults
+hardwired at the call sites; the root-gap observation stays in diagnostics but
+cannot enter root confidence, because null-window rival scores made it
+degenerate. Full detail and the retained-inert ownership table are in PLAN §3.
+
+## Forward tracker
+
+<!-- FORMATTING RULES for this tracker — follow them, they get broken often:
+     1. ONE step per `- [ ]` bullet. Never join two steps on one line with
+        "·" (e.g. "4.4 foo · 4.5 bar") — each gets its own bullet, always.
+     2. Continuation lines indent 6 spaces so they align under the text after
+        "- [ ] ". SUB-ITEM INDENT IS 4 SPACES with 10-space continuations.
+     3. Status boxes: `[ ]` todo · `[~]` ONLY while genuinely in flight (a
+        gate running right now) · `[x]` finished — accepted, rejected,
+        deferred or parked. Anything resolved is `[x]`, never `[~]`.
+     4. Every item opens with its STEP NUMBER, then (for `[x]` items) a
+        BRACKETED OUTCOME TAG in bold, so the reader orients by number
+        first and reads the result second (number BEFORE tag, never the
+        reverse):
+            - [x] 4.5 **[ACCEPTED +22.13 ± 7.28, LOS 100%]** Cluster A ...
+            - [x] 4.6b **[REJECTED −6.6]** retry — ...
+            - [x] (b) **[DEFERRED → 4.8]** late evasions — ...
+            - [x] 4.4 **[PARKED → 5.1]** dirty-piece deltas ...
+            - [x] 4.2 **[DONE, no games]** Diagnostic counters ...
+        Tags: ACCEPTED <elo> · REJECTED <elo> · DEFERRED → <item> ·
+        PARKED → <phase> · DONE · FIXED. Put the Elo in the tag, detail
+        after. The number must be ON the bullet line itself.
+     5. Bullet order: step number, outcome tag, short title, then detail.
+     6. NEVER renumber existing items. PLAN.md freezes item numbers because
+        commits and history reference them. To insert before the first item
+        use a .0; to subdivide, use letter sub-items like 4.5(a)/(b).
+     7. Mirror any status/number change into PLAN.md in the same commit.
+     8. Blank line AFTER the `###` phase heading, then NO BLANK LINES between
+        bullets at all. A blank line splits one list into two and the
+        renderer re-spaces everything around it.
+     9. ONLY NUMBERED STEPS live in the tracker. A recurring procedure or a
+        checklist is NOT a step — it never gets ticked, so an unticked box
+        reads as outstanding work forever. Those go in
+        `## Recurring procedures`, and the owning step links to them.
+    10. Wrap at ~76 columns. Do not let one bullet run to 100+ columns
+        because the sentence "felt continuous".
+    11. Quick mechanical check after editing — all five must be zero:
+        blank lines inside a list; bare `    - ` sub-bullets without a box;
+        unnumbered `- [ ] **` pseudo-steps; lines over 78 columns; and
+        `(a)`/`(b)` labels written mid-sentence inside a parent's own
+        continuation instead of as their own `    - [ ]` line. -->
+
+The model implements and verifies locally; the maintainer runs only the long
+game jobs. One item is open at a time and each candidate gates against the
+then-current accepted head. Macro-order: **A** search convergence (4.0–4.10) →
+**B** HCE convergence (4.11–4.18) → **C** transfer and release (4.19) → **D**
+NNUE (5 runway → 6 baseline → 7 frontier) → **E** scaling (8) → **F**
+contingent classical fallback (9, last, may never run). Per-item rationale is
+in `PLAN.md` §4–§9.
+
+### Phase 4 — Search and evaluation convergence (→ conditional 2.4.0)
+
+- [ ] 4.0 **Evidence, baseline and oracle freeze.** Record RAR-O01/O02, the
+      baseline and oracle SHAs, binary SHA-256 hashes, benchmark, tournament
+      protocol and the exact independence boundary. Reproduce 2.3.2 clean from
+      `master` (fmt, tests in debug **and** release, all-feature clippy, bench
+      6,519,711 / 2.449, PGO build, ISA verify). Register the Phase-4 compute
+      budget and stop rules before any code moves.
+- [ ] 4.1 **Instrumented oracle.** On a new `hybrid-diag` branch, add the 4.2
+      counter set to the Stockfish side, matched name for name. Diagnostic
+      artifact only: it never plays a rating game and never replaces the
+      frozen `75d0d43` tournament binary. Without this, cluster selection is
+      intuition rather than evidence.
+- [ ] 4.2 **Differential observation harness.** Versioned fixed suite (UHO
+      openings, quiet middlegames, tactics, checks, zugzwangs, endgames) at
+      fixed depth/nodes, 1T. Counters for TT producer/consumer kind, **prune
+      recall and overlap** (not node savings — a smaller tree can be worse),
+      **correction attribution**, history attribution, move source, cutoff
+      index, LMR/re-searches, pruning, extensions, aspiration and root
+      ownership. Off ⇒ bench 6,519,711 exactly; on ⇒ same best move and nodes.
+      Run it against the 4.1 oracle: the counters that diverge most select the
+      work. **Shadow-record** stand-pat, ProbCut, NMP/IIR/singular,
+      checking-move LMR and root-confidence concerns — each is owned by the
+      cluster that reaches it, else 7.3. Recording is mandatory; acting here
+      is not permitted.
+- [ ] 4.3 **Contract map and order freeze.** Classify each reference contract
+      as equivalent / intentionally different (with reason) / missing /
+      coupled to a later consumer, against the Rust owners in PLAN §4. If the
+      evidence contradicts the cluster order, edit `PLAN.md` **before**
+      implementing — never after seeing games.
+- [ ] 4.4 **Search-consumed board state.** Cache only the per-ply state a
+      4.5–4.9 contract actually consumes: `CheckInfo`, pins/blockers, check
+      squares, `plies_from_null`, repetition distance. Bench-identical where
+      behavior-neutral; pooled-PGO NPS gate where it is a layout change. The
+      evaluator-facing dirty-piece delta contract stays owned by 5.1 — do not
+      let this grow into the NNUE runway.
+- [ ] 4.5 **Cluster A — move ordering, histories, LMR.** One coherent cluster,
+      implemented in dependency order. Owns the retained continuation/capture
+      correction weights and `CorrSkipWhenTtRefined`. Highest prior of the
+      phase (25–60 nElo).
+    - [ ] (1) **Move-picker contract:** TT move, good captures, killers and
+          counters, quiets, deferred bad captures; legality and duplicate
+          guarantees. Rarog's picker is an enum inside `search.rs` with no
+          staged guarantee contract, so this is structural, not cosmetic.
+    - [ ] (2) **Evidence ownership:** main, capture, continuation, low-ply and
+          pawn history indexing, normalization, aging and cutoff attribution.
+    - [ ] (3) **Reduction/re-search contract:** LMR population, improving/PV/
+          cut-node adjustments, history feedback, the accepted zero-reduction
+          floor and full-depth verification.
+    - [ ] (4) **Integrated gate and ablation:** final-PGO SPRT of the coherent
+          cluster, then ablate surprising contributors. Revert the whole
+          cluster if no supported subset clears its registered gate.
+- [ ] 4.6 **Cluster B — static eval, TT and quiescence.** Keep raw eval,
+      pruning eval and searched bounds distinct; align TT capabilities and
+      entry semantics, qsearch stand-pat, capture ordering and check handling,
+      and correction attribution. Preserve our draw and mate-distance
+      semantics; they are assets, not targets. Owns the TT provenance switches
+      and typed evidence consumers.
+- [ ] 4.7 **Cluster C — main selectivity.** Razoring, reverse futility, NMP
+      verification, ProbCut, move-count and history pruning, quiet/capture
+      futility, in observed dependency order with prospective searched depth
+      used consistently. Categoricals before constants; no broad SPSA. The
+      2.3.2 selectivity fit was a constant fit around the current architecture
+      and does not pre-empt this. Owns the NMP/IIR provenance switches and
+      `SelectivityProspectiveDepth`.
+- [ ] 4.8 **Cluster D — extensions and depth authority.** Check, singular,
+      double/negative extension and IIR semantics against TT provenance and
+      LMR. Preserve mate/abort correctness including the NMP unproven-mate
+      clamp. Gate the integrated contract, never individual extensions —
+      RAR-X02 is co-adaptation evidence, not a portable verdict. Owns the
+      singular provenance switches and `SingularTtDepthMargin`.
+- [ ] 4.9 **Cluster E — root search and clock handoff.** Aspiration retries,
+      completed-root authority, PV/fallback ownership and stability inputs.
+      Total time allocation does not move until the root evidence is coherent;
+      then gate any real-clock change separately. Owns the aspiration shape
+      and the root-confidence aspiration/time inputs.
+- [ ] 4.10 **Search-only checkpoint, freeze and EV review.** Same pinned
+      final-PGO path both arms, direct 1T STC comparison with 2.3.2, explained
+      by the frozen 4.2 diagnostics. Close every open search candidate and
+      freeze the head — it may equal 2.3.2, which is an accepted outcome. Then
+      re-review expected value before 4.11: continue, decide explicitly
+      whether the HCE track earns its cost, or close the phase and resume
+      Phase 5.
+- [ ] 4.11 **HCE baseline and reciprocal-oracle freeze.** Make the 4.10 head
+      the immutable HCE baseline; record source/binary hashes, benchmark and
+      NPS, and a no-adjudication reproduction slice of Stockfish-HCE versus
+      Rarog-HCE under the frozen oracle search. Register the HCE budget and
+      stop rules before changing evaluation code.
+- [ ] 4.12 **Differential evaluator harness and contract map.** Versioned
+      legal corpus (quiet, tactical, king attack, pawn structure, endgame,
+      rule-50, search disagreement). Record both engines' raw white-POV and
+      side-to-move scores, phase, term breakdown and cost; measure scale,
+      tempo, tapering, volatility, sign/bound disagreement and
+      search-conditioned activation. Off ⇒ 4.11 fingerprint exactly. A lower
+      teacher-fit loss cannot accept a candidate — RAR-E03 disproved that
+      proxy at −17.11 Elo.
+- [ ] 4.13 **Cluster F — score foundation and endgame dispatch.** Material and
+      PST ownership, phase interpolation, tempo, score grain/units, evaluation
+      POV, rule-50 scaling and specialized-endgame dispatch. Structure before
+      constants; preserve draw/mate semantics.
+- [ ] 4.14 **Cluster G — pawns, passers and endgame scaling.** Pawn-cache
+      inputs and lifetime, structural pawn classes, passed-pawn progression
+      and king/pawn distances, together with the endgame scaling consumers
+      that read them. Gate on games **and** NPS; a prettier static fit that
+      loses games is rejected.
+- [ ] 4.15 **Cluster H — piece activity, threats and space.** Mobility-area
+      semantics, outposts, files, weak and restricted pieces, hanging threats
+      and space as one interacting group. Held-out term ablations detect
+      duplicate signals before the registered final-PGO gate.
+- [ ] 4.16 **Cluster I — king safety and imbalance.** Shelter/storm, attack
+      units, safe checks, weak squares and blockers, and nonlinear material
+      imbalance, coupled to the activity/threat inputs they consume. Our weak
+      ring, flank, missing shelter, storm and shelter-storm inputs all fit to
+      zero today — zeroed inputs are unidentified, not disproven, so repair
+      the representation before trusting any weight.
+- [ ] 4.17 **Search compatibility, cost and narrow calibration.** Lazy
+      evaluation and cache behavior, parent-child score stability,
+      pruning-bound populations, NPS and endgame pathologies on the frozen
+      search. A search margin change is a separately registered compatibility
+      gate. Tune only a small set of activated constants whose structural
+      owner already passed.
+- [ ] 4.18 **Cumulative HCE checkpoint and ablation.** Revision-matched
+      final-PGO comparison against the 4.10 baseline, adjudication off. Ablate
+      surprising contributors, remove rejected or unowned dormant HCE
+      alternatives, and record the exact search-versus-HCE attribution.
+- [ ] 4.19 **Transfer, portability, SMP and release gate.** Direct comparison
+      with 2.3.2; confirm LTC `10+0.1` and 4T direction, benchmark and pooled
+      NPS, the platform/ISA matrix, UCI conformance and the correctness suite.
+      Remove scaffolding with no future owner and resolve obsolete switches.
+      Final no-adjudication target cohort including Basilisk 1.9.3 and the 4.1
+      oracle. Drop `-use-affinity` for the 4T cells and re-calibrate the null
+      pair there. **2.4.0** needs ≥ +40 Elo STC with the 95% lower bound above
+      +25, plus positive LTC/4T lower bounds; ≥ +100 with a lower bound above
+      +75 may justify a higher minor version.
+
+### ━━━ NNUE CUTOFF ━━━ (Phase 5 opens the NNUE line)
+
+### Phase 5 — NNUE runway (bench-identical or NPS-gated per step; no games)
+
+- [ ] 5.0 **Frozen measurement corpus.** Quiet, tactical, endgame, rule-50,
+      phase-balanced and search-disagreement cohorts with deep **external**
+      teacher cp/WDL labels plus Syzygy WDL/DTZ, by-game train/validation/
+      untouched-test separation, exact cohort labels, paired counterfactuals
+      and per-candidate residual reports. No engine footprint, so it may be
+      pulled forward into Phase-4 SPRT downtime.
+- [ ] 5.1 **Per-ply state and dirty pieces.** Extend 4.4's structure to the
+      full reversible state, then add the dirty-piece delta contract for
+      quiets, captures, EP, promotions, castling and null. Adopt the Reckless
+      `BoardObserver` shape: three events emitted at the exact mutation
+      points, a generic `make_move<T>` so the null observer costs nothing, a
+      compact pre-make stack channel for accumulators and a during-make
+      observer channel for threat features. Randomized make/unmake compares
+      against a full refresh every ply.
+- [ ] 5.2 **Accumulator scaffolding.** Per-thread and per-ply ownership,
+      refresh markers and debug full-recompute seams. The accumulator lives
+      with the search worker, not inside the copyable `Board`. HCE keeps
+      running unchanged and the search stays fingerprint-identical. No
+      inference yet; reserve the king-bucket refresh-cache slot for 6.5.
+- [ ] 5.3 **Trainer preflight.** Pin trainer, Bullet, toolchain and GPU;
+      verify conversion, shuffle, deterministic splits and manifests,
+      reference vectors and resume semantics. Malformed or lossy input fails
+      loudly.
+- [ ] 5.4 **Runway gate.** Exact benchmark, fmt, tests in debug and release,
+      randomized unwind, reproducible pilot corpus and trainer conformance.
+      Create an NNUE integration branch only after this passes.
+- [ ] 5.5 **Threat-map hooks (optional).** Reserve the dirty-threat interface
+      so threat inputs can land in 7.2 without another make/unmake rewrite.
+
+### Phase 6 — Baseline NNUE via net_trainer (→ 2.4.0 or 2.5.0)
+
+- [ ] 6.0 **Trainer hardening.** Strict CLI, train/validation/untouched-test
+      splits, checkpoint selection, hashes, seeds and exact references.
+- [ ] 6.1 **Controlled data.** 30–60M unique teacher positions at 10–20
+      sampled positions per game, label blend λ selected on validation, seeded
+      from a diverse EPD book. Add by-game/trajectory splits, dedup, the
+      frozen 5.0 test set and a dataset manifest (source engine and net SHA,
+      search budget, book, λ, seed, trainer commit). Do not train mainly on
+      positions adjudicated early by the same evaluator.
+- [ ] 6.2 **Baseline networks.** Documented widths and buckets, at least two
+      seeds; validation chooses within a run, untouched cohorts are used once.
+- [ ] 6.3 **Scalar integration.** Implement `nnue_format.md` in Rarog from the
+      reference Rust example: chess768 → (H×2, perspective, SCReLU) → 8
+      material output buckets, QA=255, QB=64, SCALE=400. **Acceptance gate is
+      the integer-exact conformance vectors**, which replaces any custom
+      header scheme; embed the net hash for provenance. Require layout
+      validation, malformed/truncated rejection and a clean HCE fallback.
+- [ ] 6.4 **Incremental and SIMD.** Dirty deltas per ply and thread,
+      randomized incremental-versus-full parity across castling/EP/promotion/
+      null, integer bound proof, and portable/x86/ARM64 kernels bit-exact and
+      target-native PGO-smoked. Hard pooled-PGO NPS gate before any games.
+- [ ] 6.5 **Architecture loop.** One axis at a time with two seeds. Step to
+      king-conditioned inputs (trainer v2, mirrored king buckets) as the
+      minimum serious architecture, consuming 5.2's reserved refresh-cache
+      slot. Capacity follows data; data-scale comparisons hold architecture
+      fixed and vice versa. Do not declare NNUE complete without testing king
+      conditioning.
+- [ ] 6.6 **Gross search-scale safety.** Adjust only clearly invalid margins
+      or clock scale. The broad fit waits for 7.3.
+- [ ] 6.7 **Baseline release.** Beats the accepted pre-NNUE master at STC and
+      LTC, transfers at 4T, passes external checks, zero
+      incremental-versus-reference mismatch. Archive the 6.1 manifest and
+      trainer commit with each accepted `quantised.bin`. **2.4.0 only if Phase
+      4 did not use it**; otherwise 2.5.0.
+
+### Phase 7 — NNUE frontier and final search fit
+
+- [ ] 7.0 **Residual and disagreement analysis.** By phase, material, king,
+      tactical and endgame cohort, plus calibration, refresh cost and
+      teacher-search disagreement.
+- [ ] 7.1 **Data frontier.** Scale and deduplicate, natural finishes,
+      hard-position mining, controlled label/depth A/Bs against untouched
+      sets, and fresh on-policy data with each clearly stronger net.
+- [ ] 7.2 **Architecture ladder.** King/perspective buckets, threat and
+      material inputs, width and activation, refresh-friendly variants. Each
+      relation-input family is a full architecture revision, not an
+      engine-side patch; add one family at a time and pick by measured
+      residuals.
+- [ ] 7.3 **One post-NNUE search fit.** First resolve the retained categorical
+      switches no Phase-4 cluster reached, then register only the continuous
+      coordinates whose optimum likely moved. cp margins do not transfer
+      across evaluators; structural mechanisms do. Coordinate count and
+      horizon come from activation, curvature and budget — not a remembered 24
+      or 5,000.
+- [ ] 7.4 **Frontier gate.** Direct comparison of 2.3.2, the Phase-4 head and
+      the baseline NNUE, plus calibrated matches against contemporary target
+      engines. This is where the Basilisk gap is re-measured.
+
+### Phase 8 — Scaling, platforms and product completeness
+
+- [ ] 8.0 **High-thread and NUMA.** Price the depth-diversity deficit at
+      4T/8T/16T; test the retained pool-instability and iteration-skipping
+      switches, first-touch placement, TT/accumulator sharing and false
+      sharing. Keep the score/depth-weighted vote merge. Measure helper TT
+      write policy and helper diversity rather than intuiting them.
+- [ ] 8.1 **Runtime dispatch and memory.** Consider a baseline universal
+      binary selecting specialized kernels, plus TT/network placement and
+      large pages. No specialized-binary startup CPU guard — see Recurring
+      procedures.
+- [ ] 8.2 **Product and platform.** Demand-led Chess960 and FRC coverage or
+      other platform work; also holds the parked large-page/NUMA TT, shared-TT
+      atomic packing, AVX-512/VNNI kernels, match-manifest schema and
+      distributed testing.
+- [ ] 8.3 **Scaling release.** Full topology, clock, net, ISA and user-doc
+      gate.
+
+### Phase 9 — Contingent classical fallback (only if NNUE is abandoned)
+
+- [ ] 9.0 **King-safety semantic rework.** Closed without retry if 4.16 landed
+      it. Otherwise: activation instrumentation by queen presence and phase,
+      legal versus geometric safe checks, storm conditioning, reachable
+      shelter, and joint danger-input fits.
+- [ ] 9.1 **Winnability and material-specific scaling.** Replace the sign-only
+      initiative term; residual tables by exact material signature, Syzygy
+      WDL/DTZ as direct evidence, sign-preserving non-amplifying scalers only.
+- [ ] 9.2 **Passer and pawn conditionality.** Blocker ownership and type,
+      rear-line openness, connected-passer semantics, candidate-passer
+      exchange conditioning, and a short-horizon race diagnostic.
+- [ ] 9.3 **Threat conditionality.** SEE-safe pawn pushes, restricted mobility
+      per affected piece rather than board-global, cheap pin/overload
+      relations. NPS-check first; do not hand-write a threat net one scalar at
+      a time.
+- [ ] 9.4 **Broad positional repairs.** Queen infiltration on the full enemy
+      attack map, bad-bishop conditioning, space usability (all three weights
+      fit to zero, so the representation is the problem) and conditioned
+      rook-on-seventh.
+- [ ] 9.5 **Material and phase specialization.** Bucketed coefficients,
+      king-bucketed PSTs, queen-presence gates. Worst time-to-Elo on the list;
+      only if NNUE is abandoned outright.
+- [ ] 9.6 **Lazy-margin conditioning.** Only if dual-eval data shows a
+      material sign-flip cohort; margin by non-pawn material and king danger.
+- [ ] 9.7 **OCB material-scope refinement.** A small material hierarchy for
+      the opposite-coloured-bishop scaler with non-amplification, sign,
+      pure-OCB, plus-minor and plus-major tests. Cheap and high-confidence, so
+      it is the natural first item here.
+
+## What you run now
+
+1. Reproduce the 2.3.2 baseline from a clean `master` worktree at `f931722`
+   using the command block below. Expect `Nodes searched : 6519711` and
+   geomean EBF `2.449`. Also build with `--features tune`, issue `uci`, and
+   verify that none of the ten removed options is advertised while the
+   later-owned inert options still are.
+2. Execute PLAN 4.0: record the evidence, hashes, protocol and independence
+   boundary, and register the Phase-4 budget and stop rules.
+3. Then 4.1 and 4.2, which are observational and owe exact diagnostic-off
+   fingerprint parity. No games until a cluster is registered.
+
+The hosted release workflow remains the final production check, because one
+machine cannot create all Linux/macOS/Windows and x86/ARM assets. Use the
+reproduction procedure to verify the baseline, not to modify or republish
+2.3.2.
+
+## Recurring procedures
+
+### Convergence step lifecycle (4.4–4.18)
+
+For every behavioral Phase-4 step:
+
+1. **Audit** — name the reference contract, its Rust owner, all interacting
+   consumers and the local diagnostic population. Update `PLAN.md` first if
+   the evidence contradicts the planned order.
+2. **Register** — add an `EXPERIMENTS.md` ID with hypothesis, baseline SHA,
+   candidate scope, expected direction, gate, cap and stop rule, before games.
+   Choose bounds from the cluster's prior and the PLAN §2 sizing table.
+3. **Implement** — the smallest dependency-complete change. Substeps may be
+   compiled and diagnosed separately, but no incomplete cluster becomes the
+   next strength baseline.
+4. **Prove correctness** — fmt, workspace tests in debug and release,
+   all-feature clippy and targeted invariants. A behavior-neutral diagnostic
+   seam must preserve the exact accepted fingerprint when disabled.
+5. **Explain** — use the frozen suite at fixed depth/nodes to compare nodes,
+   qnodes, move source, cutoff index, TT use, reductions and re-searches,
+   pruning, extensions and aspiration against the oracle. Counters explain a
+   candidate; they cannot accept it.
+6. **Gate** — build revision-matched final-PGO baseline and candidate binaries
+   and run the registered paired UHO SPRT. Do not change the candidate,
+   bounds, cap, book or adjudication after observing games.
+7. **Close** — accept and commit only a passing result. Otherwise revert the
+   behavior, keep the evidence row and restore the prior fingerprint. Ablate a
+   surprising integrated result before crediting a subcomponent.
+8. **Advance** — start the next item only after the preceding one is accepted,
+   rejected or explicitly closed.
+
+Two failed coherent search clusters trigger a return to 4.2–4.3. After 4.10
+freezes the search head, two failed coherent HCE clusters close track H rather
+than triggering automatic continuation. The phase closes if its remaining
+plausible result cannot justify its opportunity cost.
+
+### Reference-use rules
+
+Rarog and Stockfish are both GPLv3, so reuse is legally permissible; the
+constraints are engineering ones. Do not copy the hybrid FFI boundary into
+Rarog, merge the `hybrid` branch, replace native Rust with C++/FFI, or
+reinterpret the oracle as permission for a wholesale unmeasured rewrite.
+Converge on contracts, attribute derived work in source comments and
+`README.md` naming the exact upstream revision, and never accept a cluster
+because its trace looks more Stockfish-like. A contract Rarog deliberately
+does otherwise is a valid outcome — record it as intentionally different, with
+its reason.
+
+Search-only candidates keep the calibrated `strength-v1` adjudication because
+both arms share Rarog's score scale. **HCE-changing candidates and every
+cross-engine cohort run with adjudication off**, because evaluator scales
+differ; RAR-O01 versus RAR-O02 priced that confounder at about 75 Elo. Enable
+it for an HCE A/B only after a registered calibration proves it safe for both
+arms. Use fixed movetime or nodes only for the deterministic diagnostic suite,
+never as the strength verdict.
+
+### Toolchain and harness notes
+
+If a PGO build dies with "target must match host", the rustup default host has
+drifted to windows-gnu, so the pinned toolchain resolves to its gnu variant
+and PGO training refuses. `rust-toolchain.toml` pins the channel, not the host
+triple, so it cannot catch this — check `rustup show active-toolchain` first.
+
+`fastchess -use-affinity` with concurrency 14 is mandatory for 1T gates;
+unpinned Zen 3 runs carry a hidden per-run offset of roughly ±10 nElo. It pins
+one core per game and starves `Threads>1`, so drop it for multi-thread runs
+and re-calibrate the null pair under that configuration. Validate any harness
+change on a null pair — the same executable on both arms — before trusting a
+verdict.
+
+NPS work: validate on a self pair first (it must read about 0.00%), pool
+several PGO builds per arm because two PGO builds of identical source differ
+by about 0.36%, and keep compilation, profiling and unrelated load off the
+match host. Roughly 2 Elo per 1% NPS at `3+0.03`.
+
+### SPSA go/no-go procedure
+
+The generic harness is retained but is not a Phase-4 task; Phase 4 forbids a
+broad tune. Before any future tune:
+
+1. Name the strength-bearing mechanism and show local evidence that its
+   consumers are misfit.
+2. Estimate plausible Elo and opportunity cost before optimizing schedule
+   details. Cancel if the plausible gain is inside the gate's dead zone.
+3. Gate categorical switches separately and freeze the winner in both arms.
+   Never pin a binary knob as an SPSA constant — a pinned A/B knob is an
+   unmeasured assumption.
+4. Select continuous coordinates from activation and interaction evidence. Do
+   not target 24 merely because an old plan said 24.
+5. Choose the horizon from gradient quality, integer resolution and compute
+   budget. 5,000 is a prior calibration, not a universal answer.
+6. Run `./tools/audit_spsa_coverage.ps1` and register surface, fixed values,
+   iterations, games, gain and estimator before launch.
+7. Complete the final theta without post-hoc checkpoint selection; bake it
+   into a fresh clean PGO binary and run a paired SPRT, then LTC/4T where
+   appropriate.
+
+### Opening book
+
+SPSA and the default SPRT both use `tools/books/UHO_Lichess_4852_v1.epd`,
+paired and reversed, at `3+0.03`. That alignment is the point: the optimizer
+and the confirmation gate see the same opening and clock distributions. Use a
+second book or LTC as an extra robustness check for a mechanism suspected of
+condition sensitivity; do not create an unnecessary tuning/confirmation
+mismatch.
+
+### CPU compatibility design
+
+There is deliberately no startup CPU guard inside specialized assets. When the
+compiler is told that BMI2/AVX2/FMA are mandatory, ordinary feature-detection
+macros fold those checks to true and the guard is removed. A working
+in-process guard would require baseline-compiled CPUID code to execute before
+specialized code, adding a separate dispatch boundary. The current design is
+close to the specialized-binary model: users choose `x86-64`, `avx2`, `pext`
+or `arm64`, the README states exact requirements, and release tooling
+disassembles each asset to enforce the promise. If a single universal binary
+becomes a product goal, 8.1 may add a Stockfish-style baseline dispatcher.
+
+### Experiment discipline
+
+- Begin from a clean revision and record both binary hashes.
+- Register hypothesis, interactions, gate, stop rule and budget before games.
+- Treat tune and non-PGO results as diagnostics unless the experiment says
+  otherwise; final-PGO games decide promotion.
+- Do not turn node reduction into Elo. Use diagnostics to explain a game
+  result.
+- Record rejected and neutral outcomes in `EXPERIMENTS.md`; never silently
+  rewrite them into a later success story.
+- A correctness exception must name the invariant, the tests and the
+  incomplete strength evidence honestly.
+
+## Decision rules
+
+- One item open at a time; each candidate gates against the current accepted
+  head, never against a stale baseline or another unresolved candidate.
+- Categorical architecture is gated before its constants are fitted.
+- A touched dormant switch must be removed, kept inert with a named owner, or
+  separately gated. It is never activated opportunistically.
+- Borderline results are not accumulated as hidden debt. Accept or revert.
+- Commit after each finished and verified step, and keep tooling changes in
+  separate commits from engine changes.
+- Mirror any tracker status or number change into `PLAN.md` in the same
+  commit.
+
+## Common commands
 
 ```powershell
 cargo fmt --check
 cargo test --workspace --all-targets
+cargo test --workspace --all-targets --release
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo build --release
 "bench" | ./target/release/rarog.exe
@@ -31,110 +560,18 @@ cargo xtask build --arch pext --pgo
 cargo xtask verify-isa --arch pext
 ```
 
-Expected benchmark: `Nodes searched : 6519711`, geomean EBF `2.449`.
+```powershell
+# Primary SPRT [3,10] nElo; add -TC "10+0.1" for the LTC confirmation
+./tools/sprt.ps1 -EngineA <candidate.exe> -EngineB <baseline.exe> `
+  -NameA candidate -NameB baseline -Elo0 3 -Elo1 10
 
-Also build with `--features tune`, issue `uci`, and verify two properties:
+# Harness calibration after any runner change — same binary on both sides
+./tools/sprt.ps1 -EngineA <same.exe> -EngineB <same.exe> -NameA a -NameB b
 
-- none of the ten removed options is advertised;
-- later-owned inert options are still advertised at accepted defaults.
-
-The hosted build workflow is the final production check because this machine
-cannot create all Linux/macOS/Windows and x86/ARM assets. Each cell must verify
-the UCI handshake, benchmark fingerprint and executable ISA contract.
-
-Commit the release-prep changes locally. Do not tag, push or publish unless the
-maintainer explicitly asks.
-
-## What was cleaned up
-
-Ten abandoned parameters were removed and their accepted defaults were placed
-directly at the call sites. This intentionally reduces the tune surface without
-changing play. The root-gap observation remains in diagnostics, but cannot
-enter root confidence because null-window rival scores made it degenerate.
-
-Future-owned experiments remain inert:
-
-| Later owner | Examples | Why skipped now |
-|---|---|---|
-| Post-NNUE search fit | aspiration, TT provenance/NMP/singular alternatives, prospective selectivity, correction weighting, root confidence | NNUE changes score/residual/margin/time-cost distributions; an HCE fit would target a soon-obsolete surface |
-| Multi-thread scaling | pooled root instability, helper iteration skipping | They have no useful 1T population and need representative topology |
-| Runtime dispatch | universal CPU dispatch | It is product architecture, not a search knob |
-
-At the owning phase, each item must pass and activate or be removed. “Retained”
-is not permission for indefinite dormant code.
-
-## SPSA go/no-go procedure
-
-The generic harness is intentionally retained, but it is not the next task.
-Before any future tune:
-
-1. Name the strength-bearing mechanism and show local evidence that its
-   consumers are misfit.
-2. Estimate plausible Elo and opportunity cost before optimizing schedule
-   details. Cancel if the plausible gain is inside the gate's dead zone.
-3. Gate categorical switches separately and freeze the winner in both arms.
-4. Select continuous coordinates from activation and interaction evidence.
-   Do not target 24 merely because an old plan said 24.
-5. Choose horizon from gradient quality, integer resolution and compute budget.
-   5,000 is a prior calibration, not a universal answer.
-6. Run `./tools/audit_spsa_coverage.ps1` and register surface, fixed values,
-   iterations, games, gain and estimator before launch.
-7. Complete the final theta without post-hoc checkpoint selection; bake into a
-   fresh clean PGO binary and run paired SPRT, then LTC/4T where appropriate.
-
-The generic stop/resume implementation is sound: state updates are
-transactional, logs append, state saves every ten iterations and the schedule
-is restored from state. Those properties preserve an approved tune; they do
-not make a low-value tune worth running.
-
-## Opening book
-
-SPSA and default SPRT both use
-`tools/books/UHO_Lichess_4852_v1.epd`, paired/reversed, at `3+0.03`. That is the
-correct default because the optimizer and confirmation gate see aligned opening
-and clock distributions. Use a second book or LTC as an additional robustness
-check for a mechanism suspected to be condition-sensitive; do not create an
-unnecessary tuning/confirmation mismatch.
-
-## CPU compatibility design
-
-There is deliberately no startup CPU guard inside specialized assets. When the
-compiler is told that BMI2/AVX2/FMA are mandatory, ordinary feature-detection
-macros fold those checks to true and the guard is removed. A working in-process
-guard would require baseline-compiled CPUID code to execute before specialized
-code, adding a separate dispatch boundary.
-
-The current design is simple and close to the specialized-binary model: users
-choose `x86-64`, `avx2`, `pext` or `arm64`, README states exact requirements,
-and release tooling disassembles each asset to enforce the promise. If a single
-universal binary becomes a product goal, Phase 8.1 may add a Stockfish-style
-baseline dispatcher which selects specialized kernels. That is a dispatcher,
-not a friendly check bolted into a binary already compiled for the newer ISA.
-
-## Experiment discipline
-
-- Begin from a clean revision and record both binary hashes.
-- Register hypothesis, interactions, gate, stop rule and budget before games.
-- Keep compilation, profiling and unrelated load off the match host.
-- Treat tune/non-PGO results as diagnostics unless the experiment says
-  otherwise; final-PGO games decide promotion.
-- Do not turn node reduction into Elo. Use diagnostics to explain a game result.
-- Record rejected and neutral outcomes in `EXPERIMENTS.md`; never silently
-  rewrite them into a later success story.
-- A correctness exception must name the invariant, tests and incomplete
-  strength evidence honestly.
-
-## NNUE handover
-
-The next code phase is runway, not network training. First freeze the corpus and
-contracts, then land reversible state/dirty pieces and accumulator scaffolding
-while the HCE benchmark stays exact. Only after the runway gate passes should an
-NNUE integration branch and large data generation begin.
-
-Once a baseline NNUE is accepted, reassess score scale and only gross safety
-margins. The one broad post-NNUE SPSA belongs after network architecture and
-scale are frozen. That tune must decide the retained inert search features and
-remove losers, followed by final-PGO STC/LTC/4T confirmation.
+# Test/tune binaries and the SPSA coverage audit
+./tools/build_test.ps1 -Suffix <s>
+./tools/audit_spsa_coverage.ps1
+```
 
 ## Documentation ownership
 
@@ -144,9 +581,9 @@ remove losers, followed by final-PGO STC/LTC/4T confirmation.
 | `CHANGELOG.md` | Users: visible release deltas and measured claims |
 | `RELEASE_NOTES_2.3.2.md` | Copy-ready GitHub release text |
 | `PLAN.md` | Maintainers: current state, ownership and ordered roadmap |
-| `GUIDE.md` | Maintainers/agents: commands and operating rules |
+| `GUIDE.md` | Maintainers/agents: tracker, commands and operating rules |
 | `EXPERIMENTS.md` | Durable evidence, failures, retry triggers and artifacts |
 | `tools/spsa_configs/README.md` | Tuning-specific mechanics and lessons |
 
-When facts disagree, source/defaults and reproducible artifacts outrank prose;
-fix the prose in the same change.
+When facts disagree, source, defaults and reproducible artifacts outrank
+prose; fix the prose in the same change.
