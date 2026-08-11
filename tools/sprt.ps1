@@ -4,8 +4,9 @@
 
 .DESCRIPTION
     Starts a fastchess match with the built-in SPRT stopping rule.  The match
-    runs until the test accepts H0 (no meaningful improvement) or H1
-    (improvement).  Real-time output is printed to the console.
+    runs until the test accepts H0, accepts H1, or exhausts the registered game
+    budget. Real-time output is printed to the console. A budget-exhausted test
+    has not accepted H1 and therefore cannot promote the candidate.
 
     Tooling:
       - fastchess (NOT cutechess-cli): faster, no Qt dependency, built-in SPRT.
@@ -27,6 +28,9 @@
         per-feature gate any more.
       - LTC confirmation runs at tc=10+0.1 (pass -TC "10+0.1") at phase
         boundaries and for TC-suspect features.
+      - Pass -Nodes N for a fixed-NODES diagnostic (10.0b) — it removes speed
+        AND time management, so it answers "is the remaining gap pure search
+        quality?" and nothing else. Never a strength gate.
       - Hash 64 MB, Threads 1, UHO_Lichess_4852_v1.epd opening book (random
         order). Adopted 2026-07-17: the Stockfish/OpenBench-standard
         "Unbalanced Human Openings" set — 2,632,036 positions, 3–4 moves deep,
@@ -80,15 +84,29 @@
     Display names. Defaults: "New" / "Base".
 
 .PARAMETER Mode
-    "gainer"       -> H0: elo<=0,  H1: elo>=Elo1  (default; test a real gain).
+    "gainer"       -> H0: elo<=3,  H1: elo>=10 (default; demand a material gain).
     "simplify"     -> H0: elo<=-5, H1: elo>=0     (non-regression / cleanup).
     "calibrate"    -> fixed-size identical-binary null match; no SPRT.
     The explicit -Elo0/-Elo1 parameters override the mode if supplied.
 
-.PARAMETER Elo1
-    Upper SPRT bound for "gainer" mode. Default 5 (nElo). Use 3 for small,
-    incremental features (e.g. a single tuned search constant) to demand a
-    cleaner signal.
+.PARAMETER Elo0 / Elo1
+    SPRT hypotheses for "gainer" mode. Defaults 3 and 10 nElo: the project is
+    intentionally parking marginal changes while larger pre-NNUE work remains.
+    Override prospectively for a broad/risky bundle, never after looking at its
+    games.
+
+.PARAMETER MaxGames
+    Maximum games for an SPRT mode. Default 16000 and must be positive/even.
+    Reaching it without H1 means park/revert, not acceptance from the point
+    estimate. Fixed/calibration modes continue to use -Games.
+
+    Why 16000 and not a rounder 12000: the LLR drift of this project's own gates
+    fits `drift/game ~ 8.3e-6 * (Elo1-Elo0) * (true_nElo - midpoint)`, calibrated
+    within 1% on three runs (RAR-M10). Under the default [3,10] that puts a
+    candidate sitting exactly ON H1 at about 14,500 games to the boundary, so a
+    12,000 cap would park a share of the very changes the bounds are meant to
+    accept. 16000 leaves headroom for that case plus variance. Raise it
+    PROSPECTIVELY for tighter bounds; never after looking at a run's games.
 
 .PARAMETER Hash
     Hash MB per engine. Default 64 (matches deployment).
@@ -117,6 +135,22 @@
     optional fixed 100 ms/move Little Blitzer sanity gauntlet; this disables
     the clock and time-management is not exercised.
 
+.PARAMETER Nodes
+    Fixed NODES-per-move (fastchess `nodes=N`). Default 0 (use clock TC).
+    Mutually exclusive with -MoveTime.
+
+    Added for 10.0(b): it removes BOTH speed and time management from the
+    comparison, which is the only way to ask "is the gap pure search quality?"
+    of an engine that matches us on NPS. Use it for that diagnostic and for
+    cross-engine search-accuracy questions — never as a strength gate, because
+    a node-limited match cannot see time management at all, and TM is the one
+    thing 9.7.5 identified as a live ~16 Elo lever.
+
+    ⚠ Equal nodes is NOT equal work across different engines: a node means
+    whatever each engine counts, and Rarog counts interior + qsearch nodes.
+    Treat the absolute Elo as a comparison against the CLOCK result for the
+    same pair, not as a rating.
+
 .PARAMETER TimeMargin
     fastchess timeout margin in milliseconds. Default 20. This prevents small
     Windows scheduler / process IO jitter from being counted as a time
@@ -134,7 +168,7 @@
     ./tools/sprt.ps1 `
         -EngineA "tools\test_engines\rarog-feat-probcut-pext-pgo.exe" `
         -EngineB "tools\test_engines\rarog-head-pext-pgo.exe" `
-        -NameA "ProbCut" -NameB "Head" -Elo1 3
+        -NameA "ProbCut" -NameB "Head" -Elo0 3 -Elo1 10 -MaxGames 16000
 #>
 param(
     [Parameter(Mandatory)][string]$EngineA,
@@ -159,12 +193,14 @@ param(
     [Nullable[int]]$ThreadsA = $null,
     [Nullable[int]]$ThreadsB = $null,
     [int]$Games = 30000,
+    [int]$MaxGames = 16000,
     [double]$CalibrationTolerance = 5,
     [int]$Seed = 0,
     [string[]]$OptionsA = @(),
     [string[]]$OptionsB = @(),
     [string]$TC = "3+0.03",
     [double]$MoveTime = 0,
+    [int]$Nodes = 0,
     [int]$TimeMargin = 20,
     [string]$Book = "$PSScriptRoot\books\UHO_Lichess_4852_v1.epd",
     [string]$FastchessPath = "$PSScriptRoot\bin\fastchess.exe"
@@ -172,6 +208,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "harness_common.ps1")
+
+$strengthProfile = Get-StrengthTestProfile
+$resignArgs = @(Get-StrengthTestResignArgs)
 
 # Per-engine Threads resolve to $Threads unless overridden. The game slot must
 # hold the larger of the two, so the core arithmetic uses max(ThreadsA,ThreadsB).
@@ -207,13 +246,30 @@ if ($Mode -eq "calibrate" -or $Mode -eq "fixed") {
     if ($CalibrationTolerance -le 0) { throw "-CalibrationTolerance must be positive." }
     if ($ThreadsA -ne $ThreadsB) { throw "Calibration must be symmetric: -ThreadsA ($ThreadsA) must equal -ThreadsB ($ThreadsB)." }
 }
+if ($Mode -ne "calibrate" -and $Mode -ne "fixed" -and
+    ($MaxGames -lt 2 -or ($MaxGames % 2) -ne 0)) {
+    throw "-MaxGames must be a positive even number."
+}
 
 # Resolve SPRT bounds from mode unless explicitly overridden.
-if ($null -eq $Elo0) { $Elo0 = if ($Mode -eq "simplify") { -5 } else { 0 } }
-if ($null -eq $Elo1) { $Elo1 = if ($Mode -eq "simplify") {  0 } else { 5 } }
+if ($null -eq $Elo0) { $Elo0 = if ($Mode -eq "simplify") { -5 } else { 3 } }
+if ($null -eq $Elo1) { $Elo1 = if ($Mode -eq "simplify") {  0 } else { 10 } }
+if ($Mode -ne "calibrate" -and $Mode -ne "fixed" -and $Elo0 -ge $Elo1) {
+    throw "SPRT requires -Elo0 lower than -Elo1."
+}
 
-# Resolve the time control: clock (default) unless a fixed movetime is given.
-if ($MoveTime -gt 0) {
+# Resolve the search limit: clock (default) unless a fixed movetime or a fixed
+# node count is given. All three are mutually exclusive; fastchess would accept
+# two limits at once and silently apply whichever it parses last, so refuse.
+if ($MoveTime -gt 0 -and $Nodes -gt 0) {
+    throw "-MoveTime and -Nodes are mutually exclusive: pick one search limit."
+}
+if ($Nodes -gt 0) {
+    $tcArg   = "nodes=$Nodes"
+    $tcLabel = "nodes=$Nodes (fixed nodes/move; NO time management)"
+    Write-Host "NOTE: fixed-nodes match - speed and time management are both removed." -ForegroundColor Yellow
+    Write-Host "      Diagnostic only (10.0b). Not a strength gate: TM is invisible here." -ForegroundColor Yellow
+} elseif ($MoveTime -gt 0) {
     $tcArg   = "st=$MoveTime"
     $tcLabel = "st=$MoveTime (fixed ${MoveTime}s/move)"
 } else {
@@ -327,7 +383,9 @@ if (-not $repoSha) { $repoSha = "n/a" } else { $repoSha = $repoSha.Trim() }
     "engineB_sha256:  $shaB"
     "repo_revision:   $repoSha"
     "test_design:     $(if ($Mode -eq 'calibrate') { "fixed ${Games}-game null; tolerance +/-${CalibrationTolerance} nElo" } else { "SPRT elo0=$Elo0 elo1=$Elo1 alpha=$Alpha beta=$Beta model=normalized" })"
+    "game_budget:     $(if ($Mode -eq 'calibrate' -or $Mode -eq 'fixed') { $Games } else { $MaxGames })"
     "time_control:    $tcLabel; timemargin=${TimeMargin}ms"
+    "adjudication:    $($strengthProfile.Name); resign=$($strengthProfile.ResignScore)/$($strengthProfile.ResignMoveCount) one-sided; draw=$($strengthProfile.DrawScore)/$($strengthProfile.DrawMoveCount) from move $($strengthProfile.DrawMoveNumber)"
     "hash_mb:         $Hash"
     "threads:         $(if ($ThreadsA -eq $ThreadsB) { $ThreadsA } else { "$NameA=$ThreadsA $NameB=$ThreadsB" })"
     "concurrency:     $Concurrency"
@@ -351,8 +409,10 @@ if ($Mode -eq "calibrate") {
     Write-Host "  Fixed null calibration: $Games games; 95% nElo CI must fit inside +/-$CalibrationTolerance"
 } else {
     Write-Host "  H0: elo<=$Elo0   H1: elo>=$Elo1   alpha=$Alpha  beta=$Beta  (nElo)"
+    Write-Host "  Budget: $MaxGames games; no H1 at the cap means park/revert"
 }
 Write-Host "  TC: $tcLabel   Margin: ${TimeMargin} ms   Hash: ${Hash} MB   Conc: $Concurrency"
+Write-Host "  Adjudication: resign $($strengthProfile.ResignScore)/$($strengthProfile.ResignMoveCount) one-sided; profile $($strengthProfile.Name)"
 Write-Host "  CPUs: $AffinityCpus"
 Write-Host "  Book: $(Split-Path $Book -Leaf)"
 Write-Host "  Runner: $($fcInfo.Text)"
@@ -369,7 +429,11 @@ Write-Host ""
 $optArgsA = @($OptionsA | ForEach-Object { "option.$_" })
 $optArgsB = @($OptionsB | ForEach-Object { "option.$_" })
 
-$rounds = if ($Mode -eq "calibrate" -or $Mode -eq "fixed") { [int]($Games / 2) } else { 50000 }
+$rounds = if ($Mode -eq "calibrate" -or $Mode -eq "fixed") {
+    [int]($Games / 2)
+} else {
+    [int]($MaxGames / 2)
+}
 $sprtArgs = if ($Mode -eq "calibrate" -or $Mode -eq "fixed") {
     @()
 } else {
@@ -409,8 +473,8 @@ $dropNoise = {
     -srand $Seed `
     -ratinginterval 20 `
     @sprtArgs `
-    -draw movenumber=40 movecount=8 score=10 `
-    -resign movecount=3 score=600 twosided=true `
+    -draw "movenumber=$($strengthProfile.DrawMoveNumber)" "movecount=$($strengthProfile.DrawMoveCount)" "score=$($strengthProfile.DrawScore)" `
+    @resignArgs `
     -pgnout "file=$pgnOut" `
     -output format=fastchess 2>&1 |    # console ticker format (not the PGN path)
     Tee-Object -FilePath $logOut |
@@ -426,6 +490,10 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host ""
     Write-Host "Match finished. PGN: $pgnOut"
     Write-Host "Full console log (all per-game lines): $logOut"
+
+    if ($Mode -ne "calibrate" -and $Mode -ne "fixed") {
+        Write-Host "Only an H1 boundary in the log promotes the candidate; a game-budget stop is unresolved and must be parked/reverted."
+    }
 
     if ($Mode -eq "calibrate") {
         $calibrationAnomaly = Select-String -LiteralPath $logOut `

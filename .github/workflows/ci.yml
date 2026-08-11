@@ -135,18 +135,23 @@ jobs:
         include:
           - os: ubuntu-latest
             label: linux-x86-64
+            isa_arch: base
             ext: ""
           - os: windows-latest
             label: windows-x86-64
+            isa_arch: base
             ext: ".exe"
           - os: ubuntu-24.04-arm
             label: linux-arm64
+            isa_arch: arm64
             ext: ""
           - os: windows-11-arm
             label: windows-arm64
+            isa_arch: arm64
             ext: ".exe"
           - os: macos-latest
             label: macos-arm64
+            isa_arch: arm64
             ext: ""
     steps:
       - uses: actions/checkout@v7
@@ -163,6 +168,24 @@ jobs:
 
       - name: Build release
         run: cargo build --release
+
+      # 4.8a — catch an ISA-contract break at PR time, not at release time.
+      # This is the check that would have caught the 15 baseline POPCNT
+      # instructions the 2.3.0/2.3.1 assets shipped, three steps earlier.
+      - name: Install llvm-tools
+        run: rustup component add llvm-tools
+
+      # `--default-cpu`: this binary came from a plain `cargo build --release`,
+      # so its permitted instruction set is the TARGET's default `target-cpu`,
+      # not the tier baseline `cargo xtask build` would have used. On
+      # aarch64-apple-darwin those differ sharply - the default enables aes,
+      # sha2 and dotprod - so without this the macOS cell would forbid
+      # instructions the binary is entitled to emit.
+      - name: Verify the baseline ISA contract
+        shell: bash
+        run: >
+          cargo xtask verify-isa --arch ${{ matrix.isa_arch }} --default-cpu
+          --exe "target/release/rarog${{ matrix.ext }}"
 
       # NOTE: no expected value is hardcoded anywhere. The invariant checked in
       # the next job is that all platforms AGREE, not that they produce some

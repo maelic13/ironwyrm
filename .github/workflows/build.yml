@@ -118,6 +118,11 @@ jobs:
       - name: Install Rust target
         run: rustup target add ${{ matrix.target }}
 
+      # 4.8a: `verify-isa` disassembles the finished asset, so the release job
+      # needs llvm-objdump. It ships with the toolchain as a rustup component.
+      - name: Install llvm-tools
+        run: rustup component add llvm-tools
+
       # 9.3: ship what we actually measure. Every cell above is a NATIVE
       # runner (host triple == matrix.target), which is what PGO requires —
       # the instrumented binary has to run its training bench locally — so
@@ -147,6 +152,19 @@ jobs:
           fi
           mv "$built" "target/dist/${asset_name}"
           echo "asset_name=${asset_name}" >> "$GITHUB_OUTPUT"
+
+      # 4.8a — the ISA contract, checked on the ASSET that is about to be
+      # uploaded. Node agreement across cells cannot see this class of defect:
+      # a binary that emits POPCNT on the baseline tier still produces the right
+      # node count on every machine that can run it at all, and dies with an
+      # illegal instruction on the machines the tier exists for. The 2.3.0 and
+      # 2.3.1 baseline assets shipped 15 such instructions before this check existed.
+      - name: Verify the ISA contract
+        shell: bash
+        run: >
+          cargo xtask verify-isa --arch ${{ matrix.asset_arch }}
+          --target ${{ matrix.target }}
+          --exe "target/dist/${{ steps.prepare-asset.outputs.asset_name }}"
 
       # A broken artifact would otherwise upload silently and a user finds out.
       # Every cell is a native runner, so the real binary can be executed here.

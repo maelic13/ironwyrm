@@ -31,6 +31,11 @@ param(
 $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "harness_common.ps1")
 
+# Every textual patch below is written against this exact upstream revision.
+# A floating clone can accept an anchor while changing surrounding semantics,
+# which is unacceptable for a runner that will consume 160,000 games.
+$weatherFactoryRevision = "19b4805c9a2372955c29666118070269f34aa2eb"
+
 $binDir = Join-Path $PSScriptRoot "bin"
 $wfDir  = Join-Path $PSScriptRoot "weather-factory"
 New-Item -ItemType Directory -Force -Path $binDir | Out-Null
@@ -106,8 +111,17 @@ if (Test-Path (Join-Path $wfDir "main.py")) {
     Write-Host "Cloning weather-factory -> tools/weather-factory/ ..."
     git clone https://github.com/jnlt3/weather-factory $wfDir
     if ($LASTEXITCODE -ne 0) { throw "git clone failed" }
+    git -C $wfDir checkout --detach $weatherFactoryRevision
+    if ($LASTEXITCODE -ne 0) { throw "Could not checkout pinned weather-factory revision $weatherFactoryRevision" }
     Write-Host "  Done."
 }
+
+$actualWeatherFactoryRevision = (git -C $wfDir rev-parse HEAD).Trim()
+if ($actualWeatherFactoryRevision -ne $weatherFactoryRevision) {
+    throw ("weather-factory is at $actualWeatherFactoryRevision, expected pinned revision " +
+        "$weatherFactoryRevision. Preserve any tuner state, recreate tools/weather-factory, and rerun setup.")
+}
+Write-Host "weather-factory revision verified: $weatherFactoryRevision"
 
 # weather-factory has no native affinity setting. Patch its generated
 # fastchess command with the OS-derived physical-core list. Rebuild this line
@@ -131,6 +145,93 @@ if (Test-Path $wfCute) {
         throw "weather-factory affinity patch failed Python syntax validation: $wfCute"
     }
     Write-Host "  weather-factory affinity patch and Python syntax verified."
+}
+
+# Some experiments freeze discrete architecture outside SPSA and tune only
+# continuous consumers. Teach the runner to apply those fixed UCI options identically to
+# both perturbed engines; they are deliberately absent from config.json, so
+# they cannot receive another parameter's noisy gradient.
+if (Test-Path $wfCute) {
+    $c = Get-Content $wfCute -Raw
+    if ($c -match 'RAROG_FIXED_OPTIONS_V1') {
+        Write-Host "  weather-factory fixed-option support already present."
+    } else {
+        $signatureAnchor = '        use_fastchess: bool = True'
+        if (-not $c.Contains($signatureAnchor)) {
+            throw "weather-factory/cutechess.py fixed-option signature anchor not found; upstream changed."
+        }
+        $c = $c.Replace($signatureAnchor, "        use_fastchess: bool = True,`n        fixed_options: dict | None = None")
+
+        $fieldAnchor = '        self.use_fastchess = use_fastchess'
+        if (-not $c.Contains($fieldAnchor)) {
+            throw "weather-factory/cutechess.py fixed-option field anchor not found; upstream changed."
+        }
+        $c = $c.Replace($fieldAnchor,
+            $fieldAnchor + "`n        self.fixed_options = fixed_options or {}  # RAROG_FIXED_OPTIONS_V1")
+
+        $commandAnchor = "        return (`n            f`"{command} `""
+        if (-not $c.Contains($commandAnchor)) {
+            throw "weather-factory/cutechess.py fixed-option command anchor not found; upstream changed."
+        }
+        $commandReplacement = "        fixed = ' '.join(f'option.{name}={value}' for name, value in self.fixed_options.items())`n" +
+            "        fixed = (fixed + ' ') if fixed else ''`n`n" + $commandAnchor
+        $c = $c.Replace($commandAnchor, $commandReplacement)
+        $c = $c.Replace('f"option.Hash={self.hash_size} {'' ''.join(params_a)} "',
+            'f"option.Hash={self.hash_size} {fixed}{'' ''.join(params_a)} "')
+        $c = $c.Replace('f"option.Hash={self.hash_size} {'' ''.join(params_b)} "',
+            'f"option.Hash={self.hash_size} {fixed}{'' ''.join(params_b)} "')
+
+        Set-Content -Path $wfCute -Value $c -Encoding utf8
+        python -m py_compile $wfCute
+        if ($LASTEXITCODE -ne 0) {
+            throw "weather-factory fixed-option patch failed Python syntax validation: $wfCute"
+        }
+        Write-Host "  weather-factory fixed-option support verified."
+    }
+}
+
+# STRENGTH ADJUDICATION ALIGNMENT (calibrated 2026-08-02). weather-factory
+# ships 400/3 one-sided. Rarog's shared strength-v1 profile is 600/3 one-sided,
+# matching Stockfish's convention and our measured evaluation scale. The
+# retrospective 69,350-game calibration found no chess-result reversals at
+# 600/3 (three apparent reversals were later time forfeits), while 400/3 changed
+# 1,533 outcomes and included 80 eventual opposite winners. SPSA, SPRT, and
+# gauntlets therefore use 600/3 one-sided. Datagen is a separate label-safety
+# profile and remains stricter.
+#
+# NOT aligned to fishtest, deliberately: the draw rule. Ours is
+# `movenumber=40 movecount=8 score=10` against fishtest's
+# `movenumber=34 movecount=8 score=20` — later AND with a tighter score
+# window, i.e. strictly more conservative on both axes, and it already agrees
+# between sprt.ps1 and the tuner. Changing it would move the verdict
+# instrument and break comparability with the whole existing ledger for no
+# correctness gain.
+$wfCuteAdj = Join-Path $wfDir "cutechess.py"
+if (Test-Path $wfCuteAdj) {
+    $strengthProfile = Get-StrengthTestProfile
+    $targetResign = '"-resign movecount={0} score={1} "  # RAROG_ADJUDICATION_PATCH_V2: strength-v1 one-sided' -f $strengthProfile.ResignMoveCount, $strengthProfile.ResignScore
+    $a = Get-Content $wfCuteAdj -Raw
+    if ($a -match 'RAROG_ADJUDICATION_PATCH_V2') {
+        Write-Host "  weather-factory adjudication patch already present."
+    } else {
+        $anchorResign = '"-resign movecount=3 score=400 "'
+        $oldPatchedResign = '"-resign movecount=3 score=600 twosided=true "  # RAROG_ADJUDICATION_PATCH_V1: match sprt.ps1'
+        if ($a.Contains($anchorResign)) {
+            $a = $a.Replace($anchorResign, $targetResign)
+        } elseif ($a.Contains($oldPatchedResign)) {
+            $a = $a.Replace($oldPatchedResign, $targetResign)
+        } else {
+            throw ("weather-factory/cutechess.py adjudication anchor not found; upstream changed. " +
+                "Expected the upstream 400/3 line or the old V1 patch — inspect it before assuming alignment.")
+        }
+        Set-Content -Path $wfCuteAdj -Value $a -Encoding utf8
+
+        python -m py_compile $wfCuteAdj
+        if ($LASTEXITCODE -ne 0) {
+            throw "weather-factory adjudication patch failed Python syntax validation: $wfCuteAdj"
+        }
+        Write-Host "  weather-factory adjudication patch and Python syntax verified."
+    }
 }
 
 # weather-factory's SPSA schedule feeds t (GAMES, 32/iteration) into Spall's
@@ -160,6 +261,65 @@ if (Test-Path $wfSpsa) {
             throw "weather-factory schedule patch failed Python syntax validation: $wfSpsa"
         }
         Write-Host "  weather-factory SPSA schedule patch and Python syntax verified."
+    }
+}
+
+# Commit the iteration counter only after the mini-match and parameter update
+# complete. Upstream advances it before launching fastchess, so Ctrl-C can save
+# an unplayed point as completed and resume from the wrong annealing step. Also
+# roll back the tiny parameter-update section if an interrupt lands inside it;
+# otherwise state could contain half an update paired with the old counter.
+if (Test-Path $wfSpsa) {
+    $s = Get-Content $wfSpsa -Raw
+    if ($s -notmatch 'RAROG_TRANSACTIONAL_STEP_V1') {
+        $advanceAnchor = '(?m)^        self\.t \+= self\.cutechess\.games\r?\n        it = self\.t / self\.cutechess\.games  # RAROG_SCHEDULE_FIX_V1: Spall decay per-iteration; t/state\.json stay in games\r?$'
+        if (-not [regex]::IsMatch($s, $advanceAnchor)) {
+            throw "weather-factory/spsa.py transactional-step advance anchor not found; upstream changed."
+        }
+        $advanceReplacement = "        next_t = self.t + self.cutechess.games  # RAROG_TRANSACTIONAL_STEP_V1: commit after completed update`n" +
+            "        it = next_t / self.cutechess.games  # RAROG_SCHEDULE_FIX_V1: Spall decay per-iteration; t/state.json stay in games"
+        $s = [regex]::Replace($s, $advanceAnchor, $advanceReplacement)
+
+        $commitAnchor = '(?m)^            param\.update\(-param_grad \* a_t \* param\.step\)\r?\n\r?\n    @property\r?$'
+        if (-not [regex]::IsMatch($s, $commitAnchor)) {
+            throw "weather-factory/spsa.py transactional-step commit anchor not found; upstream changed."
+        }
+        $commitReplacement = "            param.update(-param_grad * a_t * param.step)`n`n        self.t = next_t`n`n    @property"
+        $s = [regex]::Replace($s, $commitAnchor, $commitReplacement)
+        Set-Content -Path $wfSpsa -Value $s -Encoding utf8
+    }
+
+    $s = Get-Content $wfSpsa -Raw
+    if ($s -notmatch 'RAROG_TRANSACTIONAL_STEP_V2') {
+        $updateAnchor = '(?m)^        for param, delta, param in zip\(self\.uci_params, self\.delta, self\.uci_params\):\r?\n            param_grad = gradient / \(delta \* c_t\)\r?\n            param\.update\(-param_grad \* a_t \* param\.step\)\r?\n\r?\n        self\.t = next_t\r?$'
+        if (-not [regex]::IsMatch($s, $updateAnchor)) {
+            throw "weather-factory/spsa.py rollback anchor not found; upstream changed."
+        }
+        $updateReplacement = @'
+        old_values = [param.value for param in self.uci_params]
+        try:
+            for param, delta in zip(self.uci_params, self.delta):
+                param_grad = gradient / (delta * c_t)
+                param.update(-param_grad * a_t * param.step)
+        except BaseException:
+            for param, old_value in zip(self.uci_params, old_values):
+                param.value = old_value
+            raise
+
+        self.t = next_t  # RAROG_TRANSACTIONAL_STEP_V2: params and counter commit together
+'@
+        $s = [regex]::Replace($s, $updateAnchor, $updateReplacement)
+        Set-Content -Path $wfSpsa -Value $s -Encoding utf8
+    }
+
+    if ((Get-Content $wfSpsa -Raw) -match 'RAROG_TRANSACTIONAL_STEP_V2') {
+        python -m py_compile $wfSpsa
+        if ($LASTEXITCODE -ne 0) {
+            throw "weather-factory transactional-step patch failed Python syntax validation: $wfSpsa"
+        }
+        Write-Host "  weather-factory transactional SPSA step verified."
+    } else {
+        throw "weather-factory transactional SPSA V2 marker missing after patch."
     }
 }
 
@@ -209,8 +369,8 @@ Write-Host "  Toolchain setup complete."
 Write-Host ""
 Write-Host "  Next steps:"
 Write-Host "    1. Build a tune binary:"
-Write-Host "         ./tools/build_test.ps1 -Suffix phase1-lmr -Tune"
+Write-Host "         ./tools/build_test.ps1 -Suffix history -Tune"
 Write-Host "    2. Configure and start SPSA (setup + launch, one command):"
-Write-Host "         ./tools/spsa.ps1 -ConfigGroup lmr -EngineSuffix phase1-lmr"
+Write-Host "         ./tools/spsa.ps1 -ConfigGroup history -EngineSuffix history"
 Write-Host "============================================================"
 

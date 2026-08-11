@@ -5,6 +5,46 @@ All notable changes to Rarog are documented in this file.
 Rarog was released as Lynx through version `1.4.3`. The project was renamed
 starting with version `2.0.0` to avoid confusion with an existing chess engine.
 
+## [2.3.2] - 2026-08-11
+
+A consolidation release: accepted search and evaluation gains since 2.3.1,
+one search-correctness repair, and stronger cross-platform release guarantees.
+
+### Changed
+
+- Retained the accepted broad selectivity fit, zero-reduction LMR floor and
+  anchored evaluation refresh. Their individual confirmation results were
+  **+15.33 ± 7.34 nElo**, **+9.13 ± 5.45 nElo** and **+11.56 ± 5.19 Elo**,
+  respectively. These are sequential experiment results under different
+  estimators and must not be added into a single release-Elo claim.
+- ARM64 transposition-table prefetch now emits `prfm pldl1keep`. On an Apple M4
+  it improved median benchmark speed by **1.42%**, winning all 12 paired rounds,
+  without changing the search fingerprint.
+- Internal TT evidence and root-search fallback handling are more explicit and
+  better covered by regression tests.
+
+### Fixed
+
+- Null-move pruning no longer promotes an unproven mate-range score into an
+  authoritative cutoff. This correctness repair is retained by policy; its
+  interrupted strength run showed no early regression signal but was not
+  complete enough to support an Elo claim.
+- Published CPU tiers now have an executable ISA contract. The portable x86-64
+  build no longer inherits POPCNT from vendored tablebase code and requires only
+  its documented SSE3 baseline; ARM64 release assets are checked for the
+  required prefetch instruction.
+- Release CI now verifies each finished asset's UCI handshake, deterministic
+  benchmark and instruction-set contract before upload.
+
+### Removed
+
+- Ten abandoned experimental tuning switches/coordinates whose accepted
+  defaults are now hardwired. This removes no accepted behavior and does not
+  change the `bench 13` search fingerprint.
+- The canceled pre-NNUE Phase-4 SPSA launch configuration. No tuning games had
+  been played, and the estimated 320,000-game run lacked a credible material
+  strength prior.
+
 ## [2.3.1] - 2026-07-29
 
 Patch release restoring full release-build optimisation on Windows ARM64.

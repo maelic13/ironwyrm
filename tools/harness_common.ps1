@@ -3,6 +3,64 @@
 $script:MinimumAffinityFastchessVersion = [version]"1.7.0"
 $script:HarnessIsWindows = [Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT
 
+# One named source of truth for result adjudication in strength measurements.
+# Calibrated 2026-08-02 on 69,350 Rarog games completed under the stricter
+# 600/3 two-sided rule: one-sided 600/3 produced no chess-result reversals
+# (three apparent reversals were later time forfeits) and changed 71 results
+# to wins that later drew, 0.20% of its 35,486 triggers. Datagen intentionally
+# keeps a separate, stricter training-label profile because one wrong result
+# labels many positions.
+function Get-StrengthTestProfile {
+    [pscustomobject]@{
+        Name               = "strength-v1"
+        ResignMoveCount    = 3
+        ResignScore        = 600
+        ResignTwoSided     = $false
+        DrawMoveNumber     = 40
+        DrawMoveCount      = 8
+        DrawScore          = 10
+    }
+}
+
+function Get-StrengthTestResignArgs {
+    $profile = Get-StrengthTestProfile
+    $args = @(
+        '-resign'
+        "movecount=$($profile.ResignMoveCount)"
+        "score=$($profile.ResignScore)"
+    )
+    if ($profile.ResignTwoSided) { $args += 'twosided=true' }
+    $args
+}
+
+# Training labels need a stricter result contract than strength tests.  A
+# false resignation assigns the wrong target to every sampled position in that
+# game, so datagen keeps the historical two-sided 600/3 rule deliberately.
+# Keep this separate from strength-v1: SPRT uses one-sided resignation because
+# its only job is to decide a game result quickly and safely.
+function Get-DatagenProfile {
+    [pscustomobject]@{
+        Name               = "datagen-v1"
+        ResignMoveCount    = 3
+        ResignScore        = 600
+        ResignTwoSided     = $true
+        DrawMoveNumber     = 40
+        DrawMoveCount      = 8
+        DrawScore          = 10
+    }
+}
+
+function Get-DatagenResignArgs {
+    $profile = Get-DatagenProfile
+    $args = @(
+        '-resign'
+        "movecount=$($profile.ResignMoveCount)"
+        "score=$($profile.ResignScore)"
+    )
+    if ($profile.ResignTwoSided) { $args += 'twosided=true' }
+    $args
+}
+
 function Get-HarnessPhysicalCpus {
     if ($script:HarnessIsWindows) {
         if (-not ('RarogHarness.CpuTopology' -as [type])) {

@@ -1,8 +1,34 @@
+//! Board-operation throughput benchmark (`cross-engine-board-v1`).
+//!
+//! The timed region contains board work and nothing else: no heap allocation,
+//! no container copy, no dead code, no evaluator. Work quanta are frozen and
+//! verified by a preflight pass, so "same benchmark" is enforced rather than
+//! assumed.
+//!
+//! The profile is shared with Basilisk (`tests/board_performance.cpp`) and
+//! Manta (`tools/board_bench.zig`); the contract they all implement is written
+//! down in Manta's `docs/BOARD_BENCHMARK.md`. Corpus, order, work quanta,
+//! estimator (150 ms warm-up, 11 x 150 ms samples, median +- MAD) and batch
+//! calibration match those two implementations.
+//!
+//! ⚠ ONE COLUMN IS NOT CROSS-ENGINE COMPARABLE: **threshold SEE**. The contract
+//! specifies P/N/B/R/Q/K = 100/300/300/500/900/20000, and both peers pass those
+//! values in explicitly — Basilisk from a dedicated `SEE_VALUES` table, Manta
+//! from a `see.PieceValues` literal. Rarog has no separate SEE table: `see_ge`
+//! reads the EVAL values, `[100, 320, 330, 500, 900, MATE_SCORE]`. Knight,
+//! bishop and king therefore differ, so an exchange sequence can settle at a
+//! different point and the throughput is not measuring the same operation.
+//! Every other column is comparable.
+//!
+//! This is deliberately NOT "fixed" here. Making it match would mean giving the
+//! engine a separate SEE value table, which changes `see_ge` at twelve pruning
+//! sites in `search.rs` and needs a strength gate — a benchmark must not smuggle
+//! in a playing-strength change to make its own numbers prettier.
+
 use std::hint::black_box;
 use std::time::{Duration, Instant};
 
-use rarog::board::{Board, generate_captures, generate_legal_moves, perft};
-use rarog::eval::Evaluator;
+use rarog::board::{Board, MoveList, generate_captures, generate_legal_movelist, perft};
 
 const WARMUP: Duration = Duration::from_millis(150);
 // 9.7: N shorter samples instead of one 750 ms shot. A single sample on a
@@ -11,7 +37,10 @@ const WARMUP: Duration = Duration::from_millis(150);
 // number cannot distinguish a real 2% change from noise. The median resists
 // scheduler outliers; the MAD is printed beside it so the output itself says
 // whether a difference between two runs is resolvable or inside the noise.
-const SAMPLES: usize = 9;
+//
+// Eleven samples, not nine: `cross-engine-board-v1` fixes the estimator so
+// that runs from different engines are comparable at the same resolution.
+const SAMPLES: usize = 11;
 const SAMPLE_TIME: Duration = Duration::from_millis(150);
 
 const BENCHMARK_FENS: &[(&str, &str)] = &[
@@ -34,11 +63,15 @@ const BENCHMARK_FENS: &[(&str, &str)] = &[
     ),
 ];
 
+/// Frozen work quanta for the corpus above, in results order.
+const EXPECTED_OPS: [u64; 6] = [128, 10, 128, 10, 197_281, 4_597];
+
 struct BenchResult {
     label: &'static str,
     unit: &'static str,
     /// Per-sample throughput (ops/s), one entry per sample, unsorted.
     samples: Vec<f64>,
+    ops_per_iter: u64,
     iterations: u64,
 }
 
@@ -75,53 +108,121 @@ fn main() {
     let mut mutable_boards = boards.clone();
     let mut see_boards = boards.clone();
     let mut simulation_boards = boards.clone();
-    let mut evaluator = Evaluator::default();
+    // Built here, not inside the workload: the contract requires the working
+    // set to exist before timing starts and never be constructed in the timed
+    // region. `perft` restores it exactly through make/unmake, so one board
+    // serves every sample — which is also what the peer implementations do.
+    let mut perft_board = Board::starting_position();
+
+    // Preflight: prove every work quantum before timing anything. A workload
+    // that generates a different number of moves than its peers is not the
+    // same benchmark, however similar the label looks.
+    {
+        let measured = [
+            legal_movegen(&boards),
+            capture_gen(&mut capture_boards),
+            make_unmake(&mut mutable_boards),
+            see_captures(&mut see_boards),
+            perft(&mut perft_board, 4),
+            game_simulation(&mut simulation_boards),
+        ];
+        let mut ok = true;
+        for (i, (&got, &want)) in measured.iter().zip(EXPECTED_OPS.iter()).enumerate() {
+            if got != want {
+                eprintln!("work mismatch for workload {i}: expected {want}, received {got}");
+                ok = false;
+            }
+        }
+        assert!(
+            ok,
+            "preflight failed: work quanta do not match the contract"
+        );
+    }
 
     let results = [
-        measure("legal movegen", "moves", || legal_movegen(&boards)),
-        measure("legal validation", "moves", || legal_validation(&boards)),
-        measure("capture gen", "moves", || capture_gen(&mut capture_boards)),
-        measure("make/unmake", "moves", || make_unmake(&mut mutable_boards)),
-        measure("check detection", "positions", || check_detection(&boards)),
-        measure("see captures", "captures", || see_captures(&mut see_boards)),
-        measure("evaluation", "positions", || {
-            eval_positions(&boards, &mut evaluator)
+        measure("legal moves", "moves", EXPECTED_OPS[0], || {
+            legal_movegen(&boards)
         }),
-        measure("game simulation", "moves", || {
+        measure("legal captures", "moves", EXPECTED_OPS[1], || {
+            capture_gen(&mut capture_boards)
+        }),
+        measure("make/unmake", "moves", EXPECTED_OPS[2], || {
+            make_unmake(&mut mutable_boards)
+        }),
+        measure("threshold SEE", "captures", EXPECTED_OPS[3], || {
+            see_captures(&mut see_boards)
+        }),
+        measure("perft(4) startpos", "nodes", EXPECTED_OPS[4], || {
+            perft(&mut perft_board, 4)
+        }),
+        measure("two-ply simulation", "moves", EXPECTED_OPS[5], || {
             game_simulation(&mut simulation_boards)
         }),
-        measure("perft startpos d4", "nodes", || perft_startpos(4)),
     ];
 
     println!();
     println!("Rarog board benchmark");
+    println!("profile: cross-engine-board-v1");
     println!("positions: {}", BENCHMARK_FENS.len());
-    println!("warmup: {} ms", WARMUP.as_millis());
     println!(
-        "samples: {SAMPLES} x {} ms per workload (median +- MAD)",
-        SAMPLE_TIME.as_millis()
+        "samples: {SAMPLES} x {} ms after a {} ms warm-up (median +/- MAD)",
+        SAMPLE_TIME.as_millis(),
+        WARMUP.as_millis()
     );
+    println!("preflight: PASS");
     println!();
     println!(
-        "{:<20} {:>16} {:>13} {:<10} {:>12}",
-        "workload", "median", "MAD (noise)", "unit", "iterations"
+        "{:<22} {:>15} {:>15} {:>10} {:>12} {:>12}",
+        "workload", "estimate ops/s", "MAD ops/s", "MAD %", "ops/iter", "total iters"
     );
-    println!("{}", "-".repeat(78));
 
     for result in &results {
         println!(
-            "{:<20} {:>16.0} {:>9.0} ({:>4.1}%) {:<10} {:>12}",
+            "{:<22} {:>15.0} {:>15.0} {:>9.2}% {:>12} {:>12} {}",
             result.label,
             result.median(),
             result.mad(),
             result.spread_pct(),
-            result.unit,
-            result.iterations
+            result.ops_per_iter,
+            result.iterations,
+            result.unit
         );
     }
 }
 
-fn measure<F>(label: &'static str, unit: &'static str, mut workload: F) -> BenchResult
+/// Pick an inner batch size so the deadline clock is read about once per
+/// millisecond. `Instant::now()` costs tens of nanoseconds; the 10-op
+/// workloads run an iteration in ~100 ns, so checking the deadline once per
+/// iteration would leave a double-digit percentage of clock overhead inside
+/// the timed region and report it as board throughput.
+fn calibrate_batch<F>(workload: &mut F) -> u64
+where
+    F: FnMut() -> u64,
+{
+    const TARGET: Duration = Duration::from_millis(1);
+    const MAX_BATCH: u64 = 1_000_000;
+    const PROBES: u32 = 32;
+
+    let start = Instant::now();
+    for _ in 0..PROBES {
+        black_box(workload());
+    }
+    let per_iter = start.elapsed() / PROBES;
+    if per_iter.is_zero() {
+        return MAX_BATCH;
+    }
+    let batch = TARGET.as_nanos() / per_iter.as_nanos();
+    u64::try_from(batch)
+        .unwrap_or(MAX_BATCH)
+        .clamp(1, MAX_BATCH)
+}
+
+fn measure<F>(
+    label: &'static str,
+    unit: &'static str,
+    expected: u64,
+    mut workload: F,
+) -> BenchResult
 where
     F: FnMut() -> u64,
 {
@@ -130,61 +231,72 @@ where
         black_box(workload());
     }
 
+    let batch = calibrate_batch(&mut workload);
+
     let mut samples = Vec::with_capacity(SAMPLES);
     let mut iterations = 0u64;
     for _ in 0..SAMPLES {
         let start = Instant::now();
         let mut ops = 0u64;
+        let mut iters = 0u64;
         while start.elapsed() < SAMPLE_TIME {
-            ops += black_box(workload());
-            iterations += 1;
+            for _ in 0..batch {
+                ops += black_box(workload());
+            }
+            iters += batch;
         }
-        samples.push(ops as f64 / start.elapsed().as_secs_f64());
+        // Read the clock BEFORE checking the quantum, so the check itself is
+        // outside the timed region rather than charged to board throughput.
+        let elapsed = start.elapsed().as_secs_f64();
+        assert_eq!(
+            ops,
+            expected * iters,
+            "{label} drifted off its frozen work quantum mid-measurement"
+        );
+        samples.push(ops as f64 / elapsed);
+        iterations += iters;
     }
 
     BenchResult {
         label,
         unit,
         samples,
+        ops_per_iter: expected,
         iterations,
     }
 }
 
+// `generate_legal_movelist` writes into a fixed-capacity stack `MoveList`.
+// The convenience wrapper `generate_legal_moves` returns a `Vec<Move>` and so
+// puts a `Vec::with_capacity(48)` malloc/free pair inside the timed region —
+// that allocation was worth 17-43% on the four workloads that used it, and it
+// is allocator throughput, not board throughput. Search itself prefers the
+// movelist form, so this is also the more representative call.
 fn legal_movegen(boards: &[Board]) -> u64 {
-    boards
-        .iter()
-        .map(|board| black_box(generate_legal_moves(black_box(board)).len() as u64))
-        .sum()
-}
-
-fn legal_validation(boards: &[Board]) -> u64 {
-    let mut ops = 0u64;
+    let mut total = 0u64;
     for board in boards {
-        let moves = generate_legal_moves(board);
-        for mv in moves {
-            black_box(
-                board
-                    .legal_move(black_box(mv))
-                    .expect("generated move is legal"),
-            );
-            ops += 1;
-        }
+        let moves = generate_legal_movelist(black_box(board));
+        total += moves.len() as u64;
+        black_box(&moves);
     }
-    ops
+    total
 }
 
 fn capture_gen(boards: &mut [Board]) -> u64 {
-    boards
-        .iter_mut()
-        .map(|board| black_box(generate_captures(black_box(board)).len() as u64))
-        .sum()
+    let mut total = 0u64;
+    for board in boards {
+        let moves = generate_captures(black_box(board));
+        total += moves.len() as u64;
+        black_box(&moves);
+    }
+    total
 }
 
 fn make_unmake(boards: &mut [Board]) -> u64 {
     let mut ops = 0u64;
     for board in boards {
-        let moves = generate_legal_moves(board);
-        for mv in moves {
+        let moves: MoveList = generate_legal_movelist(board);
+        for &mv in &moves {
             board.make_move(mv);
             black_box(&board);
             board.unmake_move(mv);
@@ -194,52 +306,45 @@ fn make_unmake(boards: &mut [Board]) -> u64 {
     ops
 }
 
-fn check_detection(boards: &[Board]) -> u64 {
-    boards
-        .iter()
-        .map(|board| {
-            black_box(board.is_in_check());
-            1
-        })
-        .sum()
-}
-
+// Measures `see_ge(mv, 0)`, the threshold form, not the full-value `see()`.
+// Two independent reasons, and the cross-engine one is the weaker of them:
+//
+//   OWN HOT PATH — search.rs calls `see_ge` in twelve places (capture pruning,
+//   the qsearch bad-capture floor, LMR/ordering gates) and full `see()` in
+//   exactly one (move-ordering score at 3657). The threshold form is what
+//   actually dominates the search loop, so it is what a board benchmark should
+//   report. The old workload measured the rarer call.
+//
+//   COMPARABILITY — the peer engines measure `see_ge(m, 0)` over the same five
+//   FENs. Measuring the same operation makes the numbers a comparison rather
+//   than a coincidence of labels.
+//
+// The two are genuinely different operations, not two spellings of one: the
+// threshold form early-exits as soon as the running balance settles the
+// question, so it is expected to be the faster of the two. Both are pin-aware.
 fn see_captures(boards: &mut [Board]) -> u64 {
     let mut ops = 0u64;
     for board in boards {
         let captures = generate_captures(board);
         for &mv in &captures {
-            black_box(board.see(mv));
+            black_box(board.see_ge(mv, 0));
             ops += 1;
         }
     }
     ops
 }
 
-fn eval_positions(boards: &[Board], evaluator: &mut Evaluator) -> u64 {
-    boards
-        .iter()
-        .map(|board| {
-            black_box(evaluator.evaluate(black_box(board)));
-            1
-        })
-        .sum()
-}
-
 fn game_simulation(boards: &mut [Board]) -> u64 {
     let mut ops = 0u64;
     for board in boards {
-        let moves = generate_legal_moves(board);
-        for mv in moves {
+        let moves: MoveList = generate_legal_movelist(board);
+        for &mv in &moves {
             board.make_move(mv);
-            ops += generate_legal_moves(board).len() as u64;
+            let replies = generate_legal_movelist(board);
+            ops += replies.len() as u64;
+            black_box(&replies);
             board.unmake_move(mv);
         }
     }
     ops
-}
-
-fn perft_startpos(depth: u32) -> u64 {
-    let mut board = Board::starting_position();
-    perft(&mut board, depth)
 }

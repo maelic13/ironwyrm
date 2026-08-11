@@ -6,9 +6,16 @@ use std::sync::{
 
 use crate::board::Move;
 use crate::eval::MATE_SCORE;
+use crate::evidence::{OutcomeKind, debug_assert_outcome};
 use crate::infra;
 
 const MAX_PLY: i32 = 128;
+const BOUND_MASK: u8 = 0x03;
+const PV_BIT: u8 = 0x04;
+const SPECULATIVE_BIT: u8 = 0x08;
+const AGE_MASK: u8 = 0xF0;
+const AGE_STRIDE: u8 = 0x10;
+const AGE_QUALITY_DIVISOR: i32 = 4;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Bound {
@@ -20,7 +27,7 @@ pub enum Bound {
 impl Bound {
     #[inline(always)]
     fn from_bits(bits: u8) -> Option<Self> {
-        match bits & 3 {
+        match bits & BOUND_MASK {
             1 => Some(Self::Exact),
             2 => Some(Self::Upper),
             3 => Some(Self::Lower),
@@ -47,12 +54,19 @@ impl TtEntry {
 
     #[inline(always)]
     fn is_occupied(self) -> bool {
-        self.flag_age & 3 != 0
+        self.flag_age & BOUND_MASK != 0
     }
 
     #[inline(always)]
     pub fn is_pv_node(self) -> bool {
-        (self.flag_age >> 2) & 1 != 0
+        self.flag_age & PV_BIT != 0
+    }
+
+    /// Whether this entry came from a window-speculative producer such as
+    /// ProbCut. This is orthogonal to bound, depth and move authority.
+    #[inline(always)]
+    pub fn is_speculative(self) -> bool {
+        self.flag_age & SPECULATIVE_BIT != 0
     }
 
     #[inline(always)]
@@ -199,9 +213,19 @@ impl SharedCluster {
     }
 }
 
-// The shared cluster must be exactly one cache line, and must store positions
-// at the same density as the local one. Both were violated silently before —
-// asserting them at compile time is free.
+// The shared cluster must be exactly 64 bytes, and must store positions at the
+// same density as the local one. Both were violated silently before — asserting
+// them at compile time is free.
+//
+// ⚠ 4.8c — "64 bytes" IS "one cache line" on x86-64 and is NOT on Apple
+// Silicon. Measured on an M4 (RAR-P11): `hw.cachelinesize` is **128**, so two
+// independent `SharedCluster`s share one line there and two threads touching
+// unrelated TT entries can contend. Neither cluster type can ever STRADDLE a
+// 128 B line — 32 and 64 both divide 128 and both are aligned to their own size
+// — so `origin/arm_fix`'s `3ee4660` was aimed at a hazard that cannot occur;
+// this is the real one, and it is a Threads>1 ARM64 question that PLAN 4.8
+// item 4 owns. Do not "fix" it by over-aligning without a 4T ARM measurement:
+// padding to 128 B would halve the density this second assert exists to hold.
 const _: () = assert!(size_of::<SharedCluster>() == 64);
 const _: () = assert!(
     SHARED_CLUSTER_ENTRIES * size_of::<LocalCluster>()
@@ -249,6 +273,11 @@ pub struct TtStore {
     pub ply: usize,
     pub static_eval: i32,
     pub is_pv: bool,
+    /// What produced `score`. The full kind drives the debug contract/census;
+    /// 4.3c also persists its speculative/non-speculative class in one TT bit.
+    /// Required, not defaulted: invariant 1 is that every result is typed, and
+    /// an optional field would let the next store site skip it.
+    pub kind: OutcomeKind,
 }
 
 impl TranspositionTable {
@@ -368,13 +397,13 @@ impl TranspositionTable {
     pub fn new_search(&mut self) {
         match &mut self.storage {
             TtStorage::Local(table) => {
-                table.age = table.age.wrapping_add(8) & 0xF8;
+                table.age = table.age.wrapping_add(AGE_STRIDE) & AGE_MASK;
             }
             TtStorage::Shared(table) => {
                 let age = table.age.load(Ordering::Relaxed);
                 table
                     .age
-                    .store(age.wrapping_add(8) & 0xF8, Ordering::Relaxed);
+                    .store(age.wrapping_add(AGE_STRIDE) & AGE_MASK, Ordering::Relaxed);
             }
         }
     }
@@ -409,6 +438,12 @@ impl TranspositionTable {
 
     #[inline(always)]
     pub fn store(&mut self, e: TtStore) {
+        // 4.2 producer contract and census. Both compile out of a production
+        // build: `debug_assert_outcome` under `debug_assertions`, the counter
+        // under `--features diag`. Placed here rather than at the seven call
+        // sites so a new store path cannot bypass either.
+        debug_assert_outcome(e.kind, e.depth, e.bound, e.mv);
+        count_store_kind(e.kind);
         match &mut self.storage {
             TtStorage::Local(table) => {
                 store_local(table, e);
@@ -457,6 +492,91 @@ impl TranspositionTable {
     }
 }
 
+/// 4.3 hazard census: a moveless store INHERITS the resident move.
+///
+/// This is why a persisted producer class is not the only thing missing — for a
+/// `StandPat` store the inheritance means a purely static estimate walks away
+/// carrying a searched move, and the resulting entry (depth 0, `Lower`, with a
+/// move) is byte-identical to a searched `QsearchMove`. Any attempt to infer
+/// "stand pat" from "depth 0 + Lower + no move" is therefore only as sound as
+/// this counter is small, which is exactly why it is measured before 4.3
+/// designs around the inference.
+#[inline(always)]
+fn count_move_inheritance(kind: OutcomeKind, resident: u16) {
+    #[cfg(feature = "diag")]
+    if resident != 0 {
+        crate::diag_count!(tt_move_inherited);
+        if kind == OutcomeKind::StandPat {
+            crate::diag_count!(tt_move_inherited_stand_pat);
+        }
+    }
+    #[cfg(not(feature = "diag"))]
+    {
+        let _ = (kind, resident);
+    }
+}
+
+/// 4.3 hazard census: a depth-0 horizon store landing on a deeper searched entry
+/// for the SAME position. The depth-preservation rule above only protects an
+/// entry more than 3 plies deeper, so depths 1..3 are overwritten by a horizon
+/// estimate. Counted to size that evidence loss before 4.3 tightens anything.
+///
+/// Also records the COMMITTED-store denominators. Both call sites sit after the
+/// depth-preservation `return`, so everything counted here actually landed —
+/// which is what makes the published hazard rates exact rather than biased low.
+#[inline(always)]
+fn count_horizon_overwrite(kind: OutcomeKind, depth: i32, same_key: bool, resident_depth: i8) {
+    #[cfg(feature = "diag")]
+    {
+        match kind {
+            OutcomeKind::StandPat => crate::diag_count!(store_committed_stand_pat),
+            OutcomeKind::QsearchMove => crate::diag_count!(store_committed_qsearch_move),
+            _ => {}
+        }
+        if kind.is_horizon() {
+            crate::diag_count!(store_committed_horizon);
+            if same_key && i32::from(resident_depth) > depth {
+                crate::diag_count!(tt_horizon_overwrote_searched);
+            }
+        }
+    }
+    #[cfg(not(feature = "diag"))]
+    {
+        let _ = (kind, depth, same_key, resident_depth);
+    }
+}
+
+/// 4.3: a store the depth-preservation rule threw away. Counted at the `return`
+/// so `attempted - skipped == committed` holds on both backends, which is the
+/// arithmetic the tool asserts.
+#[inline(always)]
+fn count_skipped_store() {
+    crate::diag_count!(store_skipped_depth_rule);
+}
+
+/// Exact per-producer store census. Expands to nothing without `--features
+/// diag`; the `match` and the unused binding both disappear.
+#[inline(always)]
+fn count_store_kind(kind: OutcomeKind) {
+    #[cfg(feature = "diag")]
+    match kind {
+        OutcomeKind::Full => crate::diag_count!(store_kind_full),
+        OutcomeKind::VerifiedReduced => crate::diag_count!(store_kind_verified_reduced),
+        OutcomeKind::QsearchMove => crate::diag_count!(store_kind_qsearch_move),
+        OutcomeKind::QsearchTail => crate::diag_count!(store_kind_qsearch_tail),
+        OutcomeKind::StandPat => crate::diag_count!(store_kind_stand_pat),
+        OutcomeKind::ProbCut => crate::diag_count!(store_kind_probcut),
+        OutcomeKind::Tablebase => crate::diag_count!(store_kind_tablebase),
+        // `debug_assert_outcome` already rejects these; a release diag build
+        // must still not miscount them into a neighbouring bucket.
+        OutcomeKind::Null | OutcomeKind::Incomplete => {}
+    }
+    #[cfg(not(feature = "diag"))]
+    {
+        let _ = kind;
+    }
+}
+
 #[inline(always)]
 fn prefetch_ptr<T>(ptr: *const T) {
     // SAFETY: `_mm_prefetch` is a pure cache hint — it never dereferences the
@@ -468,9 +588,40 @@ fn prefetch_ptr<T>(ptr: *const T) {
         core::arch::x86_64::_mm_prefetch(ptr.cast::<i8>(), core::arch::x86_64::_MM_HINT_T0);
     }
 
-    // Non-x86_64 64-bit targets (e.g. aarch64): prefetch is just a hint —
-    // skipping it is always correct.
-    #[cfg(not(target_arch = "x86_64"))]
+    // 4.8b — the ARM64 spelling of the SAME hint. Until now this function had
+    // an x86 body and, for every other target, `let _ = ptr;` — so all three
+    // shipped ARM64 assets did NO TT prefetching at all while the x86 assets
+    // did, an ISA-specific search-speed difference nobody chose. Rarog issues
+    // the hint after making the child move, so there is useful work between it
+    // and the child's TT probe, which is what makes a prefetch worth issuing.
+    //
+    // `pldl1keep` is the ARM analogue of `_MM_HINT_T0`: prefetch for load, into
+    // L1, temporal (keep). Written as inline `asm!` because
+    // `core::arch::aarch64::_prefetch` is still unstable, and stable AArch64
+    // inline assembly is exactly what PLAN 4.8 pins as available.
+    //
+    // ⚠ This does NOT raise the unsafe floor that principle #8 froze at 19. The
+    // two arms are `cfg`-exclusive, so any single compiled target contains the
+    // same number of unsafe blocks as before — on ARM64 this replaces a no-op
+    // with the same intrinsic-class cache hint x86 already had, rather than
+    // adding a new mechanism.
+    //
+    // SAFETY: `prfm` is an architectural cache hint. It does not dereference
+    // `ptr` as a Rust memory access, so any address is sound — and this one is
+    // derived from the live TT allocation regardless. The instruction writes no
+    // memory, modifies no flags and uses no stack.
+    #[cfg(target_arch = "aarch64")]
+    unsafe {
+        core::arch::asm!(
+            "prfm pldl1keep, [{address}]",
+            address = in(reg) ptr,
+            options(readonly, nostack, preserves_flags)
+        );
+    }
+
+    // Rarog is 64-bit-only; retained as a correctness-first fallback for any
+    // future target that is neither x86-64 nor AArch64.
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
     {
         let _ = ptr;
     }
@@ -486,7 +637,7 @@ fn key16_of(key: u64) -> u16 {
 
 #[inline(always)]
 fn current_entry(entry: TtEntry, age: u8) -> bool {
-    entry.is_occupied() && (entry.flag_age & 0xF8) == age
+    entry.is_occupied() && (entry.flag_age & AGE_MASK) == age
 }
 
 pub fn score_to_tt(score: i32, ply: usize) -> i32 {
@@ -612,16 +763,19 @@ fn store_local(table: &mut LocalTable, e: TtStore) {
     if replace.key16 == key16
         && e.bound != Bound::Exact
         && e.depth < replace.depth as i32 - 3
-        && (replace.flag_age & 0xF8) == table.age
+        && (replace.flag_age & AGE_MASK) == table.age
     {
+        count_skipped_store();
         return;
     }
 
     let stored_move = if e.mv.is_null() && replace.key16 == key16 {
+        count_move_inheritance(e.kind, replace.mv);
         replace.mv
     } else {
         e.mv.0
     };
+    count_horizon_overwrite(e.kind, e.depth, replace.key16 == key16, replace.depth);
 
     *replace = make_entry(key16, stored_move, table.age, e);
 }
@@ -664,16 +818,19 @@ fn store_shared(table: &SharedTable, e: TtStore) {
     if replace_hits_same_key
         && e.bound != Bound::Exact
         && e.depth < replace_entry.depth as i32 - 3
-        && (replace_entry.flag_age & 0xF8) == age
+        && (replace_entry.flag_age & AGE_MASK) == age
     {
+        count_skipped_store();
         return;
     }
 
     let stored_move = if e.mv.is_null() && replace_hits_same_key {
+        count_move_inheritance(e.kind, replace_entry.mv);
         replace_entry.mv
     } else {
         e.mv.0
     };
+    count_horizon_overwrite(e.kind, e.depth, replace_hits_same_key, replace_entry.depth);
 
     cluster.store(replace_index, key16, make_entry(key16, stored_move, age, e));
 }
@@ -687,6 +844,7 @@ fn make_entry(key16: u16, mv: u16, age: u8, e: TtStore) -> TtEntry {
         ply,
         static_eval,
         is_pv,
+        kind,
         ..
     } = e;
     TtEntry {
@@ -695,7 +853,14 @@ fn make_entry(key16: u16, mv: u16, age: u8, e: TtStore) -> TtEntry {
         static_eval: crate::infra::saturating_i16(static_eval),
         mv,
         depth: crate::infra::saturating_i8(depth, -1),
-        flag_age: age | bound as u8 | ((is_pv as u8) << 2),
+        flag_age: age
+            | bound as u8
+            | if is_pv { PV_BIT } else { 0 }
+            | if kind.is_speculative() {
+                SPECULATIVE_BIT
+            } else {
+                0
+            },
     }
 }
 
@@ -704,6 +869,50 @@ fn entry_quality(entry: TtEntry, age: u8) -> i32 {
     if !entry.is_occupied() {
         return i32::MIN;
     }
-    let age_delta = age.wrapping_sub(entry.flag_age & 0xF8) & 0xF8;
-    entry.depth as i32 - age_delta as i32 / 2
+    let age_delta = age.wrapping_sub(entry.flag_age & AGE_MASK) & AGE_MASK;
+    entry.depth as i32 - age_delta as i32 / AGE_QUALITY_DIVISOR
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        AGE_MASK, AGE_QUALITY_DIVISOR, AGE_STRIDE, Bound, LocalTable, PV_BIT, SPECULATIVE_BIT,
+        TranspositionTable, TtEntry, TtStorage, entry_quality,
+    };
+
+    #[test]
+    fn four_bit_age_preserves_the_per_generation_replacement_penalty() {
+        let entry = TtEntry {
+            depth: 20,
+            flag_age: Bound::Exact as u8 | PV_BIT | SPECULATIVE_BIT,
+            ..TtEntry::default()
+        };
+
+        for generation in 0_u8..16 {
+            let age = generation.wrapping_mul(AGE_STRIDE) & AGE_MASK;
+            assert_eq!(
+                entry_quality(entry, age),
+                20 - i32::from(generation) * 4,
+                "generation {generation}"
+            );
+        }
+        assert_eq!(AGE_QUALITY_DIVISOR, 4);
+    }
+
+    #[test]
+    fn four_bit_age_wraps_after_sixteen_searches() {
+        let mut tt = TranspositionTable::new(1);
+        for expected_generation in 1_u8..16 {
+            tt.new_search();
+            let TtStorage::Local(LocalTable { age, .. }) = &tt.storage else {
+                panic!("new table must use local storage");
+            };
+            assert_eq!(*age, expected_generation * AGE_STRIDE);
+        }
+        tt.new_search();
+        let TtStorage::Local(LocalTable { age, .. }) = &tt.storage else {
+            panic!("new table must use local storage");
+        };
+        assert_eq!(*age, 0);
+    }
 }

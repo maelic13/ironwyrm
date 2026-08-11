@@ -16,15 +16,33 @@ compile_error!("Rarog supports only 64-bit targets (u64 hash -> usize indexing r
 
 const ENGINE_THREAD_STACK_SIZE: usize = 16 * 1024 * 1024;
 
+// 4.8a — THE STARTUP CPU GUARD IS GONE, because it never worked.
+//
+// Until now `main` opened with a BMI2 check meant to turn "you downloaded the
+// wrong asset" into a sentence instead of `STATUS_ILLEGAL_INSTRUCTION`. It
+// could not: `std::is_x86_feature_detected!` expands to
+// `cfg!(target_feature = "…") || runtime_detect(…)`, and the PEXT tier sets
+// `-C target-feature=+bmi2`, so the macro folded to a compile-time `true`, the
+// branch folded to dead code, and the message was stripped. **A runtime check
+// for a feature the build STATICALLY requires is `true` by construction.**
+//
+// Measured, not deduced: the released `rarog-v2.3.0-windows-pext-pgo.exe` and
+// `rarog-v2.3.1-windows-pext-pgo.exe` contain no trace of the message string.
+// The promise has never been able to fire in a shipped asset.
+//
+// Rewriting it to cover AVX2 as well reproduced the same dead code for the same
+// reason, which is what exposed the mechanism. A guard that actually fires needs
+// raw `CPUID` from a translation unit compiled at the BASELINE — the tier flags
+// otherwise license the compiler to emit tier instructions inside the guard
+// itself, and ahead of it in `main`. That is one new FFI site against a frozen
+// unsafe floor (PLAN principle #8), so it is a decision to take deliberately
+// rather than a detail to slip in here; PLAN 4.8a records it as the open option.
+//
+// What replaces it is the honest half of PLAN 4.8's own instruction: state the
+// requirement exactly. `README` now lists the measured CPU requirement per
+// asset, and `cargo xtask verify-isa` proves each asset matches it.
 fn main() {
     request_fine_grained_scheduling();
-    if !pext_build_is_supported() {
-        eprintln!(
-            "{} PEXT build requires a CPU with BMI2/PEXT support. Use the AVX2 build on this machine.",
-            capitalize_first_letter(env!("CARGO_PKG_NAME"))
-        );
-        std::process::exit(1);
-    }
 
     println!(
         "{} {} by {}",
@@ -82,13 +100,3 @@ fn request_fine_grained_scheduling() {
 
 #[cfg(not(windows))]
 fn request_fine_grained_scheduling() {}
-
-#[cfg(all(rarog_pext, target_arch = "x86_64"))]
-fn pext_build_is_supported() -> bool {
-    std::is_x86_feature_detected!("bmi2")
-}
-
-#[cfg(not(all(rarog_pext, target_arch = "x86_64")))]
-fn pext_build_is_supported() -> bool {
-    true
-}

@@ -23,7 +23,8 @@
 
 .PARAMETER ConfigGroup
     Which parameter group to tune (selects tools\spsa_configs\config_<g>.json):
-    pruning · lmr · histcov · corr · probcut · futility · tm · lazymargin · history · see.
+    pruning · lmr · histcov · corr · probcut · futility · tm ·
+    lazymargin · history · see (plus archived aspiration/selectivity groups).
 
 .PARAMETER Iterations
     Planned total iterations (sets A = Iterations / 10 in spsa.json).
@@ -54,8 +55,8 @@ is 0.002, the same order. Larger = hotter = more late wander.
     Do the setup and stop (do not launch). Prints the launch command.
 
 .PARAMETER LaunchOnly
-    Skip setup and just launch (tuner must already be populated). Ignores
-    -Iterations / -EngineSuffix / -Resume.
+    Skip setup and just launch (tuner must already be populated). EngineSuffix
+    and Resume are ignored. Iterations is the session stop target.
 
 .PARAMETER LogFile
     Override the full-log path. Default tools\results\spsa_<ConfigGroup>.log.
@@ -75,7 +76,7 @@ is 0.002, the same order. Larger = hotter = more late wander.
     ./tools/spsa.ps1 -ConfigGroup history -LaunchOnly
 #>
 param(
-    [ValidateSet("pruning","lmr","histcov","corr","probcut","futility","tm","lazymargin","history","see")]
+    [ValidateSet("aspiration","selectivity","pruning","lmr","histcov","corr","probcut","futility","tm","lazymargin","history","see")]
     [string]$ConfigGroup = "lmr",
     [int]$Iterations = 5000,
     [double]$REnd = 0.0031,
@@ -129,12 +130,15 @@ $watch     = Join-Path $PSScriptRoot "watch.ps1"
 # extension (cutechess.py: format={book.split('.')[-1]}), so the EPD works
 # unmodified — and keeps SPSA on the same book as sprt.ps1 (PLAN principle #7).
 $book      = Join-Path $PSScriptRoot "books\UHO_Lichess_4852_v1.epd"
+$gamesPerIteration = 32
 if ($LogFile -eq "") { $LogFile = Join-Path $PSScriptRoot "results\spsa_$ConfigGroup.log" }
 
 # ─── Setup ────────────────────────────────────────────────────────────────
 if (-not $LaunchOnly) {
     if ($EngineSuffix -eq "") {
         $EngineSuffix = switch ($ConfigGroup) {
+            "aspiration" { "p102a" }
+            "selectivity" { "p1046a" }
             "lmr" { "p86-lmr" }
             "histcov" { "p84-histcov" }
             "corr" { "p85-corr" }
@@ -180,6 +184,16 @@ if (-not $LaunchOnly) {
     if ((Get-Content $wfSpsaPy -Raw) -notmatch 'RAROG_SCHEDULE_FIX_V1') {
         throw "weather-factory is not carrying the SPSA schedule fix (decay per-iteration); run tools/setup_tools.ps1."
     }
+    if ((Get-Content $wfSpsaPy -Raw) -notmatch 'RAROG_TRANSACTIONAL_STEP_V2') {
+        throw "weather-factory is not carrying the transactional resume fix; run tools/setup_tools.ps1."
+    }
+    if ($wfCuteContent -notmatch 'RAROG_FIXED_OPTIONS_V1') {
+        throw "weather-factory cannot apply fixed architecture options; run tools/setup_tools.ps1."
+    }
+    if ($wfCuteContent -notmatch 'RAROG_ADJUDICATION_PATCH_V2') {
+        throw ("weather-factory is not carrying the strength-v1 adjudication alignment (resign 600/3 one-sided, " +
+            "matching sprt.ps1); run tools/setup_tools.ps1.")
+    }
 
     Write-Host "Installing matplotlib (weather-factory dependency)..."
     pip install matplotlib --quiet
@@ -189,7 +203,7 @@ if (-not $LaunchOnly) {
     New-Item -ItemType Directory -Force -Path $tuner | Out-Null
 
     if (-not $Resume) {
-        $stateFiles = @("state.json", "games.pgn", "graph.png", "fastchess_config.json")
+        $stateFiles = @("state.json", "games.pgn", "graph.png", "fastchess_config.json", "run_manifest.json")
         $existingState = $stateFiles |
             ForEach-Object { Join-Path $tuner $_ } |
             Where-Object { Test-Path $_ }
@@ -219,10 +233,19 @@ if (-not $LaunchOnly) {
         Write-Host "  skipped; fastchess.exe appears to be in use, existing copy will be used"
     }
 
+    $fixedOptions = [ordered]@{}
+    $fixedConfigPath = Join-Path $configs "fixed_$ConfigGroup.json"
+    if (Test-Path $fixedConfigPath) {
+        $fixedConfig = Get-Content $fixedConfigPath -Raw | ConvertFrom-Json
+        foreach ($option in $fixedConfig.PSObject.Properties) {
+            $fixedOptions[$option.Name] = [int]$option.Value
+        }
+    }
+
     $cutechessJson = @{
         engine        = $engineName
         book          = (Split-Path $book -Leaf)
-        games         = 32
+        games         = $gamesPerIteration
         tc            = 3      # 3+0.03 (weather-factory auto inc = tc/100); UNIFIED
                                # with sprt.ps1's default so SPSA optima transfer to
                                # the confirming SPRT (PLAN.md guiding principle #7).
@@ -231,6 +254,7 @@ if (-not $LaunchOnly) {
         save_rate     = 10
         pgnout        = "file=tuner/games.pgn"
         use_fastchess = $true
+        fixed_options = $fixedOptions
     } | ConvertTo-Json
     $cutechessJson | Out-File (Join-Path $wfRoot "cutechess.json") -Encoding utf8 -NoNewline
     Write-Host "Wrote cutechess.json"
@@ -248,10 +272,22 @@ if (-not $LaunchOnly) {
     # iteration count can never silently change the END behaviour, and `a`
     # can never be left stale when the schedule shape changes.
     #
-    # weather-factory keeps `a`/`c` global and puts the per-parameter scale in
-    # each config's `step`, so `c_end` is expressed in units of that step.
-    # With c = 1.0 the identity r_end = a_t / c_t^2 at t = N back-solves to
+    # ⚠ ONLY THE `a` HALF IS IMPLEMENTED (clarified 2026-08-04). weather-factory
+    # keeps `a`/`c` global and puts the per-parameter scale in each config's
+    # `step`. `c` stays 1.0 and is NOT back-solved, and no knob declares a
+    # `c_end` — so a config's `step` is the perturbation at iteration 1, NOT at
+    # the horizon:
+    #     c_t = c / it^gamma ;  c_t(1) = 1.0 ;  c_t(5000) = 0.4195
+    #     perturbation(knob, it) = step * c_t(it)
+    # The maths below is still self-consistent: substituting c_end = N^-gamma
+    # into a = r_end * c_end^2 * (A+N)^alpha gives exactly the expression used
+    # here, so every completed tune is valid. Only the NAME misleads — reading
+    # `step` as `c_end` gives the wrong answer about whether a knob survives to
+    # the horizon.
     #     a = r_end * (A + N)^alpha / N^(2*gamma)
+    # Practical consequence, enforced by audit class 6: the engine receives
+    # round(value), so an integer knob needs step * c_t(N) >= 0.5, i.e.
+    # step >= 2. A step-1 integer knob goes dead at it > 2^(1/gamma) ~= 894.
     # Cross-check on the two calibrations agreeing from independent
     # directions: our simulation (validated against 8.5's real trajectory to
     # within 0.02 steps of observed wander) puts the optimum at a ≈ 0.1 for
@@ -261,18 +297,87 @@ if (-not $LaunchOnly) {
     # agreeing that a=1.0 was far too hot.
     $alpha = 0.601
     $gamma = 0.102
-    $A = [int]([Math]::Floor($Iterations / 10))
-    $a = $REnd * [Math]::Pow($A + $Iterations, $alpha) / [Math]::Pow($Iterations, 2 * $gamma)
-    $aFmt = [Math]::Round($a, 5)
-    $spsaJson = "{`n    ""a"": $aFmt,`n    ""c"": 1.0,`n    ""A"": $A,`n    ""alpha"": $alpha,`n    ""gamma"": $gamma`n}"
-    $spsaJson | Out-File (Join-Path $wfRoot "spsa.json") -Encoding utf8 -NoNewline
-    Write-Host "Wrote spsa.json (r_end=$REnd over $Iterations iterations -> a=$aFmt, A=$A)"
+    # ⚠⚠ DO NOT name these `$A` and `$a`. PowerShell variable names are
+    # CASE-INSENSITIVE, so `$A` and `$a` are ONE variable: the gain assignment
+    # silently overwrote the damping term, and spsa.json shipped
+    # `"A": 0.0965` where it needed `"A": 500`. That is A ≈ 0, i.e. NO damping
+    # over the first 10% of the run — the exact defect the 2026-07-27 schedule
+    # fix existed to remove, reintroduced by a language footgun.
+    # Found 2026-07-30 by a -SetupOnly dry run before 10.4.6(a), which is the
+    # FIRST tune this parameterization would ever have driven, so no fit was
+    # contaminated. The assertion below is what makes it un-shippable again.
+    $dampingA = [int]([Math]::Floor($Iterations / 10))
+    $gainA = $REnd * [Math]::Pow($dampingA + $Iterations, $alpha) / [Math]::Pow($Iterations, 2 * $gamma)
+    $gainFmt = [Math]::Round($gainA, 5)
+    $spsaPath = Join-Path $wfRoot "spsa.json"
+    $spsaJson = "{`n    ""a"": $gainFmt,`n    ""c"": 1.0,`n    ""A"": $dampingA,`n    ""alpha"": $alpha,`n    ""gamma"": $gamma`n}"
+    $spsaJson | Out-File $spsaPath -Encoding utf8 -NoNewline
+
+    # Read back and verify. The schedule is invisible at runtime — a wrong A
+    # produces a plausible-looking run that anneals wrongly for 40 hours — so it
+    # is checked here, where it is still cheap.
+    # ⚠ -AsHashtable is MANDATORY: `a` and `A` differ only in case, and the
+    # default ConvertFrom-Json throws on that ("keys with different casing").
+    # Same footgun as the variable naming above, one layer down. Index with
+    # brackets — property access on the hashtable would be case-insensitive and
+    # silently return the wrong one of the two.
+    $written = Get-Content $spsaPath -Raw | ConvertFrom-Json -AsHashtable
+    if ([int]$written['A'] -ne $dampingA) {
+        throw "spsa.json A is $($written['A']), expected $dampingA (damping = 10% of the horizon)."
+    }
+    if ([int]$written['A'] -le 0) {
+        throw "spsa.json A must be positive; got $($written['A']). A=0 means NO damping."
+    }
+    if ([Math]::Abs([double]$written['a'] - $gainFmt) -gt 1e-9) {
+        throw "spsa.json a is $($written['a']), expected $gainFmt."
+    }
+    Write-Host "Wrote spsa.json (r_end=$REnd over $Iterations iterations -> a=$gainFmt, A=$dampingA)"
     Write-Host "  (a is DERIVED from r_end and the horizon — change -Iterations and it re-solves.)"
+    Write-Host "  Verified: A = $($written['A']) (10% of horizon), a = $($written['a'])." -ForegroundColor Green
 
     $srcConfig = Join-Path $configs "config_$ConfigGroup.json"
     if (-not (Test-Path $srcConfig)) { throw "Config not found: $srcConfig" }
     Copy-Item $srcConfig (Join-Path $wfRoot "config.json") -Force
     Write-Host "Wrote config.json (group: $ConfigGroup)"
+
+    # Freeze enough provenance to reconstruct an expensive run without relying
+    # on mutable paths or the operator's memory. The engine sidecar still holds
+    # its build flavour and bench; this manifest binds that binary to this exact
+    # SPSA configuration, architecture, runner and opening source.
+    $weatherRevision = (git -C $wfRoot rev-parse HEAD).Trim()
+    $runManifest = [ordered]@{
+        schema_version       = 2
+        created_utc          = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+        config_group         = $ConfigGroup
+        iterations           = $Iterations
+        games_per_iteration  = $gamesPerIteration
+        estimator            = "complete final theta"
+        r_end                = $REnd
+        repo_revision        = (git rev-parse HEAD).Trim()
+        repo_dirty           = [bool](git status --porcelain)
+        engine               = $engineName
+        engine_sha256        = (Get-FileHash $engine -Algorithm SHA256).Hash
+        config_sha256        = (Get-FileHash $srcConfig -Algorithm SHA256).Hash
+        fixed_options        = $fixedOptions
+        fixed_config_sha256  = if (Test-Path $fixedConfigPath) { (Get-FileHash $fixedConfigPath -Algorithm SHA256).Hash } else { $null }
+        book                 = (Split-Path $book -Leaf)
+        book_sha256          = (Get-FileHash $book -Algorithm SHA256).Hash
+        fastchess_sha256     = (Get-FileHash $fastchess -Algorithm SHA256).Hash
+        weather_factory_sha  = $weatherRevision
+        time_control         = "3+0.03"
+        hash_mb              = 64
+        engine_threads       = 1
+        concurrency          = $Concurrency
+        spsa                 = $written
+        spsa_config_sha256   = (Get-FileHash $spsaPath -Algorithm SHA256).Hash
+        runner_config_sha256 = (Get-FileHash (Join-Path $wfRoot "cutechess.json") -Algorithm SHA256).Hash
+    }
+    $runManifestPath = Join-Path $tuner "run_manifest.json"
+    $runManifest | ConvertTo-Json -Depth 6 | Out-File $runManifestPath -Encoding utf8 -NoNewline
+    Write-Host "Wrote run_manifest.json (binary/config/fixed-options/book/runner provenance)"
+    if ($runManifest.repo_dirty) {
+        Write-Warning "SPSA setup was made from a dirty repository. Commit the prepared workflow and rebuild before the real launch."
+    }
     Write-Host ""
 
     if ($SetupOnly) {
@@ -307,6 +412,22 @@ $launchSpsaPy = Join-Path $wfRoot "spsa.py"
 if ((Get-Content $launchSpsaPy -Raw) -notmatch 'RAROG_SCHEDULE_FIX_V1') {
     throw "weather-factory is not carrying the SPSA schedule fix (decay per-iteration); run tools/setup_tools.ps1."
 }
+if ((Get-Content $launchSpsaPy -Raw) -notmatch 'RAROG_TRANSACTIONAL_STEP_V2') {
+    throw "weather-factory is not carrying the transactional resume fix; run tools/setup_tools.ps1."
+}
+if ($launchCuteContent -notmatch 'RAROG_FIXED_OPTIONS_V1') {
+    throw "weather-factory cannot apply fixed architecture options; run tools/setup_tools.ps1."
+}
+# Adjudication alignment is required to START a tune, but NEVER blocks a RESUME.
+# A run that began under the old resign rule must finish under it: switching
+# game-termination rules mid-tune makes the early iterations incomparable with
+# the late ones, which is strictly worse than completing under the old rule.
+# So the check keys on whether this is a fresh run, not on -LaunchOnly.
+if (-not (Test-Path (Join-Path $wfRoot "tuner\state.json")) -and
+    $launchCuteContent -notmatch 'RAROG_ADJUDICATION_PATCH_V2') {
+    throw ("weather-factory is not carrying the strength-v1 adjudication alignment (resign 600/3 one-sided, " +
+        "matching sprt.ps1); run tools/setup_tools.ps1 before starting a new tune.")
+}
 
 $launchConfigPath = Join-Path $wfRoot "cutechess.json"
 $launchConfig = Get-Content $launchConfigPath -Raw | ConvertFrom-Json
@@ -316,9 +437,8 @@ if ([int]$launchConfig.threads -ne $Concurrency) {
 }
 
 # ─── Multi-session bookkeeping ────────────────────────────────────────────
-# A 5,000-iteration tune is ~40 h (28.57 s/iter measured), so it ALWAYS spans
-# several sessions. Three things make that safe, and each was broken before
-# 2026-07-27:
+# Long tunes span several sessions. Three things make that safe, and each was
+# broken before 2026-07-27:
 #   1. the log must APPEND on resume (it truncated — 8.5 lost 1,086 of its
 #      3,670 iterations, and the trajectory is what the bake filter reads);
 #   2. the run must STOP ITSELF at the target (main.py was `while True:`, so

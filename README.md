@@ -7,6 +7,12 @@
 Rarog is a strong UCI chess engine written in Rust. It is meant to be used from
 a chess GUI or an engine-testing tool.
 
+Version 2.3.2 consolidates the accepted search and evaluation improvements made
+after 2.3.1, fixes unproven mate scores being accepted through null-move
+pruning, and improves ARM64 transposition-table prefetching. Engine behavior is
+identical across the published CPU-specific builds; choose a binary by CPU
+compatibility and speed.
+
 ---
 
 ## Highlights
@@ -39,15 +45,22 @@ a chess GUI or an engine-testing tool.
 Every release provides ready-to-run executables — no installation needed. Pick
 the one matching your operating system and CPU:
 
-| Asset suffix | Use when |
-| --- | --- |
-| `pext` | Modern Intel, or AMD Zen 3 and newer. Usually the fastest. |
-| `avx2` | AVX2-capable CPUs without fast PEXT, such as AMD Zen 1 and Zen 2. |
-| `x86-64` | Any 64-bit Intel or AMD CPU. Use this if the others do not start. |
-| `arm64` | ARM64 Linux, Windows on ARM, and Apple Silicon Macs. |
+| Asset suffix | CPU required | Use when |
+| --- | --- | --- |
+| `pext` | AVX2, BMI2, FMA (Intel 2013+, AMD 2015+) | Modern Intel, or AMD Zen 3 and newer. Usually the fastest. |
+| `avx2` | AVX2, BMI2, FMA (Intel 2013+, AMD 2015+) | Same CPUs as `pext`, but faster on AMD Zen 1 and Zen 2, where the PEXT instruction is slow. |
+| `x86-64` | SSE3 (Intel 2004+, AMD 2005+) | Anything older, or when the two above do not start. |
+| `arm64` | ARM64 baseline | ARM64 Linux, Windows on ARM, and Apple Silicon Macs. |
 
-If unsure, try `pext` first and fall back to `avx2`, then `x86-64`. All builds
-play identically; they differ only in speed.
+`pext` and `avx2` need **exactly the same CPU** — choosing between them is about
+speed, not compatibility. So if `pext` does not start, `avx2` will not start
+either: go straight to `x86-64`.
+
+A wrong choice shows up immediately as a crash on startup (`illegal
+instruction`), not as an error message — the engine cannot reliably detect this
+about itself, because the check would have to run on instructions the CPU is
+already unable to execute. All builds play identically; they differ only in
+speed.
 
 Releases up to `1.4.3` were published under the engine's former name, Lynx.
 
@@ -115,13 +128,20 @@ cargo xtask build --arch pext --pgo
 
 | Option | Meaning |
 | --- | --- |
-| `--arch x86-64` | Runs on any 64-bit Intel or AMD CPU. |
-| `--arch avx2` | Requires AVX2. |
-| `--arch pext` | Requires BMI2/PEXT. |
+| `--arch x86-64` | Portable x86-64; requires SSE3. |
+| `--arch avx2` | Requires AVX2, BMI2 and FMA. |
+| `--arch pext` | Same requirements as `avx2`, plus it uses the PEXT instruction. |
 | `--arch arm64` | ARM64 targets. |
 | `--native` | Additionally tunes for the CPU you are building on. |
 | `--pgo` | Profile-guided optimization. Used for all published builds. |
 | `--target <triple>` | Cross-compile to another platform. |
+
+To check that a finished binary contains only the instructions its `--arch`
+allows — and does contain the ones it is built for — run:
+
+```bash
+cargo xtask verify-isa --arch pext
+```
 
 `--arch` and `--native` are independent, so they can be combined freely. A
 `--native` build is faster on the machine that produced it but may not run
@@ -135,7 +155,7 @@ needed for a valid profile; no separate LLVM installation is required.
 ### Tests
 
 ```bash
-cargo test
+cargo test --workspace --all-targets
 ```
 
 ---

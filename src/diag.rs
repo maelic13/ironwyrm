@@ -1,4 +1,4 @@
-//! Phase 7.6 search diagnostics — compile-time gated counters.
+//! Phase 4.1 search diagnostics — compile-time gated counters and sampled traces.
 //!
 //! Enabled only with `--features diag`. The default build contains **no**
 //! counter code at all (`diag_count!` expands to nothing), so `bench` stays a
@@ -7,10 +7,10 @@
 //! several worker threads), reset at each `go`, and dumped as `info string diag
 //! <name> <value>` lines when the search completes.
 //!
-//! Purpose (search audit §12): size the Phase-8 opportunities before they spend
-//! SPRT slots — the check-node share (8.2), the stale-`tt_pv` prune-veto share
-//! (8.3), the per-family prune rates, the LMR re-search rate, and the
-//! history/correction event coverage.
+//! The legacy event counters remain exact. Phase 4 adds a deterministic 1/1024
+//! position sample for the wider interaction map; this bounds diagnostic cost
+//! while making repeated runs on the same tree directly comparable. Sampled
+//! counters are observational only and may never steer search.
 
 #[cfg(feature = "diag")]
 // Counter statics are deliberately lower_snake_case: the name is emitted
@@ -57,12 +57,79 @@ pub mod counters {
         see_prune,
         // LMR reduction and its verification re-search.
         lmr_applied,
+        // 10.2.5 — late moves whose confidence estimate removes the old
+        // mandatory one-ply reduction.
+        lmr_zero_reduction,
         lmr_research,
-        // History / correction learning events.
+        // History / correction learning events. `cutoff_quiet + cutoff_capture`
+        // is also the count of every beta cutoff at a real (non-excluded)
+        // interior node, i.e. the DENOMINATOR of the ordering metric below.
         cutoff_quiet,
         cutoff_capture,
+        // 10.0(a) — FIRST-MOVE CUTOFF RATE, the standard move-ordering readout:
+        // `cutoff_first_move / (cutoff_quiet + cutoff_capture)`. Counted where
+        // the move that failed high was the FIRST move the node searched.
+        //
+        // Why it is the missing metric: 10.0 established that Rarog's eval and
+        // NPS match Basilisk 1.9.1 while it plays ~38-55 Elo weaker at 1T, at
+        // any time control, so the deficit is in how the search converts nodes
+        // into decisions. Two sub-causes remain, and they imply opposite fixes.
+        // The over-reduction ratio (`lmr_research / lmr_applied`) reads the
+        // PRUNING-DEPTH side; this counter reads the ORDERING side. Healthy
+        // engines sit ~90%+; materially below implicates ordering, in which
+        // case re-tuning the selectivity surface (10.4.6) is aimed at the wrong
+        // half of the problem.
+        //
+        // Excluded-move (singular-verification) searches do NOT count: their
+        // best move is deliberately withheld, so a first-move cutoff there
+        // measures the exclusion, not the ordering. That is automatic — this
+        // sits inside the same `excluded.is_null()` guard as the two above, so
+        // numerator and denominator always cover the same node set.
+        cutoff_first_move,
         correction_updates,
         correction_on_capture,
+        // 4.5 — residual MAGNITUDE by attribution class, exact.
+        //
+        // The premise behind capture-weighted correction updates is that a
+        // capture-caused residual is less trustworthy evidence for a
+        // positional correction. Nobody has measured that. These give the mean
+        // |residual| for each class; if the two means are close, the premise is
+        // wrong and neither knob should move off its baseline.
+        // 4.5c — nodes where the margin/reduction knobs are widened by a
+        // correction magnitude that is NOT in the eval they test, because a TT
+        // bound replaced the corrected eval. Exact. This sizes the mismatch
+        // `CorrSkipWhenTtRefined` exists to remove.
+        corr_applied_to_replaced_eval,
+        correction_resid_capture_n,
+        correction_resid_capture_sum,
+        correction_resid_quiet_n,
+        correction_resid_quiet_sum,
+        // 4.6c — safe versus losing quiet checks in the ordering path.
+        //
+        // `CheckBonusLosing` measured 0.00% node change even at 0, which is
+        // indistinguishable from dead code. These decide which it is: a zero
+        // `losing` count means the population is genuinely empty, while a
+        // non-zero one means the switch is wired but its effect is masked.
+        // Counted unconditionally, so the answer does not depend on the
+        // switch being enabled.
+        check_order_safe,
+        check_order_losing,
+        // 4.5d — residual by HALFMOVE-CLOCK context. PLAN 4.5 allows a new
+        // correction context only where held-out unique signal is shown, so the
+        // measurement comes before any proposal. Rule-50 proximity is the
+        // plausible mechanism: near the horizon a position's value stops being a
+        // function of its structure.
+        //
+        // The check/evasion context the plan also lists is NOT measured, because
+        // it is structurally unreachable: correction only trains where
+        // `static_eval != VALUE_NONE`, which IS the not-in-check condition, so
+        // its population is zero by construction rather than by observation.
+        correction_resid_hm_low_n,
+        correction_resid_hm_low_sum,
+        correction_resid_hm_mid_n,
+        correction_resid_hm_mid_sum,
+        correction_resid_hm_high_n,
+        correction_resid_hm_high_sum,
         // 9.7.5(b) — SMP quality. The question these answer: 16 threads give
         // 13x the nodes but +0 depth and +2 seldepth, so where does the work
         // go? Four hypotheses imply opposite fixes, hence measure first.
@@ -79,6 +146,49 @@ pub mod counters {
         // both backends so 1T (local) and NT (shared) are comparable.
         tt_store_same_key,
         tt_store_fresh,
+        // 4.2 — EXACT producer census, keyed by the `OutcomeKind` the store site
+        // declares. The 4.1 producer counters are sampled and sit at the call
+        // sites; these are unsampled and sit in the store path, so they both
+        // cross-check the sampler's producer mix and catch a store site that
+        // stops being reached at all. `Null`/`Incomplete` have no counter
+        // because no path stores them — `debug_assert_outcome` fires instead.
+        store_kind_full,
+        store_kind_verified_reduced,
+        store_kind_qsearch_move,
+        store_kind_qsearch_tail,
+        store_kind_stand_pat,
+        store_kind_probcut,
+        store_kind_tablebase,
+        // 4.3 — provenance HAZARDS in the store path, both exact.
+        //
+        // `tt_move_inherited` counts moveless stores that adopted the resident
+        // move; the `_stand_pat` subset is the one that matters, because it
+        // turns a static estimate into an entry indistinguishable from a
+        // searched qmove. If that subset is large, "depth 0 + Lower + no move"
+        // is NOT a usable stand-pat test and 4.3 cannot lean on it.
+        //
+        // `tt_horizon_overwrote_searched` counts depth-0 stores that replaced a
+        // deeper same-position entry, which the depth-preservation rule only
+        // blocks beyond 3 plies.
+        tt_move_inherited,
+        tt_move_inherited_stand_pat,
+        tt_horizon_overwrote_searched,
+        // 4.3 — ATTEMPTED versus COMMITTED stores.
+        //
+        // The `store_kind_*` census above runs before the backend dispatch, so
+        // it counts ATTEMPTS and reconciles with `fresh + same_key`. The hazard
+        // counters run after the depth-preservation `return`, so they count
+        // COMMITTED stores. Dividing one by the other mismatches denominators
+        // and understates every hazard rate, which is exactly the error the
+        // first RAR-S25 figures carried. These give the matched denominators.
+        //
+        // A store is skipped when it lands on a same-position entry more than 3
+        // plies deeper, is not exact, and is the current generation — so horizon
+        // producers are by far the likeliest to be skipped.
+        store_skipped_depth_rule,
+        store_committed_stand_pat,
+        store_committed_qsearch_move,
+        store_committed_horizon,
         // Does helper work actually REACH the main thread? Probe/hit counted
         // on thread 0 only. If helpers contribute, main's hit rate should rise
         // with thread count; if it is flat, the helpers are searching in vain.
@@ -117,7 +227,596 @@ pub mod counters {
         lazy_cross_phase_q2,
         lazy_cross_phase_q3,
         lazy_cross_phase_q4,
+        // 4.1 sampled node/TT provenance and contradiction map.
+        sampled_main_nodes,
+        sampled_qnodes,
+        tt_sample_hit,
+        tt_sample_miss,
+        tt_cut_exact,
+        tt_cut_lower,
+        tt_cut_upper,
+        // Deep enough at an eligible node, but the stored bound resolves some
+        // OTHER window — a store/window question.
+        tt_bound_not_usable,
+        // 4.9b — why an entry that HIT could not be used, split by cause,
+        // because the three imply different fixes and only one of them can
+        // grow with thread count.
+        //
+        // `_pv` and `_excluded` are structural: those nodes refuse the entry
+        // however deep it is, and their populations do not depend on how many
+        // threads are searching. `_shallow` is the one the "helpers add entries
+        // that cannot cut" hypothesis predicts should rise with threads, and
+        // `_deficit` sums how many plies short each one was, so a marginal miss
+        // (a replacement-policy question) is distinguishable from a hopeless
+        // one (not worth chasing).
+        tt_reject_pv,
+        tt_reject_excluded,
+        tt_reject_shallow,
+        tt_reject_shallow_deficit,
+        tt_bound_contradicts_window,
+        tt_eval_refined,
+        tt_eval_delta_sum,
+        main_store_lower,
+        main_store_exact,
+        main_store_upper,
+        // qsearch authority: distinguish unsearched stand pat from searched moves.
+        q_in_check,
+        q_tt_hit,
+        q_tt_cut,
+        q_stand_pat_cut,
+        q_stand_pat_store,
+        q_move_cut,
+        q_move_store,
+        q_tail_exact_store,
+        q_tail_upper_store,
+        // 4.9d — SIZING the in-check qsearch staging that 4.6 deferred here.
+        //
+        // An in-check qnode generates every evasion and scores ALL of them
+        // before picking any, so a node that cuts on its first move paid for
+        // the rest. Staging would emit the TT move before scoring anything —
+        // order-identical, since `score_moves` already gives it a dominating
+        // score — but it is only worth building if the scoring is genuinely
+        // wasted. `scored - tried` is exactly that waste, and these are EXACT
+        // (in-check qnodes are a small population; sampling them would add
+        // noise to the one number that decides whether to build it).
+        q_check_nodes,
+        q_check_moves_scored,
+        q_check_moves_tried,
+        // NMP/ProbCut/singular/IIR cooperation.
+        nmp_attempt,
+        nmp_sample_cut,
+        nmp_nested_attempt,
+        nmp_eval_raw,
+        nmp_eval_corrected,
+        nmp_eval_tt,
+        nmp_verify_attempt,
+        nmp_verify_pass,
+        nmp_verify_fail,
+        // 4.10a — two DIFFERENT questions the decisive guard has been conflated
+        // with, counted apart because they imply opposite decisions.
+        //
+        // `nmp_decisive_population` is an NMP-eligible node whose WINDOW is
+        // already at mate range. This was `NmpDecisiveGuard`'s predicate; 4.10a
+        // removed that switch (efficiency only, 0.004% of nodes) and kept the
+        // count, because it is the context for the question below.
+        //
+        // `nmp_cut_unproven_mate` is the correctness question, and it is NOT
+        // the same condition: an NMP cutoff whose RETURNED SCORE is mate-range,
+        // i.e. a mate this node never proved by a real line. Rarog returns the
+        // raw null score with no clamp, where Stockfish forces it back to beta
+        // precisely so unproven mates cannot propagate. A non-zero count here
+        // is a defect the guard does not fix.
+        nmp_decisive_population,
+        nmp_cut_unproven_mate,
+        probcut_attempt,
+        probcut_qpass,
+        probcut_tt_store,
+        singular_attempt,
+        singular_probcut_depth_match,
+        singular_speculative_seed_blocked,
+        singular_extend_one,
+        singular_extend_two,
+        singular_multicut,
+        singular_negative_extension,
+        iir_applied,
+        iir_pv,
+        iir_no_tt_move,
+        iir_shallow_tt,
+        iir_extension_debt,
+        // Move-stage recall and pruning overlap. Counts cover sampled nodes only.
+        move_seen_tt,
+        move_seen_good_capture,
+        move_seen_quiet,
+        move_seen_bad_capture,
+        best_rank_1,
+        best_rank_2_3,
+        best_rank_4_7,
+        best_rank_8_plus,
+        best_stage_tt,
+        best_stage_good_capture,
+        best_stage_quiet,
+        best_stage_bad_capture,
+        best_was_reduced,
+        prune_shadow_moves,
+        prune_shadow_lmp,
+        prune_shadow_futility,
+        prune_shadow_see,
+        prune_shadow_check_exempt,
+        prune_shadow_overlap_two_plus,
+        prospective_depth_sum,
+        reduction_depth_sum,
+        // Correction attribution and hashed-table quality.
+        correction_sample_updates,
+        correction_sample_abs_sum,
+        correction_slot_first,
+        correction_slot_repeat,
+        correction_slot_collision,
+        correction_slot_near_saturation,
+        // Root confidence/SMP observations use fixed-point sums (ppm/cp).
+        root_iterations,
+        root_gap_sum,
+        root_deviation_sum,
+        root_effort_ppm_sum,
+        root_best_changes,
+        root_interrupted_fallback,
+        // 4.7b — the completed-iteration confidence model, measured before any
+        // consumer is switched on.
+        //
+        // The scalar histogram answers the first question a confidence model
+        // has to answer: does it DISCRIMINATE? A model that reads ~500 on every
+        // iteration is a constant wearing a model's clothes, and multiplying
+        // the clock by a constant is a re-scale of `TmOptScale`, not a new
+        // mechanism.
+        rootconf_scalar_sum,
+        rootconf_scalar_q1,
+        rootconf_scalar_q2,
+        rootconf_scalar_q3,
+        rootconf_scalar_q4,
+        // Input distributions. The deviation scale is seeded at its measured
+        // half-confidence point instead of a round number that happens to
+        // saturate its term; gap remains diagnostic-only.
+        // The gap gets a ZERO bucket of its own, because the separation term
+        // stands or falls on it: every root move but the best is searched on a
+        // null window, so a move that fails low reports a bound just under
+        // alpha rather than a value. If the gap is mostly exactly 0, the term
+        // is measuring PVS bookkeeping and not separation.
+        // Splits the zero bucket by CAUSE. "No rival" means no other root move
+        // was searched to this depth at all, so the gap is zero by absence of
+        // evidence; the remainder is a rival that genuinely scored level.
+        rootconf_gap_no_rival,
+        rootconf_gap_0,
+        rootconf_gap_1_7,
+        rootconf_gap_8_127,
+        rootconf_gap_128_plus,
+        rootconf_dev_lt_8,
+        rootconf_dev_8_31,
+        rootconf_dev_32_127,
+        rootconf_dev_128_plus,
+        // Is the term the confidence factor REPLACES even live? The baseline
+        // effort factor interpolates over `0.79..=1.0` of the iteration spent
+        // on the best move, and reads its endpoint for everything below 0.79.
+        // This counts the iterations that actually land inside the band — i.e.
+        // the ones where the shipped effort factor is a function rather than a
+        // constant.
+        rootconf_effort_term_live,
+        // Iterations that took at least one aspiration re-search: the WINDOW
+        // term's population.
+        rootconf_window_fail_iters,
+        // The redundancy check behind leaving best-move AGE out of the scalar.
+        // If age and instability track each other, charging both would price
+        // one fact twice; these two sums are what makes that claim falsifiable
+        // rather than asserted.
+        rootconf_best_age_sum,
+        rootconf_instab_milli_sum,
+        rootconf_pool_instab_milli_sum,
+        // PV truncation: the population a PV term would have. 4.5d's lesson —
+        // a term needs a distinct signal AND a population, so measure the
+        // population before adding the term.
+        rootconf_pv_truncated,
+        // 4.7b TM SHADOW — the two clock multipliers side by side, in
+        // ten-thousandths. `RootConfTime` cannot be sized by `bench` (which is
+        // depth-limited, so the soft target never binds), but the multiplier it
+        // would apply is computed from data `bench` does produce. Sum ratio =
+        // does the arm move the total budget or only its distribution;
+        // longer/shorter = how often it disagrees at all.
+        rootconf_tm_baseline_sum,
+        rootconf_tm_candidate_sum,
+        rootconf_tm_longer,
+        rootconf_tm_shorter,
+        worker_best_disagreement,
+        worker_depth_spread_sum,
+        worker_score_spread_sum,
+        // 4.2b SHADOW TEST — inexact bounds that CONTRADICT the current window.
+        //
+        // A `Lower` at or below alpha, or an `Upper` at or above beta, resolved
+        // some OTHER window and says nothing about this one. It cannot produce a
+        // cutoff (proved by a unit test in `evidence.rs`), but every consumer
+        // that does not test the bound direction still admits it at full
+        // nominal depth. The registered question is whether it should carry a
+        // confidence/depth penalty. These counters measure what a penalty WOULD
+        // change; no consumer branches on any of them.
+        //
+        // `contradict_hits` is UNGATED, unlike `tt_bound_contradicts_window`
+        // above, which only counts the cutoff-eligible subset (deep enough, at a
+        // non-PV non-excluded node). The consumers below have their own, looser
+        // depth rules, so the gated figure understates their exposure.
+        contradict_hits,
+        // eval_for_pruning: the highest-volume consumer. `slack` is
+        // `ev.depth` relative to the accepted floor of zero. A hypothetical
+        // penalty of P plies blocks exactly the cases with slack < P — one
+        // histogram answers every P.
+        contradict_refined_eval,
+        contradict_refine_slack_0,
+        contradict_refine_slack_1,
+        contradict_refine_slack_2_3,
+        contradict_refine_slack_4_7,
+        contradict_refine_slack_8_plus,
+        contradict_refine_delta_sum,
+        // Singular seeds its verification window from this stored score.
+        contradict_singular_attempt,
+        contradict_singular_changed_depth,
+        // The multi-cut arm RETURNS, so it cannot be counted alongside the
+        // extension outcomes above; it needs its own counter at its own site.
+        contradict_singular_multicut,
+        // A DEEP contradicting entry suppresses IIR, i.e. it is trusted to
+        // order the node even though it resolved a different window.
+        contradict_iir_suppressed,
+        // Control pair. If a contradicting entry's move is best about as often
+        // as an agreeing one's, the penalty belongs on the SCORE consumers only
+        // and must not touch ordering or IIR. This is the measurement that
+        // decides the shape of the 4.3 change, so it has its own denominator.
+        contradict_move_present,
+        contradict_move_was_best,
+        agree_move_present,
+        agree_move_was_best,
+        // 4.4a SIZING — how much work does each candidate switch actually reach?
+        //
+        // All exact, all measured with the switches OFF, so they size the arms
+        // BEFORE the bundle is chosen rather than after a gate has been spent.
+        // `tt_pv_veto` above is the shared denominator: the nodes where one
+        // inherited PV bit currently blocks all four mechanisms at once. These
+        // count, per mechanism, how many of those vetoed nodes would additionally
+        // satisfy that mechanism's own depth precondition — i.e. the population
+        // its `*AllowTtPv` switch would hand back.
+        tt_pv_veto_rfp_eligible,
+        tt_pv_veto_razor_eligible,
+        tt_pv_veto_nmp_eligible,
+        tt_pv_veto_probcut_eligible,
+        // 4.3 SHADOW — is TT eval refinement SELF-CANCELLING?
+        //
+        // Two depth-floor arms (1 and 2) both measured ~0 Elo while
+        // moving 15-44% of the tree, which has two very different explanations:
+        // the margins absorb it (lesson 2), or the refinement helps as often as
+        // it hurts. Those imply opposite fixes, so measure rather than guess.
+        //
+        // PART 1 - decision flips, at the pruning site. For each consumer, does
+        // the predicate evaluated on `eval_for_pruning` differ from the same
+        // predicate on `static_eval`? `_on` = refinement CAUSED the prune,
+        // `_off` = refinement PREVENTED one static would have taken. Roughly
+        // balanced on/off is the precise form of "self-cancelling", and this
+        // half is unbiased: it is recorded before any of the three can return.
+        refine_flip_nodes,
+        refine_flip_rfp_on,
+        refine_flip_rfp_off,
+        refine_flip_razor_on,
+        refine_flip_razor_off,
+        refine_flip_nmp_on,
+        refine_flip_nmp_off,
+        // PART 2 - did refinement move the eval TOWARD the value the node went
+        // on to report? Recorded at the node tail.
+        //
+        // ⚠ BIASED, and knowably so: a node that pruned never reaches the tail,
+        // so the cases where refinement mattered MOST are exactly the ones
+        // missing. Part 1 sizes that excluded population. The comparison is also
+        // against what the node REPORTED, not against truth — on a fail-low the
+        // reported score is an upper bound, not a value. Read it as "did
+        // refinement agree with the search's own conclusion", nothing stronger.
+        refine_report_nodes,
+        refine_report_closer,
+        refine_report_farther,
+        refine_report_gain_sum,
+        refine_report_loss_sum,
+        // Coverage proof for the shadow consumers planned in 4.2--4.7.
+        shadow_4_2_evidence,
+        shadow_4_3_qsearch,
+        shadow_4_4_selectivity,
+        shadow_4_5_correction,
+        shadow_4_6_prospective_depth,
+        shadow_4_7_root_confidence,
     );
+}
+
+/// Stable domains keep independent samples from accidentally selecting exactly
+/// the same positions. Public constants make call sites self-documenting.
+#[cfg(feature = "diag")]
+pub const SAMPLE_MAIN: u64 = 0x4D41_494E_5F34_2E31;
+#[cfg(feature = "diag")]
+pub const SAMPLE_QSEARCH: u64 = 0x5153_4541_5243_4831;
+#[cfg(feature = "diag")]
+pub const SAMPLE_CORRECTION: u64 = 0x434F_5252_5F34_2E31;
+
+/// Deterministic 1/1024 position sampler. It is deliberately available only in
+/// diagnostic builds: production code must contain neither the mix nor a branch.
+#[cfg(feature = "diag")]
+#[inline]
+pub fn sampled(hash: u64, ply: usize, domain: u64) -> bool {
+    let mut value = hash ^ domain ^ (ply as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
+    value = (value ^ (value >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    value = (value ^ (value >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+    ((value ^ (value >> 31)) & 1023) == 0
+}
+
+/// Diagnostic-only ownership tags for the deliberately lossy correction
+/// tables. A repeated slot/key is normal reuse; a different key in the same
+/// slot is an observed collision. The map is sparse because callers invoke it
+/// only for sampled updates.
+#[cfg(feature = "diag")]
+mod correction_probe {
+    use std::collections::HashMap;
+    use std::sync::atomic::Ordering;
+    use std::sync::{Mutex, OnceLock};
+
+    static OWNERS: OnceLock<Mutex<HashMap<(u8, usize), u64>>> = OnceLock::new();
+
+    fn owners() -> &'static Mutex<HashMap<(u8, usize), u64>> {
+        OWNERS.get_or_init(|| Mutex::new(HashMap::new()))
+    }
+
+    pub fn reset() {
+        owners()
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .clear();
+    }
+
+    pub fn record(source: u8, index: usize, key: u64, value: i16) {
+        use crate::diag::counters;
+        let mut owners = owners().lock().unwrap_or_else(|error| error.into_inner());
+        match owners.insert((source, index), key) {
+            None => counters::correction_slot_first.fetch_add(1, Ordering::Relaxed),
+            Some(old) if old == key => {
+                counters::correction_slot_repeat.fetch_add(1, Ordering::Relaxed)
+            }
+            Some(_) => counters::correction_slot_collision.fetch_add(1, Ordering::Relaxed),
+        };
+        if value.unsigned_abs() >= 15_000 {
+            counters::correction_slot_near_saturation.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+}
+
+#[cfg(feature = "diag")]
+#[inline]
+pub fn record_correction_slot(source: u8, index: usize, key: u64, value: i16) {
+    correction_probe::record(source, index, key, value);
+}
+
+#[cfg(feature = "diag")]
+pub fn record_best_move(rank: usize, stage: crate::evidence::MoveClass, reduced: bool) {
+    use crate::evidence::MoveClass;
+    use std::sync::atomic::Ordering;
+
+    let rank_counter = match rank {
+        1 => &counters::best_rank_1,
+        2 | 3 => &counters::best_rank_2_3,
+        4..=7 => &counters::best_rank_4_7,
+        _ => &counters::best_rank_8_plus,
+    };
+    rank_counter.fetch_add(1, Ordering::Relaxed);
+    // 4.2: takes `MoveClass` rather than a 0..3 integer, so the picker's stage
+    // taxonomy is defined in exactly one place.
+    let stage_counter = match stage {
+        MoveClass::TtMove => &counters::best_stage_tt,
+        MoveClass::GoodCapture => &counters::best_stage_good_capture,
+        MoveClass::Quiet => &counters::best_stage_quiet,
+        MoveClass::BadCapture => &counters::best_stage_bad_capture,
+    };
+    stage_counter.fetch_add(1, Ordering::Relaxed);
+    if reduced {
+        counters::best_was_reduced.fetch_add(1, Ordering::Relaxed);
+    }
+}
+
+/// 4.2b: record how a contradicting entry's MOVE fared for ordering, against
+/// the agreeing-entry control.
+///
+/// Called from both node exits so the numerator and denominator always cover the
+/// same node set — the same trap `cutoff_first_move` documents. `hit` without
+/// `contradicts` is the control group and includes exact bounds.
+#[cfg(feature = "diag")]
+#[inline]
+pub fn record_contradiction_ordering(contradicts: bool, hit: bool, best_was_tt_move: bool) {
+    use std::sync::atomic::Ordering;
+
+    if contradicts {
+        counters::contradict_move_present.fetch_add(1, Ordering::Relaxed);
+        if best_was_tt_move {
+            counters::contradict_move_was_best.fetch_add(1, Ordering::Relaxed);
+        }
+    } else if hit {
+        counters::agree_move_present.fetch_add(1, Ordering::Relaxed);
+        if best_was_tt_move {
+            counters::agree_move_was_best.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+}
+
+/// 4.3 shadow, part 2: did the refined eval sit closer than the plain static
+/// eval to the score this node went on to report?
+///
+/// `gain`/`loss` accumulate the centipawn improvement or worsening so a small
+/// number of large disagreements cannot hide behind a majority of tiny ones —
+/// the count alone would call that self-cancelling when it is not.
+#[cfg(feature = "diag")]
+#[inline]
+pub fn record_refine_agreement(static_eval: i32, refined: i32, reported: i32) {
+    use std::sync::atomic::Ordering;
+
+    counters::refine_report_nodes.fetch_add(1, Ordering::Relaxed);
+    let plain_err = i64::from(static_eval - reported).abs();
+    let refined_err = i64::from(refined - reported).abs();
+    if refined_err < plain_err {
+        counters::refine_report_closer.fetch_add(1, Ordering::Relaxed);
+        let gain = u64::try_from(plain_err - refined_err).unwrap_or(0);
+        counters::refine_report_gain_sum.fetch_add(gain, Ordering::Relaxed);
+    } else if refined_err > plain_err {
+        counters::refine_report_farther.fetch_add(1, Ordering::Relaxed);
+        let loss = u64::try_from(refined_err - plain_err).unwrap_or(0);
+        counters::refine_report_loss_sum.fetch_add(loss, Ordering::Relaxed);
+    }
+}
+
+/// 4.2b: bucket the depth slack a contradicting entry had when it refined
+/// `eval_for_pruning`. A penalty of P plies blocks every case with slack < P.
+#[cfg(feature = "diag")]
+#[inline]
+pub fn record_contradiction_refine(slack: i32, delta: u64) {
+    use std::sync::atomic::Ordering;
+
+    counters::contradict_refined_eval.fetch_add(1, Ordering::Relaxed);
+    counters::contradict_refine_delta_sum.fetch_add(delta, Ordering::Relaxed);
+    let bucket = match slack {
+        i32::MIN..=0 => &counters::contradict_refine_slack_0,
+        1 => &counters::contradict_refine_slack_1,
+        2..=3 => &counters::contradict_refine_slack_2_3,
+        4..=7 => &counters::contradict_refine_slack_4_7,
+        _ => &counters::contradict_refine_slack_8_plus,
+    };
+    bucket.fetch_add(1, Ordering::Relaxed);
+}
+
+/// One completed root iteration, as the 4.7b diagnostics see it.
+///
+/// A struct rather than nine positional scalars: the recorder takes every field
+/// of the same snapshot, and a positional list of `i32`/`f64`/`bool` is exactly
+/// the kind of call site that silently transposes two arguments.
+#[cfg(feature = "diag")]
+pub struct RootConfidenceShadow {
+    pub gap: i32,
+    pub deviation: i32,
+    pub effort: f64,
+    pub best_changed: bool,
+    /// True when no other root move reached this depth, so `gap` is zero for
+    /// want of a rival rather than for want of separation.
+    pub no_rival: bool,
+    pub scalar: i32,
+    pub instability: f64,
+    pub pooled_instability: Option<u64>,
+    pub best_age: usize,
+    pub pv_len: usize,
+    pub fails: i32,
+    /// Clock multiplier the shipped formula applies.
+    pub baseline_time: f64,
+    /// Clock multiplier `RootConfTime = 1` would apply instead.
+    pub candidate_time: f64,
+}
+
+/// Root statistics are cold and diagnostic-only. Floating-point conversion is
+/// intentionally lossy because these are aggregate telemetry units, not search
+/// inputs (effort in ppm, deviation in cp, multipliers in ten-thousandths).
+#[cfg(feature = "diag")]
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+pub fn record_root_confidence(shadow: &RootConfidenceShadow) {
+    use std::sync::atomic::Ordering;
+
+    let add = |counter: &std::sync::atomic::AtomicU64, value: u64| {
+        counter.fetch_add(value, Ordering::Relaxed);
+    };
+    // Octave buckets. The boundaries are where they are so the MEDIAN of each
+    // input is identifiable: a scale coordinate seeded off a mean would be
+    // dragged by the decisive tail (a mate-range gap is hundreds of cp), and
+    // one seeded off a round number would sit wherever the round number sits.
+    let bucket = |value: i32, counters: [&std::sync::atomic::AtomicU64; 4]| {
+        let slot = match value {
+            i32::MIN..8 => counters[0],
+            8..32 => counters[1],
+            32..128 => counters[2],
+            _ => counters[3],
+        };
+        slot.fetch_add(1, Ordering::Relaxed);
+    };
+
+    add(&counters::root_iterations, 1);
+    add(
+        &counters::root_gap_sum,
+        u64::from(shadow.gap.unsigned_abs()),
+    );
+    add(
+        &counters::root_deviation_sum,
+        u64::from(shadow.deviation.unsigned_abs()),
+    );
+    add(
+        &counters::root_effort_ppm_sum,
+        (shadow.effort.clamp(0.0, 1.0) * 1_000_000.0) as u64,
+    );
+    if shadow.best_changed {
+        add(&counters::root_best_changes, 1);
+    }
+    add(&counters::shadow_4_7_root_confidence, 1);
+
+    add(
+        &counters::rootconf_scalar_sum,
+        u64::from(shadow.scalar.clamp(0, 1000).unsigned_abs()),
+    );
+    let quartile = match shadow.scalar {
+        i32::MIN..250 => &counters::rootconf_scalar_q1,
+        250..500 => &counters::rootconf_scalar_q2,
+        500..750 => &counters::rootconf_scalar_q3,
+        _ => &counters::rootconf_scalar_q4,
+    };
+    add(quartile, 1);
+    if shadow.no_rival {
+        add(&counters::rootconf_gap_no_rival, 1);
+    }
+    let gap_slot = match shadow.gap {
+        i32::MIN..1 => &counters::rootconf_gap_0,
+        1..8 => &counters::rootconf_gap_1_7,
+        8..128 => &counters::rootconf_gap_8_127,
+        _ => &counters::rootconf_gap_128_plus,
+    };
+    add(gap_slot, 1);
+    bucket(
+        shadow.deviation,
+        [
+            &counters::rootconf_dev_lt_8,
+            &counters::rootconf_dev_8_31,
+            &counters::rootconf_dev_32_127,
+            &counters::rootconf_dev_128_plus,
+        ],
+    );
+    if shadow.effort > crate::search::EFFORT_TERM_FLOOR {
+        add(&counters::rootconf_effort_term_live, 1);
+    }
+    if shadow.fails > 0 {
+        add(&counters::rootconf_window_fail_iters, 1);
+    }
+    add(
+        &counters::rootconf_best_age_sum,
+        u64::try_from(shadow.best_age).unwrap_or(u64::MAX),
+    );
+    add(
+        &counters::rootconf_instab_milli_sum,
+        (shadow.instability.clamp(0.0, 1_000.0) * 1000.0) as u64,
+    );
+    if let Some(pooled) = shadow.pooled_instability {
+        add(&counters::rootconf_pool_instab_milli_sum, pooled);
+    }
+    if shadow.pv_len < 2 {
+        add(&counters::rootconf_pv_truncated, 1);
+    }
+
+    let baseline = (shadow.baseline_time.max(0.0) * 10_000.0) as u64;
+    let candidate = (shadow.candidate_time.max(0.0) * 10_000.0) as u64;
+    add(&counters::rootconf_tm_baseline_sum, baseline);
+    add(&counters::rootconf_tm_candidate_sum, candidate);
+    // "Disagrees" means by more than 1% of the baseline: below that the two
+    // multipliers are the same decision expressed with different rounding.
+    let tolerance = baseline / 100;
+    if candidate > baseline.saturating_add(tolerance) {
+        add(&counters::rootconf_tm_longer, 1);
+    } else if candidate < baseline.saturating_sub(tolerance) {
+        add(&counters::rootconf_tm_shorter, 1);
+    }
 }
 
 /// 9.7.5(b) per-thread completed depth — the counter that distinguishes "the
@@ -202,9 +901,25 @@ pub mod lazy_probe {
 #[cfg(feature = "diag")]
 #[macro_export]
 macro_rules! diag_count {
-    ($name:ident) => {
+    ($name:ident) => {{
         $crate::diag::counters::$name.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    };
+    }};
+}
+
+/// Add an unsigned value to a diagnostic counter. Like `diag_count!`, both the
+/// expression and atomic disappear entirely from non-diagnostic builds.
+#[cfg(feature = "diag")]
+#[macro_export]
+macro_rules! diag_add {
+    ($name:ident, $value:expr) => {{
+        $crate::diag::counters::$name.fetch_add($value, std::sync::atomic::Ordering::Relaxed);
+    }};
+}
+
+#[cfg(not(feature = "diag"))]
+#[macro_export]
+macro_rules! diag_add {
+    ($name:ident, $value:expr) => {};
 }
 
 #[cfg(not(feature = "diag"))]
@@ -225,6 +940,33 @@ pub fn reset() {
     {
         counters::reset();
         smp::reset();
+        correction_probe::reset();
+    }
+}
+
+#[cfg(all(test, feature = "diag"))]
+mod tests {
+    use super::{SAMPLE_MAIN, SAMPLE_QSEARCH, sampled};
+
+    #[test]
+    fn sampler_is_stable_sparse_and_domain_separated() {
+        let first: Vec<_> = (0..65_536_u64)
+            .filter(|hash| sampled(*hash, 7, SAMPLE_MAIN))
+            .collect();
+        let repeated: Vec<_> = (0..65_536_u64)
+            .filter(|hash| sampled(*hash, 7, SAMPLE_MAIN))
+            .collect();
+        let qsearch: Vec<_> = (0..65_536_u64)
+            .filter(|hash| sampled(*hash, 7, SAMPLE_QSEARCH))
+            .collect();
+
+        assert_eq!(first, repeated);
+        assert!(
+            (40..=88).contains(&first.len()),
+            "sample size {}",
+            first.len()
+        );
+        assert_ne!(first, qsearch);
     }
 }
 

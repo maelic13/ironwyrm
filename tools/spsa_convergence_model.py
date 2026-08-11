@@ -1,83 +1,96 @@
-"""Model Rarog's SPSA schedule to size a tune BEFORE spending machine nights.
+"""Compare SPSA horizons under Rarog's live schedule.
 
-Written 2026-07-27 to answer "how many iterations for N knobs?" with evidence
-instead of folklore. Calibration is all measured, not assumed:
-  - mini-match = 32 games, gradient = (l - w); std(w-l) = sqrt(32*0.55) = 4.2
-  - E[w-l] for an Elo diff D over 32 games = 0.092*D  (logistic slope)
-  - schedule = EXACTLY the shipped code path after the a0fbc9f fix:
-        it = t/games ; a_t = a/(it+A)^0.601 ; c_t = c/it^0.102 ; A = iters/10
-  - measured cost: 28.57 s/iteration at 3+0.03, concurrency 14
+This is a schedule/noise model, not an Elo oracle.  It deliberately models a
+separable quadratic because the real search objective is unknown; use it only
+to compare horizons and gains while keeping its limitations visible.
 
-Findings that drove the 10.4.6 design (see PLAN):
-  1. DIMENSION IS ~FREE. p=6 and p=26 converge at nearly the same rate, so
-     merging tune groups costs nothing and captures cross-knob interactions.
-     Iterations, not knob count, is the budget that matters.
-  2. ITERATIONS DOMINATE. At 1,000-2,500 iterations a tune barely beats its
-     own seed -- which is the range every historical Rarog tune ran in.
-     ~5,000 recovers ~70% of available gain, ~10,000 ~85%.
-  3. THERE IS AN ABSOLUTE NOISE FLOOR, and it does not depend on where you
-     start: at p=18 the same run lands in the same band whether seeded 1.0 or
-     0.25 steps off. So re-tuning values that are ALREADY inside the floor
-     strictly HURTS -- it scatters them. This is why 10.4.6 carries a per-knob
-     bake filter instead of baking everything the tuner returns.
-  4. CURVATURE BELOW ~0.5 Elo per full step is UNFITTABLE at 32 games/iter.
-     Such knobs wander forever; baking their wander ships noise.
-  5. Games-per-iteration barely matters at a fixed game budget (16..128 all
-     land within noise of each other), so 32 stays.
+Measured inputs:
+  * 32 games/iteration and std(W-L) ~= sqrt(32 * 0.55) = 4.2;
+  * E[W-L] ~= 0.092 * Elo over a 32-game mini-match;
+  * alpha/gamma = 0.601/0.102 and A = iterations/10;
+  * gain a is derived exactly as tools/spsa.ps1 derives it from r_end.
 
-Run: python tools/spsa_convergence_model.py
+The canceled pre-NNUE Phase-4 proposal (10k/0.00235, 30 coordinates) is kept
+here only as a reproducible lesson in schedule design. It was never launched:
+a valid schedule does not establish that a tune has enough expected value.
 """
-import math, random, statistics
 
-ALPHA, GAMMA, A_FRAC, GAMES = 0.601, 0.102, 0.10, 32
-SIG_PER_ELO, NOISE = 0.092, 4.2
+import math
+import random
+import statistics
+
+ALPHA, GAMMA = 0.601, 0.102
+GAMES, SIG_PER_ELO, GRADIENT_NOISE = 32, 0.092, 4.2
 
 
-def run(p, iters, loss_per_step, seed, start_off=1.0):
-    """Returns (rmse_in_step_units_at_end, rmse_tail_mean) starting start_off steps off."""
+def gain_for(iterations: int, r_end: float) -> tuple[float, float]:
+    damping = iterations / 10
+    gain = r_end * (damping + iterations) ** ALPHA / iterations ** (2 * GAMMA)
+    return damping, gain
+
+
+def schedule_metrics(iterations: int, r_end: float) -> tuple[float, float]:
+    damping, gain = gain_for(iterations, r_end)
+    cumulative_learning = 0.0
+    flat_variance = 0.0
+    for k in range(1, iterations + 1):
+        a_t = gain / (k + damping) ** ALPHA
+        c_t = k**-GAMMA
+        cumulative_learning += a_t
+        flat_variance += (a_t / c_t * GRADIENT_NOISE) ** 2
+    return cumulative_learning, math.sqrt(flat_variance)
+
+
+def run_quadratic(
+    dimensions: int,
+    iterations: int,
+    r_end: float,
+    loss_per_step: float,
+    seed: int,
+) -> float:
     rng = random.Random(seed)
-    A = iters * A_FRAC
-    # theta measured in units of each knob's own step; optimum at 0
-    theta = [start_off * (1 if rng.random() < 0.5 else -1) for _ in range(p)]
-    tail = []
-    for k in range(1, iters + 1):
-        it = k
-        a_t = 1.0 / (it + A) ** ALPHA
-        c_t = 1.0 / it ** GAMMA
-        delta = [1 if rng.random() < 0.5 else -1 for _ in range(p)]
-        # Elo of each arm relative to optimum: -loss_per_step * sum(x_i^2)
-        plus = [theta[i] + c_t * delta[i] for i in range(p)]
-        minus = [theta[i] - c_t * delta[i] for i in range(p)]
-        elo_plus = -loss_per_step * sum(x * x for x in plus)
-        elo_minus = -loss_per_step * sum(x * x for x in minus)
-        D = elo_plus - elo_minus                      # Elo(arm A) - Elo(arm B)
-        grad = -SIG_PER_ELO * D + rng.gauss(0, NOISE)  # (l - w)
-        for i in range(p):
-            theta[i] -= a_t * grad / (delta[i] * c_t)
-        if k > iters * 0.85:
-            tail.append(list(theta))
-    rmse = math.sqrt(sum(x * x for x in theta) / p)
-    tm = [statistics.fmean(v[i] for v in tail) for i in range(p)]
-    rmse_tm = math.sqrt(sum(x * x for x in tm) / p)
-    return rmse, rmse_tm
+    damping, gain = gain_for(iterations, r_end)
+    theta = [1.0 if rng.random() < 0.5 else -1.0 for _ in range(dimensions)]
+    for k in range(1, iterations + 1):
+        a_t = gain / (k + damping) ** ALPHA
+        c_t = k**-GAMMA
+        delta = [1 if rng.random() < 0.5 else -1 for _ in theta]
+        plus = sum((theta[i] + c_t * delta[i]) ** 2 for i in range(dimensions))
+        minus = sum((theta[i] - c_t * delta[i]) ** 2 for i in range(dimensions))
+        elo_a, elo_b = -loss_per_step * plus, -loss_per_step * minus
+        gradient = -SIG_PER_ELO * (elo_a - elo_b) + rng.gauss(0, GRADIENT_NOISE)
+        for i in range(dimensions):
+            theta[i] -= a_t * gradient / (delta[i] * c_t)
+    return math.sqrt(sum(x * x for x in theta) / dimensions)
 
 
-def sweep(label, ps, iters_list, loss_per_step, reps=12):
-    print(f"\n=== {label}  (loss per knob per full step = {loss_per_step} Elo) ===")
-    print("            " + "".join(f"{i:>12}" for i in iters_list) + "     <- iterations")
-    for p in ps:
-        cells = []
-        for iters in iters_list:
-            rs = [run(p, iters, loss_per_step, seed=1000 + 7 * r) for r in range(reps)]
-            end = statistics.fmean(r[0] for r in rs)
-            tm = statistics.fmean(r[1] for r in rs)
-            cells.append(f"{end:>5.2f}/{tm:<5.2f}")
-        print(f"  p={p:<3}     " + "".join(f"{c:>12}" for c in cells))
-    print("  (cells: RMSE-at-endpoint / RMSE-of-tail-mean, in units of each knob's step;")
-    print("   start = 1.0 step off the optimum. <1.0 means the tune IMPROVED on its seed.)")
+def main() -> None:
+    dimensions = 30
+    schedules = [
+        ("calibrated-5k", 5000, 0.0031),
+        ("canceled-phase4", 10000, 0.00235),
+    ]
+    print("schedule                 iterations  r_end    sum(a_t)  flat-noise SD (steps)")
+    for name, iterations, r_end in schedules:
+        learning, flat_sd = schedule_metrics(iterations, r_end)
+        print(f"{name:24} {iterations:10}  {r_end:.5f}  {learning:8.3f}  {flat_sd:8.3f}")
+
+    print("\nQuadratic endpoint RMSE in parameter-step units (12 deterministic replicas):")
+    for curvature in (0.5, 1.5, 4.0):
+        print(f"  curvature {curvature:.1f} Elo/full-step")
+        for name, iterations, r_end in schedules:
+            values = [
+                run_quadratic(
+                    dimensions,
+                    iterations,
+                    r_end,
+                    curvature,
+                    1000 + replica,
+                )
+                for replica in range(12)
+            ]
+            print(f"    {name:22} {statistics.fmean(values):.3f}")
 
 
 if __name__ == "__main__":
-    for lps in (0.5, 1.5, 4.0):
-        sweep("convergence vs dimension", [6, 8, 14, 18, 26], [1000, 2500, 5000, 10000], lps)
-
+    main()

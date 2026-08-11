@@ -1,12 +1,9 @@
 # Rarog Texel tuning toolchain
 
-Tools for the **Phase 4 eval data-fit** (see `PLAN.md` §6–§8). Most of this was
-ported from Basilisk's working pipeline (`D:/code/basilisk/tools/texel`) and
-adapted to Rarog. The scripts here are **ready now**; the tuner binary itself is
-wired up in **Phase 3.3** (it needs Rarog's eval to expose the `EvalTrace`,
-`reconstruct()`, and the `EvalParams` flat-parameter list — none of which exist
-until the Phase 3 eval refactor lands). See `reference/basilisk_tuner.cpp` for
-the exact, proven design to port.
+Tools for Rarog's self-play-labelled HCE fits. The pipeline and Rust tuner are
+fully implemented. Hydra contributed the useful five-reservoir sampling idea;
+Rarog deliberately retains self-play game-result labels because its measured
+Stockfish-distillation experiment lost 17.11 Elo.
 
 > **Two outputs feed the tuner, both in `FEN;target` text format** (one position
 > per line; `target` is White-perspective expected score: `1` / `0.5` / `0`, or
@@ -24,18 +21,22 @@ and compare.
 ### Path A — self-play labels (primary, fully functional now)
 
 Label each position by the **result of a Rarog-vs-Rarog game** that passed
-through it. Pure, never over-fits to another engine's quirks, lower ceiling.
+through it. This remains mandatory for Rarog: its Phase-6 Stockfish-distilled
+fit improved offline loss but lost 17.11 Elo. We copy Hydra's reliable
+five-reservoir sampling design, not its label source.
 
 ```
 Beast FENs ──sample_fens.py──▶ beast_seed.epd ──datagen.ps1──▶ selfplay.pgn ──extract.py──▶ train.csv + holdout.csv
 ```
 
-### Path B — Stockfish-WDL labels (optional, higher ceiling, needs an SF binary)
+### Path B — Stockfish-WDL labels (archived diagnostic; rejected for Rarog)
 
 Label each sampled position by a **strong engine's WDL/eval**, distilling its
 static judgment into Rarog's weights (a common strong-HCE technique). Denser and
 often higher-quality than self-play results, but can chase SF quirks that do not
-transfer. Use `import_beast.py` once you have `FEN<TAB>target` files (e.g. from
+transfer. Rarog measured exactly that failure in Phase 6.1 (**−17.11 Elo**), so
+do not use this path for 10.4.3. `import_beast.py` remains only to reproduce or
+diagnose that result once you have `FEN<TAB>target` files (e.g. from
 running an SF `go nodes`/`go depth` pass over the sampled FENs and writing its
 WDL as the side-to-move target). No SF binary was found in this repo; point the
 labeller at your capped/full Stockfish when you choose this path.
@@ -50,9 +51,9 @@ copied**. Treat it as an immutable position pool.
 
 | Script | What it does |
 |---|---|
-| `sample_fens.py` | Reservoir-samples N diverse FENs from the Beast pool (or any FEN/CSV) into a fastchess EPD **opening book**. Validates with python-chess, dedups, filters by piece count / check / quietness. 7 GB-safe (streaming). |
-| `datagen.ps1` (in `tools/`) | Runs Rarog self-play at a fixed node limit from the book, appends to `data/selfplay.pgn`. Auto-concurrency = logical CPUs − 1. |
-| `extract.py` | PGN → `FEN;result`. Skips opening (16 plies) / endgame (6 plies) / in-check / capture-or-promo positions, caps plies per game, dedups by FEN, **splits holdout by game** (no train/holdout leakage). |
+| `sample_fens.py` | Streams the Beast pool into five equal phase reservoirs and writes a validated, deduped EPD seed book. Default 750k starts; 7 GB-safe. |
+| `datagen.ps1` (in `tools/`) | Runs one deterministic self-play game per independent book entry. A fixed shuffle seed plus non-overlapping `Start`/`Rounds` segments makes pilot and continuation reproducible; each completed archive gets a provenance manifest. |
+| `extract.py` | Reads one or many PGN archives into exact train/holdout quotas. Samples per phase inside each game, dedups globally, splits by game, and writes atomically only when all five reservoirs are full. `--preflight-games` sizes the run first. |
 | `import_beast.py` | For Path B: converts pre-evaluated `FEN<TAB>target` files to `FEN;target` train/holdout, converting side-to-move targets to White perspective. |
 | `reference/basilisk_tuner.cpp` | The proven C++ tuner (Adam + golden-section K-fit + group masks + reconstruction `--verify`). **Reference for the Rust port in Phase 3.3** — do not build; it links Basilisk's eval. |
 
@@ -60,39 +61,71 @@ copied**. Treat it as an immutable position pool.
 
 ## Full self-play workflow (Path A)
 
-Run from the repo root. **Hardware note:** sized for a Ryzen 9 5950X
-(16C/32T). The defaults below leave the machine usable — raise `-Concurrency`
-or `-Rounds` if you want the run to finish faster and the box can spare it.
+Run from the repo root. **Hardware note:** auto-concurrency leaves two physical
+cores free (14 games on a Ryzen 9 5950X). Pass a higher value such as 24 only
+when maximum throughput matters more than responsiveness. Fixed-node games are
+deterministic either way.
 
 ```powershell
-# 0. Build the current head as a PGO test binary (the datagen engine).
-.\tools\build_test.ps1 -Suffix phase3-base
+# 0. The accepted post-capstone label generator is already built and has a
+#    clean manifest: rarog-p1025a-zero-pext-pgo.exe (source 74d4426).
 
-# 1. Sample a diverse opening book from the Beast pool (source stays intact).
-#    --max-read caps the streaming pass; drop it for a fully uniform sample.
-python tools\texel\sample_fens.py "A:\Chess\Beast\data\txt\positions.txt" `
-    --out tools\texel\data\beast_seed.epd --count 50000 --min-pieces 6
+# 1. Sample a phase-balanced seed book from the evaluated Beast pool. The SF
+#    target is used ONLY to reject nearly-decided seeds; game results remain
+#    Rarog self-play labels. The external source stays read-only.
+python tools\texel\sample_fens.py "A:\Chess\Beast\data\evaluated" `
+    --out tools\texel\data\beast_seed.epd --count 750000 --min-pieces 6 `
+    --target-min 0.05 --target-max 0.95 --max-read 40000000
 
-# 2. Generate self-play games (node-limited, fast, diverse). Moderate
-#    concurrency so the machine stays usable; raise it for unattended runs.
-.\tools\datagen.ps1 -Suffix phase3-base -Rounds 30000 -Nodes 8000 `
-    -Book tools\texel\data\beast_seed.epd -BookFormat epd -Concurrency 24
-# Optional second pass for variety (different node count appends to the PGN):
-.\tools\datagen.ps1 -Suffix phase3-base -Rounds 15000 -Nodes 5000 `
-    -Book tools\texel\data\beast_seed.epd -BookFormat epd -Concurrency 24
+# 2. Validate, then run ONLY a 20k pilot. Seed 10403 defines one reproducible
+#    shuffled order; later segments retain it and begin at opening 20001.
+.\tools\datagen.ps1 -Suffix p1025a-zero -Nodes 8000 -Rounds 20000 `
+    -Start 1 -Seed 10403 -SetupOnly
+.\tools\datagen.ps1 -Suffix p1025a-zero -Nodes 8000 -Rounds 20000 `
+    -Start 1 -Seed 10403
 
-# 3. Extract labelled positions (train + holdout, split by game).
-python tools\texel\extract.py tools\texel\data\selfplay.pgn `
+# 3. Size the corpus BEFORE generating the expensive continuation. It reports
+#    the limiting phase and a conservative recommended TOTAL game count.
+python tools\texel\extract.py `
+    tools\texel\data\selfplay-p1025a-zero-n8000-s1-g20000.pgn `
+    --preflight-games 20000
+
+# 4. Substitute the reported total N. This continuation is exactly N-20,000
+#    games and cannot overlap the pilot or wrap around the 750k book.
+$recommendedTotal = <N_FROM_PREFLIGHT>
+.\tools\datagen.ps1 -Suffix p1025a-zero -Nodes 8000 `
+    -Rounds ($recommendedTotal - 20000) -Start 20001 -Seed 10403 -SetupOnly
+.\tools\datagen.ps1 -Suffix p1025a-zero -Nodes 8000 `
+    -Rounds ($recommendedTotal - 20000) -Start 20001 -Seed 10403
+
+# 5. One extraction across pilot + continuation. Defaults: exactly 3M rows,
+#    600k in each phase, plus a phase-balanced 5% holdout.
+python tools\texel\extract.py `
+    tools\texel\data\selfplay-p1025a-zero-n8000-s1-g20000.pgn `
+    tools\texel\data\selfplay-p1025a-zero-n8000-s20001-g*.pgn `
     --out-dir tools\texel\data --train train.csv --holdout holdout.csv
 
-# 4. (Phase 3.3+) Verify reconstruction, then tune a stage:
+# 6. Verify reconstruction, then tune a stage:
 #    rarog-texel --verify  tools\texel\data\holdout.csv
 #    rarog-texel --tune kingsafety tools\texel\data\train.csv tools\texel\data\holdout.csv tools\texel\out\eval_params.txt
+
+# 7. Bake, THEN FORMAT, then verify the fingerprint. cargo fmt is not optional:
+#    bake_params.py writes one long line per PST, so `cargo fmt --check` fails
+#    until it runs. Skipping it once already produced a gate binary built from a
+#    tree that would have failed CI (2026-08-04). Formatting cannot change
+#    behaviour, so the bench must be identical before and after.
+python tools\texel\bake_params.py tools\texel\out\eval_params.txt
+cargo fmt
+cargo fmt --check          # must pass before building anything gated
 ```
 
-Target ≥ 1.5 M train positions (the `extract.py` warning enforces this). Each
-node-limited game is ~1–2 s; ~60 k games on the 5950X is well under an hour at
-`-Concurrency 24`.
+The completion contract is **3,000,000 train positions with an equal five-phase
+mix**, not a rough global estimate. Short input exits 2 without touching an
+existing train/holdout pair and reports the exact missing quota. The 20k pilot
+sizes from measured limiting-phase unique quiet yield before the costly tail is
+generated. Keep the same book hash and seed for every segment; `datagen.ps1`
+records both plus engine SHA-256/source commit, fastchess version, range, node
+limit, and the named `datagen-v1` adjudication profile in `*.manifest.json`.
 
 ---
 

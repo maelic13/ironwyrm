@@ -47,6 +47,7 @@ function Med($a) {
 "{0,-3} {1,8} {2,9} {3,10} {4,9}  {5}" -f 'T', 'hit%', 'samekey%', 'asp/thread', 'nodes', 'depths (median per thread)'
 foreach ($t in 1, 2, 4, 8, 16) {
     $hits = @(); $sk = @(); $asp = @(); $nodes = @(); $depthSets = @(); $dumps = @()
+    $cutPct = @(); $shallowPct = @(); $deficit = @(); $pvPct = @(); $windowPct = @()
     foreach ($fen in $POS) {
         for ($r = 0; $r -lt $REPS; $r++) {
             $d = Get-Diag $t $fen
@@ -57,6 +58,16 @@ foreach ($t in 1, 2, 4, 8, 16) {
             $nodes += $d['nodes']
             $depthSets += , $d['depths']
             $dumps += $d['dumps']
+            # 4.9b: what happens to a sampled TT HIT, by cause. The shares must
+            # be read against `tt_sample_hit`, never against probes: the
+            # question is what a hit is worth, not how often one occurs.
+            $sh = [Math]::Max(1, $d['tt_sample_hit'])
+            $cuts = $d['tt_cut_exact'] + $d['tt_cut_lower'] + $d['tt_cut_upper']
+            $cutPct += 100.0 * $cuts / $sh
+            $shallowPct += 100.0 * $d['tt_reject_shallow'] / $sh
+            $pvPct += 100.0 * ($d['tt_reject_pv'] + $d['tt_reject_excluded']) / $sh
+            $windowPct += 100.0 * $d['tt_bound_not_usable'] / $sh
+            $deficit += $d['tt_reject_shallow_deficit'] / [Math]::Max(1, $d['tt_reject_shallow'])
         }
     }
     # median depth per thread slot across all reps
@@ -67,5 +78,9 @@ foreach ($t in 1, 2, 4, 8, 16) {
     }
     "{0,-3} {1,8:N1} {2,9:N1} {3,10:N1} {4,9:N0}  {5}   dumps={6}" -f `
         $t, (Med $hits), (Med $sk), (Med $asp), (Med $nodes), ($perSlot -join ','), ((Med $dumps))
+    # 4.9b breakdown of the same runs: of every sampled TT hit, what share
+    # could actually cut, and what share was refused for each distinct reason.
+    "    of hits: cut {0,5:N1}%  shallow {1,5:N1}% (short by {2,4:N1} ply)  pv/excl {3,5:N1}%  wrong-window {4,5:N1}%" -f `
+        (Med $cutPct), (Med $shallowPct), (Med $deficit), (Med $pvPct), (Med $windowPct)
 }
 

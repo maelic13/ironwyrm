@@ -20,8 +20,22 @@ enum Arch {
     Arm64,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+enum CommandKind {
+    Build,
+    VerifyIsa,
+}
+
 #[derive(Debug)]
 struct Config {
+    command: CommandKind,
+    /// Artifact to verify, when `command` is `VerifyIsa`. Defaults to the
+    /// dist asset for the requested tier, either PGO flavour.
+    exe: Option<PathBuf>,
+    /// The artifact was built with the TARGET's default `target-cpu` rather
+    /// than the tier's — i.e. a plain `cargo build --release`. See
+    /// [`tier_features`] for why this cannot be inferred.
+    default_cpu: bool,
     arch: Arch,
     /// Tune codegen for the exact host CPU instead of the arch's portable
     /// baseline. ORTHOGONAL to `arch`: it swaps `-C target-cpu=<baseline>` for
@@ -49,6 +63,9 @@ fn main() {
 fn run() -> Result<()> {
     let config = parse_args()?;
     ensure_arch_target_pair(config.arch, &config.target)?;
+    if config.command == CommandKind::VerifyIsa {
+        return verify_isa(&config);
+    }
     ensure_rust_target(&config.target)?;
 
     if config.pgo {
@@ -73,16 +90,23 @@ fn parse_args() -> Result<Config> {
         print_usage();
         std::process::exit(0);
     }
-    if command != "build" {
-        return Err(format!(
-            "unknown command `{command}`; expected `build`. Run `cargo xtask help`."
-        ));
-    }
+    let command = match command.as_str() {
+        "build" => CommandKind::Build,
+        "verify-isa" => CommandKind::VerifyIsa,
+        other => {
+            return Err(format!(
+                "unknown command `{other}`; expected `build` or `verify-isa`. \
+                 Run `cargo xtask help`."
+            ));
+        }
+    };
 
     let mut arch: Option<Arch> = None;
     let mut target: Option<String> = None;
+    let mut exe: Option<PathBuf> = None;
     let mut pgo = false;
     let mut native = false;
+    let mut default_cpu = false;
     let mut bench_depth = 13u16;
 
     while let Some(arg) = args.next() {
@@ -108,6 +132,13 @@ fn parse_args() -> Result<Config> {
                         .ok_or_else(|| "`--target` requires a value".to_string())?,
                 );
             }
+            "--exe" => {
+                exe = Some(PathBuf::from(
+                    args.next()
+                        .ok_or_else(|| "`--exe` requires a value".to_string())?,
+                ));
+            }
+            "--default-cpu" => default_cpu = true,
             "--pgo" => pgo = true,
             "--native" => native = true,
             "--bench-depth" => {
@@ -130,6 +161,9 @@ fn parse_args() -> Result<Config> {
     let target = target.unwrap_or_else(|| default_target(arch));
     ensure_native_is_buildable(arch, native, &target)?;
     Ok(Config {
+        command,
+        exe,
+        default_cpu,
         arch,
         native,
         target,
@@ -142,9 +176,13 @@ fn print_usage() {
     println!(
         "Usage:
   cargo xtask build [--arch base|x86-64|avx2|pext|arm64] [--native] [--target <triple>] [--pgo] [--bench-depth <n>]
+  cargo xtask verify-isa [--arch <same>] [--target <triple>] [--exe <path>] [--pgo] [--native] [--default-cpu]
 
 `--arch` picks the ISA contract: which source path compiles (PEXT vs portable
 magic bitboards) and which CPU features are required.
+`verify-isa` disassembles a finished artifact and holds it to that contract:
+no instruction the tier's `target-cpu` does not enable, and every instruction
+class the tier exists to emit. Needs `rustup component add llvm-tools`.
 `--native` is INDEPENDENT of it: it swaps the portable `target-cpu` baseline
 for this exact host CPU. LOCAL ONLY - such a binary is not guaranteed to run
 anywhere else, and is marked `-native` in its filename.
@@ -155,7 +193,8 @@ Examples:
   cargo xtask build --arch pext --pgo            # the shipped pext asset
   cargo xtask build --arch pext --native --pgo   # fastest build for this box
   cargo xtask build --arch base --native         # native on a pre-BMI2 CPU
-  cargo xtask build --arch arm64 --target aarch64-apple-darwin"
+  cargo xtask build --arch arm64 --target aarch64-apple-darwin
+  cargo xtask verify-isa --arch base             # prove the baseline asset is baseline"
     );
 }
 
@@ -308,6 +347,550 @@ fn rustflags(arch: Arch, native: bool) -> Vec<String> {
         }
         Arch::Arm64 => cpu("generic"),
     }
+}
+
+// ─── 4.8a: the ISA contract, as something that EXECUTES ─────────────────────
+//
+// A tier is a promise about which instructions an asset may contain, and until
+// now that promise lived only in `rustflags` above and in prose. Node agreement
+// across CI cells does not test it: a binary that emits POPCNT on the baseline
+// tier computes exactly the right node count on every machine that can run it
+// at all, and crashes with `#UD` on the machines the tier exists for.
+//
+// It was not hypothetical. The 2.3.0/2.3.1 baseline assets shipped **15 `popcntq`**,
+// every one of them from `vendor/fathom`, because `-C target-cpu` is a rustc
+// flag that `cc` never sees and Fathom picks its popcount from the compiler
+// rather than from the target (fixed in `build.rs`). This command is what keeps
+// that class of drift from coming back silently.
+//
+// SCOPE, stated honestly: this proves the CLASSES named below and nothing
+// wider. It is a lower bound on conformance, not a proof of it.
+
+/// One named instruction class, and the rustc `target_feature` that permits it.
+///
+/// The feature name is the load-bearing field. What a tier may emit is decided
+/// by asking RUSTC what its `target-cpu` enables, never by a list maintained
+/// here from memory — that list would be folklore, and folklore is exactly what
+/// this command exists to replace. Writing one down was tried first and was
+/// wrong within the hour: `movddup` was assumed to be outside the baseline, and
+/// the pinned rustc's `x86-64` model turns out to enable `sse3`.
+struct InstructionClass {
+    name: &'static str,
+    feature: &'static str,
+    /// Bare mnemonics, matched with or without an operand-size suffix.
+    mnemonics: &'static [&'static str],
+    /// Matched as a prefix instead, for families too large to list (`v...`).
+    prefixes: &'static [&'static str],
+}
+
+const X86_CLASSES: &[InstructionClass] = &[
+    InstructionClass {
+        name: "popcnt",
+        feature: "popcnt",
+        mnemonics: &["popcnt"],
+        prefixes: &[],
+    },
+    // `tzcnt` is deliberately NOT here — see `TZCNT_IS_BASELINE_SAFE`. `lzcnt`
+    // is, and gets its own class because rustc reports it as its own feature.
+    InstructionClass {
+        name: "lzcnt",
+        feature: "lzcnt",
+        mnemonics: &["lzcnt"],
+        prefixes: &[],
+    },
+    InstructionClass {
+        name: "bmi1",
+        feature: "bmi1",
+        mnemonics: &["andn", "blsi", "blsmsk", "blsr", "bextr"],
+        prefixes: &[],
+    },
+    // `pext`/`pdep` are split out from the rest of BMI2 so the avx2 tier can
+    // forbid the PEXT SOURCE PATH while still permitting the BMI2 instructions
+    // `x86-64-v3` grants it. That distinction is what separates the two assets.
+    InstructionClass {
+        name: "bmi2",
+        feature: "bmi2",
+        mnemonics: &["shlx", "shrx", "sarx", "bzhi", "mulx", "rorx"],
+        prefixes: &[],
+    },
+    InstructionClass {
+        name: "pext",
+        feature: "bmi2",
+        mnemonics: &["pext", "pdep"],
+        prefixes: &[],
+    },
+    InstructionClass {
+        name: "avx",
+        feature: "avx",
+        mnemonics: &[],
+        prefixes: &["v"],
+    },
+    InstructionClass {
+        name: "sse3",
+        feature: "sse3",
+        mnemonics: &[
+            "movddup", "lddqu", "haddpd", "haddps", "hsubpd", "hsubps", "movshdup",
+        ],
+        prefixes: &[],
+    },
+    InstructionClass {
+        name: "ssse3",
+        feature: "ssse3",
+        mnemonics: &[
+            "pshufb",
+            "palignr",
+            "phaddd",
+            "phaddw",
+            "pabsd",
+            "pabsb",
+            "pabsw",
+            "pmaddubsw",
+            "psignb",
+            "psignd",
+        ],
+        prefixes: &[],
+    },
+    InstructionClass {
+        name: "sse4.1",
+        feature: "sse4.1",
+        mnemonics: &[
+            "ptest",
+            "pblendvb",
+            "blendvps",
+            "blendvpd",
+            "roundss",
+            "roundsd",
+            "roundps",
+            "roundpd",
+            "pmulld",
+            "pminsd",
+            "pmaxsd",
+            "pminud",
+            "pmaxud",
+            "packusdw",
+            "extractps",
+            "insertps",
+            "phminposuw",
+            "mpsadbw",
+            "dpps",
+            "dppd",
+            "pcmpeqq",
+        ],
+        prefixes: &["pmovzx", "pmovsx"],
+    },
+    InstructionClass {
+        name: "sse4.2",
+        feature: "sse4.2",
+        mnemonics: &[
+            "crc32",
+            "pcmpgtq",
+            "pcmpistri",
+            "pcmpestri",
+            "pcmpistrm",
+            "pcmpestrm",
+        ],
+        prefixes: &[],
+    },
+];
+
+/// AArch64 classes above the `generic` baseline.
+///
+/// SVE is matched only on mnemonics that cannot be anything else — `st1`/`ld1r`
+/// look like SVE but are ordinary NEON, and a class that fires on every NEON
+/// store would be worse than no class at all.
+const ARM_CLASSES: &[InstructionClass] = &[
+    InstructionClass {
+        name: "sve",
+        feature: "sve",
+        mnemonics: &[
+            "ptrue", "whilelo", "rdvl", "setffr", "addvl", "cntb", "cntd",
+        ],
+        prefixes: &[],
+    },
+    InstructionClass {
+        name: "aes",
+        feature: "aes",
+        mnemonics: &["aese", "aesd", "aesmc", "aesimc"],
+        prefixes: &[],
+    },
+    InstructionClass {
+        name: "sha2",
+        feature: "sha2",
+        mnemonics: &[
+            "sha1c",
+            "sha1h",
+            "sha1m",
+            "sha1p",
+            "sha256h",
+            "sha256h2",
+            "sha256su0",
+        ],
+        prefixes: &[],
+    },
+    InstructionClass {
+        name: "dotprod",
+        feature: "dotprod",
+        mnemonics: &["sdot", "udot"],
+        prefixes: &[],
+    },
+    // 4.8b — the TT prefetch. `prfm` is ARMv8 BASELINE, so it can never be a
+    // forbidden class; it is listed so the arm64 tier can REQUIRE it. Until
+    // 4.8b the ARM64 assets shipped with `prefetch_ptr` compiled to nothing,
+    // which no test, fingerprint or node count could see — the engine plays
+    // identically with and without a cache hint, it just plays slower. A
+    // required class is the only instrument that catches that class of silent
+    // loss, and it is why `neon` is the feature named here: `prfm` needs no
+    // feature at all, and `neon` is what `target-cpu=generic` guarantees.
+    InstructionClass {
+        name: "prefetch",
+        feature: "neon",
+        mnemonics: &["prfm"],
+        prefixes: &[],
+    },
+];
+
+/// Why `tzcnt` is permitted on a tier that forbids the rest of BMI1.
+///
+/// Its encoding is `F3 0F BC` — `rep bsf` — and the `rep` prefix is ignored by
+/// a CPU without BMI1, so the instruction decodes and runs as `bsf` there. LLVM
+/// emits it at `target-cpu=x86-64` deliberately for that reason. The two differ
+/// only for a ZERO operand, where `bsf` leaves the destination unchanged while
+/// `tzcnt` writes the operand width, and LLVM covers exactly that: measured over
+/// the 212 baseline sites, each is either guarded by a `test`/`je` that makes
+/// zero unreachable or preceded by a `mov $0x40, dst` whose preserved value IS
+/// the answer `tzcnt` would have written.
+const TZCNT_IS_BASELINE_SAFE: &str =
+    "tzcnt is encoded as `rep bsf` and runs correctly on a pre-BMI1 CPU";
+
+/// What each tier promises, beyond what its `target-cpu` already decides.
+struct IsaContract {
+    classes: &'static [InstructionClass],
+    /// Forbidden even though the tier's `target-cpu` permits it. Only one entry
+    /// exists: the avx2 asset must not contain the PEXT source path, which is a
+    /// choice about which asset is which, not about what the CPU can execute.
+    also_forbidden: &'static [&'static str],
+    /// Classes that must be PRESENT. An optimized tier that quietly lost its
+    /// optimized path is as broken as a baseline that gained one — and far
+    /// harder to notice, because it still produces the right answer.
+    required: &'static [&'static str],
+}
+
+fn isa_contract(arch: Arch) -> IsaContract {
+    match arch {
+        Arch::Base => IsaContract {
+            classes: X86_CLASSES,
+            also_forbidden: &[],
+            required: &[],
+        },
+        Arch::Avx2 => IsaContract {
+            classes: X86_CLASSES,
+            also_forbidden: &["pext"],
+            required: &["avx", "popcnt", "bmi2"],
+        },
+        Arch::Pext => IsaContract {
+            classes: X86_CLASSES,
+            also_forbidden: &[],
+            required: &["avx", "popcnt", "bmi2", "pext"],
+        },
+        Arch::Arm64 => IsaContract {
+            classes: ARM_CLASSES,
+            also_forbidden: &[],
+            required: &["prefetch"],
+        },
+    }
+}
+
+/// The target features this tier's codegen flags actually enable, straight from
+/// the compiler that will emit the code.
+///
+/// This is the single source of truth for the whole command. PLAN 4.8 requires
+/// the `target-cpu`/`target-feature` contract to be "inspected in generated
+/// artifacts" rather than assumed, and asking rustc is how the inspection stays
+/// correct across a pinned-toolchain bump instead of decaying into folklore.
+fn tier_features(arch: Arch, target: &str, default_cpu: bool) -> Result<Vec<String>> {
+    let mut args: Vec<String> = vec![
+        "--print".into(),
+        "cfg".into(),
+        "--target".into(),
+        target.into(),
+    ];
+    // `default_cpu` describes the ARTIFACT's provenance, and getting it wrong
+    // makes the whole check meaningless in one direction or the other.
+    //
+    // A tier asset is built by `cargo xtask build --arch T`, so its permitted
+    // set is T's flags. A plain `cargo build --release` binary — which is what
+    // the CI bench cells produce — is built with the TARGET's own default
+    // `target-cpu`, and on `aarch64-apple-darwin` that is emphatically not
+    // `generic`: it enables aes, sha2, dotprod and a dozen more. Holding such a
+    // binary to the `generic` set would forbid instructions it is entitled to
+    // emit, so the checker would be reporting a defect that is really a
+    // mismatch between what was built and what was asserted. Every other
+    // shipped triple happens to agree (both x86-64 defaults equal the base
+    // tier; both non-Apple aarch64 defaults equal `generic`), which is exactly
+    // why this needed to be found by inspection rather than by a green run.
+    if !default_cpu {
+        // Reuse the very flags the build uses, minus `--cfg`, which selects a
+        // source path rather than an instruction set.
+        let flags = rustflags(arch, false);
+        let mut index = 0;
+        while index < flags.len() {
+            if flags[index] == "--cfg" {
+                index += 2;
+                continue;
+            }
+            args.push(flags[index].clone());
+            index += 1;
+        }
+    }
+    let borrowed: Vec<&str> = args.iter().map(String::as_str).collect();
+    let cfg = command_output("rustc", &borrowed)?;
+    Ok(cfg
+        .lines()
+        .filter_map(|line| {
+            line.strip_prefix("target_feature=\"")
+                .and_then(|rest| rest.strip_suffix('"'))
+                .map(str::to_string)
+        })
+        .collect())
+}
+
+/// Find the tier's artifact in `target/dist`, accepting either PGO flavour.
+///
+/// `--pgo` is a BUILD flag; it says nothing about which instructions an
+/// artifact contains, so requiring the caller to repeat it here bought nothing
+/// and cost a real failure: `cargo xtask build --arch arm64 --pgo` followed by
+/// the obvious `cargo xtask verify-isa --arch arm64` reported "artifact not
+/// found" while the artifact sat next to the name it looked for. Try the
+/// requested flavour, then the other, and only then fail — listing what IS
+/// there, because "not found" without the directory contents is the least
+/// useful thing a tool can say.
+fn resolve_dist_artifact(config: &Config) -> Result<PathBuf> {
+    let dist = PathBuf::from("target").join("dist");
+    for pgo in [config.pgo, !config.pgo] {
+        let candidate = dist.join(asset_name(config.arch, config.native, &config.target, pgo)?);
+        if candidate.is_file() {
+            if pgo != config.pgo {
+                println_flush(format_args!(
+                    "  note: using the {} artifact ({})",
+                    if pgo { "PGO" } else { "non-PGO" },
+                    candidate.display()
+                ));
+            }
+            return Ok(candidate);
+        }
+    }
+    let mut found: Vec<String> = fs::read_dir(&dist)
+        .map(|entries| {
+            entries
+                .filter_map(|entry| Some(entry.ok()?.file_name().to_string_lossy().into_owned()))
+                .collect()
+        })
+        .unwrap_or_default();
+    found.sort();
+    let listing = if found.is_empty() {
+        "  (nothing in target/dist)".to_string()
+    } else {
+        found
+            .iter()
+            .map(|name| format!("  {name}"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    Err(format!(
+        "no `{}` artifact in {}. Build it first, e.g. `cargo xtask build --arch {}`.\n\
+         Present:\n{listing}",
+        arch_arg_name(config.arch),
+        dist.display(),
+        arch_arg_name(config.arch)
+    ))
+}
+
+/// Disassemble one artifact and hold it to its tier's contract.
+fn verify_isa(config: &Config) -> Result<()> {
+    let exe = match &config.exe {
+        Some(path) => {
+            if !path.is_file() {
+                return Err(format!("artifact not found: {}", path.display()));
+            }
+            path.clone()
+        }
+        None => resolve_dist_artifact(config)?,
+    };
+    let objdump = find_llvm_tool("llvm-objdump").ok_or_else(|| {
+        "llvm-objdump not found. Install it with `rustup component add llvm-tools`.".to_string()
+    })?;
+
+    let features = tier_features(config.arch, &config.target, config.default_cpu)?;
+    println_flush(format_args!(
+        "Verifying {} against the `{}` ISA contract",
+        exe.display(),
+        arch_arg_name(config.arch)
+    ));
+    println_flush(format_args!(
+        "  rustc enables ({}): {}",
+        if config.default_cpu {
+            "target default cpu"
+        } else {
+            "tier baseline"
+        },
+        features.join(" ")
+    ));
+    let disassembly = command_output(
+        objdump.to_str().ok_or("llvm-objdump path is not UTF-8")?,
+        &[
+            "-d",
+            "--no-show-raw-insn",
+            exe.to_str().ok_or("artifact path is not UTF-8")?,
+        ],
+    )?;
+
+    let contract = isa_contract(config.arch);
+    let mut counts: Vec<(&str, u64)> = contract
+        .classes
+        .iter()
+        .map(|class| (class.name, 0u64))
+        .collect();
+    let mut instructions = 0u64;
+    let mut tzcnt = 0u64;
+    for line in disassembly.lines() {
+        let Some(mnemonic) = disassembled_mnemonic(line) else {
+            continue;
+        };
+        instructions += 1;
+        if strip_operand_suffix(mnemonic) == "tzcnt" {
+            tzcnt += 1;
+            continue;
+        }
+        for (index, class) in contract.classes.iter().enumerate() {
+            if class.matches(mnemonic) {
+                counts[index].1 += 1;
+            }
+        }
+    }
+    if instructions == 0 {
+        return Err(format!(
+            "llvm-objdump produced no instructions for {} — it is probably not an \
+             object file for this host's disassembler",
+            exe.display()
+        ));
+    }
+
+    let count_of = |name: &str| -> u64 {
+        counts
+            .iter()
+            .find_map(|(class, count)| (*class == name).then_some(*count))
+            .unwrap_or(0)
+    };
+    println_flush(format_args!("  {instructions} instructions disassembled"));
+    for (class, count) in &counts {
+        println_flush(format_args!("    {class:<10} {count}"));
+    }
+    if tzcnt > 0 {
+        println_flush(format_args!(
+            "    {:<10} {} (permitted: {})",
+            "tzcnt", tzcnt, TZCNT_IS_BASELINE_SAFE
+        ));
+    }
+
+    let mut failures = Vec::new();
+    for class in contract.classes {
+        let count = count_of(class.name);
+        if count == 0 {
+            continue;
+        }
+        let permitted_by_cpu = features.iter().any(|feature| feature == class.feature);
+        let banned_by_tier = contract.also_forbidden.contains(&class.name);
+        if !permitted_by_cpu {
+            failures.push(format!(
+                "FORBIDDEN `{}` appears {count} times, but the `{}` tier does not enable \
+                 `{}` — this artifact cannot run on every CPU the tier promises",
+                class.name,
+                arch_arg_name(config.arch),
+                class.feature
+            ));
+        } else if banned_by_tier {
+            failures.push(format!(
+                "FORBIDDEN `{}` appears {count} times — the `{}` asset must not carry \
+                 that source path, or the two assets are the same binary",
+                class.name,
+                arch_arg_name(config.arch)
+            ));
+        }
+    }
+    for class in contract.required {
+        if count_of(class) == 0 {
+            failures.push(format!(
+                "REQUIRED `{class}` never appears — the `{}` tier is not actually \
+                 emitting the path it is built for",
+                arch_arg_name(config.arch)
+            ));
+        }
+    }
+    if failures.is_empty() {
+        println_flush(format_args!("  contract holds"));
+        Ok(())
+    } else {
+        Err(failures.join("\n       "))
+    }
+}
+
+impl InstructionClass {
+    fn matches(&self, mnemonic: &str) -> bool {
+        let bare = strip_operand_suffix(mnemonic);
+        self.mnemonics.contains(&bare)
+            || self.mnemonics.contains(&mnemonic)
+            || self
+                .prefixes
+                .iter()
+                .any(|prefix| mnemonic.starts_with(prefix))
+    }
+}
+
+/// AT&T syntax carries an operand-size suffix (`popcntq`), Intel and AArch64 do
+/// not. Strip one so a class list can name the bare instruction.
+fn strip_operand_suffix(mnemonic: &str) -> &str {
+    let candidate = mnemonic
+        .strip_suffix('q')
+        .or_else(|| mnemonic.strip_suffix('l'))
+        .or_else(|| mnemonic.strip_suffix('w'))
+        .or_else(|| mnemonic.strip_suffix('b'));
+    // Only strip when something is left that could be an instruction name.
+    candidate.filter(|bare| bare.len() >= 3).unwrap_or(mnemonic)
+}
+
+/// Pull the mnemonic out of one `llvm-objdump -d --no-show-raw-insn` line.
+///
+/// The shape is `<hex address>:\t<mnemonic>\t<operands>`, which holds for both
+/// the x86 (AT&T) and AArch64 printers. Anything else — headers, section
+/// banners, symbol lines, blank lines — is not an instruction.
+fn disassembled_mnemonic(line: &str) -> Option<&str> {
+    let (address, rest) = line.trim_start().split_once(':')?;
+    if address.is_empty() || !address.chars().all(|c| c.is_ascii_hexdigit()) {
+        return None;
+    }
+    let mnemonic = rest
+        .split(|c: char| c.is_ascii_whitespace())
+        .find(|token| !token.is_empty())?;
+    mnemonic
+        .chars()
+        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '.')
+        .then_some(mnemonic)
+}
+
+fn find_llvm_tool(name: &str) -> Option<PathBuf> {
+    find_on_path(name).or_else(|| find_rustup_llvm_tool(name))
+}
+
+fn find_rustup_llvm_tool(name: &str) -> Option<PathBuf> {
+    let sysroot = command_output("rustc", &["--print", "sysroot"]).ok()?;
+    let host = host_triple().ok()?;
+    let candidate = PathBuf::from(sysroot)
+        .join("lib")
+        .join("rustlib")
+        .join(host)
+        .join("bin")
+        .join(tool_name(name));
+    candidate.exists().then_some(candidate)
 }
 
 /// Linker overrides a target needs on top of its codegen flags.
@@ -738,19 +1321,7 @@ fn ensure_llvm_profdata() -> Result<PathBuf> {
 }
 
 fn find_llvm_profdata() -> Option<PathBuf> {
-    find_on_path("llvm-profdata").or_else(find_rustup_llvm_profdata)
-}
-
-fn find_rustup_llvm_profdata() -> Option<PathBuf> {
-    let sysroot = command_output("rustc", &["--print", "sysroot"]).ok()?;
-    let host = host_triple().ok()?;
-    let candidate = PathBuf::from(sysroot)
-        .join("lib")
-        .join("rustlib")
-        .join(host)
-        .join("bin")
-        .join(tool_name("llvm-profdata"));
-    candidate.exists().then_some(candidate)
+    find_llvm_tool("llvm-profdata")
 }
 
 fn find_on_path(program: &str) -> Option<PathBuf> {
@@ -903,6 +1474,119 @@ mod tests {
 
     fn flags(arch: Arch, native: bool) -> String {
         rustflags(arch, native).join(" ")
+    }
+
+    /// The parser has to pick out mnemonics from real `llvm-objdump` output and
+    /// reject everything else. A parser that quietly matched nothing would make
+    /// `verify-isa` pass every artifact — the failure mode that looks exactly
+    /// like success.
+    #[test]
+    fn disassembly_parser_finds_mnemonics_and_ignores_everything_else() {
+        assert_eq!(
+            disassembled_mnemonic("140001024:     \tcmpl\t$0x11, 0x10(%rdi)"),
+            Some("cmpl")
+        );
+        assert_eq!(
+            disassembled_mnemonic("  100000: \tstp\tx29, x30, [sp, #-16]!"),
+            Some("stp")
+        );
+        assert_eq!(
+            disassembled_mnemonic("140037d0d:     \tmovddup\t%xmm1, %xmm1"),
+            Some("movddup")
+        );
+        assert_eq!(disassembled_mnemonic("Disassembly of section .text:"), None);
+        assert_eq!(disassembled_mnemonic("0000000140001000 <.text>:"), None);
+        assert_eq!(disassembled_mnemonic(""), None);
+    }
+
+    /// AT&T prints `popcntq`, AArch64 prints `prfm`. One class list has to name
+    /// both without listing every suffix.
+    #[test]
+    fn instruction_classes_match_with_and_without_operand_suffixes() {
+        let popcnt = &X86_CLASSES[0];
+        assert_eq!(popcnt.name, "popcnt");
+        assert!(popcnt.matches("popcntq"));
+        assert!(popcnt.matches("popcnt"));
+        assert!(!popcnt.matches("popa"));
+
+        // Named with its trailing `b`, so stripping must not lose it.
+        let ssse3 = X86_CLASSES
+            .iter()
+            .find(|class| class.name == "ssse3")
+            .expect("ssse3 class");
+        assert!(ssse3.matches("pshufb"));
+
+        let avx = X86_CLASSES
+            .iter()
+            .find(|class| class.name == "avx")
+            .expect("avx class");
+        assert!(avx.matches("vmovdqu"));
+        assert!(!avx.matches("movdqu"));
+    }
+
+    /// `tzcnt` must never be classified as BMI1 — it is the one instruction in
+    /// that family a baseline artifact may legitimately contain.
+    #[test]
+    fn tzcnt_is_not_classified_as_bmi1() {
+        let bmi1 = X86_CLASSES
+            .iter()
+            .find(|class| class.name == "bmi1")
+            .expect("bmi1 class");
+        assert!(!bmi1.matches("tzcntq"));
+        assert!(bmi1.matches("blsrq"));
+        assert!(!TZCNT_IS_BASELINE_SAFE.is_empty());
+    }
+
+    /// Every class must name a feature rustc actually reports, or the contract
+    /// silently permits it: an unknown feature name is never in the enabled
+    /// list, which would make the class permanently forbidden rather than
+    /// permanently allowed — still wrong, and far harder to notice.
+    #[test]
+    fn every_class_feature_is_reported_by_rustc_for_the_richest_tier() {
+        let features = tier_features(Arch::Pext, "x86_64-unknown-linux-gnu", false)
+            .expect("rustc --print cfg");
+        for class in X86_CLASSES {
+            assert!(
+                features.iter().any(|enabled| enabled == class.feature),
+                "class `{}` names feature `{}`, which `x86-64-v3 +bmi2` does not enable — \
+                 either the name is a typo or the class does not belong to this tier",
+                class.name,
+                class.feature
+            );
+        }
+    }
+
+    /// 4.8b: the ARM64 assets shipped for three releases with the TT prefetch
+    /// compiled to nothing, and nothing could see it — the engine plays
+    /// identically without a cache hint, just slower, so no node count, test or
+    /// fingerprint moves. Requiring the instruction is the only instrument that
+    /// catches a silent loss of that shape, so pin that it IS required.
+    #[test]
+    fn the_arm64_tier_requires_the_tt_prefetch() {
+        assert!(isa_contract(Arch::Arm64).required.contains(&"prefetch"));
+
+        let prefetch = ARM_CLASSES
+            .iter()
+            .find(|class| class.name == "prefetch")
+            .expect("prefetch class");
+        assert!(prefetch.matches("prfm"));
+        // `prfm` is ARMv8 baseline, so the feature it names must be one the
+        // generic tier enables — otherwise the class would be forbidden AND
+        // required at once, and the tier could never pass.
+        let features = tier_features(Arch::Arm64, "aarch64-unknown-linux-gnu", false)
+            .expect("rustc --print cfg");
+        assert!(features.iter().any(|f| f == prefetch.feature));
+    }
+
+    /// The one tier distinction that is a packaging choice rather than a CPU
+    /// capability: avx2 and pext require the same features, so only an explicit
+    /// rule keeps the PEXT source path out of the avx2 asset.
+    #[test]
+    fn only_the_avx2_tier_bans_a_capability_its_cpu_allows() {
+        assert_eq!(isa_contract(Arch::Avx2).also_forbidden, &["pext"]);
+        assert!(isa_contract(Arch::Base).also_forbidden.is_empty());
+        assert!(isa_contract(Arch::Pext).also_forbidden.is_empty());
+        assert!(isa_contract(Arch::Pext).required.contains(&"pext"));
     }
 
     /// The property that motivated the 2.3.0 rework: `--arch` and `--native`
