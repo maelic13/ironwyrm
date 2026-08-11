@@ -301,12 +301,23 @@ and no cluster is entitled to its prior.
 
 | Step | Cluster | Prior (STC nElo) | Reasoning |
 |---|---|---:|---|
-| 4.5 | A — ordering, histories, LMR | 25–60 | Largest coordinated contract; feeds every downstream consumer. Rarog's `MovePicker` is an enum inside `search.rs` with no staged guarantee contract |
+| 4.7 | C — main selectivity | 25–60 | **The only cluster with a positive local result already in hand.** RAR-S54: a blind, untuned, uniform 15% de-selectivity shift beat the fitted values at +4.06 ± 3.71 over 14,196 games while spending +23.2% nodes. RAR-S53 reaches the same place independently. A structural rework with its own refit should beat a blind scalar |
+| 4.5 | A — ordering, histories, LMR | 15–45 | Largest coordinated contract and feeds every downstream consumer, but RAR-S52 puts the first-move cutoff rate at 87.65%, only marginally under the ~90% healthy band. The prior therefore rests on the history, reduction and re-search contracts — not on raw ordering quality. Rarog's `MovePicker` is an enum inside `search.rs` with no staged guarantee contract |
 | 4.6 | B — static eval, TT, qsearch | 5–25 | Raw/pruning/searched evidence separation is already partly present |
-| 4.7 | C — main selectivity | 15–45 | Broadly populated; the closed line fitted its constants but never reconciled its architecture |
 | 4.8 | D — extensions and depth authority | 5–25 | Rarog's check extension already gained +30.75, so co-adaptation risk is high and headroom is narrower |
-| 4.9 | E — root search and clock | 5–20 | Root confidence and TM are locally tuned; the reference's root authority model differs structurally |
+| 4.9 | E — root search and clock | 5–20 | Root confidence and TM are locally tuned, and RAR-S53 priced speed plus time management together at a ~0 point estimate, so this cluster is about root authority rather than about the clock |
 | 4.13–4.16 | F–I — HCE structural clusters | 15–50 each | Drawn from the 328-Elo evaluator population, discounted hard for co-adaptation with a search that is not Stockfish's |
+
+The rows are ordered by prior, not by execution order. Execution still follows
+the dependency order in the step list, because selectivity consumes the depth
+and history evidence that cluster A owns. If 4.2–4.3 contradict that, reorder
+here before implementing.
+
+**RAR-S52–S54 predate the oracle and reach the same conclusion from a different
+direction.** At exactly equal nodes and equal speed, Rarog searched **2.5 plies
+deeper** than Basilisk 1.9.1 and still lost by 65 Elo: it buys depth it cannot
+use by discarding width it needs. That gives this phase a concrete, falsifiable
+progress metric that costs nothing to run — see 4.10.
 
 **Programme target: cumulative ≥ +100 Elo STC over 2.3.2.** That is what makes
 this phase worth its delay to NNUE. The release bar below is lower, because a
@@ -472,7 +483,9 @@ Named now so every step has a concrete surface:
   constant fit; do not launch a broad SPSA. The 2.3.2 broad selectivity fit
   (+15.33 nElo) was a constant fit around the current architecture and does
   not pre-empt this. Owns the NMP and IIR provenance switches and
-  `SelectivityProspectiveDepth`.
+  `SelectivityProspectiveDepth`. RAR-S54 licenses a structural rework here with
+  its own refit; it does **not** license shipping the uniform 15% scalar that
+  produced the evidence.
 
 - **4.8 Cluster D — extensions and depth authority.** Reconcile check,
   singular, double and negative extension and IIR semantics against TT
@@ -504,6 +517,12 @@ Named now so every step has a concrete surface:
 
   The frozen head may equal 2.3.2 if no search cluster won. That is an accepted
   outcome and is recorded as such.
+
+  Also re-run the RAR-S53 fixed-node depth readout here, because it is free and
+  falsifiable: at `-Nodes 250000`, mean depth should have **fallen** toward ~14
+  while Elo **rose**. An accepted head that still carries the +2.5-ply lead over
+  Basilisk 1.9.1 has not fixed the over-selectivity, whatever its gate said, and
+  that contradiction must be explained before the head is frozen.
 
 ### HCE track — ordered work
 

@@ -149,8 +149,10 @@ in `PLAN.md` §4–§9.
       let this grow into the NNUE runway.
 - [ ] 4.5 **Cluster A — move ordering, histories, LMR.** One coherent cluster,
       implemented in dependency order. Owns the retained continuation/capture
-      correction weights and `CorrSkipWhenTtRefined`. Highest prior of the
-      phase (25–60 nElo).
+      correction weights and `CorrSkipWhenTtRefined`. Prior 15–45 nElo:
+      RAR-S52 put the first-move cutoff rate at 87.65%, just under the ~90%
+      healthy band, so the prior rests on the history, reduction and re-search
+      contracts rather than on raw ordering quality.
     - [ ] (1) **Move-picker contract:** TT move, good captures, killers and
           counters, quiets, deferred bad captures; legality and duplicate
           guarantees. Rarog's picker is an enum inside `search.rs` with no
@@ -175,7 +177,10 @@ in `PLAN.md` §4–§9.
       used consistently. Categoricals before constants; no broad SPSA. The
       2.3.2 selectivity fit was a constant fit around the current architecture
       and does not pre-empt this. Owns the NMP/IIR provenance switches and
-      `SelectivityProspectiveDepth`.
+      `SelectivityProspectiveDepth`. **Highest prior of the phase (25–60
+      nElo)** — RAR-S54's blind uniform de-selectivity shift already measured
+      +4.06 ± 3.71 over 14,196 games. That licenses a structural rework with
+      its own refit, not shipping the scalar.
 - [ ] 4.8 **Cluster D — extensions and depth authority.** Check, singular,
       double/negative extension and IIR semantics against TT provenance and
       LMR. Preserve mate/abort correctness including the NMP unproven-mate
@@ -189,11 +194,14 @@ in `PLAN.md` §4–§9.
       and the root-confidence aspiration/time inputs.
 - [ ] 4.10 **Search-only checkpoint, freeze and EV review.** Same pinned
       final-PGO path both arms, direct 1T STC comparison with 2.3.2, explained
-      by the frozen 4.2 diagnostics. Close every open search candidate and
-      freeze the head — it may equal 2.3.2, which is an accepted outcome. Then
-      re-review expected value before 4.11: continue, decide explicitly
-      whether the HCE track earns its cost, or close the phase and resume
-      Phase 5.
+      by the frozen 4.2 diagnostics. Re-run the RAR-S53 fixed-node depth
+      readout — at `-Nodes 250000` mean depth should have fallen toward ~14
+      while Elo rose; a head still carrying the +2.5-ply lead has not fixed
+      the over-selectivity and must be explained before it is frozen. Close
+      every open search candidate and freeze the head — it may equal 2.3.2,
+      which is an accepted outcome. Then re-review expected value before 4.11:
+      continue, decide explicitly whether the HCE track earns its cost, or
+      close the phase and resume Phase 5.
 - [ ] 4.11 **HCE baseline and reciprocal-oracle freeze.** Make the 4.10 head
       the immutable HCE baseline; record source/binary hashes, benchmark and
       NPS, and a no-adjudication reproduction slice of Stockfish-HCE versus
