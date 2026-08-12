@@ -19,7 +19,7 @@ of method, history, phase numbers and internal naming — see PLAN §2
 | Integration branch | `dev`, reset to `master` and carrying this plan |
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
 | Active experiment | None. Baseline and budget registered at 4.0; no games until a cluster is registered |
-| Current action | 4.0 closed 2026-08-12 (RAR-M12). **Next: 4.1**, the instrumented oracle on `hybrid-diag` |
+| Current action | 4.0 and 4.1 closed 2026-08-12. **Next: 4.2**, the Rarog-side differential harness |
 | Evaluation | HCE frozen through 4.10. Structural HCE work unfreezes at 4.11 only. No broad Texel or SPSA refit anywhere in Phase 4 |
 | Reference | Stockfish `9587eeeb`, the last pure-HCE master commit before NNUE. Read for **ideas** only — no code crosses into Rarog, and similarity is never a goal |
 | Next releases | **2.4.0 at 4.19** if the work transfers (higher minor if the gain is large); baseline NNUE then **2.5.0 at 6.7** |
@@ -128,11 +128,15 @@ classical fallback (9, last, may never run). Per-item rationale is in
       `389E234E…05046E28` and passes `verify-isa`. Oracle binaries re-hashed
       byte-exact. Budget and stop rules registered. `hybrid` and `spsa_impr`
       pushed, so the oracle is no longer single-machine.
-- [ ] 4.1 **Instrumented oracle.** On a new `hybrid-diag` branch, add the 4.2
-      counter set to the Stockfish side, matched name for name. Diagnostic
-      artifact only: it never plays a rating game and never replaces the
-      frozen `75d0d43` tournament binary. Without this, cluster selection is
-      intuition rather than evidence.
+- [x] 4.1 **[DONE, no games]** Instrumented oracle — `hybrid-diag` at
+      `de568b3`, implementing `analysis/phase4_counter_spec.md`. Verified:
+      diag OFF reproduces the frozen binary exactly (bench 136,903, bestmove
+      e7e3, zero diag lines); diag ON gives the same 136,903, so the
+      instrumentation does not perturb the tree. Built-in invariants hold —
+      `best_rank_1` == `cutoff_first_move`, rank buckets sum to the cutoff
+      total, `main_tt_probes` == `nodes`. Build with `make build
+      ARCH=x86-64-bmi2 COMP=mingw diag=yes`. **The suite must drive `bench`; a
+      piped `go … quit` aborts before the search starts.**
 - [ ] 4.2 **Differential observation harness.** Versioned fixed suite (UHO
       openings, quiet middlegames, tactics, checks, zugzwangs, endgames) at
       fixed depth/nodes, 1T. Counters for TT producer/consumer kind, **prune

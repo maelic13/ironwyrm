@@ -202,6 +202,31 @@ Their absence on the oracle side is a fact about 2020 Stockfish, not a finding.
 | `shadow_4_*` | Retired shadow slots from the closed Phase-4 line |
 | `worker_*` | Rarog's SMP vote merge |
 
+## Learned at 4.1, from the first instrumented reading
+
+Recorded here because each one would otherwise be misread as a finding.
+
+| Observation | Consequence |
+|---|---|
+| `singular_extend_two` and `singular_negative_extension` are **structurally absent** in `9587eeeb` — both mechanisms postdate it | They read 0 always. Never read as "the oracle extends less": Rarog has them, the reference does not. These are Rarog-only in the oracle's direction |
+| `nmp_verify_*` only fires at depth ≥ 13 | A short-depth suite reads 0. Not a gap; size the suite before reading them |
+| `prune_shadow_moves` excludes quiets the picker withheld under LMP | The threshold is enforced in the move picker, not by a `continue`, so LMP-removed moves never reach the shadow stage. LMP's overlap with futility and SEE is observable only at the boundary move. `lmp_prune` is therefore counted in the picker |
+| A piped `go … quit` aborts the search before it starts | The suite must drive `bench`, which is synchronous. A naive `go depth 10` returns `bestmove a2a3` on the *frozen* binary too — this is a harness trap, not an engine defect |
+| `probcut_cut` initially exceeded `probcut_attempt` | The TT-served ProbCut shortcut returns without running a search. It now counts as both. A rate above 1 discredits the whole diagnostic |
+
+### Invariants that must keep holding
+
+These are free cross-checks. If one separates, the instrumentation is wrong,
+not the engine. Verified on the oracle at bench depth 9:
+
+| Invariant | Reading |
+|---|---|
+| `best_rank_1` == `cutoff_first_move` | 1433 == 1433 |
+| `best_rank_1 + best_rank_2_3 + best_rank_4_7 + best_rank_8_plus` == `cutoff_quiet + cutoff_capture` | 1726 == 1726 |
+| `main_tt_probes` == `nodes` | 6967 == 6967 |
+| `main_store_lower` == cutoff total | 1726 == 1726 |
+| `probcut_cut` ≤ `probcut_attempt` | holds in all 44 bench positions |
+
 ## Oracle-only — questions for 4.3, never targets
 
 | Name | Mechanism | Note |

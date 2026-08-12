@@ -12,7 +12,7 @@ lives in `EXPERIMENTS.md`; the operational tracker lives in `GUIDE.md`.
 | Integration branch | `dev`, reset to `master` and carrying this plan |
 | Frozen oracle | `hybrid` at `75d0d43` — Stockfish `9587eeeb` driving the exact 2.3.2 HCE |
 | Active game jobs | None. The stopped no-adjudication hybrid tournament already settled the architectural decision |
-| Current phase | **Phase 4 — reference-accelerated search and HCE development**; 4.0 closed, 4.1 open |
+| Current phase | **Phase 4 — reference-accelerated search and HCE development**; 4.0 and 4.1 closed, 4.2 open |
 | Next release | **2.4.0 at 4.19** if the work transfers; a larger cumulative gain may justify a higher minor version. Baseline NNUE then targets **2.5.0** |
 | Reference posture | Stockfish `9587eeeb` is read for **ideas**. No Stockfish code enters Rarog. Rarog is not a derivative work and does not aim at behavioral similarity |
 | HCE status | Frozen through 4.10. Structural, reference-led HCE work reopens at 4.11 under its own gates. No broad constant refit at any point in this phase |
@@ -439,7 +439,7 @@ Named now so every step has a concrete surface:
   ISA verify. Register the Phase-4 compute budget and stop rules before any
   code moves.
 
-- **4.1 Instrumented oracle.** On `hybrid-diag`, add the 4.2 counter set to
+- **4.1 Instrumented oracle — CLOSED 2026-08-12 (`hybrid-diag` `de568b3`).** On `hybrid-diag`, add the 4.2 counter set to
   the Stockfish side, matched name for name. This is what makes the phase
   evidence-led rather than guess-led: without a counter-for-counter
   comparison, cluster selection is intuition. The instrumented build is a
