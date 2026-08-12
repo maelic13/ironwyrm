@@ -88,6 +88,43 @@ X is good/bad”. If conditions or artifacts are unknown, say so.
 | RAR-M11 | Phase-4 consolidated SPSA go/no-go review. Proposed surface: 30 coordinates, three fixed architecture switches, 10,000 iterations × 32 games (320,000 games), about 79 hours, complete final theta. Setup and resume mechanics were validated; no games started. | **Canceled before launch and removed in 2.3.2.** The architecture bundle had failed to accumulate, its best node-saving pair had no material Elo prior, and the three proposed fixed switches were unaccepted. A valid schedule could at most refine a low-prior HCE surface immediately before NNUE. | Perform the expected-value review before investing in schedule optimization. SPSA is a local constant optimizer, not the missing mechanism for a 50–100 Elo target; clean setup, sunk preparation and a larger coordinate count do not create that prior. The next broad fit is post-NNUE and must select its coordinates/horizon from new activation and curvature evidence. | `PLAN.md` §2–3; `tools/spsa_convergence_model.py`; `tools/spsa_configs/README.md` |
 | RAR-M10 | Calibrating this harness's LLR drift so a game budget can be derived rather than guessed. Fitted on three completed `[0,3]` nElo gates at `3+0.03`, 1T, paired UHO, concurrency 14 with affinity: RAR-S31 (+5.24 nElo, LLR 2.96 in 31,822 games), RAR-S29 (−4.95, −2.95 in 18,436) and RAR-S27 (−2.33, −2.19 in 23,044). | **Retained method tool.** `drift per game ≈ 8.3e-6 × (Elo1 − Elo0) × (true_nElo − midpoint)` predicts all three observed drifts within 1% (9.30e-5 vs 9.30e-5; −1.61e-4 vs −1.60e-4; −9.54e-5 vs −9.50e-5). Applied to the `[3,10]` default it gives ~9,200 games for a true 12 nElo, **~14,500 for a candidate exactly on H1 (10 nElo)**, ~33,700 for 8 nElo, and ~14,500 to H0 for one exactly on H0. That is why the default cap moved from 12,000 to **16,000**: at 12,000 the effective bar was about 12 nElo rather than the stated 10. | Under this harness a cap and its bounds must be checked against each other, or the gate silently becomes stricter than it reads. Use the fit to size a budget **prospectively** only; it is a design tool and never a justification for extending a run whose games have been seen. Recalibrate after any change to adjudication, book, TC or the pentanomial model, since `k` absorbs all of them. Three points spanning +5.2 to −5.0 nElo at one bound pair is a narrow basis — treat predictions outside roughly ±6 nElo, or under different bounds, as extrapolation. | `tools/results/sprt_*`; `tools/sprt.ps1`; `PLAN.md` §2 |
 | RAR-M09 | Phase-4.1 normal versus diagnostic release builds on the Ryzen 9 5950X, non-PGO, `bench 13` plus four depth-10 positions. | **Retained infrastructure:** both builds matched 6,502,902 nodes / EBF 2.449; the four probes matched nodes, scores, PVs and best/ponder moves. Paired best-of-three NPS was 2,585,646 versus 2,301,097 (11.0% diagnostic cost including legacy exact atomics). | Under these conditions, the sampled observers did not alter the tree and their offline cost was bounded. This does not prove equivalence on every ISA/thread count or make counter movement an Elo proxy; repeat the gate after diagnostic control-flow changes. | `src/diag.rs`; `tools/diag_search_quality.ps1`; Plan 4.1 |
+| RAR-M12 | **Phase-4 step 4.0 — baseline and oracle freeze**, 2026-08-12 on the Ryzen 9 5950X. Reproduced the 2.3.2 baseline from `dev` at `5294e2c`, first confirming its code tree is byte-identical to `master` `f931722` (the diff is documentation only, so the build is the released revision). Toolchain `rustc 1.97.1 (8bab26f4f 2026-07-14)`, matching the `rust-toolchain.toml` pin. | **Closed; baseline accepted.** `cargo fmt --check` clean; all-feature workspace clippy clean at `-D warnings`. Tests **258 passed / 0 failed** in debug and **259 / 0** in release, 23 suites each — the one-test difference is deliberate and documented, `random_position_garbage_never_crashes_or_hangs` being `#[cfg(not(debug_assertions))]` because a debug engine spends ~5 s per process start and the property under test belongs to the shipped binary. Release `bench 13` = **6,519,711 nodes / EBF 2.449**, median 149,097, top-position share 6.8% (440,767), 2,939,454 nps. `--features tune` advertises **101** options: all ten options removed in 2.3.2 are absent, and the sampled later-owned inert options (`CorrSkipWhenTtRefined`, `SelectivityProspectiveDepth`, `SingularTtDepthMargin`, `RootConfPoolInstability`, `SmpIterationSkip`) are present. PGO PEXT asset `rarog-v2.3.2-windows-pext-pgo.exe` reproduces the identical fingerprint, SHA-256 `389E234ECCB725D81BEBB4030D4AF17ED181D130F0803E9948B5437E05046E28`; `verify-isa --arch pext` holds (pext 303, avx 6247, zero sse3/ssse3/sse4.1/sse4.2, tzcnt 344 permitted as `rep bsf`). Oracle `hybrid` at `75d0d43` re-verified: both frozen binaries hash byte-exact to the values recorded under the search-oracle section. | This is the revision every Phase-4 candidate gates against; do not re-derive it per cluster. Two conditions are recorded rather than assumed: the profile-dependent test count is a documented `cfg`, not drift, so a future 258/259 reading needs no investigation, while any *other* asymmetry does; and the doc-only equality between `dev` and `master` is what licenses building the baseline from the integration branch — it must be re-checked, not assumed, the moment Phase-4 code lands. **Open risk:** `hybrid` has no remote copy, so the oracle that 4.1 branches from and 4.19 re-runs exists on one machine. | `PLAN.md` §4 step 4.0; `GUIDE.md` tracker; `tests/fuzz_lite.rs`; `target/dist/rarog-v2.3.2-windows-pext-pgo.exe` |
+
+### Phase-4 registration (RAR-M12, 2026-08-12)
+
+Registered at 4.0, before any Phase-4 code moves. Caps are prospective, derived
+from each cluster's PLAN §4 prior through RAR-M10's drift fit; a cap is a stop
+point, never a target to run to, and none of it may be revised after games are
+seen.
+
+| Step | Cluster | Prior (nElo) | Bounds | Cap (games) |
+|---|---|---:|---|---:|
+| 4.5 | A — ordering, histories, LMR | 15–45 | `[3,10]` | 6,000 |
+| 4.6 | B — static eval, TT, qsearch | 5–25 | `[3,10]` | 9,200 |
+| 4.7 | C — main selectivity | 25–60 | `[3,10]` | 4,000 |
+| 4.8 | D — extensions, depth authority | 5–25 | `[3,10]` | 9,200 |
+| 4.9 | E — root search and clock | 5–20 | `[3,10]` | 9,200 |
+| 4.13–4.16 | F–I — HCE structural | 15–50 each | `[3,10]` | 4,000 each |
+
+That is roughly **55,000 STC games** of cluster gating, before ablations and
+the 4.10 / 4.18 / 4.19 checkpoints. RAR-M11's completed schedule is the only
+throughput anchor on this host — 320,000 games in about 79 hours, so ~4,050
+games/hour — which puts the gating at roughly **14 hours**, call it 20 with
+checkpoints. Treat that as an order of magnitude: it came from tune binaries
+under an SPSA driver, not from final-PGO SPRT pairs.
+
+Stop rules, all pre-registered:
+
+1. Two fully implemented **search** clusters failing to produce an accepted
+   gain stops the track and returns to 4.2–4.3. Not a third attempt.
+2. Two coherent **HCE** clusters failing closes track H; go to 4.19 or Phase 5.
+3. 4.10 is a real expected-value review with a close option, not a formality.
+4. A cluster ends accepted or reverted. Borderline results are not carried.
+5. **2.4.0** needs cumulative ≥ +40 Elo STC over 2.3.2 with the 95% lower bound
+   above +25, plus positive LTC and 4T lower bounds. The programme *target* is
+   ≥ +100 cumulative; a result there with a lower bound above +75 may justify a
+   higher minor version.
+6. HCE-changing A/Bs and every cross-engine cohort run with adjudication off.
 
 ## 3. Search and selectivity
 

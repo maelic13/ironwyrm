@@ -12,7 +12,7 @@ lives in `EXPERIMENTS.md`; the operational tracker lives in `GUIDE.md`.
 | Integration branch | `dev`, reset to `master` and carrying this plan |
 | Frozen oracle | `hybrid` at `75d0d43` — Stockfish `9587eeeb` driving the exact 2.3.2 HCE |
 | Active game jobs | None. The stopped no-adjudication hybrid tournament already settled the architectural decision |
-| Current phase | **Phase 4 — reference-accelerated search and HCE development**, starting at 4.0 |
+| Current phase | **Phase 4 — reference-accelerated search and HCE development**; 4.0 closed, 4.1 open |
 | Next release | **2.4.0 at 4.19** if the work transfers; a larger cumulative gain may justify a higher minor version. Baseline NNUE then targets **2.5.0** |
 | Reference posture | Stockfish `9587eeeb` is read for **ideas**. No Stockfish code enters Rarog. Rarog is not a derivative work and does not aim at behavioral similarity |
 | HCE status | Frozen through 4.10. Structural, reference-led HCE work reopens at 4.11 under its own gates. No broad constant refit at any point in this phase |
@@ -62,8 +62,8 @@ changes in separate commits.
 7. Final-PGO binaries decide material strength. Tune binaries and non-PGO
    probes can size or debug a mechanism only.
 8. Do not add features from names or sibling engines. Require a local
-   population, a unique signal, an interaction model and an acceptance gate. A
-   reading a reference changes what you may *try*; it does not change what you
+   population, a unique signal, an interaction model and an acceptance gate.
+   Reading a reference changes what you may *try*; it does not change what you
    must *measure*.
 9. Correctness repairs may be retained without an Elo claim when the invariant
    is explicit and covered; record the exception rather than calling it free.
@@ -429,7 +429,7 @@ Named now so every step has a concrete surface:
 
 ### Search track — ordered work
 
-- **4.0 Evidence, baseline and oracle freeze.** Record RAR-O01/RAR-O02, the
+- **4.0 Evidence, baseline and oracle freeze — CLOSED 2026-08-12 (RAR-M12).** Record RAR-O01/RAR-O02, the
   baseline and oracle SHAs, binary SHA-256 hashes, benchmark fingerprint,
   tournament protocol and the exact independence boundary. Preserve the
   Stage-1 hybrid package so the observation can be reproduced. Reproduce 2.3.2

@@ -18,8 +18,8 @@ of method, history, phase numbers and internal naming — see PLAN §2
 | Accepted fingerprint | **6,519,711 nodes / EBF 2.449** at `bench 13`, 1T |
 | Integration branch | `dev`, reset to `master` and carrying this plan |
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
-| Active experiment | None |
-| Current action | PLAN 4.0, then execute Phase-4 steps one at a time |
+| Active experiment | None. Baseline and budget registered at 4.0; no games until a cluster is registered |
+| Current action | 4.0 closed 2026-08-12 (RAR-M12). **Next: 4.1**, the instrumented oracle on `hybrid-diag` |
 | Evaluation | HCE frozen through 4.10. Structural HCE work unfreezes at 4.11 only. No broad Texel or SPSA refit anywhere in Phase 4 |
 | Reference | Stockfish `9587eeeb`, the last pure-HCE master commit before NNUE. Read for **ideas** only — no code crosses into Rarog, and similarity is never a goal |
 | Next releases | **2.4.0 at 4.19** if the work transfers (higher minor if the gain is large); baseline NNUE then **2.5.0 at 6.7** |
@@ -118,12 +118,16 @@ classical fallback (9, last, may never run). Per-item rationale is in
 
 ### Phase 4 — Reference-accelerated search and HCE work (→ conditional 2.4.0)
 
-- [ ] 4.0 **Evidence, baseline and oracle freeze.** Record RAR-O01/O02, the
-      baseline and oracle SHAs, binary SHA-256 hashes, benchmark, tournament
-      protocol and the exact independence boundary. Reproduce 2.3.2 clean from
-      `master` (fmt, tests in debug **and** release, all-feature clippy, bench
-      6,519,711 / 2.449, PGO build, ISA verify). Register the Phase-4 compute
-      budget and stop rules before any code moves.
+- [x] 4.0 **[DONE, no games]** Evidence, baseline and oracle freeze — RAR-M12.
+      2.3.2 reproduced from `dev` `5294e2c` (code byte-identical to `master`,
+      doc-only diff), rustc 1.97.1 as pinned. fmt and all-feature clippy
+      clean; tests 258/0 debug and 259/0 release, the one-test gap being a
+      documented release-only `cfg`. Bench **6,519,711 / 2.449**; tune build
+      advertises 101 options with all ten removed absent and the inert ones
+      present; PGO PEXT asset reproduces the fingerprint at SHA-256
+      `389E234E…05046E28` and passes `verify-isa`. Oracle binaries re-hashed
+      byte-exact. Budget and stop rules registered. **Open risk: `hybrid`
+      still has no remote copy.**
 - [ ] 4.1 **Instrumented oracle.** On a new `hybrid-diag` branch, add the 4.2
       counter set to the Stockfish side, matched name for name. Diagnostic
       artifact only: it never plays a rating game and never replaces the
