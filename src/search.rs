@@ -1948,10 +1948,8 @@ impl Searcher {
             return 0;
         }
 
-        crate::diag_count!(nodes);
         let in_check = board.is_in_check();
         if in_check {
-            crate::diag_count!(nodes_in_check);
             // Phase 8.2(a): the unconditional in-check extension (`depth += 1`)
             // is REMOVED. It was the first of five stacked protections around
             // checked nodes and the prime EBF suspect — every check bought a
@@ -1975,6 +1973,18 @@ impl Searcher {
 
         if depth <= 0 {
             return self.quiescence(board, alpha, beta, ply, 0, poll);
+        }
+
+        // 4.2: counted HERE, after the depth<=0 hand-off, so `nodes` means
+        // interior nodes actually searched — which is the oracle's population.
+        // Counting at function entry inflated it by every node that
+        // immediately became a qnode, and that same node was then counted a
+        // second time as `qnodes`. That double count silently deflated every
+        // rate taken against `nodes`.
+        crate::diag_count!(nodes);
+        #[cfg(feature = "diag")]
+        if in_check {
+            crate::diag_count!(nodes_in_check);
         }
 
         let original_alpha = alpha;
