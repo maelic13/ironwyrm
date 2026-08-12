@@ -21,6 +21,7 @@
 #include <cassert>
 
 #include "movepick.h"
+#include "rarog_diag.h"
 
 namespace {
 
@@ -155,6 +156,8 @@ top:
   case QSEARCH_TT:
   case PROBCUT_TT:
       ++stage;
+      if (stage == MAIN_TT + 1 && ttMove)
+          DIAG_COUNT(move_seen_tt);
       return ttMove;
 
   case CAPTURE_INIT:
@@ -172,7 +175,10 @@ top:
                        return pos.see_ge(*cur, Value(-69 * cur->value / 1024)) ?
                               // Move losing capture to endBadCaptures to be tried later
                               true : (*endBadCaptures++ = *cur, false); }))
+      {
+          DIAG_COUNT(move_seen_good_capture);
           return *(cur - 1);
+      }
 
       // Prepare the pointers to loop over the refutations array
       cur = std::begin(refutations);
@@ -190,7 +196,10 @@ top:
       if (select<Next>([&](){ return    *cur != MOVE_NONE
                                     && !pos.capture(*cur)
                                     &&  pos.pseudo_legal(*cur); }))
+      {
+          DIAG_COUNT(move_seen_quiet);
           return *(cur - 1);
+      }
       ++stage;
       /* fallthrough */
 
@@ -208,11 +217,17 @@ top:
       /* fallthrough */
 
   case QUIET:
+      if (skipQuiets)
+          DIAG_COUNT(lmp_prune);
+
       if (   !skipQuiets
           && select<Next>([&](){return   *cur != refutations[0].move
                                       && *cur != refutations[1].move
                                       && *cur != refutations[2].move;}))
+      {
+          DIAG_COUNT(move_seen_quiet);
           return *(cur - 1);
+      }
 
       // Prepare the pointers to loop over the bad captures
       cur = moves;
@@ -222,7 +237,12 @@ top:
       /* fallthrough */
 
   case BAD_CAPTURE:
-      return select<Next>([](){ return true; });
+  {
+      const Move bad = select<Next>([](){ return true; });
+      if (bad)
+          DIAG_COUNT(move_seen_bad_capture);
+      return bad;
+  }
 
   case EVASION_INIT:
       cur = moves;

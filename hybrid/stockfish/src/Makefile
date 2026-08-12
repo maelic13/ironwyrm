@@ -38,7 +38,8 @@ PGOBENCH = ./$(EXE) bench
 ### Source and object files
 SRCS = benchmark.cpp bitbase.cpp bitboard.cpp endgame.cpp evaluate.cpp hybrid_eval.cpp main.cpp \
 	material.cpp misc.cpp movegen.cpp movepick.cpp pawns.cpp position.cpp psqt.cpp \
-	search.cpp thread.cpp timeman.cpp tt.cpp uci.cpp ucioption.cpp tune.cpp syzygy/tbprobe.cpp
+	rarog_diag.cpp search.cpp thread.cpp timeman.cpp tt.cpp uci.cpp ucioption.cpp \
+	tune.cpp syzygy/tbprobe.cpp
 
 OBJS = $(notdir $(SRCS:.cpp=.o))
 
@@ -155,6 +156,14 @@ endif
 
 ### 3.1 Selecting compiler (default = gcc)
 CXXFLAGS += -Wall -Wcast-qual -fno-exceptions -std=c++11 $(EXTRACXXFLAGS)
+
+### Rarog Phase-4 differential diagnostics (PLAN 4.1). OFF by default, so an
+### ordinary build of this branch is the frozen oracle. `make ... diag=yes`
+### produces the instrumented diagnostic artifact, which never plays a rating
+### game and never replaces the frozen 75d0d43 tournament binary.
+ifeq ($(diag),yes)
+	CXXFLAGS += -DRAROG_DIAG
+endif
 DEPENDFLAGS += -std=c++11
 LDFLAGS += $(EXTRALDFLAGS)
 

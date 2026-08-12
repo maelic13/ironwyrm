@@ -34,6 +34,7 @@
 #include "thread.h"
 #include "timeman.h"
 #include "tt.h"
+#include "rarog_diag.h"
 #include "uci.h"
 #include "syzygy/tbprobe.h"
 
@@ -227,6 +228,11 @@ void MainThread::search() {
   Time.init(Limits, us, rootPos.game_ply());
   TT.new_search();
 
+  // Reset once per `go`, main thread only, before start_searching() spawns any
+  // helper. Rarog has already paid for getting this wrong: a per-thread reset
+  // wiped every earlier thread's contribution and made the numbers junk.
+  RarogDiag::reset();
+
   if (rootMoves.empty())
   {
       rootMoves.emplace_back(MOVE_NONE);
@@ -274,6 +280,8 @@ void MainThread::search() {
   // Send again PV info if we have a new best thread
   if (bestThread != this)
       sync_cout << UCI::pv(bestThread->rootPos, bestThread->completedDepth, -VALUE_INFINITE, VALUE_INFINITE) << sync_endl;
+
+  RarogDiag::dump();
 
   sync_cout << "bestmove " << UCI::move(bestThread->rootMoves[0].pv[0], rootPos.is_chess960());
 
@@ -370,6 +378,9 @@ void Thread::search() {
          && !Threads.stop
          && !(Limits.depth && mainThread && rootDepth > Limits.depth))
   {
+      if (mainThread)
+          DIAG_COUNT(root_iterations);
+
       // Age out PV variability metric
       if (mainThread)
           totBestMoveChanges /= 2;
@@ -449,6 +460,7 @@ void Thread::search() {
               // re-search, otherwise exit the loop.
               if (bestValue <= alpha)
               {
+                  DIAG_COUNT(asp_fail_low);
                   beta = (alpha + beta) / 2;
                   alpha = std::max(bestValue - delta, -VALUE_INFINITE);
 
@@ -458,6 +470,7 @@ void Thread::search() {
               }
               else if (bestValue >= beta)
               {
+                  DIAG_COUNT(asp_fail_high);
                   beta = std::min(bestValue + delta, VALUE_INFINITE);
                   ++failedHighCnt;
               }
@@ -606,6 +619,9 @@ namespace {
     // Step 1. Initialize node
     Thread* thisThread = pos.this_thread();
     ss->inCheck = pos.checkers();
+    DIAG_COUNT(nodes);
+    if (ss->inCheck)
+        DIAG_COUNT(nodes_in_check);
     priorCapture = pos.captured_piece();
     Color us = pos.side_to_move();
     moveCount = captureCount = quietCount = ss->moveCount = 0;
@@ -664,6 +680,9 @@ namespace {
     excludedMove = ss->excludedMove;
     posKey = excludedMove == MOVE_NONE ? pos.key() : pos.key() ^ make_key(excludedMove);
     tte = TT.probe(posKey, ttHit);
+    DIAG_COUNT(main_tt_probes);
+    if (ttHit)
+        DIAG_COUNT(main_tt_hits);
     ttValue = ttHit ? value_from_tt(tte->value(), ss->ply, pos.rule50_count()) : VALUE_NONE;
     ttMove =  rootNode ? thisThread->rootMoves[thisThread->pvIdx].pv[0]
             : ttHit    ? tte->move() : MOVE_NONE;
@@ -685,10 +704,24 @@ namespace {
     if (  !PvNode
         && ttHit
         && tte->depth() >= depth
+        && ttValue != VALUE_NONE
+        && !(ttValue >= beta ? (tte->bound() & BOUND_LOWER)
+                             : (tte->bound() & BOUND_UPPER)))
+        DIAG_COUNT(tt_bound_not_usable);
+
+    if (  !PvNode
+        && ttHit
+        && tte->depth() >= depth
         && ttValue != VALUE_NONE // Possible in case of TT access race
         && (ttValue >= beta ? (tte->bound() & BOUND_LOWER)
                             : (tte->bound() & BOUND_UPPER)))
     {
+        if (tte->bound() == BOUND_EXACT)
+            DIAG_COUNT(tt_cut_exact);
+        else if (tte->bound() & BOUND_LOWER)
+            DIAG_COUNT(tt_cut_lower);
+        else
+            DIAG_COUNT(tt_cut_upper);
         // If ttMove is quiet, update move sorting heuristics on TT hit
         if (ttMove)
         {
@@ -809,7 +842,10 @@ namespace {
     if (   !rootNode // The required rootNode PV handling is not available in qsearch
         &&  depth == 1
         &&  eval <= alpha - RazorMargin)
+    {
+        DIAG_COUNT(razor_drop);
         return qsearch<NT>(pos, ss, alpha, beta);
+    }
 
     improving =  (ss-2)->staticEval == VALUE_NONE ? (ss->staticEval > (ss-4)->staticEval
               || (ss-4)->staticEval == VALUE_NONE) : ss->staticEval > (ss-2)->staticEval;
@@ -819,7 +855,10 @@ namespace {
         &&  depth < 6
         &&  eval - futility_margin(depth, improving) >= beta
         &&  eval < VALUE_KNOWN_WIN) // Do not return unproven wins
+    {
+        DIAG_COUNT(rfp_cut);
         return eval;
+    }
 
     // Step 9. Null move search with verification search (~40 Elo)
     if (   !PvNode
@@ -842,6 +881,7 @@ namespace {
 
         pos.do_null_move(st);
 
+        DIAG_COUNT(nmp_attempt);
         Value nullValue = -search<NonPV>(pos, ss+1, -beta, -beta+1, depth-R, !cutNode);
 
         pos.undo_null_move();
@@ -853,7 +893,10 @@ namespace {
                 nullValue = beta;
 
             if (thisThread->nmpMinPly || (abs(beta) < VALUE_KNOWN_WIN && depth < 13))
+            {
+                DIAG_COUNT(nmp_cut);
                 return nullValue;
+            }
 
             assert(!thisThread->nmpMinPly); // Recursive verification is not allowed
 
@@ -862,12 +905,18 @@ namespace {
             thisThread->nmpMinPly = ss->ply + 3 * (depth-R) / 4;
             thisThread->nmpColor = us;
 
+            DIAG_COUNT(nmp_verify_attempt);
             Value v = search<NonPV>(pos, ss, beta-1, beta, depth-R, false);
 
             thisThread->nmpMinPly = 0;
 
             if (v >= beta)
+            {
+                DIAG_COUNT(nmp_verify_pass);
+                DIAG_COUNT(nmp_cut);
                 return nullValue;
+            }
+            DIAG_COUNT(nmp_verify_fail);
         }
     }
 
@@ -890,7 +939,14 @@ namespace {
             && ttValue >= probcutBeta
             && ttMove
             && pos.capture_or_promotion(ttMove))
+        {
+            // The TT-served shortcut produces a ProbCut return without running
+            // a ProbCut search, so it must count as BOTH, or probcut_cut
+            // exceeds probcut_attempt and the rate reads above 1.
+            DIAG_COUNT(probcut_attempt);
+            DIAG_COUNT(probcut_cut);
             return probcutBeta;
+        }
 
         assert(probcutBeta < VALUE_INFINITE);
         MovePicker mp(pos, ttMove, probcutBeta - ss->staticEval, &captureHistory);
@@ -905,6 +961,7 @@ namespace {
 
                 captureOrPromotion = true;
                 probCutCount++;
+                DIAG_COUNT(probcut_attempt);
 
                 ss->currentMove = move;
                 ss->continuationHistory = &thisThread->continuationHistory[ss->inCheck]
@@ -931,6 +988,7 @@ namespace {
                         tte->save(posKey, value_to_tt(value, ss->ply), ttPv,
                             BOUND_LOWER,
                             depth - 3, move, ss->staticEval);
+                    DIAG_COUNT(probcut_cut);
                     return value;
                 }
             }
@@ -939,6 +997,7 @@ namespace {
     // Step 11. Internal iterative deepening (~1 Elo)
     if (depth >= 7 && !ttMove)
     {
+        DIAG_COUNT(iid_applied);
         search<NT>(pos, ss, alpha, beta, depth - 7, cutNode);
 
         tte = TT.probe(posKey, ttHit);
@@ -1014,6 +1073,36 @@ moves_loop: // When in check, search starts from here
           // Reduced depth of the next LMR search
           int lmrDepth = std::max(newDepth - reduction(improving, depth, moveCount), 0);
 
+#ifdef RAROG_DIAG
+          {
+              DIAG_COUNT(prune_shadow_moves);
+
+              const bool shadowQuiet = !captureOrPromotion && !givesCheck;
+              const bool shadowLmp = moveCountPruning && !captureOrPromotion;
+              const bool shadowFutility =
+                  shadowQuiet && lmrDepth < 6 && !ss->inCheck
+                  && ss->staticEval + 284 + 188 * lmrDepth <= alpha;
+              const bool shadowSee =
+                  shadowQuiet
+                  && !pos.see_ge(move, Value(-(29 - std::min(lmrDepth, 17)) * lmrDepth * lmrDepth));
+
+              if (shadowLmp)
+                  DIAG_COUNT(prune_shadow_lmp);
+              if (shadowFutility)
+                  DIAG_COUNT(prune_shadow_futility);
+              if (shadowSee)
+                  DIAG_COUNT(prune_shadow_see);
+
+              // A move the quiet families would have taken had it not given
+              // check. This is the exemption population, not a prune.
+              if (givesCheck && !captureOrPromotion)
+                  DIAG_COUNT(prune_shadow_check_exempt);
+
+              if (int(shadowLmp) + int(shadowFutility) + int(shadowSee) >= 2)
+                  DIAG_COUNT(prune_shadow_overlap_two_plus);
+          }
+#endif
+
           if (   !captureOrPromotion
               && !givesCheck)
           {
@@ -1031,11 +1120,17 @@ moves_loop: // When in check, search starts from here
                     + (*contHist[1])[movedPiece][to_sq(move)]
                     + (*contHist[3])[movedPiece][to_sq(move)]
                     + (*contHist[5])[movedPiece][to_sq(move)] / 2 < 28388)
+              {
+                  DIAG_COUNT(quiet_futility_prune);
                   continue;
+              }
 
               // Prune moves with negative SEE (~20 Elo)
               if (!pos.see_ge(move, Value(-(29 - std::min(lmrDepth, 17)) * lmrDepth * lmrDepth)))
+              {
+                  DIAG_COUNT(see_prune);
                   continue;
+              }
           }
           else
           {
@@ -1057,7 +1152,10 @@ moves_loop: // When in check, search starts from here
 
               // See based pruning
               if (!pos.see_ge(move, Value(-202) * depth)) // (~25 Elo)
+              {
+                  DIAG_COUNT(see_prune);
                   continue;
+              }
           }
       }
 
@@ -1080,6 +1178,7 @@ moves_loop: // When in check, search starts from here
       {
           Value singularBeta = ttValue - ((formerPv + 4) * depth) / 2;
           Depth singularDepth = (depth - 1 + 3 * formerPv) / 2;
+          DIAG_COUNT(singular_attempt);
           ss->excludedMove = move;
           value = search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
           ss->excludedMove = MOVE_NONE;
@@ -1087,6 +1186,7 @@ moves_loop: // When in check, search starts from here
           if (value < singularBeta)
           {
               extension = 1;
+              DIAG_COUNT(singular_extend_one);
               singularQuietLMR = !ttCapture;
           }
 
@@ -1096,7 +1196,10 @@ moves_loop: // When in check, search starts from here
           // that multiple moves fail high, and we can prune the whole subtree by returning
           // a soft bound.
           else if (singularBeta >= beta)
+          {
+              DIAG_COUNT(singular_multicut);
               return singularBeta;
+          }
 
           // If the eval of ttMove is greater than beta we try also if there is another
           // move that pushes it over beta, if so also produce a cutoff.
@@ -1107,14 +1210,20 @@ moves_loop: // When in check, search starts from here
               ss->excludedMove = MOVE_NONE;
 
               if (value >= beta)
+              {
+                  DIAG_COUNT(singular_multicut);
                   return beta;
+              }
           }
       }
 
       // Check extension (~2 Elo)
       else if (    givesCheck
                && (pos.is_discovery_check_on_king(~us, move) || pos.see_ge(move)))
+      {
+          DIAG_COUNT(check_extensions);
           extension = 1;
+      }
 
       // Passed pawn extension
       else if (   move == ss->killers[0]
@@ -1244,9 +1353,17 @@ moves_loop: // When in check, search starts from here
 
           Depth d = Utility::clamp(newDepth - r, 1, newDepth);
 
+          if (d < newDepth)
+          {
+              DIAG_COUNT(lmr_applied);
+              DIAG_ADD(reduction_depth_sum, newDepth - d);
+          }
+
           value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, d, true);
 
           doFullDepthSearch = value > alpha && d != newDepth;
+          if (doFullDepthSearch)
+              DIAG_COUNT(lmr_research);
 
           didLMR = true;
       }
@@ -1318,7 +1435,10 @@ moves_loop: // When in check, search starts from here
               // iteration. This information is used for time management: when
               // the best move changes frequently, we allocate some more time.
               if (moveCount > 1)
+              {
+                  DIAG_COUNT(root_best_changes);
                   ++thisThread->bestMoveChanges;
+              }
           }
           else
               // All other moves but the PV are set to the lowest value: this
@@ -1343,6 +1463,27 @@ moves_loop: // When in check, search starts from here
               else
               {
                   assert(value >= beta); // Fail high
+#ifdef RAROG_DIAG
+                  if (!excludedMove)
+                  {
+                      if (captureOrPromotion)
+                          DIAG_COUNT(cutoff_capture);
+                      else
+                          DIAG_COUNT(cutoff_quiet);
+
+                      if (moveCount == 1)
+                          DIAG_COUNT(cutoff_first_move);
+
+                      if (moveCount == 1)
+                          DIAG_COUNT(best_rank_1);
+                      else if (moveCount <= 3)
+                          DIAG_COUNT(best_rank_2_3);
+                      else if (moveCount <= 7)
+                          DIAG_COUNT(best_rank_4_7);
+                      else
+                          DIAG_COUNT(best_rank_8_plus);
+                  }
+#endif
                   ss->statScore = 0;
                   break;
               }
@@ -1391,10 +1532,20 @@ moves_loop: // When in check, search starts from here
         bestValue = std::min(bestValue, maxValue);
 
     if (!excludedMove && !(rootNode && thisThread->pvIdx))
+    {
+#ifdef RAROG_DIAG
+        if (bestValue >= beta)
+            DIAG_COUNT(main_store_lower);
+        else if (PvNode && bestMove)
+            DIAG_COUNT(main_store_exact);
+        else
+            DIAG_COUNT(main_store_upper);
+#endif
         tte->save(posKey, value_to_tt(bestValue, ss->ply), ttPv,
                   bestValue >= beta ? BOUND_LOWER :
                   PvNode && bestMove ? BOUND_EXACT : BOUND_UPPER,
                   depth, bestMove, ss->staticEval);
+    }
 
     assert(bestValue > -VALUE_INFINITE && bestValue < VALUE_INFINITE);
 
@@ -1434,6 +1585,9 @@ moves_loop: // When in check, search starts from here
     (ss+1)->ply = ss->ply + 1;
     bestMove = MOVE_NONE;
     ss->inCheck = pos.checkers();
+    DIAG_COUNT(qnodes);
+    if (ss->inCheck)
+        DIAG_COUNT(q_in_check);
     moveCount = 0;
 
     // Check for an immediate draw or maximum ply reached
@@ -1454,6 +1608,8 @@ moves_loop: // When in check, search starts from here
     ttValue = ttHit ? value_from_tt(tte->value(), ss->ply, pos.rule50_count()) : VALUE_NONE;
     ttMove = ttHit ? tte->move() : MOVE_NONE;
     pvHit = ttHit && tte->is_pv();
+    if (ttHit)
+        DIAG_COUNT(q_tt_hit);
 
     if (  !PvNode
         && ttHit
@@ -1461,7 +1617,10 @@ moves_loop: // When in check, search starts from here
         && ttValue != VALUE_NONE // Only in case of TT access race
         && (ttValue >= beta ? (tte->bound() & BOUND_LOWER)
                             : (tte->bound() & BOUND_UPPER)))
+    {
+        DIAG_COUNT(q_tt_cut);
         return ttValue;
+    }
 
     // Evaluate the position statically
     if (ss->inCheck)
@@ -1490,6 +1649,7 @@ moves_loop: // When in check, search starts from here
         // Stand pat. Return immediately if static value is at least beta
         if (bestValue >= beta)
         {
+            DIAG_COUNT(q_stand_pat_cut);
             if (!ttHit)
                 tte->save(posKey, value_to_tt(bestValue, ss->ply), false, BOUND_LOWER,
                           DEPTH_NONE, MOVE_NONE, ss->staticEval);
@@ -1591,7 +1751,10 @@ moves_loop: // When in check, search starts from here
               if (PvNode && value < beta) // Update alpha here!
                   alpha = value;
               else
+              {
+                  DIAG_COUNT(q_move_cut);
                   break; // Fail high
+              }
           }
        }
     }
