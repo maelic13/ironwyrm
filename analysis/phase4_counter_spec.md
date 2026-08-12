@@ -261,6 +261,46 @@ Three ways out, and the decision:
 Until the core set is exact on both sides, **only the already-exact core
 counters may be compared**. The sampled ones are Rarog-internal readings.
 
+## Exact mode, and the three invariant failures it exposed
+
+`RAROG_DIAG_SAMPLE_STRIDE=1` makes every sampled Rarog counter exact in one
+place, instead of lifting seventeen counters out of their guards in the hottest
+file in the engine. The stride must be a power of two; unset, it stays 1024, so
+every historical reading (RAR-S21/S22/S24) still reproduces. `bench 13` is
+6,519,711 in all three configurations — diagnostics off, on at 1024, on at 1.
+
+Running the invariants against Rarog in exact mode immediately broke three of
+them. **This is the cross-check doing its job**: every one would have silently
+poisoned the 4.2 differential, and each is a definition mismatch rather than an
+engine defect.
+
+| Invariant | Rarog, exact | Verdict |
+|---|---|---|
+| `best_rank_1` == `cutoff_first_move` | 668,275 vs 475,494 | **FAILS.** Different populations |
+| rank buckets == `cutoff_quiet + cutoff_capture` | 829,922 vs 537,976 | **FAILS.** Same cause |
+| `main_tt_probes` == `nodes` | 2,336,660 vs 4,022,611 | **FAILS.** Different populations |
+
+**`best_rank_*` measures a different thing in each engine.** Rarog records the
+rank of the *best move found at any node*, guarded only by `diag_best_rank > 0`,
+so it includes PV nodes where the best move merely raised alpha and no cutoff
+happened. The oracle records the rank *at which a beta cutoff occurred*. Rarog's
+population strictly contains the oracle's, which is exactly why the numbers look
+comparable and are not — the RAR-S25 lesson, one level up. Resolution: the spec
+keeps `best_rank_*` meaning cutoff rank, Rarog needs exact cutoff-rank counters
+at its beta-cutoff site, and Rarog's existing measurement is a distinct
+Rarog-only counter that must be renamed rather than differenced.
+
+**`main_tt_probes` is not one-per-node in Rarog.** It sits behind
+`if self.thread_id == 0` for an SMP hit-rate diagnostic, and some interior nodes
+return before reaching the probe at all, so the ratio is ~58% where the oracle's
+is exactly 100%. Whether that is a counter-placement artifact or a real
+difference in when Rarog consults the table is an open question owned by 4.6 —
+and a genuinely interesting one, since it bears on TT capability rather than on
+instrumentation.
+
+Until these are resolved, the affected counters are **not comparable** and must
+not appear in a 4.2 differential.
+
 ## Mechanism divergences found at 4.2 — inputs for 4.3
 
 | Mechanism | State | Note |

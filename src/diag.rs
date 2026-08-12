@@ -539,15 +539,45 @@ pub const SAMPLE_QSEARCH: u64 = 0x5153_4541_5243_4831;
 #[cfg(feature = "diag")]
 pub const SAMPLE_CORRECTION: u64 = 0x434F_5252_5F34_2E31;
 
-/// Deterministic 1/1024 position sampler. It is deliberately available only in
-/// diagnostic builds: production code must contain neither the mix nor a branch.
+/// Sampling stride mask, read once from `RAROG_DIAG_SAMPLE_STRIDE`.
+///
+/// Phase 4.2: the differential suite needs the CORE counters exact, because the
+/// oracle collects them exactly and a 1/1024 sample cannot be joined against an
+/// exact count — the ratio reads 1024x off while looking plausible. Rather than
+/// lift seventeen counters out of their sampling guards in the hottest file in
+/// the engine, the stride itself is configurable, so `RAROG_DIAG_SAMPLE_STRIDE=1`
+/// makes every sampled counter exact in one place.
+///
+/// The stride must be a power of two; anything else falls back to the 1024
+/// default, which keeps every historical reading (RAR-S21/S22/S24) reproducible
+/// by simply not setting the variable.
+#[cfg(feature = "diag")]
+fn sample_mask() -> u64 {
+    use std::sync::OnceLock;
+    static MASK: OnceLock<u64> = OnceLock::new();
+    *MASK.get_or_init(|| {
+        std::env::var("RAROG_DIAG_SAMPLE_STRIDE")
+            .ok()
+            .and_then(|raw| raw.trim().parse::<u64>().ok())
+            .filter(|stride| *stride >= 1 && stride.is_power_of_two())
+            .map(|stride| stride - 1)
+            .unwrap_or(1023)
+    })
+}
+
+/// Deterministic position sampler, 1/1024 by default. It is deliberately
+/// available only in diagnostic builds: production code must contain neither
+/// the mix nor a branch.
+///
+/// With a stride of 1 the mask is 0, so the test is always true and every
+/// position is sampled — the exact mode the Phase-4 differential requires.
 #[cfg(feature = "diag")]
 #[inline]
 pub fn sampled(hash: u64, ply: usize, domain: u64) -> bool {
     let mut value = hash ^ domain ^ (ply as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
     value = (value ^ (value >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
     value = (value ^ (value >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
-    ((value ^ (value >> 31)) & 1023) == 0
+    ((value ^ (value >> 31)) & sample_mask()) == 0
 }
 
 /// Diagnostic-only ownership tags for the deliberately lossy correction
