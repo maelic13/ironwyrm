@@ -20,9 +20,9 @@ of method, history, phase numbers and internal naming — see PLAN §2
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
 | Active experiment | None |
 | Current action | PLAN 4.0, then execute Phase-4 steps one at a time |
-| Evaluation | HCE frozen through 4.10. Structural convergence unfreezes at 4.11 only. No broad Texel or SPSA refit anywhere in Phase 4 |
-| Reference | Stockfish `9587eeeb`, the last pure-HCE master commit before NNUE. A specification, never a transcription source |
-| Next releases | **2.4.0 at 4.19** if convergence transfers (higher minor if the gain is large); baseline NNUE then **2.5.0 at 6.7** |
+| Evaluation | HCE frozen through 4.10. Structural HCE work unfreezes at 4.11 only. No broad Texel or SPSA refit anywhere in Phase 4 |
+| Reference | Stockfish `9587eeeb`, the last pure-HCE master commit before NNUE. Read for **ideas** only — no code crosses into Rarog, and similarity is never a goal |
+| Next releases | **2.4.0 at 4.19** if the work transfers (higher minor if the gain is large); baseline NNUE then **2.5.0 at 6.7** |
 | Work after Phase 4 | PLAN 5.0, the frozen NNUE measurement corpus |
 
 **Phase 4 changed scope on 2026-08-12.** The old Phase 4 closed with 2.3.2 and
@@ -31,14 +31,19 @@ search-oracle experiments RAR-O01/RAR-O02 measured Stockfish's last pure-HCE
 search — driving Rarog's own evaluator, at 1.5M NPS against our 2.4M — beating
 Rarog 2.3.2 by about **+196.5 Elo**, and the matching Stockfish HCE beating
 that hybrid by another **+328.6**. So the largest measurable deficit is search
-coordination, with a second in HCE feature coverage, and both can be converged
-against a public reference instead of redesigned blindly.
+coordination, with a second in HCE feature coverage, and both can be attacked
+with a public engine as an idea source instead of rediscovered blindly.
 
 Those are logistic point estimates from a deliberately stopped run. They size
 a target and order the work; they never accept a change and are never quoted
-as a release claim. Search convergence is evaluator-agnostic, so it survives
-NNUE intact — this is not work spent on a surface NNUE will replace. HCE
-convergence also pays forward as a better NNUE teacher at 6.1.
+as a release claim. Search work is evaluator-agnostic, so it survives NNUE
+intact — this is not work spent on a surface NNUE will replace. HCE work also
+pays forward as a better NNUE teacher at 6.1.
+
+The point is **acceleration, not imitation**. Reading a strong engine tells us
+which problems are worth solving and in what order, which is the expensive
+part Rarog has repeatedly paid for in blind cycles. The deliverable is Rarog's
+own design, and where Rarog's answer is better, Rarog keeps it.
 
 Do not run `./tools/spsa.ps1 -ConfigGroup phase4 -LaunchOnly`. That
 configuration was cancelled and removed before any games. Do not resume the
@@ -105,13 +110,13 @@ degenerate. Full detail and the retained-inert ownership table are in PLAN §3.
 
 The model implements and verifies locally; the maintainer runs only the long
 game jobs. One item is open at a time and each candidate gates against the
-then-current accepted head. Macro-order: **A** search convergence (4.0–4.10) →
-**B** HCE convergence (4.11–4.18) → **C** transfer and release (4.19) → **D**
-NNUE (5 runway → 6 baseline → 7 frontier) → **E** scaling (8) → **F**
-contingent classical fallback (9, last, may never run). Per-item rationale is
-in `PLAN.md` §4–§9.
+then-current accepted head. Macro-order: **A** search work (4.0–4.10) → **B**
+HCE work (4.11–4.18) → **C** transfer and release (4.19) → **D** NNUE (5
+runway → 6 baseline → 7 frontier) → **E** scaling (8) → **F** contingent
+classical fallback (9, last, may never run). Per-item rationale is in
+`PLAN.md` §4–§9.
 
-### Phase 4 — Search and evaluation convergence (→ conditional 2.4.0)
+### Phase 4 — Reference-accelerated search and HCE work (→ conditional 2.4.0)
 
 - [ ] 4.0 **Evidence, baseline and oracle freeze.** Record RAR-O01/O02, the
       baseline and oracle SHAs, binary SHA-256 hashes, benchmark, tournament
@@ -413,13 +418,13 @@ reproduction procedure to verify the baseline, not to modify or republish
 
 ## Recurring procedures
 
-### Convergence step lifecycle (4.4–4.18)
+### Phase-4 step lifecycle (4.4–4.18)
 
 For every behavioral Phase-4 step:
 
-1. **Audit** — name the reference contract, its Rust owner, all interacting
-   consumers and the local diagnostic population. Update `PLAN.md` first if
-   the evidence contradicts the planned order.
+1. **Audit** — name the problem, its Rust owner, all interacting consumers and
+   the local diagnostic population. Update `PLAN.md` first if the evidence
+   contradicts the planned order.
 2. **Register** — add an `EXPERIMENTS.md` ID with hypothesis, baseline SHA,
    candidate scope, expected direction, gate, cap and stop rule, before games.
    Choose bounds from the cluster's prior and the PLAN §2 sizing table.
@@ -447,17 +452,34 @@ freezes the search head, two failed coherent HCE clusters close track H rather
 than triggering automatic continuation. The phase closes if its remaining
 plausible result cannot justify its opportunity cost.
 
-### Reference-use rules
+### The independence boundary
 
-Rarog and Stockfish are both GPLv3, so reuse is legally permissible; the
-constraints are engineering ones. Do not copy the hybrid FFI boundary into
-Rarog, merge the `hybrid` branch, replace native Rust with C++/FFI, or
-reinterpret the oracle as permission for a wholesale unmeasured rewrite.
-Converge on contracts, attribute derived work in source comments and
-`README.md` naming the exact upstream revision, and never accept a cluster
-because its trace looks more Stockfish-like. A contract Rarog deliberately
-does otherwise is a valid outcome — record it as intentionally different, with
-its reason.
+Rarog takes **ideas** from Stockfish and builds its own answer. It does not
+take code, and it does not aim to resemble it. Both engines are GPLv3, so
+copying would be legally permissible — this boundary is a product decision and
+is deliberately stricter than the licence requires. PLAN §4 holds the full
+table; the working rules are:
+
+- What may cross: the problem a mechanism solves, that the problem exists at
+  all, which mechanisms interact and in what order, which populations are
+  worth measuring, and known failure modes.
+- What may not cross: source code in any language or amount, line-by-line or
+  structure-for-structure transcription, tuned constants and margins, copied
+  identifiers or file layout, and behavioral equivalence as a goal.
+- Read, understand, close the file, then design from Rarog's own code and 4.2
+  evidence. If a change cannot be justified without pointing at the reference,
+  it is not understood well enough to ship.
+- No upstream code is copied, so Rarog is not a derivative work. `README.md`
+  already states the correct posture — an independent engine, with thanks for
+  the inspiration. Do not restyle that into an attribution of derived code.
+- Do not merge the `hybrid` branch, copy its FFI boundary into Rarog, replace
+  native Rust with C++/FFI, or read the oracle as permission for a wholesale
+  unmeasured rewrite.
+- Similarity is never a reason to accept anything, and a counter that diverges
+  from the oracle is a question, not a defect. Closing a counter gap is not an
+  outcome; winning games is.
+- Rarog solving a problem differently, or deciding it does not apply here, is
+  a first-class result — record it with its reason and move on.
 
 Search-only candidates keep the calibrated `strength-v1` adjudication because
 both arms share Rarog's score scale. **HCE-changing candidates and every

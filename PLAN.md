@@ -12,8 +12,9 @@ lives in `EXPERIMENTS.md`; the operational tracker lives in `GUIDE.md`.
 | Integration branch | `dev`, reset to `master` and carrying this plan |
 | Frozen oracle | `hybrid` at `75d0d43` — Stockfish `9587eeeb` driving the exact 2.3.2 HCE |
 | Active game jobs | None. The stopped no-adjudication hybrid tournament already settled the architectural decision |
-| Current phase | **Phase 4 — search and evaluation convergence**, starting at 4.0 |
-| Next release | **2.4.0 at 4.19** if convergence transfers; a larger cumulative gain may justify a higher minor version. Baseline NNUE then targets **2.5.0** |
+| Current phase | **Phase 4 — reference-accelerated search and HCE development**, starting at 4.0 |
+| Next release | **2.4.0 at 4.19** if the work transfers; a larger cumulative gain may justify a higher minor version. Baseline NNUE then targets **2.5.0** |
+| Reference posture | Stockfish `9587eeeb` is read for **ideas**. No Stockfish code enters Rarog. Rarog is not a derivative work and does not aim at behavioral similarity |
 | HCE status | Frozen through 4.10. Structural, reference-led HCE work reopens at 4.11 under its own gates. No broad constant refit at any point in this phase |
 
 **Phase 4 changed scope on 2026-08-12.** The original Phase 4 was a pre-NNUE
@@ -22,7 +23,8 @@ released and must not be reopened. The number is now reused for a different
 programme, described in §4, created by the search-oracle experiments RAR-O01
 and RAR-O02: Rarog's largest measurable deficit is **search coordination**,
 with a second large deficit in **HCE feature coverage**, and both can be
-converged against a public reference instead of redesigned blindly.
+attacked with a public engine as an idea source instead of rediscovered
+blindly.
 
 The old partial rating observation — an unfinished development binary roughly
 +11 pool Elo over 2.3.1 and 39 below Basilisk 1.9.3 — remains diagnostic only
@@ -61,8 +63,8 @@ changes in separate commits.
    probes can size or debug a mechanism only.
 8. Do not add features from names or sibling engines. Require a local
    population, a unique signal, an interaction model and an acceptance gate. A
-   reference specification changes what you may *read*; it does not change
-   what you must *measure*.
+   reading a reference changes what you may *try*; it does not change what you
+   must *measure*.
 9. Correctness repairs may be retained without an Elo claim when the invariant
    is explicit and covered; record the exception rather than calling it free.
 10. Release numbers describe shipped evidence, not the plan that once existed.
@@ -93,10 +95,9 @@ that then failed a hosted CI run.
 `fastchess -use-affinity` with concurrency 14 is mandatory for 1T gates on this
 host; unpinned Zen 3 runs carry a hidden per-run offset of roughly ±10 nElo.
 Validate any harness change on a null pair — the same executable on both arms
-— before trusting a verdict. `-use-affinity` pins one core per game and
-starves
-`Threads>1`, so **drop it for multi-thread runs and re-calibrate the null pair
-under the multi-thread configuration**.
+— before trusting a verdict. `-use-affinity` pins one core per game and so
+starves any run with `Threads>1`: **drop it for multi-thread runs and
+re-calibrate the null pair under the multi-thread configuration**.
 
 ### Sizing a game budget
 
@@ -228,16 +229,32 @@ named owner, or separately gated. The post-NNUE owner remains intentional for
 ordinary retuning, because NNUE changes score scale, correction residuals,
 pruning margins, node cost and time allocation.
 
-## 4. Phase 4 — Search and evaluation convergence (→ conditional 2.4.0)
+## 4. Phase 4 — Reference-accelerated search and HCE development (→ conditional 2.4.0)
 
 ### Objective
 
-Converge Rarog's search, and then its HCE, toward the last pure-HCE Stockfish,
-one dependency-complete cluster at a time, each gated by games. Rarog stays an
-independent Rust engine: it keeps its board, move generation, evaluator, UCI,
-build system and product identity. Stockfish `9587eeeb` is a GPL-attributed
-**behavioral specification**, and the frozen `hybrid` branch is an executable
-**oracle** used to size targets and explain counters.
+Build Rarog's own strongest search, and then its own strongest HCE, **faster
+than blind discovery would allow**, by reading a strong public engine for
+ideas. The deliverable is Rarog's design. It may end up unlike Stockfish's,
+and where Rarog's answer is better, Rarog keeps its answer.
+
+What the reference actually buys is the expensive part of engine development:
+knowing **which problems are worth solving and in what order**. Rarog has
+spent whole cycles discovering that a plausible mechanism does not pay. The
+`9587eeeb` revision is a working existence proof that a particular set of
+problems matters and can be solved together, so reading it replaces a long
+sequence of blind, individually-gated guesses. That is the acceleration, and it
+is the only thing being taken.
+
+What it does **not** buy is a target to imitate. Rarog is an independent Rust
+engine and stays one: its board, move generation, evaluator, transposition
+table, UCI, build system, testing methodology and product identity are its
+own. Similarity to Stockfish is not a goal, not a metric and not evidence
+anywhere in this phase. Success is measured only as Rarog Elo against Rarog's
+own accepted head.
+
+The frozen `hybrid` branch is an executable **diagnostic instrument** — it
+sizes targets and explains counters. It is never a thing to become.
 
 This is a bounded exception to the previous "NNUE next" ordering. It exists
 because the evidence changed, not because the roadmap wanted more pre-NNUE
@@ -245,11 +262,11 @@ work.
 
 ### Why this runs before NNUE
 
-Search convergence is **evaluator-agnostic**. Every accepted search contract
+Search work is **evaluator-agnostic**. Every accepted search mechanism
 survives NNUE intact, so this is the opposite of the constant-fitting that
-rule 3 forbids — it is not work spent on a surface NNUE will replace. HCE
-convergence pays forward twice: directly as strength now, and as a better
-teacher for Phase 6.1 data generation.
+rule 3 forbids — it is not work spent on a surface NNUE will replace. HCE work
+pays forward twice: directly as strength now, and as a better teacher for
+Phase 6.1 data generation.
 
 The cost is real and stated plainly: this phase delays NNUE by its own
 duration, and it can fail at any cluster. The stop rules below exist to make
@@ -313,11 +330,11 @@ the dependency order in the step list, because selectivity consumes the depth
 and history evidence that cluster A owns. If 4.2–4.3 contradict that, reorder
 here before implementing.
 
-**RAR-S52–S54 predate the oracle and reach the same conclusion from a different
-direction.** At exactly equal nodes and equal speed, Rarog searched **2.5 plies
-deeper** than Basilisk 1.9.1 and still lost by 65 Elo: it buys depth it cannot
-use by discarding width it needs. That gives this phase a concrete, falsifiable
-progress metric that costs nothing to run — see 4.10.
+**RAR-S52–S54 predate the oracle and reach the same conclusion from a
+different direction.** At exactly equal nodes and equal speed, Rarog searched
+**2.5 plies deeper** than Basilisk 1.9.1 and still lost by 65 Elo: it buys
+depth it cannot use by discarding width it needs. That gives this phase a
+concrete, falsifiable progress metric that costs nothing to run — see 4.10.
 
 **Programme target: cumulative ≥ +100 Elo STC over 2.3.2.** That is what makes
 this phase worth its delay to NNUE. The release bar below is lower, because a
@@ -325,7 +342,7 @@ smaller confirmed gain still deserves to ship rather than be discarded; but if
 the phase looks like it will land near the release bar rather than near the
 target, the 4.10 expected-value review is where it closes.
 
-### Two convergence tracks
+### Two tracks
 
 **Search track (4.0–4.10).** Priority. HCE terms and weights are frozen
 throughout. Single-thread search is the owner; time management and SMP are
@@ -333,27 +350,52 @@ transfer checks, not places to hide a weak 1T result.
 
 **HCE track (4.11–4.18).** Entered only after 4.10 freezes one search head, so
 evaluation is measured against a settled search. Scope is **structural
-coverage** against the reference: contracts Rarog lacks entirely, or expresses
-in a materially weaker form, each carrying its own local refit.
+coverage**: problems Rarog does not address at all, or addresses in a
+materially weaker form, each fix carrying its own local refit.
 
 Explicitly out of scope for the whole phase: another broad Texel or SPSA
 constant fit over the existing feature set, Stockfish-label weight
 distillation (RAR-E03 rejected it at −17.11 despite 4.9% lower holdout loss),
 copying a term list, mixed search/eval tuning, and any NNUE integration work.
 
-### Reference-use rules
+### The independence boundary
 
-Rarog and Stockfish are both GPLv3, so reuse is legally permissible. The
-constraints here are engineering and product ones:
+Both engines are GPLv3, so copying would be *legally* permissible. This
+boundary is therefore a **product and engineering decision, not a licence
+constraint**, and it is deliberately stricter than the licence requires.
 
-- Converge on **contracts**, not on transcription. No C++ search or evaluator,
-  no FFI adapter and no `hybrid` source is merged into the integration branch.
-- Attribute derived work in source comments and `README.md`, naming the exact
-  upstream revision.
-- Never accept a cluster because its trace looks more Stockfish-like. Games
-  decide, exactly as before.
-- A contract Rarog deliberately does otherwise is a valid outcome; record it
-  as intentionally different, with its reason.
+| May cross into Rarog | May not cross |
+|---|---|
+| The problem a mechanism solves, and why it matters | Source code, in any language, in any amount |
+| That a problem exists at all — the thing that is expensive to discover | Line-by-line or structure-for-structure transcription |
+| Which mechanisms interact, and the order they must be built in | Tuned constants and margins |
+| Which populations are worth instrumenting and measuring | Identifier names, file layout or type shapes copied for their own sake |
+| Known pitfalls and failure modes, so Rarog does not rediscover them | Behavioral equivalence as a goal or as an acceptance criterion |
+
+Consequences, stated plainly so no later step can drift:
+
+- **Read, understand, close the file, then design.** The implementation step
+  starts from Rarog's own code and Rarog's own diagnostic evidence. If a
+  change cannot be justified without pointing at the reference, it is not
+  understood well enough to ship.
+- **No Stockfish code is copied, so Rarog is not a derivative work of it.**
+  `README.md` already carries the correct posture — an independent engine that
+  benefits from the community's published ideas, with thanks to Stockfish for
+  the inspiration. That acknowledgement is accurate and sufficient; do not
+  restyle it as an attribution of derived code. If some future step genuinely
+  needs actual upstream code, that is a separate maintainer decision with full
+  GPL attribution, and it is explicitly **not** what this phase authorizes.
+- The `hybrid` branch does vendor upstream source, correctly attributed with
+  its `AUTHORS` and `Copying.txt`. It is a diagnostic artifact: never merged,
+  never shipped, never a source to copy from.
+- **Similarity is never a reason to accept anything.** A candidate whose trace
+  looks more Stockfish-like and loses games is rejected, and a candidate that
+  looks nothing like it and wins is accepted. Games decide, exactly as before.
+- **A counter that diverges from the oracle is a question, not a defect.** 4.2
+  uses divergence to choose where to look next. It never sets a target value,
+  and closing a gap in a counter is not an outcome.
+- Rarog solving a problem differently, or deciding a problem does not apply to
+  Rarog, is a first-class result. Record it with its reason and move on.
 - Existing accepted Rarog mechanisms are not sacred, but replacing one
   requires a registered game gate against the currently accepted head.
 
@@ -432,23 +474,28 @@ Named now so every step has a concrete surface:
   reaches falls through to 7.3. Recording it is mandatory; acting on it here is
   not permitted.
 
-- **4.3 Contract map and order freeze.** Map Stockfish `search.cpp`,
-  `movepick.cpp` and their per-ply state onto the Rust owners listed above.
-  Classify each contract as **equivalent**, **intentionally different** (with
-  reason), **missing**, or **coupled to a later consumer**. Use the 4.2
-  populations to choose and document the first cluster. If the evidence
+- **4.3 Mechanism map and order freeze.** Read `search.cpp`, `movepick.cpp`
+  and their per-ply state as a catalogue of **problems and one working set of
+  answers**, and write down, per mechanism: the problem it solves, whether
+  Rarog's own 4.2 evidence shows that problem is present here, what Rarog does
+  about it today, and which other mechanisms it must move with. Classify each
+  as **Rarog already solves this**, **problem present and Rarog's answer is
+  weaker**, **problem does not apply to Rarog** (with reason), or **unknown,
+  needs measurement**. The map's output is a Rarog work list, not a diff
+  against Stockfish, and it must be usable without the reference open. Use the
+  4.2 populations to choose and document the first cluster. If the evidence
   contradicts the provisional order below, **edit this plan before
   implementing** — never after seeing games.
 
-- **4.4 Search-consumed board state.** Several reference contracts assume
-  cheap per-ply state that Rarog recomputes on demand: `CheckInfo`, pins and
-  blockers, check squares, `plies_from_null`, repetition distance. Land only
-  the parts a 4.5–4.9 contract actually consumes, as a cached per-ply
-  structure. Gate on an exact benchmark fingerprint where the change is
-  behavior-neutral, and on pooled-PGO NPS where it is a layout change. This
-  step deliberately does **not** build the evaluator-facing dirty-piece delta
-  contract; that stays owned by 5.1, which consumes the same per-ply
-  structure. Do not let 4.4 grow into the NNUE runway.
+- **4.4 Search-consumed board state.** Several mechanisms in the 4.5–4.9 list
+  are only affordable with cheap per-ply state that Rarog recomputes on
+  demand: `CheckInfo`, pins and blockers, check squares, `plies_from_null`,
+  repetition distance. Land only the parts a 4.5–4.9 design actually consumes,
+  as a cached per-ply structure. Gate on an exact benchmark fingerprint where
+  the change is behavior-neutral, and on pooled-PGO NPS where it is a layout
+  change. This step deliberately does **not** build the evaluator-facing
+  dirty-piece delta contract; that stays owned by 5.1, which consumes the same
+  per-ply structure. Do not let 4.4 grow into the NNUE runway.
 
 - **4.5 Cluster A — move ordering, histories, LMR.** Implement in dependency
   order, as one coherent cluster:
@@ -473,30 +520,30 @@ Named now so every step has a concrete surface:
   pruning evaluation and searched bounds; align TT capabilities and entry
   semantics, qsearch stand-pat, capture ordering and check handling, and
   correction attribution. Preserve Rarog's proven draw and mate-distance
-  semantics — they are correctness assets, not convergence targets. Owns the
-  TT provenance switches and typed evidence consumers.
+  semantics — they are correctness assets, and nothing here targets them. Owns
+  the TT provenance switches and typed evidence consumers.
 
-- **4.7 Cluster C — main selectivity.** In observed dependency order,
-  reconcile razoring, reverse futility, null-move verification, ProbCut,
-  move-count and history pruning, and quiet/capture futility. Use prospective
-  searched depth consistently. Gate categorical architecture before any narrow
-  constant fit; do not launch a broad SPSA. The 2.3.2 broad selectivity fit
-  (+15.33 nElo) was a constant fit around the current architecture and does
-  not pre-empt this. Owns the NMP and IIR provenance switches and
-  `SelectivityProspectiveDepth`. RAR-S54 licenses a structural rework here with
-  its own refit; it does **not** license shipping the uniform 15% scalar that
-  produced the evidence.
+- **4.7 Cluster C — main selectivity.** In observed dependency order, rework
+  razoring, reverse futility, null-move verification, ProbCut, move-count and
+  history pruning, and quiet/capture futility. Use prospective searched depth
+  consistently. Gate categorical architecture before any narrow constant fit;
+  do not launch a broad SPSA. The 2.3.2 broad selectivity fit (+15.33 nElo)
+  was a constant fit around the current architecture and does not pre-empt
+  this. Owns the NMP and IIR provenance switches and
+  `SelectivityProspectiveDepth`. RAR-S54 licenses a structural rework here
+  with its own refit; it does **not** license shipping the uniform 15% scalar
+  that produced the evidence.
 
-- **4.8 Cluster D — extensions and depth authority.** Reconcile check,
-  singular, double and negative extension and IIR semantics against TT
-  provenance and LMR. Preserve mate and abort correctness, including the
-  accepted NMP unproven-mate clamp. Gate the integrated contract, never the
-  individual extensions — RAR-X02 showed check-extension removal cost Basilisk
-  −10.17 while Rarog's extension had gained +30.75, which is co-adaptation,
-  not a portable verdict. Owns the singular provenance switches and
+- **4.8 Cluster D — extensions and depth authority.** Rework check, singular,
+  double and negative extension and IIR semantics against TT provenance and
+  LMR. Preserve mate and abort correctness, including the accepted NMP
+  unproven-mate clamp. Gate the integrated contract, never the individual
+  extensions — RAR-X02 showed check-extension removal cost Basilisk −10.17
+  while Rarog's extension had gained +30.75, which is co-adaptation, not a
+  portable verdict. Owns the singular provenance switches and
   `SingularTtDepthMargin`.
 
-- **4.9 Cluster E — root search and clock handoff.** Reconcile aspiration
+- **4.9 Cluster E — root search and clock handoff.** Rework aspiration
   retries, completed-root authority, PV and fallback ownership, and stability
   inputs. **Total time allocation must not move until the root evidence is
   coherent**; then gate any real-clock change separately. Owns the aspiration
@@ -547,25 +594,24 @@ in native Rust, measure them on Rarog, and reject what does not transfer.
   lower aggregate teacher-fit loss cannot accept a candidate; RAR-E03 already
   disproved that proxy for this HCE.
 
-- **4.13 Cluster F — score foundation and endgame dispatch.** Reconcile
-  material and PST ownership, phase interpolation, tempo, score grain and
-  units, evaluation POV, rule-50 scaling and specialized-endgame dispatch.
-  Gate structural choices before narrow constants; preserve proven draw and
-  mate semantics.
+- **4.13 Cluster F — score foundation and endgame dispatch.** Rework material
+  and PST ownership, phase interpolation, tempo, score grain and units,
+  evaluation POV, rule-50 scaling and specialized-endgame dispatch. Gate
+  structural choices before narrow constants; preserve proven draw and mate
+  semantics.
 
-- **4.14 Cluster G — pawns, passers and endgame scaling.** Reconcile
-  pawn-cache inputs and lifetime, structural pawn classes, passed-pawn
-  progression and king/pawn distances together with the endgame scaling
-  consumers that read them. Gate the coherent cluster including NPS; do not
-  retain a prettier static fit that loses games.
+- **4.14 Cluster G — pawns, passers and endgame scaling.** Rework pawn-cache
+  inputs and lifetime, structural pawn classes, passed-pawn progression and
+  king/pawn distances together with the endgame scaling consumers that read
+  them. Gate the coherent cluster including NPS; do not retain a prettier
+  static fit that loses games.
 
-- **4.15 Cluster H — piece activity, threats and space.** Reconcile
-  mobility-area semantics, outposts, files, weak and restricted pieces,
-  hanging threats and space as one interacting group. Use held-out term
-  ablations to detect duplicate signals, then run the registered final-PGO
-  game gate.
+- **4.15 Cluster H — piece activity, threats and space.** Rework mobility-area
+  semantics, outposts, files, weak and restricted pieces, hanging threats and
+  space as one interacting group. Use held-out term ablations to detect
+  duplicate signals, then run the registered final-PGO game gate.
 
-- **4.16 Cluster I — king safety and imbalance.** Reconcile shelter and storm,
+- **4.16 Cluster I — king safety and imbalance.** Rework shelter and storm,
   attack units, safe checks, weak squares and blockers, and nonlinear material
   imbalance, together with the activity and threat inputs they consume. Treat
   this as a coupled model, not independent bonus copying; gate it as one
@@ -594,8 +640,8 @@ in native Rust, measure them on Rarog, and reject what does not transfer.
   4T, benchmark and pooled NPS, the platform and ISA matrix, UCI conformance
   and the correctness suite. Remove diagnostic scaffolding that has no future
   owner and resolve obsolete dormant switches. Run a final no-adjudication
-  target cohort including Basilisk 1.9.3 and the 4.1 oracle as the convergence
-  reference. Harness caveat: drop `-use-affinity` for the 4T cells and
+  target cohort including Basilisk 1.9.3 and the 4.1 oracle as the diagnostic
+  reference point. Harness caveat: drop `-use-affinity` for the 4T cells and
   re-calibrate the null pair under that configuration.
 
 ### Release rule
@@ -787,7 +833,7 @@ format doc plus a new conformance net, together.
   trainer commit alongside each accepted `quantised.bin` so every net stays
   reproducibly trainable. Use **2.4.0 only if Phase 4 did not already use that
   version and this is a material release**; otherwise use 2.5.0 after a
-  convergence-derived 2.4.0, or remain on the current minor line.
+  Phase-4 2.4.0, or remain on the current minor line.
 
 Phase 9 is entered only if a king-conditioned net plus at least one inference
 optimization and one meaningful data-scale retry fail to produce a viable net,
@@ -968,7 +1014,7 @@ Run for every release, in order:
 | `hybrid/build.ps1` | Rebuild the Stage-1 oracle package (`hybrid` branch only) |
 | `D:/code/net_trainer` | Phase-6 NNUE training stack: datagen → extract → convert/shuffle → train → `quantised.bin` |
 | `D:/code/net_trainer/docs/nnue_format.md` + `models/test/` | Net consumer contract plus integer-exact conformance vectors (the 6.3 acceptance gate) |
-| `D:/code/basilisk` | Sibling C++ engine; its Phase 5 runs the same convergence programme independently |
+| `D:/code/basilisk` | Sibling C++ engine; its Phase 5 runs the same reference-accelerated programme independently |
 
 ```powershell
 cargo fmt --check

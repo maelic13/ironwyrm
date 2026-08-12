@@ -3,7 +3,14 @@
 Tools for Rarog's self-play-labelled HCE fits. The pipeline and Rust tuner are
 fully implemented. Hydra contributed the useful five-reservoir sampling idea;
 Rarog deliberately retains self-play game-result labels because its measured
-Stockfish-distillation experiment lost 17.11 Elo.
+Stockfish-distillation experiment lost 17.11 Elo (RAR-E03).
+
+> **Numbering note.** Phase numbers in this file are the **legacy** tuning-cycle
+> numbering used while these tools were built. They do not correspond to the
+> current roadmap in `PLAN.md`. Nothing here is scheduled work: HCE weight
+> fitting is frozen for all of current Phase 4, which permits only a narrow
+> refit attached to an accepted structural change (4.13–4.17), and the next
+> broad fit is post-NNUE at 7.3.
 
 > **Two outputs feed the tuner, both in `FEN;target` text format** (one position
 > per line; `target` is White-perspective expected score: `1` / `0.5` / `0`, or
