@@ -126,8 +126,8 @@ classical fallback (9, last, may never run). Per-item rationale is in
       advertises 101 options with all ten removed absent and the inert ones
       present; PGO PEXT asset reproduces the fingerprint at SHA-256
       `389E234E…05046E28` and passes `verify-isa`. Oracle binaries re-hashed
-      byte-exact. Budget and stop rules registered. **Open risk: `hybrid`
-      still has no remote copy.**
+      byte-exact. Budget and stop rules registered. `hybrid` and `spsa_impr`
+      pushed, so the oracle is no longer single-machine.
 - [ ] 4.1 **Instrumented oracle.** On a new `hybrid-diag` branch, add the 4.2
       counter set to the Stockfish side, matched name for name. Diagnostic
       artifact only: it never plays a rating game and never replaces the
@@ -617,6 +617,7 @@ cargo xtask verify-isa --arch pext
 | `PLAN.md` | Maintainers: current state, ownership and ordered roadmap |
 | `GUIDE.md` | Maintainers/agents: tracker, commands and operating rules |
 | `EXPERIMENTS.md` | Durable evidence, failures, retry triggers and artifacts |
+| `analysis/phase4_counter_spec.md` | The 4.1/4.2 shared counter contract: names, definitions, sites and tiers |
 | `tools/spsa_configs/README.md` | Tuning-specific mechanics and lessons |
 
 When facts disagree, source, defaults and reproducible artifacts outrank

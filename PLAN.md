@@ -143,6 +143,7 @@ patterns.
 | `PLAN.md` | Maintainers: current state, ownership and ordered roadmap |
 | `GUIDE.md` | Maintainers/agents: tracker, commands and operating rules |
 | `EXPERIMENTS.md` | Durable evidence, failures, retry triggers and artifacts |
+| `analysis/phase4_counter_spec.md` | The 4.1/4.2 shared counter contract: names, definitions, sites and tiers |
 | `tools/spsa_configs/README.md` | Tuning-specific mechanics and lessons |
 
 `PLAN.md` and `GUIDE.md` are the maintainer-facing pair. The user-facing files
