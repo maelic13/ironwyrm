@@ -332,6 +332,17 @@ pub mod counters {
         move_seen_good_capture,
         move_seen_quiet,
         move_seen_bad_capture,
+        // Rarog-only: rank of the BEST MOVE at any node, including PV nodes
+        // where it merely raised alpha. Strictly larger population than a beta
+        // cutoff, so it must never be differenced against the oracle's
+        // cutoff-rank counters -- see analysis/phase4_counter_spec.md.
+        best_move_rank_1,
+        best_move_rank_2_3,
+        best_move_rank_4_7,
+        best_move_rank_8_plus,
+        // Core (comparable): rank at which a beta cutoff occurred. Exact, and
+        // counted in the same block as cutoff_quiet/cutoff_capture so the
+        // buckets sum to that denominator.
         best_rank_1,
         best_rank_2_3,
         best_rank_4_7,
@@ -631,10 +642,10 @@ pub fn record_best_move(rank: usize, stage: crate::evidence::MoveClass, reduced:
     use std::sync::atomic::Ordering;
 
     let rank_counter = match rank {
-        1 => &counters::best_rank_1,
-        2 | 3 => &counters::best_rank_2_3,
-        4..=7 => &counters::best_rank_4_7,
-        _ => &counters::best_rank_8_plus,
+        1 => &counters::best_move_rank_1,
+        2 | 3 => &counters::best_move_rank_2_3,
+        4..=7 => &counters::best_move_rank_4_7,
+        _ => &counters::best_move_rank_8_plus,
     };
     rank_counter.fetch_add(1, Ordering::Relaxed);
     // 4.2: takes `MoveClass` rather than a 0..3 integer, so the picker's stage

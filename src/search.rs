@@ -3151,6 +3151,18 @@ impl Searcher {
                         if searched == 1 {
                             crate::diag_count!(cutoff_first_move);
                         }
+                        // 4.2 core: cutoff rank, exact, same block and same
+                        // denominator as cutoff_quiet + cutoff_capture. The
+                        // buckets must sum to that total and best_rank_1 must
+                        // equal cutoff_first_move; both are cross-checks the
+                        // oracle satisfies too.
+                        #[cfg(feature = "diag")]
+                        match searched {
+                            1 => crate::diag_count!(best_rank_1),
+                            2 | 3 => crate::diag_count!(best_rank_2_3),
+                            4..=7 => crate::diag_count!(best_rank_4_7),
+                            _ => crate::diag_count!(best_rank_8_plus),
+                        }
                         // 8.4(e): the cutoff REWARD is scaled when the node
                         // static eval sat below beta - the search found a good
                         // move the eval did not credit. 100 = neutral; maluses

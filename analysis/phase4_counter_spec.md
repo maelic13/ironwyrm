@@ -276,8 +276,8 @@ engine defect.
 
 | Invariant | Rarog, exact | Verdict |
 |---|---|---|
-| `best_rank_1` == `cutoff_first_move` | 668,275 vs 475,494 | **FAILS.** Different populations |
-| rank buckets == `cutoff_quiet + cutoff_capture` | 829,922 vs 537,976 | **FAILS.** Same cause |
+| `best_rank_1` == `cutoff_first_move` | 668,275 vs 475,494 | **FIXED 2026-08-12.** Now 475,494 == 475,494 |
+| rank buckets == `cutoff_quiet + cutoff_capture` | 829,922 vs 537,976 | **FIXED 2026-08-12.** Now 537,976 == 537,976 |
 | `main_tt_probes` == `nodes` | 2,336,660 vs 4,022,611 | **FAILS.** Different populations |
 
 **`best_rank_*` measures a different thing in each engine.** Rarog records the
@@ -285,10 +285,13 @@ rank of the *best move found at any node*, guarded only by `diag_best_rank > 0`,
 so it includes PV nodes where the best move merely raised alpha and no cutoff
 happened. The oracle records the rank *at which a beta cutoff occurred*. Rarog's
 population strictly contains the oracle's, which is exactly why the numbers look
-comparable and are not — the RAR-S25 lesson, one level up. Resolution: the spec
-keeps `best_rank_*` meaning cutoff rank, Rarog needs exact cutoff-rank counters
-at its beta-cutoff site, and Rarog's existing measurement is a distinct
-Rarog-only counter that must be renamed rather than differenced.
+comparable and are not — the RAR-S25 lesson, one level up. **Resolved 2026-08-12.** `best_rank_*` keeps its
+spec meaning of cutoff rank and is now counted exactly in Rarog's beta-cutoff
+block, in the same guard as `cutoff_quiet`/`cutoff_capture` so the buckets sum
+to that denominator by construction. Rarog's original measurement was renamed to
+`best_move_rank_*` and is **Rarog-only**: it still reads 668,275 at rank 1, and
+differencing it against the oracle is now a naming error rather than a silent
+one.
 
 **`main_tt_probes` is not one-per-node in Rarog.** It sits behind
 `if self.thread_id == 0` for an SMP hit-rate diagnostic, and some interior nodes
