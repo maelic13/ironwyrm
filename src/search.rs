@@ -3030,12 +3030,13 @@ impl Searcher {
                     #[cfg(feature = "diag")]
                     {
                         diag_move_reduced = reduction > 0;
-                        if diag_sample {
-                            crate::diag_add!(
-                                reduction_depth_sum,
-                                u64::try_from(reduction).unwrap_or(0)
-                            );
-                        }
+                        // 4.2: EXACT, because its denominator `lmr_applied` is
+                        // exact. Sampling only the numerator made the mean
+                        // reduction read 1024x low at the default stride.
+                        crate::diag_add!(
+                            reduction_depth_sum,
+                            u64::try_from(reduction).unwrap_or(0)
+                        );
                     }
                     if reduction == 0 {
                         crate::diag_count!(lmr_zero_reduction);

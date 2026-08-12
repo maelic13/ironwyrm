@@ -321,8 +321,31 @@ direction, which is precisely the kind of error that looks like a finding.
 | Gap | Detail |
 |---|---|
 | `qnodes` | **CLOSED 2026-08-12.** An exact `qnodes` now increments at qsearch entry alongside the sampled `sampled_qnodes`. Bench stays 6,519,711 with diagnostics both off and on |
-| `prune_shadow_*` | Present, but predate this spec; re-verify each site collects at the stage boundary this document names |
-| `reduction_depth_sum` | Present; confirm it sums applied reduction, not prospective depth |
+| `prune_shadow_*` | **Audited 2026-08-12 — NOT comparable, see below** |
+| `reduction_depth_sum` | **CLOSED 2026-08-12.** It does sum applied reduction, correctly, but was behind the sample guard while its denominator `lmr_applied` was exact, so the mean read 1024x low. Now exact. Rarog's mean reduction on `bench 13` is **2.960 plies** |
+
+### `prune_shadow_*` is not comparable as implemented
+
+The two engines apply SEE pruning to different move populations, so the family
+sets the shadow counters range over are not the same:
+
+| | Rarog | Oracle |
+|---|---|---|
+| LMP / futility shadow | quiet moves | quiet moves |
+| SEE shadow | **captures only** (`else if is_capture && see < 0`) | **quiets** (the `lmrDepth`-scaled threshold) |
+| `prune_shadow_overlap_two_plus` | `lmp && futility` only — SEE lives in a mutually exclusive branch, so SEE can never overlap | any two of `lmp`, `futility`, `see`, all on quiets |
+
+So Rarog's overlap figure is structurally incapable of including SEE, while the
+oracle's is dominated by it. Differencing them would compare a two-family
+redundancy against a three-family one and read the gap as a finding. This also
+explains why RAR-S21's 0.47% overlap looked so much lower than the oracle's
+~5.2%: they are not the same measurement.
+
+Resolution is owned by 4.7, which is the cluster that owns selectivity
+architecture anyway: decide whether Rarog's capture-only SEE pruning is
+intentionally different, then define the shadow families to match whatever
+survives. Until then these six counters are **Rarog-internal readings**, not
+differential inputs.
 
 None of these are oracle-side work. They are recorded here so 4.2 starts from a
 list rather than a rediscovery.
