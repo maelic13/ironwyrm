@@ -233,11 +233,47 @@ not the engine. Verified on the oracle at bench depth 9:
 |---|---|---|
 | `iid_applied` | Internal iterative deepening, SF step 11 | Rarog implements **IIR** instead. These are different mechanisms and must not share a name or be differenced. SF's own annotation prices IID at ~1 Elo, so this is a low-value question |
 
+## The sampling split — 4.2's central design problem
+
+Found at 4.2 by auditing call sites rather than assuming the names matched.
+
+Rarog's diagnostics are **two families**, as `diag.rs` says in its own header:
+legacy event counters are exact, while Phase-4 added a deterministic 1/1024
+position sample for the wider interaction map. The core set straddles that
+line. Roughly half of it — `move_seen_*`, `best_rank_*`, `q_*`, `tt_cut_*`,
+`tt_bound_not_usable`, `main_store_lower`, `nmp_attempt`, `probcut_attempt`,
+`singular_attempt`, `prune_shadow_moves` — is **sampled** on the Rarog side and
+**exact** on the oracle.
+
+Joining a 1/1024 sample against an exact count is exactly the error this
+document was written to prevent, one level up: the names match, the numbers do
+not mean the same thing, and the ratio silently reads 1000× off. It is the
+denominator lesson of RAR-S25 applied across engines instead of within one.
+
+Three ways out, and the decision:
+
+| Option | Verdict |
+|---|---|
+| Make the core set exact on the Rarog side, leaving the wide sampled map untouched | **Chosen.** Sampling exists to bound cost on the wide interaction map, not on the ~59 core counters. A diagnostic build may pay for exactness |
+| Make the oracle sample identically | Rejected: it would have to reproduce Rarog's hash, ply and domain mixing exactly, which couples the two implementations instead of both satisfying this spec |
+| Scale the sampled side by 1024 | Rejected: valid only in expectation, and it converts a exact cross-check such as `best_rank_1 == cutoff_first_move` into a noisy near-equality that can no longer falsify anything |
+
+Until the core set is exact on both sides, **only the already-exact core
+counters may be compared**. The sampled ones are Rarog-internal readings.
+
+## Mechanism divergences found at 4.2 — inputs for 4.3
+
+| Mechanism | State | Note |
+|---|---|---|
+| **In-check extension** | Oracle extends (`check_extensions` = 68 at bench depth 9); **Rarog does not extend at all** | Rarog removed the unconditional in-check extension in its Phase 8.2(a) and measured **+30.75 Elo** for removing it. RAR-X02 records the opposite sign in Basilisk, which lost −10.17 removing its own. This is a first-class *intentionally different* result with local evidence, not a gap to close. 4.8 owns any revisit, and must start from Rarog's +30.75, not from the reference's behaviour |
+| Double and negative singular extension | Rarog has both; the oracle has neither | Recorded at 4.1 from the other direction |
+| IID vs IIR | Oracle has IID; Rarog has IIR | Different mechanisms, never differenced |
+
 ## Known gaps on the Rarog side (4.2 work)
 
 | Gap | Detail |
 |---|---|
-| `qnodes` | Rarog has only `sampled_qnodes`, a 1/1024 deterministic sample. The differential suite needs an exact count on both sides |
+| `qnodes` | **CLOSED 2026-08-12.** An exact `qnodes` now increments at qsearch entry alongside the sampled `sampled_qnodes`. Bench stays 6,519,711 with diagnostics both off and on |
 | `prune_shadow_*` | Present, but predate this spec; re-verify each site collects at the stage boundary this document names |
 | `reduction_depth_sum` | Present; confirm it sums applied reduction, not prospective depth |
 

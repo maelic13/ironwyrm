@@ -3409,6 +3409,7 @@ impl Searcher {
         }
 
         let in_check = board.is_in_check();
+        crate::diag_count!(qnodes);
         let hash = board.hash;
         #[cfg(feature = "diag")]
         let diag_q_sample = crate::diag::sampled(hash, ply + qply, crate::diag::SAMPLE_QSEARCH);

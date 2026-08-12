@@ -40,8 +40,12 @@ pub mod counters {
     }
 
     declare!(
-        // Denominators.
+        // Denominators. `qnodes` is EXACT, unlike `sampled_qnodes`: the
+        // Phase-4 differential needs a qsearch denominator collected the same
+        // way the oracle collects it, and a 1/1024 sample cannot be joined
+        // against an exact count (analysis/phase4_counter_spec.md).
         nodes,
+        qnodes,
         // 8.2 — check-node cost.
         nodes_in_check,
         check_extensions,
