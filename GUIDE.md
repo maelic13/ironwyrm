@@ -19,7 +19,7 @@ of method, history, phase numbers and internal naming — see PLAN §2
 | Integration branch | `dev`, reset to `master` and carrying this plan |
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
 | Active experiment | None. Baseline and budget registered at 4.0; no games until a cluster is registered |
-| Current action | 4.0–4.4 closed 2026-08-12. **4.7 open** (cluster C, main selectivity) — order frozen at 4.3, then 4.5, 4.6, 4.8, 4.9 |
+| Current action | 4.0–4.4 closed. **4.7 open**: 4.7a prepared and HELD on `p47a-nmp-entry` (RAR-S56, no games — effect too small to gate alone). Next: implement 4.7b and bundle |
 | Evaluation | HCE frozen through 4.10. Structural HCE work unfreezes at 4.11 only. No broad Texel or SPSA refit anywhere in Phase 4 |
 | Reference | Stockfish `9587eeeb`, the last pure-HCE master commit before NNUE. Read for **ideas** only — no code crosses into Rarog, and similarity is never a goal |
 | Next releases | **2.4.0 at 4.19** if the work transfers (higher minor if the gain is large); baseline NNUE then **2.5.0 at 6.7** |
