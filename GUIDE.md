@@ -19,7 +19,7 @@ of method, history, phase numbers and internal naming — see PLAN §2
 | Integration branch | `dev`, reset to `master` and carrying this plan |
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
 | Active experiment | None. Baseline and budget registered at 4.0; no games until a cluster is registered |
-| Current action | 4.0 and 4.1 closed 2026-08-12. **Next: 4.2**, the Rarog-side differential harness |
+| Current action | 4.0–4.2 closed 2026-08-12. **Next: 4.3**, the mechanism map and order freeze |
 | Evaluation | HCE frozen through 4.10. Structural HCE work unfreezes at 4.11 only. No broad Texel or SPSA refit anywhere in Phase 4 |
 | Reference | Stockfish `9587eeeb`, the last pure-HCE master commit before NNUE. Read for **ideas** only — no code crosses into Rarog, and similarity is never a goal |
 | Next releases | **2.4.0 at 4.19** if the work transfers (higher minor if the gain is large); baseline NNUE then **2.5.0 at 6.7** |
@@ -137,18 +137,18 @@ classical fallback (9, last, may never run). Per-item rationale is in
       total, `main_tt_probes` == `nodes`. Build with `make build
       ARCH=x86-64-bmi2 COMP=mingw diag=yes`. **The suite must drive `bench`; a
       piped `go … quit` aborts before the search starts.**
-- [ ] 4.2 **Differential observation harness.** Versioned fixed suite (UHO
-      openings, quiet middlegames, tactics, checks, zugzwangs, endgames) at
-      fixed depth/nodes, 1T. Counters for TT producer/consumer kind, **prune
-      recall and overlap** (not node savings — a smaller tree can be worse),
-      **correction attribution**, history attribution, move source, cutoff
-      index, LMR/re-searches, pruning, extensions, aspiration and root
-      ownership. Off ⇒ bench 6,519,711 exactly; on ⇒ same best move and nodes.
-      Run it against the 4.1 oracle: the counters that diverge most select the
-      work. **Shadow-record** stand-pat, ProbCut, NMP/IIR/singular,
-      checking-move LMR and root-confidence concerns — each is owned by the
-      cluster that reaches it, else 7.3. Recording is mandatory; acting here
-      is not permitted.
+- [x] 4.2 **[DONE, no games]** Differential observation harness — RAR-S55.
+      Versioned fixed suite (UHO openings, quiet middlegames, tactics, checks,
+      zugzwangs, endgames) at fixed depth/nodes, 1T. Counters for TT
+      producer/consumer kind, **prune recall and overlap** (not node savings —
+      a smaller tree can be worse), **correction attribution**, history
+      attribution, move source, cutoff index, LMR/re-searches, pruning,
+      extensions, aspiration and root ownership. Off ⇒ bench 6,519,711
+      exactly; on ⇒ same best move and nodes. Run it against the 4.1 oracle:
+      the counters that diverge most select the work. **Shadow-record**
+      stand-pat, ProbCut, NMP/IIR/singular, checking-move LMR and
+      root-confidence concerns — each is owned by the cluster that reaches it,
+      else 7.3. Recording is mandatory; acting here is not permitted.
 - [ ] 4.3 **Contract map and order freeze.** Classify each reference contract
       as equivalent / intentionally different (with reason) / missing /
       coupled to a later consumer, against the Rust owners in PLAN §4. If the

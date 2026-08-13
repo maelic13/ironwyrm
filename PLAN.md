@@ -12,7 +12,7 @@ lives in `EXPERIMENTS.md`; the operational tracker lives in `GUIDE.md`.
 | Integration branch | `dev`, reset to `master` and carrying this plan |
 | Frozen oracle | `hybrid` at `75d0d43` — Stockfish `9587eeeb` driving the exact 2.3.2 HCE |
 | Active game jobs | None. The stopped no-adjudication hybrid tournament already settled the architectural decision |
-| Current phase | **Phase 4 — reference-accelerated search and HCE development**; 4.0 and 4.1 closed, 4.2 open |
+| Current phase | **Phase 4 — reference-accelerated search and HCE development**; 4.0–4.2 closed, 4.3 open |
 | Next release | **2.4.0 at 4.19** if the work transfers; a larger cumulative gain may justify a higher minor version. Baseline NNUE then targets **2.5.0** |
 | Reference posture | Stockfish `9587eeeb` is read for **ideas**. No Stockfish code enters Rarog. Rarog is not a derivative work and does not aim at behavioral similarity |
 | HCE status | Frozen through 4.10. Structural, reference-led HCE work reopens at 4.11 under its own gates. No broad constant refit at any point in this phase |
@@ -446,7 +446,7 @@ Named now so every step has a concrete surface:
   diagnostic artifact only; it never plays a rating game and never replaces
   the frozen `75d0d43` tournament binary.
 
-- **4.2 Differential observation harness.** Define a versioned fixed suite
+- **4.2 Differential observation harness — CLOSED 2026-08-12 (RAR-S55).** Define a versioned fixed suite
   spanning UHO openings, quiet middlegames, tactics, checks, zugzwangs and
   endgames. At fixed depth and fixed nodes, one thread, emit deterministic
   counters for:
