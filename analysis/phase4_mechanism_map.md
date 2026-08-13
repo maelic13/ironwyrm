@@ -62,7 +62,7 @@ This is where the evidence concentrates.
 
 | Mechanism | Problem | Rarog today | Verdict |
 |---|---|---|---|
-| Move-count pruning | Stop searching quiets once enough have failed | `lmp_prune` **13.35x** | **WEAKER.** An order of magnitude more per node. Enforced inside the picker by withholding quiets |
+| Move-count pruning | Stop searching quiets once enough have failed | `lmp_nodes` **0.57x** — fires at 8.3% of nodes against 14.6% | **SOLVED, and the earlier reading was wrong.** The 13.35x first reported was `lmp_prune` (per move) against the oracle's per-node counter. Corrected: Rarog prunes by move count *less* often, not more |
 | Quiet futility | Skip quiets that cannot reach alpha | `quiet_futility_prune` 0.44x | **UNKNOWN.** Lower, but LMP removes the population before futility sees it |
 | SEE pruning | Skip moves that lose material outright | `see_prune` **0.18x**, and captures only | **DIFFERENT, and the scope is the question.** The reference also prunes *quiets* by SEE; Rarog does not. Rarog's low rate is mostly this scope difference, not a weaker threshold |
 | Reverse futility | Return early when the static eval is far above beta | `rfp_cut` 1.38x | **SOLVED (probably).** Slightly hot, no evidence of harm |
@@ -74,9 +74,10 @@ This is where the evidence concentrates.
 **Cutoff composition is inverted.** The reference takes 1.37 quiet cutoffs per
 capture cutoff; Rarog takes 0.71 — `cutoff_quiet` 0.66x against
 `cutoff_capture` 1.29x. Rarog's cutoffs come predominantly from captures where
-the reference's come from quiets. That is what an over-pruned quiet population
-looks like from the other end, and it ties the LMP reading to the cutoff
-reading.
+the reference's come from quiets. This no longer has an LMP explanation, since
+the corrected `lmp_nodes` shows Rarog pruning quiets at *fewer* nodes. It is
+therefore an open question, and a real one: it is owned by 4.7 but has no
+identified mechanism yet.
 
 ### Extensions and depth authority — owner 4.8
 
@@ -147,9 +148,11 @@ The three leads, in the order the evidence ranks them:
 
 1. **Null-move conversion.** 19.2% of attempts produce a cutoff against 83.3%.
    Rarog is paying for null-move searches it overwhelmingly does not use.
-2. **Move-count pruning volume.** 13.35x per node, enforced by withholding
-   quiets in the picker, with an inverted cutoff composition to match.
-3. **ProbCut conversion.** 22.7% against 91.2%, at 2.33x the attempt rate.
+2. **ProbCut conversion.** 22.7% against 91.2%, at 2.33x the attempt rate.
+
+   ~~Move-count pruning volume~~ — **withdrawn 2026-08-12.** The 13.35x was a
+   per-move against per-node artifact; corrected, Rarog fires LMP at 0.57x the
+   reference's per-node rate. See the RAR-S55 correction.
 
 Each is a *coherent contract* question, not a threshold to nudge, and all three
 sit in one cluster because they compete for the same quiet population.

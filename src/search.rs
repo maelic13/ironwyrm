@@ -2629,6 +2629,10 @@ impl Searcher {
         // and for the `make_move` check hint below. `board` is restored by
         // `unmake_move` each iteration, so these stay valid for the whole loop.
         let mut node_ci: Option<CheckInfo> = None;
+        // 4.7b: latch so `lmp_nodes` counts NODES, not moves -- the oracle can
+        // only observe the per-node event, so that is the comparable unit.
+        #[cfg(feature = "diag")]
+        let mut diag_node_lmp_seen = false;
         let mut quiets = crate::board::MoveList::new();
         let mut good_caps = BadCaptureList::new();
         let mut bad_caps = BadCaptureList::new();
@@ -2798,6 +2802,11 @@ impl Searcher {
                         && !move_gives_check(board, &mut node_ci, mv, &mut gives_check)
                     {
                         crate::diag_count!(lmp_prune);
+                        #[cfg(feature = "diag")]
+                        if !diag_node_lmp_seen {
+                            diag_node_lmp_seen = true;
+                            crate::diag_count!(lmp_nodes);
+                        }
                         continue;
                     }
                     // Per-move quiet futility pruning (Phase 2.7): a quiet move

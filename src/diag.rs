@@ -56,7 +56,13 @@ pub mod counters {
         razor_drop,
         nmp_cut,
         probcut_cut,
+        // Per-MOVE: every quiet skipped by move-count/history pruning.
+        // Rarog-only -- the oracle cannot count this without generating the
+        // quiets it is declining to generate.
         lmp_prune,
+        // Per-NODE: nodes at which at least one quiet was suppressed. THIS is
+        // the comparable one; see analysis/phase4_counter_spec.md.
+        lmp_nodes,
         quiet_futility_prune,
         see_prune,
         // LMR reduction and its verification re-search.

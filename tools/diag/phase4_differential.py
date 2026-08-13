@@ -44,7 +44,7 @@ move_seen_tt move_seen_good_capture move_seen_quiet move_seen_bad_capture
 lmr_applied lmr_research reduction_depth_sum
 razor_drop rfp_cut nmp_attempt nmp_cut
 nmp_verify_attempt nmp_verify_pass nmp_verify_fail
-probcut_attempt probcut_cut lmp_prune quiet_futility_prune see_prune
+probcut_attempt probcut_cut lmp_nodes quiet_futility_prune see_prune
 singular_attempt singular_extend_one singular_multicut
 main_tt_probes main_tt_hits tt_cut_exact tt_cut_lower tt_cut_upper
 tt_bound_not_usable main_store_exact main_store_lower main_store_upper
@@ -55,6 +55,7 @@ root_iterations root_best_changes asp_fail_high asp_fail_low
 # Excluded from the difference with the reason, so a reader is never left
 # wondering whether a counter was forgotten.
 EXCLUDED = {
+    "lmp_prune": "Rarog-only: per MOVE skipped; the oracle can only count per node",
     "check_extensions": "Rarog removed its in-check extension (+30.75); oracle extends",
     "singular_extend_two": "mechanism absent in 9587eeeb",
     "singular_negative_extension": "mechanism absent in 9587eeeb",
