@@ -44,7 +44,7 @@
         X(nmp_attempt) X(nmp_cut) \
         X(nmp_verify_attempt) X(nmp_verify_pass) X(nmp_verify_fail) \
         X(probcut_attempt) X(probcut_cut) \
-        X(lmp_prune) X(quiet_futility_prune) X(see_prune) \
+        X(lmp_nodes) X(quiet_futility_prune) X(see_prune) \
         /* 3b — prune recall and overlap */ \
         X(prune_shadow_moves) X(prune_shadow_lmp) X(prune_shadow_futility) \
         X(prune_shadow_see) X(prune_shadow_check_exempt) \

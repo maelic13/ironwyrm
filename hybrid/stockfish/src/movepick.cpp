@@ -217,8 +217,13 @@ top:
       /* fallthrough */
 
   case QUIET:
+      // 4.7b CORRECTION. This fires at most ONCE per node -- reaching the QUIET
+      // stage with skipQuiets set advances past it -- so it counts NODES whose
+      // quiets were suppressed, not MOVES skipped. Rarog's lmp_prune counts
+      // per move, so the two were never comparable and their ratio read ~13x
+      // when the mechanisms may well agree. Named for what it measures.
       if (skipQuiets)
-          DIAG_COUNT(lmp_prune);
+          DIAG_COUNT(lmp_nodes);
 
       if (   !skipQuiets
           && select<Next>([&](){return   *cur != refutations[0].move
