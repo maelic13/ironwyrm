@@ -2367,7 +2367,29 @@ impl Searcher {
                             self.params.singular_reject_speculative != 0,
                         )))
                 && depth >= 3
-                && nmp_eval
+                // 4.7a NULL-MOVE ENTRY CONTRACT. The primary gate is now "the
+                // pruning eval already says this node fails high", not "the
+                // pruning eval is within a margin of failing high".
+                //
+                // The old single relaxed test admitted nodes up to
+                // `12*depth + 35*improving` BELOW beta — about 131 cp at depth
+                // 8 — and RAR-S55 measured what that costs: Rarog attempted
+                // null move at 0.94x the reference's rate per node and
+                // converted 19.2% of attempts against its 83.3%. Four out of
+                // five null searches were spent on nodes that were never going
+                // to fail high.
+                //
+                // The margin is not deleted, it is RE-HOMED onto the raw static
+                // eval as a secondary floor. That keeps both tuned parameters
+                // live and gives them a defensible role — "the position is not
+                // wildly worse than beta once TT refinement is removed" — while
+                // the decision itself is made by the refined eval. `static_eval`
+                // is always real here: this whole block is under `!in_check`.
+                //
+                // Direction is de-selectivity, which is where RAR-S53/S54 point:
+                // fewer null cutoffs, a larger tree, better decisions per node.
+                && nmp_eval >= beta
+                && static_eval
                     >= beta
                         - self.params.nm_depth_coeff * depth
                         - self.params.nm_improving_bonus * improving_i
