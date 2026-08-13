@@ -19,7 +19,7 @@ of method, history, phase numbers and internal naming — see PLAN §2
 | Integration branch | `dev`, reset to `master` and carrying this plan |
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
 | Active experiment | None. Baseline and budget registered at 4.0; no games until a cluster is registered |
-| Current action | 4.0–4.2 closed 2026-08-12. **Next: 4.3**, the mechanism map and order freeze |
+| Current action | 4.0–4.3 closed 2026-08-12. **Next: 4.7** (cluster C, main selectivity) — order frozen at 4.3, then 4.5, 4.6, 4.8, 4.9 |
 | Evaluation | HCE frozen through 4.10. Structural HCE work unfreezes at 4.11 only. No broad Texel or SPSA refit anywhere in Phase 4 |
 | Reference | Stockfish `9587eeeb`, the last pure-HCE master commit before NNUE. Read for **ideas** only — no code crosses into Rarog, and similarity is never a goal |
 | Next releases | **2.4.0 at 4.19** if the work transfers (higher minor if the gain is large); baseline NNUE then **2.5.0 at 6.7** |
@@ -149,11 +149,16 @@ classical fallback (9, last, may never run). Per-item rationale is in
       stand-pat, ProbCut, NMP/IIR/singular, checking-move LMR and
       root-confidence concerns — each is owned by the cluster that reaches it,
       else 7.3. Recording is mandatory; acting here is not permitted.
-- [ ] 4.3 **Contract map and order freeze.** Classify each reference contract
-      as equivalent / intentionally different (with reason) / missing /
-      coupled to a later consumer, against the Rust owners in PLAN §4. If the
-      evidence contradicts the cluster order, edit `PLAN.md` **before**
-      implementing — never after seeing games.
+- [x] 4.3 **[DONE, no games]** Mechanism map and order freeze —
+      `analysis/phase4_mechanism_map.md`. **Execution order changed on the
+      evidence: 4.7 runs first**, then 4.5, 4.6, 4.8, 4.9; numbers unchanged.
+      Ordering premise refuted (Rarog's first-move cutoff beats the reference
+      in every cohort), so 4.5 drops to low expectation. Six mechanisms are
+      classed UNKNOWN and their owning cluster must measure before designing.
+      Classify each reference contract as equivalent / intentionally different
+      (with reason) / missing / coupled to a later consumer, against the Rust
+      owners in PLAN §4. If the evidence contradicts the cluster order, edit
+      `PLAN.md` **before** implementing — never after seeing games.
 - [ ] 4.4 **Search-consumed board state.** Cache only the per-ply state a
       4.5–4.9 contract actually consumes: `CheckInfo`, pins/blockers, check
       squares, `plies_from_null`, repetition distance. Bench-identical where
@@ -622,6 +627,7 @@ cargo xtask verify-isa --arch pext
 | `GUIDE.md` | Maintainers/agents: tracker, commands and operating rules |
 | `EXPERIMENTS.md` | Durable evidence, failures, retry triggers and artifacts |
 | `analysis/phase4_counter_spec.md` | The 4.1/4.2 shared counter contract: names, definitions, sites and tiers |
+| `analysis/phase4_mechanism_map.md` | The 4.3 map: per mechanism, the problem, Rarog's answer, the verdict and its owner |
 | `tools/spsa_configs/README.md` | Tuning-specific mechanics and lessons |
 
 When facts disagree, source, defaults and reproducible artifacts outrank

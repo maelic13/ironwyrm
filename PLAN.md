@@ -12,7 +12,7 @@ lives in `EXPERIMENTS.md`; the operational tracker lives in `GUIDE.md`.
 | Integration branch | `dev`, reset to `master` and carrying this plan |
 | Frozen oracle | `hybrid` at `75d0d43` — Stockfish `9587eeeb` driving the exact 2.3.2 HCE |
 | Active game jobs | None. The stopped no-adjudication hybrid tournament already settled the architectural decision |
-| Current phase | **Phase 4 — reference-accelerated search and HCE development**; 4.0–4.2 closed, 4.3 open |
+| Current phase | **Phase 4 — reference-accelerated search and HCE development**; 4.0–4.3 closed. **4.7 executes first** (order frozen at 4.3), then 4.5, 4.6, 4.8, 4.9 |
 | Next release | **2.4.0 at 4.19** if the work transfers; a larger cumulative gain may justify a higher minor version. Baseline NNUE then targets **2.5.0** |
 | Reference posture | Stockfish `9587eeeb` is read for **ideas**. No Stockfish code enters Rarog. Rarog is not a derivative work and does not aim at behavioral similarity |
 | HCE status | Frozen through 4.10. Structural, reference-led HCE work reopens at 4.11 under its own gates. No broad constant refit at any point in this phase |
@@ -144,6 +144,7 @@ patterns.
 | `GUIDE.md` | Maintainers/agents: tracker, commands and operating rules |
 | `EXPERIMENTS.md` | Durable evidence, failures, retry triggers and artifacts |
 | `analysis/phase4_counter_spec.md` | The 4.1/4.2 shared counter contract: names, definitions, sites and tiers |
+| `analysis/phase4_mechanism_map.md` | The 4.3 map: per mechanism, the problem, Rarog's answer, the verdict and its owner |
 | `tools/spsa_configs/README.md` | Tuning-specific mechanics and lessons |
 
 `PLAN.md` and `GUIDE.md` are the maintainer-facing pair. The user-facing files
@@ -326,10 +327,17 @@ and no cluster is entitled to its prior.
 | 4.9 | E — root search and clock | 5–20 | Root confidence and TM are locally tuned, and RAR-S53 priced speed plus time management together at a ~0 point estimate, so this cluster is about root authority rather than about the clock |
 | 4.13–4.16 | F–I — HCE structural clusters | 15–50 each | Drawn from the 328-Elo evaluator population, discounted hard for co-adaptation with a search that is not Stockfish's |
 
-The rows are ordered by prior, not by execution order. Execution still follows
-the dependency order in the step list, because selectivity consumes the depth
-and history evidence that cluster A owns. If 4.2–4.3 contradict that, reorder
-here before implementing.
+**Execution order was changed at 4.3, on 4.2's evidence: 4.7 runs first**,
+then 4.5, 4.6, 4.8, 4.9. The original order put 4.5 first because selectivity
+consumes the depth and history evidence cluster A owns — but that assumed A
+would *improve* those inputs, and RAR-S52/S55 refute the premise: Rarog's
+first-move cutoff rate is already **above** the reference's in every cohort.
+There is little for 4.5 to improve and correspondingly little for 4.7 to wait
+on, while 4.7 is the only cluster with a positive local result already in hand
+(RAR-S54, +4.06 ± 3.71). Item numbers do not move; this is execution order, not
+renumbering. The accepted risk — that 4.5 could later disturb 4.7's result — is
+handled by re-verifying 4.7 against the accepted head if ordering moves
+materially, and by 4.10 verifying the combination rather than assuming it.
 
 **RAR-S52–S54 predate the oracle and reach the same conclusion from a
 different direction.** At exactly equal nodes and equal speed, Rarog searched
@@ -475,7 +483,7 @@ Named now so every step has a concrete surface:
   reaches falls through to 7.3. Recording it is mandatory; acting on it here is
   not permitted.
 
-- **4.3 Mechanism map and order freeze.** Read `search.cpp`, `movepick.cpp`
+- **4.3 Mechanism map and order freeze — CLOSED 2026-08-12 (`analysis/phase4_mechanism_map.md`).** Read `search.cpp`, `movepick.cpp`
   and their per-ply state as a catalogue of **problems and one working set of
   answers**, and write down, per mechanism: the problem it solves, whether
   Rarog's own 4.2 evidence shows that problem is present here, what Rarog does
