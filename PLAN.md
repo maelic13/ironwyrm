@@ -12,7 +12,7 @@ lives in `EXPERIMENTS.md`; the operational tracker lives in `GUIDE.md`.
 | Integration branch | `dev`, reset to `master` and carrying this plan |
 | Frozen oracle | `hybrid` at `75d0d43` — Stockfish `9587eeeb` driving the exact 2.3.2 HCE |
 | Active game jobs | None. The stopped no-adjudication hybrid tournament already settled the architectural decision |
-| Current phase | **Phase 4 — reference-accelerated search and HCE development**; 4.0–4.3 closed. **4.7 executes first** (order frozen at 4.3), then 4.5, 4.6, 4.8, 4.9 |
+| Current phase | **Phase 4 — reference-accelerated search and HCE development**; 4.0–4.4 closed. **4.7 open** (order frozen at 4.3), then 4.5, 4.6, 4.8, 4.9 |
 | Next release | **2.4.0 at 4.19** if the work transfers; a larger cumulative gain may justify a higher minor version. Baseline NNUE then targets **2.5.0** |
 | Reference posture | Stockfish `9587eeeb` is read for **ideas**. No Stockfish code enters Rarog. Rarog is not a derivative work and does not aim at behavioral similarity |
 | HCE status | Frozen through 4.10. Structural, reference-led HCE work reopens at 4.11 under its own gates. No broad constant refit at any point in this phase |
@@ -496,7 +496,7 @@ Named now so every step has a concrete surface:
   contradicts the provisional order below, **edit this plan before
   implementing** — never after seeing games.
 
-- **4.4 Search-consumed board state.** Several mechanisms in the 4.5–4.9 list
+- **4.4 Search-consumed board state — CLOSED 2026-08-12, nothing required.** Several mechanisms in the 4.5–4.9 list
   are only affordable with cheap per-ply state that Rarog recomputes on
   demand: `CheckInfo`, pins and blockers, check squares, `plies_from_null`,
   repetition distance. Land only the parts a 4.5–4.9 design actually consumes,

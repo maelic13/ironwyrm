@@ -19,7 +19,7 @@ of method, history, phase numbers and internal naming — see PLAN §2
 | Integration branch | `dev`, reset to `master` and carrying this plan |
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
 | Active experiment | None. Baseline and budget registered at 4.0; no games until a cluster is registered |
-| Current action | 4.0–4.3 closed 2026-08-12. **Next: 4.7** (cluster C, main selectivity) — order frozen at 4.3, then 4.5, 4.6, 4.8, 4.9 |
+| Current action | 4.0–4.4 closed 2026-08-12. **4.7 open** (cluster C, main selectivity) — order frozen at 4.3, then 4.5, 4.6, 4.8, 4.9 |
 | Evaluation | HCE frozen through 4.10. Structural HCE work unfreezes at 4.11 only. No broad Texel or SPSA refit anywhere in Phase 4 |
 | Reference | Stockfish `9587eeeb`, the last pure-HCE master commit before NNUE. Read for **ideas** only — no code crosses into Rarog, and similarity is never a goal |
 | Next releases | **2.4.0 at 4.19** if the work transfers (higher minor if the gain is large); baseline NNUE then **2.5.0 at 6.7** |
@@ -159,12 +159,20 @@ classical fallback (9, last, may never run). Per-item rationale is in
       (with reason) / missing / coupled to a later consumer, against the Rust
       owners in PLAN §4. If the evidence contradicts the cluster order, edit
       `PLAN.md` **before** implementing — never after seeing games.
-- [ ] 4.4 **Search-consumed board state.** Cache only the per-ply state a
-      4.5–4.9 contract actually consumes: `CheckInfo`, pins/blockers, check
-      squares, `plies_from_null`, repetition distance. Bench-identical where
-      behavior-neutral; pooled-PGO NPS gate where it is a layout change. The
-      evaluator-facing dirty-piece delta contract stays owned by 5.1 — do not
-      let this grow into the NNUE runway.
+- [x] 4.4 **[DONE, nothing required]** Search-consumed board state. Audited
+      against 4.7's three leads (null-move entry, move-count volume, ProbCut
+      entry): they consume `improving`, `eval_for_pruning`, depth and beta,
+      all already available, and the one board-state input their pruning block
+      uses is `CheckInfo` — already a per-node lazy cache (`node_ci`) with
+      per-move memoisation. Building persistent
+      pins/blockers/`plies_from_null` now would be speculative state with no
+      consumer, which rule 2 forbids and the step itself warns against.
+      Deferred to whichever cluster needs one, else 5.1. Cache only the
+      per-ply state a 4.5–4.9 contract actually consumes: `CheckInfo`,
+      pins/blockers, check squares, `plies_from_null`, repetition distance.
+      Bench-identical where behavior-neutral; pooled-PGO NPS gate where it is
+      a layout change. The evaluator-facing dirty-piece delta contract stays
+      owned by 5.1 — do not let this grow into the NNUE runway.
 - [ ] 4.5 **Cluster A — move ordering, histories, LMR.** One coherent cluster,
       implemented in dependency order. Owns the retained continuation/capture
       correction weights and `CorrSkipWhenTtRefined`. Prior 15–45 nElo:
