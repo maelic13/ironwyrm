@@ -318,6 +318,14 @@ pub mod counters {
         // is a defect the guard does not fix.
         nmp_decisive_population,
         nmp_cut_unproven_mate,
+        // Per-NODE: nodes passing the ProbCut entry gate, counted before
+        // capture generation, so nodes with no eligible capture are included.
+        // Per-MOVE: `probcut_attempt` -- a ProbCut search was actually started,
+        // which is what the spec says and what the oracle counts. Until 4.7c
+        // prep the per-node figure carried the `probcut_attempt` name and was
+        // differenced against the oracle's per-move one; see the RAR-S55
+        // correction in EXPERIMENTS.md.
+        probcut_nodes,
         probcut_attempt,
         probcut_qpass,
         probcut_tt_store,

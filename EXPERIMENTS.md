@@ -178,6 +178,47 @@ designing the candidate, one step before it would have justified a change and a
 game budget. `lmp_prune` is retained as a Rarog-only volume reading. Everything
 else in RAR-S55 stands; its invariants passed then and pass now.
 
+**Second correction to RAR-S55, 2026-08-14.** The reported ProbCut divergence —
+`probcut_attempt` **2.33x** and conversion **22.7% against 91.2%** — is
+**withdrawn as not comparable**, the same denominator class as the `lmp_prune`
+correction above, one lead later.
+
+The oracle's `probcut_attempt` fires inside its MovePicker loop, once per move
+actually searched, up to `2 + 2·cutNode` at a node. Rarog's fired once per NODE
+entering the ProbCut block, before capture generation, so nodes with no
+eligible capture counted an attempt that could never convert. The `2.33x`
+compared nodes against moves; the conversion pair divided cuts-per-node by
+cuts-per-move-tried.
+
+Compounding it, the oracle's **TT-served shortcut** — a stored entry already
+above `probcutBeta`, so the node returns without searching anything — was made
+to count as `probcut_attempt` at 4.1 specifically so `probcut_cut` could not
+exceed it. That satisfied the invariant and concealed the population. Rarog has
+no TT-served ProbCut path at all.
+
+Both engines now carry `probcut_nodes` (per node), `probcut_attempt` (per
+move), and the oracle carries `probcut_tt_served`. The runner's invariant
+becomes `probcut_cut <= probcut_nodes`; the old form held on both engines while
+being incapable of falsifying anything.
+
+Preliminary indication, from the oracle's 47 bench positions at depth 7 — a
+build fingerprint check, **not** the measurement, which is the 4.2 suite at
+depth 8: of 1,623 nodes entering the block, **939 (57.9%) returned from the TT
+unsearched**, and only 218 moves were searched across the remaining 684 nodes.
+Netting the TT path out leaves 179 search-produced cuts from 684 nodes, **26.2%
+per node**, against Rarog's 22.7%. Different suite and depth, so this is not
+yet a finding — but the gap that ranked ProbCut second in the 4.3 map is not
+visible in it, and roughly two-thirds of the nodes reaching the oracle's picker
+search nothing at all, which is the `probcutBeta − staticEval` SEE threshold
+doing work the conversion rate was being credited for.
+
+Consequence: **4.7c is not yet a designed candidate.** No code has been written
+against the withdrawn numbers. The 4.3 map's remaining ProbCut entry is
+suspended pending the corrected depth-8 re-run, and the 4.7a+4.7c bundle is not
+sized until then. Also note what this says about 4.1's defect list: the ProbCut
+issue was *seen* at 4.1 and closed by forcing the invariant to hold. Making a
+cross-check pass is not the same as making two counters comparable.
+
 Frozen local Stage-1 package SHA-256 hashes: executable
 `DA78A1455BAFE222BD6AF7EF243B8C62450B6BC0913C4AF3B09F8C68E14826E8`;
 `rarog_hce.dll`

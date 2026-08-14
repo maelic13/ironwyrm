@@ -44,7 +44,7 @@ move_seen_tt move_seen_good_capture move_seen_quiet move_seen_bad_capture
 lmr_applied lmr_research reduction_depth_sum
 razor_drop rfp_cut nmp_attempt nmp_cut
 nmp_verify_attempt nmp_verify_pass nmp_verify_fail
-probcut_attempt probcut_cut lmp_nodes quiet_futility_prune see_prune
+probcut_nodes probcut_attempt probcut_cut lmp_nodes quiet_futility_prune see_prune
 singular_attempt singular_extend_one singular_multicut
 main_tt_probes main_tt_hits tt_cut_exact tt_cut_lower tt_cut_upper
 tt_bound_not_usable main_store_exact main_store_lower main_store_upper
@@ -60,6 +60,9 @@ EXCLUDED = {
     "singular_extend_two": "mechanism absent in 9587eeeb",
     "singular_negative_extension": "mechanism absent in 9587eeeb",
     "iid_applied": "oracle-only; Rarog has IIR, a different mechanism",
+    "probcut_tt_served": "oracle-only: TT-served ProbCut return, a path Rarog "
+                         "does not have. Subtract it before reading the "
+                         "oracle's cut rate as a SEARCH conversion",
     "prune_shadow_moves": "SEE families range over different populations (4.7)",
     "prune_shadow_lmp": "see prune_shadow_moves",
     "prune_shadow_futility": "see prune_shadow_moves",
@@ -76,8 +79,14 @@ INVARIANTS = [
     ("rank buckets == cutoff_quiet + cutoff_capture",
      lambda c: c["best_rank_1"] + c["best_rank_2_3"] + c["best_rank_4_7"]
      + c["best_rank_8_plus"] == c["cutoff_quiet"] + c["cutoff_capture"]),
-    ("probcut_cut <= probcut_attempt",
-     lambda c: c["probcut_cut"] <= c["probcut_attempt"]),
+    # Was `probcut_cut <= probcut_attempt` until 4.7c prep. That held on both
+    # engines and told us nothing, because the two counters were in different
+    # units: the oracle's attempt is per MOVE searched, Rarog's was per NODE
+    # entered. Cuts are per node on both sides, so the node count is the only
+    # denominator this bounds -- and on the oracle the old form can now legally
+    # fail, since a TT-served cut has no attempt behind it.
+    ("probcut_cut <= probcut_nodes",
+     lambda c: c["probcut_cut"] <= c["probcut_nodes"]),
 ]
 
 

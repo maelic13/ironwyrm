@@ -69,7 +69,7 @@ This is where the evidence concentrates.
 | Razoring | Drop hopeless nodes into qsearch | `razor_drop` 1.61x | **UNKNOWN** |
 | Null-move pruning | Prove a node fails high without searching a move | `nmp_attempt` 0.94x, `nmp_cut` **0.22x** | **WEAKER, and the sharpest single reading.** Rarog attempts null move as often and converts **19.2%** of attempts against the reference's **83.3%** |
 | Null-move verification | Re-verify a null cutoff at high depth | Present; fires only at depth ≥ 13, so the depth-8 suite reads 0 on both | **UNKNOWN.** Needs a deeper suite run |
-| ProbCut | Prove a capture beats beta with a shallow search | `probcut_attempt` 2.33x, `probcut_cut` 0.58x | **WEAKER.** Conversion **22.7%** against **91.2%**. Rarog tries ProbCut four times as often and four times as ineffectively |
+| ProbCut | Prove a capture beats beta with a shallow search | ~~`probcut_attempt` 2.33x~~, `probcut_cut` 0.58x | **UNKNOWN — withdrawn 2026-08-14.** The attempt counters were per-MOVE on the oracle against per-NODE in Rarog, and the oracle's TT-served returns were counted as attempts, so neither the 2.33x nor the "22.7% against 91.2%" was a comparison. See the second RAR-S55 correction. Re-reads on the corrected depth-8 suite |
 
 **Cutoff composition is inverted.** The reference takes 1.37 quiet cutoffs per
 capture cutoff; Rarog takes 0.71 — `cutoff_quiet` 0.66x against
@@ -144,18 +144,29 @@ head, not assumed to hold.
 closed Phase-4 line already fitted those constants for +15.33 nElo and left the
 shape untouched, which is why fitting them again is out of scope.
 
-The three leads, in the order the evidence ranks them:
+The three leads, in the order the evidence ranked them. **One survives.**
 
 1. **Null-move conversion.** 19.2% of attempts produce a cutoff against 83.3%.
    Rarog is paying for null-move searches it overwhelmingly does not use.
-2. **ProbCut conversion.** 22.7% against 91.2%, at 2.33x the attempt rate.
+   Both counters are per-node on both engines, so this reading is comparable
+   and stands. It is what 4.7a was built against.
+
+   ~~ProbCut conversion~~ — **withdrawn 2026-08-14.** Per-move against per-node
+   on the attempt side, plus the oracle's TT-served returns counted as
+   attempts. Re-reads on the corrected suite; the first indication is that the
+   gap is small and that the real difference is the oracle's SEE *move filter*,
+   not its entry gate. See the second RAR-S55 correction.
 
    ~~Move-count pruning volume~~ — **withdrawn 2026-08-12.** The 13.35x was a
    per-move against per-node artifact; corrected, Rarog fires LMP at 0.57x the
    reference's per-node rate. See the RAR-S55 correction.
 
-Each is a *coherent contract* question, not a threshold to nudge, and all three
-sit in one cluster because they compete for the same quiet population.
+Two of the three leads this map ranked were denominator artifacts of the same
+class, found by auditing each counter before designing against it. The
+surviving lead is a *coherent contract* question, not a threshold to nudge.
+The claim that all three compete for one quiet population no longer has three
+members to bind, so the case for gating 4.7 as a bundle rather than as a single
+contract now rests on whatever the corrected re-run finds.
 
 ## What this map does not license
 

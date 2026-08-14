@@ -2486,9 +2486,15 @@ impl Searcher {
             }
 
             if probcut_tt_pv_ok && depth >= 4 {
+                // Per NODE entering the block, before capture generation, so
+                // nodes with no eligible capture are counted here too. This
+                // carried the `probcut_attempt` name until 4.7c prep, and was
+                // differenced against the oracle's per-MOVE counter of the same
+                // name -- the RAR-S25 denominator shape. See the RAR-S55
+                // correction.
                 #[cfg(feature = "diag")]
                 if diag_sample {
-                    crate::diag_count!(probcut_attempt);
+                    crate::diag_count!(probcut_nodes);
                     crate::diag_count!(shadow_4_4_selectivity);
                 }
                 let probcut_beta = beta + self.params.probcut_margin;
@@ -2499,6 +2505,15 @@ impl Searcher {
                     let mv = picked.mv;
                     if !board.see_ge(mv, 0) {
                         continue;
+                    }
+                    // Per MOVE: a ProbCut search is about to start. This is the
+                    // counter the oracle's `probcut_attempt` can be differenced
+                    // against -- placed after the eligibility filter and before
+                    // the qsearch, exactly where the oracle places its own.
+                    // Up to 8 of these can fire at a single node.
+                    #[cfg(feature = "diag")]
+                    if diag_sample {
+                        crate::diag_count!(probcut_attempt);
                     }
                     self.stack_moves[ply] = mv;
                     board.make_move_unchecked(mv);
@@ -2531,6 +2546,14 @@ impl Searcher {
                         return 0;
                     }
                     if score >= probcut_beta {
+                        // Deliberately EXACT, like every other `*_cut` counter
+                        // (`rfp_cut`, `nmp_cut`, `see_prune`). The core set is
+                        // guarded inconsistently on purpose: the spec's chosen
+                        // resolution is `RAROG_DIAG_SAMPLE_STRIDE=1`, which
+                        // makes the sampled half exact in one place rather than
+                        // lifting counters out of guards in the hottest file.
+                        // Never read this against `probcut_attempt` at the
+                        // default stride.
                         crate::diag_count!(probcut_cut);
                         let cutoff_score = score - (probcut_beta - beta);
                         self.tt.store(TtStore {

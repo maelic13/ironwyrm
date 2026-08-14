@@ -116,8 +116,9 @@ priced at 2.5 plies of unusable depth.
 | `nmp_verify_attempt` | Verification search started | 9 |
 | `nmp_verify_pass` | Verification confirmed the cutoff | 9 |
 | `nmp_verify_fail` | Verification refuted the cutoff | 9 |
-| `probcut_attempt` | A ProbCut search was started | 10 |
-| `probcut_cut` | ProbCut produced a cutoff | 10 |
+| `probcut_nodes` | A node passed the ProbCut entry gate — per NODE, counted before any move is picked, so nodes where nothing is eligible are included | 10 |
+| `probcut_attempt` | A ProbCut search was started — per MOVE. Several can fire at one node (oracle `2 + 2·cutNode`, Rarog up to 8) | 10 |
+| `probcut_cut` | ProbCut produced a cutoff — per NODE, so its denominator is `probcut_nodes`, never `probcut_attempt` | 10 |
 | `lmp_prune` | A move was skipped by move-count pruning | 13 |
 | `quiet_futility_prune` | A quiet move was skipped by futility | 13 |
 | `see_prune` | A move was skipped by an SEE threshold | 13 |
@@ -212,7 +213,8 @@ Recorded here because each one would otherwise be misread as a finding.
 | `nmp_verify_*` only fires at depth ≥ 13 | A short-depth suite reads 0. Not a gap; size the suite before reading them |
 | `prune_shadow_moves` excludes quiets the picker withheld under LMP | The threshold is enforced in the move picker, not by a `continue`, so LMP-removed moves never reach the shadow stage. LMP's overlap with futility and SEE is observable only at the boundary move. `lmp_prune` is therefore counted in the picker |
 | A piped `go … quit` aborts the search before it starts | The suite must drive `bench`, which is synchronous. A naive `go depth 10` returns `bestmove a2a3` on the *frozen* binary too — this is a harness trap, not an engine defect |
-| `probcut_cut` initially exceeded `probcut_attempt` | The TT-served ProbCut shortcut returns without running a search. It now counts as both. A rate above 1 discredits the whole diagnostic |
+| `probcut_cut` initially exceeded `probcut_attempt` | The TT-served ProbCut shortcut returns without running a search. 4.1 made it count as both so the rate could not read above 1 — **that hid it.** Corrected at 4.7c prep: it is a cutoff but not an attempt, and now carries its own oracle-only `probcut_tt_served`. Forcing an invariant to hold is not the same as making the counters comparable |
+| `probcut_attempt` was per MOVE on the oracle and per NODE in Rarog | Both engines now carry `probcut_nodes` (per node) and `probcut_attempt` (per move). RAR-S55's "22.7% against 91.2%" divided cuts-per-node by cuts-per-move-tried, and the `2.33×` attempt ratio compared nodes against moves. Corrected at 4.7c prep — see the RAR-S55 correction note in `EXPERIMENTS.md` |
 
 ### Invariants that must keep holding
 
@@ -225,13 +227,14 @@ not the engine. Verified on the oracle at bench depth 9:
 | `best_rank_1 + best_rank_2_3 + best_rank_4_7 + best_rank_8_plus` == `cutoff_quiet + cutoff_capture` | 1726 == 1726 |
 | `main_tt_probes` == `nodes` | 6967 == 6967 |
 | `main_store_lower` == cutoff total | 1726 == 1726 |
-| `probcut_cut` ≤ `probcut_attempt` | holds in all 44 bench positions |
+| `probcut_cut` ≤ `probcut_nodes` | holds on both engines. **Replaces** `probcut_cut ≤ probcut_attempt`, which held only because the two counters were in different units and could not falsify anything |
 
 ## Oracle-only — questions for 4.3, never targets
 
 | Name | Mechanism | Note |
 |---|---|---|
 | `iid_applied` | Internal iterative deepening, SF step 11 | Rarog implements **IIR** instead. These are different mechanisms and must not share a name or be differenced. SF's own annotation prices IID at ~1 Elo, so this is a low-value question |
+| `probcut_tt_served` | ProbCut satisfied straight from the TT: a stored entry at depth ≥ `depth − 3` already exceeds `probcutBeta`, so the node returns without searching anything | Rarog has no such path — its ProbCut always searches. Counted inside `probcut_nodes` and `probcut_cut`, so **subtract it** before reading the oracle's cut rate as a *search* conversion. Whether Rarog should acquire this shortcut is a 4.7c question, and it is not the same question as the entry contract |
 
 ## The sampling split — 4.2's central design problem
 
@@ -241,9 +244,17 @@ Rarog's diagnostics are **two families**, as `diag.rs` says in its own header:
 legacy event counters are exact, while Phase-4 added a deterministic 1/1024
 position sample for the wider interaction map. The core set straddles that
 line. Roughly half of it — `move_seen_*`, `best_rank_*`, `q_*`, `tt_cut_*`,
-`tt_bound_not_usable`, `main_store_lower`, `nmp_attempt`, `probcut_attempt`,
-`singular_attempt`, `prune_shadow_moves` — is **sampled** on the Rarog side and
-**exact** on the oracle.
+`tt_bound_not_usable`, `main_store_lower`, `nmp_attempt`, `probcut_nodes`,
+`probcut_attempt`, `singular_attempt`, `prune_shadow_moves` — is **sampled** on
+the Rarog side and **exact** on the oracle.
+
+The split runs *inside* families, not just between them: `probcut_nodes` and
+`probcut_attempt` are sampled while `probcut_cut` is exact, exactly as
+`nmp_attempt` is sampled while `nmp_cut` is exact. That is deliberate and is
+left alone — the resolution below is what makes every such pair readable, and
+lifting individual counters out of their guards in the hottest file in the
+engine is what it was chosen to avoid. **The consequence is a hard rule: no
+rate built from these counters may be read at the default stride.**
 
 Joining a 1/1024 sample against an exact count is exactly the error this
 document was written to prevent, one level up: the names match, the numbers do
