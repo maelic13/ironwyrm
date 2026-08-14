@@ -933,6 +933,13 @@ namespace {
              && ttValue != VALUE_NONE
              && ttValue < probcutBeta))
     {
+        // Per NODE that passes the ProbCut entry gate, counted before the
+        // TT shortcut and before the MovePicker, so it includes nodes where
+        // the picker yields nothing and no search is ever started. This is the
+        // denominator Rarog's per-node counter can be compared against;
+        // probcut_attempt below cannot, because it is per MOVE.
+        DIAG_COUNT(probcut_nodes);
+
         if (   ttHit
             && tte->depth() >= depth - 3
             && ttValue != VALUE_NONE
@@ -941,9 +948,11 @@ namespace {
             && pos.capture_or_promotion(ttMove))
         {
             // The TT-served shortcut produces a ProbCut return without running
-            // a ProbCut search, so it must count as BOTH, or probcut_cut
-            // exceeds probcut_attempt and the rate reads above 1.
-            DIAG_COUNT(probcut_attempt);
+            // a ProbCut search. It is a ProbCut cutoff, so it counts as one --
+            // but no search was started, so it is NOT an attempt. It gets its
+            // own oracle-only counter instead: Rarog has no TT-served ProbCut
+            // path, so this population must be visible to be subtracted.
+            DIAG_COUNT(probcut_tt_served);
             DIAG_COUNT(probcut_cut);
             return probcutBeta;
         }
@@ -961,6 +970,9 @@ namespace {
 
                 captureOrPromotion = true;
                 probCutCount++;
+                // Per MOVE actually searched -- "a ProbCut search was started",
+                // which is what the spec's probcut_attempt says. Up to
+                // 2 + 2*cutNode of these can fire at a single node.
                 DIAG_COUNT(probcut_attempt);
 
                 ss->currentMove = move;
