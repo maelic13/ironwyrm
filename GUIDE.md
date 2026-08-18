@@ -218,8 +218,14 @@ classical fallback (9, last, may never run). Per-item rationale is in
           Previous-PV following REJECTED as redundant with `Stage::TtMove`.
           **All six of 4.5.1's deferred fields are now disposed**, so (5) may
           close. No dormant switches were left behind.
-    - [ ] (5) **Fit, gate and ablation:** cluster-only SPSA only if activation
-          and curvature justify it, then clean-PGO SPRT and ablation.
+    - [~] (5) **Fit, gate and ablation.** Fit CONSIDERED and DEFERRED: the
+          curvature probe shows a real interior peak in first-move cutoff at
+          `LmrPriorReductionAdj=768`, the first time this project's SPSA
+          condition has been met — but 768 costs +17 pct nodes for +0.23
+          points of a proxy RAR-S59 proved can mislead, and PLAN 4.10 owns
+          consolidation tuning across accepted clusters. Evidence handed to
+          4.10. Gate REGISTERED as RAR-S61: `[3,10]` nElo, cap 16,000, prior
+          re-derived 15–45 → 5–20. Awaiting the PGO bake and the SPRT.
       **Quiet suppression: CLOSED as intentionally different, 2026-08-18.**
       Stockfish's `skipQuiets` is a work-saving optimisation, not a search-
       quality feature, and its shape does not transfer: Rarog's LMP carries a
