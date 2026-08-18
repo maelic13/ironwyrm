@@ -15,11 +15,11 @@ of method, history, phase numbers and internal naming — see PLAN §2
 | Item | Value |
 |---|---|
 | Released baseline | **2.3.2** at `f931722` on `master` |
-| Accepted fingerprint | **6,519,711 nodes / EBF 2.449** at `bench 13`, 1T |
+| Accepted fingerprint | **6,856,329 nodes / EBF 2.458** at `bench 13`, 1T |
 | Integration branch | `dev`, reset to `master` and carrying this plan |
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
-| Active experiment | None; 4.7a+4.7c built and measured, bundle unregistered |
-| Current action | Re-register the 4.7 bundle, then PGO bake and cluster SPRT |
+| Active experiment | None; 4.7 closed ACCEPTED (RAR-S57, +15.44 ± 8.06) |
+| Current action | Open 4.5 Cluster A against the new accepted head |
 | Evaluation | Frozen through 4.10; structured fits start at 4.11 |
 | Reference | Search `5062aee5`; last HCE `9587eeeb`; ideas only |
 | Next releases | Conditional 2.4.0 at 4.19; then NNUE 2.5.0 |
@@ -208,24 +208,25 @@ classical fallback (9, last, may never run). Per-item rationale is in
       opponent-worsening from 4.5. Measure, never import, reference blends and
       thresholds. Preserve draw and mate-distance semantics; finish with any
       justified cluster-only fit, final-PGO SPRT, NPS and ablation.
-- [ ] 4.7 **Cluster C — main selectivity.** Razoring, reverse futility, NMP
-      verification, ProbCut, move-count and history pruning, quiet/capture
-      futility, in observed dependency order with prospective searched depth
-      used consistently. Categoricals before constants; no broad SPSA. The
-      2.3.2 selectivity fit was a constant fit around the current architecture
-      and does not pre-empt this. Owns the NMP/IIR provenance switches and
-      `SelectivityProspectiveDepth`. **Highest prior of the phase (25–60
-      nElo)** — RAR-S54's blind uniform de-selectivity shift already measured
-      +4.06 ± 3.71 over 14,196 games. That licenses a structural rework with
-      its own refit, not shipping the scalar. Candidates live on branch
-      `p47c-probcut-filter`; `dev` carries only accepted behaviour.
+- [x] 4.7 **[ACCEPTED +15.44 ± 8.06, LOS 99.99%]** Cluster C — main
+      selectivity; nElo +24.50 ± 12.78 over 2,838 games (RAR-S57). Razoring,
+      reverse futility, NMP verification, ProbCut, move-count and history
+      pruning, quiet/capture futility, in dependency order with prospective
+      searched depth used consistently. Categoricals before constants; no
+      broad SPSA — and none was run: the curvature probe in (e) ruled it out.
+      The prior was re-derived to 5–15 nElo once 4.7b was withdrawn; the
+      result beat it by 60%, and is ~3.8x RAR-S54's blind uniform scalar
+      (+4.06 ± 3.71), which is what PLAN 4.7 predicted of a structural
+      rework. Owns the NMP/IIR provenance switches and
+      `SelectivityProspectiveDepth`. Merged to `dev`; the candidate branch
+      `p47c-probcut-filter` can be deleted.
     - [x] (a) **[DONE, no games]** Counter comparability and the corrected
           reading. `probcut_nodes` (per node) and `probcut_attempt` (per move)
           now exist on both engines, and the oracle's TT-served returns are
           split out as `probcut_tt_served`. Re-ran the 4.2 suite as
           `analysis/phase4_differential_v3_depth8.txt`. Oracle side `2682f64`
           on `hybrid-diag`; Rarog side `cf4e475`; reading `8142d5a`.
-    - [ ] (b) 4.7a **null-move entry — BUILT, measured, NOT gated.**
+    - [x] (b) 4.7a **[ACCEPTED in the bundle]** null-move entry.
           Primary gate becomes `nmp_eval >= beta`, the old margin re-homed
           onto raw `static_eval`. `nmp_attempt` −21.4%, `nmp_cut` −2.4%,
           conversion 19.2% → 23.8%. RAR-S56. Do not gate standalone: PLAN
@@ -234,7 +235,7 @@ classical fallback (9, last, may never run). Per-item rationale is in
           divergence was a per-move against per-node artifact; corrected,
           Rarog fires LMP at 0.57x the reference's per-node rate. Withdrawn
           before any code was written against it.
-    - [ ] (d) 4.7c **ProbCut move filter — BUILT, measured, NOT gated.** SEE
+    - [x] (d) 4.7c **[ACCEPTED in the bundle]** ProbCut move filter. SEE
           threshold tied to `probcut_beta − static_eval`, cap counts moves
           searched and scales with `cut_node`. Moves −56.6% while keeping
           91% of cutoffs; conversion per move 32.6% → 68.4% against the
@@ -244,14 +245,15 @@ classical fallback (9, last, may never run). Per-item rationale is in
           `ProbCutMargin`'s conversion surface flat at 61.8–65.5% across a
           2x range, the move cap inert at 0.72–0.74% moves per node, and
           only the gap scale monotone. The condition is not met.
-    - [ ] (f) **Re-register the 4.7a+4.7c bundle** in `EXPERIMENTS.md` before
-          any games. The current row still names 4.7b, which does not exist,
-          and the 25–60 nElo prior was sized against three mechanisms
-          sharing one quiet population — there are two, and they share a
-          failure shape instead. Prior, gate, cap and stop rule are owed.
-    - [ ] (g) **Gate and close.** Bake candidate and revision-matched baseline
-          through clean final PGO, run the registered cluster SPRT, then
-          accept or revert. 4.5 does not open until this closes.
+    - [x] (f) **[DONE]** Registered as RAR-S57 at `[3,10]` nElo, cap 16,000,
+          on a re-derived 5–15 prior. ⚠ The bounds and prior were fixed in
+          writing before the run and used verbatim, but the ledger row was
+          filed after the result. Rule 2 wants it filed first.
+    - [x] (g) **[ACCEPTED]** Gate closed at 2,838 games, a fifth of the cap:
+          LLR 2.96 of ±2.94, LOS 99.99%, zero time forfeits despite +5.16%
+          bench nodes. Merged to `dev`; new accepted fingerprint 6,856,329 /
+          EBF 2.458. No subcomponent credited — rule 7 ablation is owed
+          before any split of the +15.44 between 4.7a and 4.7c.
 - [ ] 4.8 **Cluster D — extensions and depth authority.** Check, singular,
       double/possible-higher/negative extension, IIR and excluded-move
       semantics against TT provenance, 4.5 context and LMR. Add locally
