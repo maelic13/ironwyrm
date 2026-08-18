@@ -8,9 +8,8 @@ use crate::eval::{Evaluator, INF_SCORE, MATE_SCORE, VALUE_NONE, piece_value};
 use crate::infra;
 use crate::move_ordering::{
     BadCaptureList, CAP_HISTORY_MAX, CONT_SIZE, CORR_SIZE, HISTORY_MAX, LOW_PLY_HISTORY_SIZE,
-    PAWN_HISTORY_SIZE, PIECE_TO_SIZE, ScoredMove, ScoredMoveList, cont_index, cont_row_base,
-    diversify_root_scores, pawn_history_index, pawn_row_base, pick_next, piece_to_index,
-    update_hist_entry,
+    PAWN_HISTORY_SIZE, PIECE_TO_SIZE, ScoredMove, ScoredMoveList, diversify_root_scores,
+    pawn_history_index, pawn_row_base, pick_next, piece_to_index, update_hist_entry,
 };
 use crate::params::SearchParams;
 use crate::search_options::{EngineOptions, MAX_THREADS, SearchLimits, SearchOptions};
@@ -552,6 +551,18 @@ struct NodeContext {
     /// left over from a sibling subtree. Deriving the key at push time means
     /// the three can no longer disagree.
     cont_key: usize,
+}
+
+impl NodeContext {
+    /// Row base for continuation tables at this ply.
+    ///
+    /// `cont_row_base(piece, to) == piece_to_index(piece, to) * PIECE_TO_SIZE`,
+    /// so the stored key serves every continuation site and none of them needs
+    /// to re-derive the pair from `mv`/`piece`.
+    #[inline]
+    fn cont_row_base(&self) -> usize {
+        self.cont_key * PIECE_TO_SIZE
+    }
 }
 
 impl Default for NodeContext {
@@ -4045,10 +4056,7 @@ impl Searcher {
             if prev.is_null() {
                 continue;
             }
-            cont_bases[slot] = Some(cont_row_base(
-                self.stack[ply - back].piece as usize,
-                prev.to_sq().index(),
-            ));
+            cont_bases[slot] = Some(self.stack[ply - back].cont_row_base());
         }
         QuietHistoryCtx {
             cont_bases,
@@ -4186,12 +4194,7 @@ impl Searcher {
             if prev.is_null() {
                 continue;
             }
-            let index = cont_index(
-                self.stack[ply - back].piece as usize,
-                prev.to_sq().index(),
-                piece,
-                to,
-            );
+            let index = self.stack[ply - back].cont_row_base() + piece_to_index(piece, to);
             update_hist_entry(
                 &mut self.cont_history[slot][index],
                 bonus / divisor,

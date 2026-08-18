@@ -219,6 +219,16 @@ classical fallback (9, last, may never run). Per-item rationale is in
           **Owns from 4.5.1's deferred list: continuation-context keys,
           cutoff count, statistical score, plus previous-PV following handed
           over from 4.5.2.**
+      **Continuation attribution is asymmetric, found at 4.5.3 and NOT
+      changed.** `update_cutoff_tables` gives the cutting move a
+      continuation bonus, and gives every tried-and-failed quiet a malus
+      in main, low-ply and pawn history — but never a continuation
+      malus. So continuation history learns only what worked, while the
+      other three tables learn from both. Whether that is a defect or a
+      deliberate difference is unmeasured: adding the malus is importing
+      Stockfish's shape, which PLAN 4.5.3 forbids without measuring
+      first. Registered as a 4.5.3 measurement candidate, not
+      implemented.
     - [ ] (4) **Reduction/re-search contract:** LMR populations, PV/cut/all-
           node, statistical, cutoff and prior-reduction authority; accepted
           zero-reduction floor and full-depth verification.
