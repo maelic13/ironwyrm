@@ -18,8 +18,8 @@ of method, history, phase numbers and internal naming — see PLAN §2
 | Accepted fingerprint | **6,519,711 nodes / EBF 2.449** at `bench 13`, 1T |
 | Integration branch | `dev`, reset to `master` and carrying this plan |
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
-| Active experiment | None; register the next 4.7 candidate before games |
-| Current action | 4.7a HELD (RAR-S56); finish protected 4.7 unchanged |
+| Active experiment | None; 4.7a+4.7c built and measured, bundle unregistered |
+| Current action | Re-register the 4.7 bundle, then PGO bake and cluster SPRT |
 | Evaluation | Frozen through 4.10; structured fits start at 4.11 |
 | Reference | Search `5062aee5`; last HCE `9587eeeb`; ideas only |
 | Next releases | Conditional 2.4.0 at 4.19; then NNUE 2.5.0 |
@@ -217,7 +217,41 @@ classical fallback (9, last, may never run). Per-item rationale is in
       `SelectivityProspectiveDepth`. **Highest prior of the phase (25–60
       nElo)** — RAR-S54's blind uniform de-selectivity shift already measured
       +4.06 ± 3.71 over 14,196 games. That licenses a structural rework with
-      its own refit, not shipping the scalar.
+      its own refit, not shipping the scalar. Candidates live on branch
+      `p47c-probcut-filter`; `dev` carries only accepted behaviour.
+    - [x] (a) **[DONE, no games]** Counter comparability and the corrected
+          reading. `probcut_nodes` (per node) and `probcut_attempt` (per move)
+          now exist on both engines, and the oracle's TT-served returns are
+          split out as `probcut_tt_served`. Re-ran the 4.2 suite as
+          `analysis/phase4_differential_v3_depth8.txt`. Oracle side `2682f64`
+          on `hybrid-diag`; Rarog side `cf4e475`; reading `8142d5a`.
+    - [ ] (b) 4.7a **null-move entry — BUILT, measured, NOT gated.**
+          Primary gate becomes `nmp_eval >= beta`, the old margin re-homed
+          onto raw `static_eval`. `nmp_attempt` −21.4%, `nmp_cut` −2.4%,
+          conversion 19.2% → 23.8%. RAR-S56. Do not gate standalone: PLAN
+          rule 3 says substeps are not expected to win alone.
+    - [x] (c) 4.7b **[REJECTED, no games]** Move-count volume. The 13.35x
+          divergence was a per-move against per-node artifact; corrected,
+          Rarog fires LMP at 0.57x the reference's per-node rate. Withdrawn
+          before any code was written against it.
+    - [ ] (d) 4.7c **ProbCut move filter — BUILT, measured, NOT gated.** SEE
+          threshold tied to `probcut_beta − static_eval`, cap counts moves
+          searched and scales with `cut_node`. Moves −56.6% while keeping
+          91% of cutoffs; conversion per move 32.6% → 68.4% against the
+          oracle's 71.9%. Cost is not uniform — one endgame got 46% cheaper.
+    - [x] (e) **[DONE, no games]** Fit decision: **no SPSA.** PLAN rule 4
+          makes it conditional on curvature. A zero-game sweep shows
+          `ProbCutMargin`'s conversion surface flat at 61.8–65.5% across a
+          2x range, the move cap inert at 0.72–0.74% moves per node, and
+          only the gap scale monotone. The condition is not met.
+    - [ ] (f) **Re-register the 4.7a+4.7c bundle** in `EXPERIMENTS.md` before
+          any games. The current row still names 4.7b, which does not exist,
+          and the 25–60 nElo prior was sized against three mechanisms
+          sharing one quiet population — there are two, and they share a
+          failure shape instead. Prior, gate, cap and stop rule are owed.
+    - [ ] (g) **Gate and close.** Bake candidate and revision-matched baseline
+          through clean final PGO, run the registered cluster SPRT, then
+          accept or revert. 4.5 does not open until this closes.
 - [ ] 4.8 **Cluster D — extensions and depth authority.** Check, singular,
       double/possible-higher/negative extension, IIR and excluded-move
       semantics against TT provenance, 4.5 context and LMR. Add locally
