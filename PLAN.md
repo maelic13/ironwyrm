@@ -1,6 +1,6 @@
 # Rarog development plan
 
-Updated 2026-08-12. This is the current roadmap. Detailed historical evidence
+Updated 2026-08-18. This is the current roadmap. Detailed historical evidence
 lives in `EXPERIMENTS.md`; the operational tracker lives in `GUIDE.md`.
 
 ## 1. Current state
@@ -12,10 +12,10 @@ lives in `EXPERIMENTS.md`; the operational tracker lives in `GUIDE.md`.
 | Integration branch | `dev`, reset to `master` and carrying this plan |
 | Frozen oracle | `hybrid` at `75d0d43` — Stockfish `9587eeeb` driving the exact 2.3.2 HCE |
 | Active game jobs | None. The stopped no-adjudication hybrid tournament already settled the architectural decision |
-| Current phase | **Phase 4 — reference-accelerated search and HCE development**; 4.0–4.4 closed. **4.7 open** (order frozen at 4.3), then 4.5, 4.6, 4.8, 4.9 |
+| Current phase | **Phase 4 — reference-accelerated search and HCE development**; 4.0–4.4 closed. **4.7 open and unchanged** (order frozen at 4.3), then the audited maturity programme in 4.5–4.19 |
 | Next release | **2.4.0 at 4.19** if the work transfers; a larger cumulative gain may justify a higher minor version. Baseline NNUE then targets **2.5.0** |
-| Reference posture | Stockfish `9587eeeb` is read for **ideas**. No Stockfish code enters Rarog. Rarog is not a derivative work and does not aim at behavioral similarity |
-| HCE status | Frozen through 4.10. Structural, reference-led HCE work reopens at 4.11 under its own gates. No broad constant refit at any point in this phase |
+| Reference posture | Search maturity is audited against local Stockfish `5062aee5`; HCE maturity against `9587eeeb`, its last pure-HCE master. Both are read for **ideas** only. No Stockfish code or tuned constant enters Rarog |
+| HCE status | Frozen through 4.10. The evaluator has mature infrastructure but incomplete feature contracts. Structural work, local Texel refits and narrowly justified SPSA reopen at 4.11 |
 
 **Phase 4 changed scope on 2026-08-12.** The original Phase 4 was a pre-NNUE
 search-and-tuning programme that closed with 2.3.2 and a cancelled SPSA. It is
@@ -327,8 +327,9 @@ and no cluster is entitled to its prior.
 | 4.9 | E — root search and clock | 5–20 | Root confidence and TM are locally tuned, and RAR-S53 priced speed plus time management together at a ~0 point estimate, so this cluster is about root authority rather than about the clock |
 | 4.13–4.16 | F–I — HCE structural clusters | 15–50 each | Drawn from the 328-Elo evaluator population, discounted hard for co-adaptation with a search that is not Stockfish's |
 
-**Execution order was changed at 4.3, on 4.2's evidence: 4.7 runs first**,
-then 4.5, 4.6, 4.8, 4.9. The original order put 4.5 first because selectivity
+**Execution order was changed at 4.3, on 4.2's evidence: 4.7 runs first and
+remains the protected in-progress step.** After it closes, run 4.5, 4.6, 4.8,
+4.9 and the 4.10 integration pass. The original order put 4.5 first because selectivity
 consumes the depth and history evidence cluster A owns — but that assumed A
 would *improve* those inputs, and RAR-S52/S55 refute the premise: Rarog's
 first-move cutoff rate is already **above** the reference's in every cohort.
@@ -354,18 +355,77 @@ target, the 4.10 expected-value review is where it closes.
 ### Two tracks
 
 **Search track (4.0–4.10).** Priority. HCE terms and weights are frozen
-throughout. Single-thread search is the owner; time management and SMP are
-transfer checks, not places to hide a weak 1T result.
+throughout. The end state is a mature single-thread search architecture that
+also transfers at 4T; NUMA and high-thread scaling remain owned by Phase 8.
 
 **HCE track (4.11–4.18).** Entered only after 4.10 freezes one search head, so
-evaluation is measured against a settled search. Scope is **structural
-coverage**: problems Rarog does not address at all, or addresses in a
-materially weaker form, each fix carrying its own local refit.
+evaluation is measured against a settled search. Scope is **mature structural
+coverage plus calibration**: every material contract in the last Stockfish HCE
+must be classified, and every accepted representation carries its own local
+Texel refit before the final whole-HCE convergence cycles.
 
-Explicitly out of scope for the whole phase: another broad Texel or SPSA
-constant fit over the existing feature set, Stockfish-label weight
-distillation (RAR-E03 rejected it at −17.11 despite 4.9% lower holdout loss),
-copying a term list, mixed search/eval tuning, and any NNUE integration work.
+Explicitly out of scope for the whole phase: undirected full-surface SPSA,
+Stockfish-label weight distillation (RAR-E03 rejected it at −17.11 despite
+4.9% lower holdout loss), copied terms or tuned constants, mixed search/eval
+tuning in one candidate, and any NNUE integration work.
+
+### Maturity audit — 2026-08-18
+
+The reference roles are deliberately different. Local Stockfish `5062aee5` is
+the current search reference. It is pure NNUE: there is no standalone HCE left
+in its `evaluate.cpp`. HCE therefore uses `9587eeeb`, the last pure-HCE master
+already frozen by the hybrid experiment. The oracle remains `9587eeeb`; the
+newer search tree is an audit source, not a replacement tournament binary.
+
+**Search verdict: not yet mature.** Rarog already has iterative deepening,
+PVS, aspiration, typed TT evidence, NMP and verification, ProbCut, singular
+extension, LMR, quiescence, Syzygy, a real clock and Lazy SMP. Its diagnostics,
+abort handling and correctness coverage are production-quality. The remaining
+gap is coordination, not a missing headline algorithm:
+
+| Maturity contract | Audit disposition |
+|---|---|
+| Per-ply authority | Missing a coherent Rarog-owned context for previous reduction, statistical score, cutoff count and previous-PV following |
+| History semantics | Main, capture, pawn, low-ply, continuation and correction histories exist; check/capture context, update attribution and ageing policy need an integrated owner |
+| Move selection and LMR | Both exist, but stage guarantees, evidence flow, reductions and re-search authority are not one explicit contract |
+| TT, raw eval and qsearch | Present, but raw/pruning/searched evidence, stand-pat, corrected eval and bound propagation need a full producer/consumer audit |
+| Selectivity | Broad coverage exists; 4.7 is active. A second pass is required only after later history/depth contracts move, without altering 4.7 in progress |
+| Extensions | Check, singular, double and negative extensions exist; TT-move reliability, multi-cut feedback and higher extension authority are incomplete |
+| Root and clock | Strong Rarog-specific confidence model exists; completed-root, retry, extra-iteration and fallback authority still need one contract |
+
+Current Stockfish constants, history seeds, qsearch blends, depth formulae and
+time multipliers are **candidates, not maturity requirements**. Each underlying
+problem must be measured on Rarog, and an intentionally different accepted
+answer closes the contract. MultiPV and Skill Level are product features;
+NUMA and high-thread history placement remain Phase 8 work.
+
+**HCE verdict: not yet mature.** The parameter/trace macro, Texel
+reconstruction, tune/load surface, caches, symmetry tests, KPK bitbase,
+quadratic imbalance and several endgame handlers are mature infrastructure.
+The evaluator itself has materially weaker coverage than the last Stockfish
+HCE in the following families:
+
+| Maturity contract | Verified gap |
+|---|---|
+| Score foundation | Lazy evaluation, rule-50/tempo ordering, score grain, space gating and winnability/complexity need explicit local dispositions |
+| Pawns and passers | Weak-unopposed/lever semantics, blocked-passer support, edge-file effects, path safety and king-distance progression are partial or absent |
+| Activity and threats | Mobility lacks pin-aware areas and selected x-rays; reachable outposts, queen/king-ring pressure and several threat relations are absent or inert |
+| King safety | Shelter/storm is too low-dimensional, castling-destination shelter and pinned-defender danger are absent, and flank/safe-check inputs are incomplete or zero |
+| Scaling and endgames | The dispatcher is sound but materially narrower, especially rook-and-pawn, bishop-and-pawn, KQKR and generic winnability scales |
+| Calibration | Many structurally present terms are zero or were fitted around weaker representations; local and final whole-HCE refits are required |
+
+Generic ideas absent from `9587eeeb` — chain length, triple-pawn penalties and
+connected-passer bonuses, for example — are not smuggled into the programme as
+reference requirements. They need separate local evidence.
+
+**End-of-Phase-4 maturity bar.** A contract is complete only when it is
+classified as equivalent, intentionally different with evidence, accepted
+through its registered game gate, or rejected after a dependency-complete
+implementation. There may be no unclassified or first-draft item in the search
+or HCE maps. Every accepted HCE representation must be traceable, activation-
+and covariance-audited, locally fitted, PGO/NPS checked and SPRT-confirmed.
+This is an implementation-maturity target, not a promise to match Stockfish's
+strength, constants, source shape or exact feature list.
 
 ### The independence boundary
 
@@ -506,31 +566,49 @@ Named now so every step has a concrete surface:
   dirty-piece delta contract; that stays owned by 5.1, which consumes the same
   per-ply structure. Do not let 4.4 grow into the NNUE runway.
 
-- **4.5 Cluster A — move ordering, histories, LMR.** Implement in dependency
-  order, as one coherent cluster:
-    - **4.5.1 Move-picker contract:** TT move, good captures, killers and
-      counters, quiets, deferred bad captures; legality and duplicate
-      guarantees. Rarog's picker is an enum inside `search.rs` with no staged
-      guarantee contract, so this substep is structural, not cosmetic.
-    - **4.5.2 Evidence ownership:** main, capture, continuation, low-ply and
-      pawn history indexing, normalization, aging and cutoff attribution.
-    - **4.5.3 Reduction and re-search contract:** LMR population, improving/PV/
-      cut-node adjustments, history feedback, the accepted zero-reduction floor
-      and full-depth verification.
-    - **4.5.4 Integrated gate and ablation:** final-PGO SPRT of the coherent
-      cluster, then ablate surprising contributors. Reject and revert the whole
-      cluster if no supported subset clears its registered gate.
+- **4.5 Cluster A — per-ply authority, move ordering, histories and LMR.**
+  Implement in dependency order, as one coherent cluster:
+    - **4.5.1 Rarog search context:** replace the scattered minimum arrays with
+      a typed per-ply context owning current/previous move and piece, static
+      eval, TT/PV evidence, previous reduction, statistical score and cutoff
+      count. Add previous-PV following and continuation-context keys. Land the
+      representation behavior-neutral first: exact fingerprint, tests and
+      pooled-PGO NPS, with no copied Stockfish `Stack` shape.
+    - **4.5.2 Move-picker contract:** TT move, good captures, killers and
+      counters, quiets, deferred bad captures; named stage transitions, quiet
+      suppression, legality and duplicate guarantees in normal, root and
+      in-check paths.
+    - **4.5.3 Evidence ownership:** main, capture, continuation, low-ply, pawn
+      and correction history indexing, check/capture context, normalization,
+      aging and cutoff/fail-low attribution. Measure evaluation-difference
+      training and seed/decay policy as Rarog candidates; Stockfish's events and
+      constants are not defaults.
+    - **4.5.4 Reduction and re-search contract:** LMR population,
+      improving/PV/cut/all-node adjustments, statistical and cutoff feedback,
+      prior-reduction authority, the accepted zero-reduction floor and
+      full-depth verification. Previously rejected deeper/shallower re-search
+      remains rejected unless the completed context creates a new registered
+      reason to retry it.
+    - **4.5.5 Integrated fit, gate and ablation:** if activation and curvature
+      show that the changed contract displaced continuous optima, run a
+      cluster-only SPSA after all categorical choices freeze. Bake the final
+      theta into clean PGO, SPRT the coherent cluster, then ablate surprising
+      contributors. Revert if no supported subset clears its registered gate.
 
   This cluster owns the retained continuation and capture correction weights
   and `CorrSkipWhenTtRefined`. Rule 12 applies directly: do not repair a member
   of this cluster standalone.
 
 - **4.6 Cluster B — static eval, TT and quiescence.** Separate raw evaluation,
-  pruning evaluation and searched bounds; align TT capabilities and entry
-  semantics, qsearch stand-pat, capture ordering and check handling, and
-  correction attribution. Preserve Rarog's proven draw and mate-distance
-  semantics — they are correctness assets, and nothing here targets them. Owns
-  the TT provenance switches and typed evidence consumers.
+  corrected/pruning evaluation and searched bounds end to end. Audit TT
+  admission, replacement, PV and bound propagation, qsearch stand-pat,
+  corrected eval, previous-square futility, capture/promotion ordering, evasions
+  and check handling. Derive opponent-worsening from the 4.5 context and give it
+  an explicit consumer. Stockfish's stand-pat blends and thresholds are
+  measured candidates, never imported defaults. Preserve Rarog's proven draw
+  and mate-distance semantics. Owns the TT provenance switches and typed
+  evidence consumers; ends with a cluster-only fit if justified, final-PGO
+  SPRT, NPS and ablation.
 
 - **4.7 Cluster C — main selectivity.** In observed dependency order, rework
   razoring, reverse futility, null-move verification, ProbCut, move-count and
@@ -544,32 +622,54 @@ Named now so every step has a concrete surface:
   that produced the evidence.
 
 - **4.8 Cluster D — extensions and depth authority.** Rework check, singular,
-  double and negative extension and IIR semantics against TT provenance and
-  LMR. Preserve mate and abort correctness, including the accepted NMP
-  unproven-mate clamp. Gate the integrated contract, never the individual
-  extensions — RAR-X02 showed check-extension removal cost Basilisk −10.17
-  while Rarog's extension had gained +30.75, which is co-adaptation, not a
-  portable verdict. Owns the singular provenance switches and
-  `SingularTtDepthMargin`.
+  double, possible higher and negative extension, IIR and excluded-move
+  semantics against TT provenance, the 4.5 per-ply context and LMR. Add a
+  Rarog-owned TT-move reliability signal, multi-cut correction feedback and a
+  repetition/shuffling guard where local populations justify them. Preserve
+  mate and abort correctness, including the accepted NMP unproven-mate clamp.
+  Gate the integrated contract, never copied formulas or isolated extensions —
+  RAR-X02 showed check-extension removal cost Basilisk −10.17 while Rarog's
+  extension had gained +30.75, which is co-adaptation, not a portable verdict.
+  Owns the singular provenance switches and `SingularTtDepthMargin`; refit only
+  the activated depth-authority surface before final-PGO SPRT.
 
 - **4.9 Cluster E — root search and clock handoff.** Rework aspiration
-  retries, completed-root authority, PV and fallback ownership, and stability
-  inputs. **Total time allocation must not move until the root evidence is
-  coherent**; then gate any real-clock change separately. Owns the aspiration
+  retries, completed-root authority, PV and interrupted fallback ownership,
+  stability inputs and the decision to start or suppress another iteration.
+  Measure extra-iteration/search-again behavior against Rarog's stronger
+  root-confidence model rather than assuming Stockfish's policy transfers.
+  **Total time allocation must not move until the root evidence is coherent**;
+  then tune and gate any real-clock change separately. Owns the aspiration
   shape and the root-confidence aspiration and time inputs.
 
-- **4.10 Search-only cumulative checkpoint, freeze and EV review.** Build the
-  accepted search head and 2.3.2 through the same pinned final-PGO path. Run a
-  direct fixed-protocol comparison at 1T STC, explain it with the frozen 4.2
-  diagnostics, close every open search candidate and freeze the resulting
-  head. Then perform a new expected-value review before entering 4.11:
-    - if the search track banked a material gain and the remaining HCE
-      programme still has a plausible path to the phase target, continue;
-    - if it banked little and the HCE population is the only remaining
-      argument, decide explicitly whether the HCE track is worth its cost
-      rather than continuing by momentum;
-    - if neither track can plausibly reach the release bar, close the phase and
-      resume Phase 5 from `master`.
+- **4.10 Search integration, second-pass selectivity, calibration, freeze and
+  EV review.** Re-run the 4.2 suite after 4.5, 4.6, 4.8 and 4.9, because those
+  contracts change the evidence consumed by selectivity. Resolve every
+  remaining search-map item as equivalent, intentionally different, accepted
+  or rejected. This is the owner for any 4.7-adjacent issue deliberately left
+  outside the protected in-progress 4.7 scope, including shallow TT-served
+  cutoffs and a changed NMP/ProbCut/futility population.
+
+  If the accepted structural work displaced continuous optima, run one
+  **targeted search SPSA** over only the activated LMR, history, selectivity,
+  qsearch and root coordinates identified by activation and curvature. Freeze
+  categorical choices, complete the final theta, bake clean PGO and SPRT it;
+  do not turn this into a full `params.rs` tune.
+
+  Build the accepted search head and 2.3.2 through the same pinned final-PGO
+  path. Run a direct fixed-protocol comparison at 1T STC, explain it with the
+  updated diagnostics, close every open search candidate and freeze the
+  resulting head. Then perform a new expected-value review before entering
+  4.11:
+    - if the search track banked a material gain, continue into the maturity-
+      scoped HCE programme;
+    - if it banked little, reprice the HCE population and budget explicitly,
+      but do not discard the independently measured HCE maturity gap merely
+      because search disappointed;
+    - close early only by explicitly conceding the Phase-4 implementation-
+      maturity target, listing the contracts left open and resuming Phase 5
+      from `master`. Opportunity cost can justify that decision; it cannot be
+      presented as successful Phase-4 maturity.
 
   The frozen head may equal 2.3.2 if no search cluster won. That is an accepted
   outcome and is recorded as such.
@@ -594,53 +694,80 @@ in native Rust, measure them on Rarog, and reject what does not transfer.
 
 - **4.12 Differential evaluator harness and contract map.** On a versioned,
   legal corpus containing quiet, tactical, king-attack, pawn-structure,
-  endgame, rule-50 and search-disagreement positions, record Stockfish and
-  Rarog raw white-POV and side-to-move scores, phase, term breakdown and cost.
-  Map `evaluate.cpp`, the pawn/material/endgame helpers and their search
-  consumers onto owners in `src/eval.rs`. Measure scale, tempo, tapering,
-  volatility, sign and bound disagreements, and search-conditioned activation.
-  Diagnostics off must reproduce the 4.11 baseline fingerprint exactly. A
-  lower aggregate teacher-fit loss cannot accept a candidate; RAR-E03 already
-  disproved that proxy for this HCE.
+  endgame, rule-50 and search-disagreement positions, record the `9587eeeb`
+  HCE and Rarog raw white-POV and side-to-move scores, phase, term breakdown,
+  activation, covariance and cost. Map score/lazy semantics, mobility and
+  x-rays, pawn shelter/storm, king danger, passers, winnability/material
+  scaling and the specialized-endgame registry onto owners in `src/eval.rs`.
+  Classify every reference contract as equivalent, intentionally different,
+  missing or locally rejected; generic non-reference ideas stay outside unless
+  local evidence admits them. Diagnostics off must reproduce the 4.11 baseline
+  fingerprint exactly. A lower aggregate teacher-fit loss cannot accept a
+  candidate; RAR-E03 already disproved that proxy for this HCE.
 
-- **4.13 Cluster F — score foundation and endgame dispatch.** Rework material
-  and PST ownership, phase interpolation, tempo, score grain and units,
-  evaluation POV, rule-50 scaling and specialized-endgame dispatch. Gate
-  structural choices before narrow constants; preserve proven draw and mate
-  semantics.
+- **4.13 Cluster F — score foundation, winnability and endgame dispatch.**
+  Rework material/PST ownership, phase interpolation, tempo, score grain and
+  units, evaluation POV, rule-50 damping, space phase/material gating and
+  winnability/complexity as one score contract. Treat the Stockfish formulae as
+  hypotheses, not correctness fixes. Expand the specialized dispatcher and
+  generic scaling coverage where the 4.12/Syzygy cohorts show gaps, including
+  queen-versus-rook, rook-and-pawn-versus-rook, rook-versus-pawn and the
+  bishop/pawn and KPKP families. Preserve proven draw and mate semantics.
+  Structural choices and tablebase invariants precede a local Texel refit;
+  final-PGO no-adjudication SPRT and NPS decide.
 
-- **4.14 Cluster G — pawns, passers and endgame scaling.** Rework pawn-cache
-  inputs and lifetime, structural pawn classes, passed-pawn progression and
-  king/pawn distances together with the endgame scaling consumers that read
-  them. Gate the coherent cluster including NPS; do not retain a prettier
-  static fit that loses games.
+- **4.14 Cluster G — pawns, passers and pawn-dependent scaling.** Rework
+  pawn-cache inputs and lifetime, weak-unopposed and lever semantics, doubled/
+  backward/opposed classification, blocked-passer support, edge-file effects,
+  path safety, progression and first/second-push king distances together with
+  the endgame scaling consumers that read them. Terms already planted at zero
+  must be activation- and covariance-audited, not assumed disproven. After the
+  representation freezes, run a joint pawn/passer Texel fit; repeat a cycle
+  only after the previous fitted bake improved validation and passed SPRT.
+  Gate the coherent cluster including NPS; do not retain a prettier static fit
+  that loses games.
 
-- **4.15 Cluster H — piece activity, threats and space.** Rework mobility-area
-  semantics, outposts, files, weak and restricted pieces, hanging threats and
-  space as one interacting group. Use held-out term ablations to detect
-  duplicate signals, then run the registered final-PGO game gate.
+- **4.15 Cluster H — piece activity, threats and space.** Rework pin-aware
+  mobility areas, selected bishop/rook x-rays, reachable and bad outposts,
+  bishop-pawn severity, trapped-rook geometry, files, king-ring and queen
+  pressure, weak/restricted/hanging threats, king threats and material-gated
+  space as one interacting group. Hot attack generation owes a pooled-PGO NPS
+  gate. Refit all mobility tables after their representation changes, Texel-fit
+  direct traced terms, use held-out ablations for duplicate signals, then run
+  the registered final-PGO game gate.
 
-- **4.16 Cluster I — king safety and imbalance.** Rework shelter and storm,
-  attack units, safe checks, weak squares and blockers, and nonlinear material
-  imbalance, together with the activity and threat inputs they consume. Treat
-  this as a coupled model, not independent bonus copying; gate it as one
-  coherent candidate. Rarog's own king-safety inputs for weak ring, flank,
-  missing shelter, storm and shelter-storm currently fit to zero — zeroed
-  inputs are unidentified, not disproven, so this cluster is where the
-  representation is repaired before any weight is trusted.
+- **4.16 Cluster I — king safety and nonlinear imbalance.** Replace the
+  low-dimensional shelter/storm approximation with rank/file-sensitive,
+  blocked/unblocked and castling-destination-aware inputs. Rework attack units,
+  single/multiple safe and unsafe checks, weak squares, pinned defenders,
+  flank camp/pressure, pawnless flanks and mobility/score feedback together
+  with activity and threat consumers. Treat this as a coupled Rarog model, not
+  independent bonus copying. Texel-fit direct terms and one-hot shelter/
+  king-safety tables; only after the representation passes its structural gate
+  may a targeted SPSA fit the danger-index drivers that select those buckets.
+  Bake and SPRT the final theta. Existing zero weak-ring, flank, missing-
+  shelter, storm and shelter-storm inputs are unidentified, not disproven.
 
-- **4.17 Search compatibility, cost and narrow calibration.** Measure lazy
-  evaluation and cache behavior, parent–child score stability, pruning-bound
-  populations, NPS and endgame pathologies on the frozen search. Any search
-  margin change is a separately registered compatibility gate. Tune only a
-  small set of activated, identifiable constants whose structural owner has
-  already passed. No broad HCE SPSA and no mixed search/eval tune.
+- **4.17 HCE convergence, search compatibility and cost.** Measure lazy
+  evaluation and cache behavior, parent-child stability, pruning-bound
+  populations, NPS and endgame pathologies on the frozen search. Then run an
+  anchored whole-HCE Texel consolidation over activated, identifiable weights
+  using fixed train/validation/untouched splits. Bake and SPRT each completed
+  cycle; repeat only while both held-out fit and games improve, and stop on the
+  first failed/no-gain cycle rather than selecting a lucky checkpoint.
+
+  After HCE convergence, audit the cp-valued search margins whose populations
+  moved. Any search-margin SPSA is a separate, narrow compatibility candidate
+  with frozen HCE, completed theta, PGO and SPRT. Do not mix HCE and search
+  coordinates in one tune and do not run undirected full-surface SPSA.
 
 - **4.18 Cumulative HCE checkpoint and ablation.** Compare the accepted HCE
   head directly with the 4.10 baseline using revision-matched final-PGO builds
   and adjudication off. Ablate surprising contributors, remove rejected or
-  dormant HCE alternatives with no later owner, and record the exact
-  search-versus-HCE attribution.
+  dormant HCE alternatives with no later owner, close every 4.12 contract
+  classification, and record the exact search-versus-HCE attribution. An
+  unclassified or first-draft contract fails the maturity bar even if the
+  cumulative Elo result is positive.
 
 ### Transfer, cleanup and release
 
@@ -648,10 +775,12 @@ in native Rust, measure them on Rarog, and reject what does not transfer.
   accepted head directly with 2.3.2. Confirm direction at LTC `10+0.1` and at
   4T, benchmark and pooled NPS, the platform and ISA matrix, UCI conformance
   and the correctness suite. Remove diagnostic scaffolding that has no future
-  owner and resolve obsolete dormant switches. Run a final no-adjudication
-  target cohort including Basilisk 1.9.3 and the 4.1 oracle as the diagnostic
-  reference point. Harness caveat: drop `-use-affinity` for the 4T cells and
-  re-calibrate the null pair under that configuration.
+  owner and resolve obsolete dormant switches. Verify zero UNKNOWN items in
+  both maturity maps and distinguish accepted implementations from measured
+  intentional departures. Run a final no-adjudication target cohort including
+  Basilisk 1.9.3 and the 4.1 oracle as the diagnostic reference point. Harness
+  caveat: drop `-use-affinity` for the 4T cells and re-calibrate the null pair
+  under that configuration.
 
 ### Release rule
 
@@ -691,8 +820,10 @@ accumulating individually plausible search mechanisms that did not compose.
    sizing table gives the cap.
 6. Ablate a surprising integrated result before crediting a subcomponent.
 7. **After two fully implemented search clusters fail to produce an accepted
-   gain, stop and re-audit 4.2–4.3.** Track H has its own stop: after two
-   coherent HCE clusters fail, close it and proceed to 4.19 or Phase 5.
+   gain, stop and re-audit 4.2–4.3.** After two coherent HCE clusters fail,
+   stop implementation and re-audit 4.12 and the remaining order. Track H may
+   close early only by explicitly conceding the Phase-4 HCE maturity target;
+   it may not silently leave UNKNOWN or first-draft contracts behind.
 8. Record both Elo and NPS for every cluster. A richer contract that wins per
    node but loses enough depth is not an accepted implementation of it.
 9. HCE-changing A/Bs and every cross-engine cohort default to **no
@@ -700,6 +831,14 @@ accumulating individually plausible search mechanisms that did not compose.
    may be enabled only after a registered calibration demonstrates equivalent
    behavior for both arms; never reuse the search-only `strength-v1`
    assumption automatically.
+10. Every changed HCE feature must reconstruct exactly through `EvalTrace`,
+    report activation and covariance, and use train/validation/untouched
+    separation. Texel proposes a fitted candidate; only its clean PGO SPRT can
+    accept it.
+11. SPSA is reserved for accepted architectures whose game-objective
+    coordinates are not identifiable from the trace, or for search parameters.
+    Freeze categorical choices, complete final theta and never select a
+    checkpoint retrospectively.
 
 ## 5. Phase 5 — NNUE runway
 
