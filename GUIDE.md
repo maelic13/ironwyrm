@@ -305,6 +305,15 @@ classical fallback (9, last, may never run). Per-item rationale is in
       time; tune and gate real-clock changes separately.
 - [ ] 4.10 **Search integration, second selectivity pass, fit and freeze.**
       Re-run 4.2 after 4.5/4.6/4.8/4.9 and close every search-map contract.
+      **Inherited from 4.5.4 (RAR-S60): Stockfish `cutoffCnt`.** A ply-
+      slot recency counter — reset via `(ss+2)->cutoffCnt = 0`, so it
+      accumulates across sibling visits — consumed as `if
+      ((ss-1)->cutoffCnt > 3) r++`. Rejected at 4.5.4 because that is a
+      selectivity increase and every reading this project owns says
+      Rarog prunes too much. Re-open here only if the second-pass
+      evidence changes that, and note the counter-point: it is
+      CONDITIONAL on plies that demonstrably cut often, unlike the
+      blanket increases already rejected.
       Own any 4.7-adjacent issue intentionally excluded from protected 4.7,
       including changed NMP/ProbCut/futility populations. If structural work
       moved continuous optima, run one targeted search SPSA over activated
