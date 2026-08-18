@@ -222,10 +222,18 @@ impl SharedCluster {
 // independent `SharedCluster`s share one line there and two threads touching
 // unrelated TT entries can contend. Neither cluster type can ever STRADDLE a
 // 128 B line — 32 and 64 both divide 128 and both are aligned to their own size
-// — so `origin/arm_fix`'s `3ee4660` was aimed at a hazard that cannot occur;
-// this is the real one, and it is a Threads>1 ARM64 question that PLAN 4.8
-// item 4 owns. Do not "fix" it by over-aligning without a 4T ARM measurement:
-// padding to 128 B would halve the density this second assert exists to hold.
+// — so the 128 B block wrapper this project twice considered was aimed at a
+// hazard that cannot occur; this is the real one.
+//
+// Both halves are now settled, so this is a CLOSED question, not an open TODO.
+// RAR-P12 measured the Threads>1 exposure and found none (3.89x at 4T against a
+// pre-registered >=3.8x bar). RAR-P16 then measured the wrapper itself on an M4:
+// -0.12% median, 4/12 paired wins, inside the noise floor — and showed why, by
+// probing the allocator, which already returns 128 B-aligned TT bases at every
+// Hash size, so the wrapper cannot move a single address. Do not reintroduce it
+// without a Threads>1 ARM result that contradicts RAR-P12; RAR-P16 carries the
+// recipe if one is ever needed. Naive padding to 128 B would additionally halve
+// the density this second assert exists to hold.
 const _: () = assert!(size_of::<SharedCluster>() == 64);
 const _: () = assert!(
     SHARED_CLUSTER_ENTRIES * size_of::<LocalCluster>()
