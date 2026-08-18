@@ -18,6 +18,9 @@ than guessing.
 
 Normalised figures quoted as `Nx` are from RAR-S55: firings per node searched,
 with the 1.861 node-ratio divided out. 1.00 means "in line with tree size".
+The LMP and ProbCut figures are the **corrected** ones — v2 and v3 of the
+differential respectively; both original readings compared per-move against
+per-node counters. See the two RAR-S55 corrections in `EXPERIMENTS.md`.
 
 ## Classification
 
@@ -69,7 +72,7 @@ This is where the evidence concentrates.
 | Razoring | Drop hopeless nodes into qsearch | `razor_drop` 1.61x | **UNKNOWN** |
 | Null-move pruning | Prove a node fails high without searching a move | `nmp_attempt` 0.94x, `nmp_cut` **0.22x** | **WEAKER, and the sharpest single reading.** Rarog attempts null move as often and converts **19.2%** of attempts against the reference's **83.3%** |
 | Null-move verification | Re-verify a null cutoff at high depth | Present; fires only at depth ≥ 13, so the depth-8 suite reads 0 on both | **UNKNOWN.** Needs a deeper suite run |
-| ProbCut | Prove a capture beats beta with a shallow search | ~~`probcut_attempt` 2.33x~~, `probcut_cut` 0.58x | **UNKNOWN — withdrawn 2026-08-14.** The attempt counters were per-MOVE on the oracle against per-NODE in Rarog, and the oracle's TT-served returns were counted as attempts, so neither the 2.33x nor the "22.7% against 91.2%" was a comparison. See the second RAR-S55 correction. Re-reads on the corrected depth-8 suite |
+| ProbCut | Prove a capture beats beta with a shallow search | `probcut_attempt` (per move) **5.17x**, conversion per move 32.6% vs 71.9%; conversion per node 22.7% vs **25.2%** | **WEAKER, at the MOVE level only.** Restated 2026-08-14 on the corrected v3 counters. Per node the engines convert alike and Rarog produces 2.35x the oracle's search cutoffs; it pays 5.17x the moves for them. The old "22.7% against 91.2%" was 75.3% TT-served freebies the oracle gets without searching |
 
 **Cutoff composition is inverted.** The reference takes 1.37 quiet cutoffs per
 capture cutoff; Rarog takes 0.71 — `cutoff_quiet` 0.66x against
@@ -151,22 +154,41 @@ The three leads, in the order the evidence ranked them. **One survives.**
    Both counters are per-node on both engines, so this reading is comparable
    and stands. It is what 4.7a was built against.
 
-   ~~ProbCut conversion~~ — **withdrawn 2026-08-14.** Per-move against per-node
-   on the attempt side, plus the oracle's TT-served returns counted as
-   attempts. Re-reads on the corrected suite; the first indication is that the
-   gap is small and that the real difference is the oracle's SEE *move filter*,
-   not its entry gate. See the second RAR-S55 correction.
+2. **ProbCut move filter.** **Restated 2026-08-14**, not withdrawn. The
+   ranked claim — "22.7% against 91.2%, at 2.33x the attempt rate" — was a
+   per-node against per-move comparison and is gone: per node the two engines
+   convert alike, 22.7% against 25.2%, and 75.3% of the oracle's ProbCut
+   cutoffs were TT-served freebies that never ran a search. What the corrected
+   counters show instead is one level down. Rarog searches **5.17x** the
+   normalised ProbCut moves and converts **32.6%** of them against **71.9%** —
+   the same attempt-often/convert-rarely shape as the null-move lead, at the
+   move rather than the node. The oracle admits a capture only when SEE bridges
+   `probcutBeta − staticEval` and stops at `2 + 2·cutNode`; Rarog admits any
+   `see_ge(mv, 0)` and tries up to 8.
+
+   *Separable, and not part of the above:* Rarog has no TT-served ProbCut
+   shortcut. The oracle takes one at 0.89% of its nodes at zero search cost.
+   Cheap, not selectivity, and must be attributed on its own if pursued.
 
    ~~Move-count pruning volume~~ — **withdrawn 2026-08-12.** The 13.35x was a
    per-move against per-node artifact; corrected, Rarog fires LMP at 0.57x the
    reference's per-node rate. See the RAR-S55 correction.
 
-Two of the three leads this map ranked were denominator artifacts of the same
-class, found by auditing each counter before designing against it. The
-surviving lead is a *coherent contract* question, not a threshold to nudge.
-The claim that all three compete for one quiet population no longer has three
-members to bind, so the case for gating 4.7 as a bundle rather than as a single
-contract now rests on whatever the corrected re-run finds.
+All three ranked readings were per-move-against-per-node comparisons. One
+mechanism was withdrawn outright (move-count volume), one survived intact
+(null-move conversion), and one was restated at a different level (ProbCut).
+Each was caught by auditing the counter before designing against it, never
+after a game budget had been spent.
+
+**The cluster's binding claim has changed.** These three were placed in one
+cluster because they compete for the same *quiet* population. That no longer
+holds: LMP is not over-firing, and the surviving ProbCut finding is about
+*captures* — the shallow-search move filter — not quiets at all. What 4.7a and
+the ProbCut move filter share is a **failure shape**, entry admitted far too
+cheaply into a speculative reduced search, not a contested population. That is
+still a defensible bundle, but it is a weaker form of coherence than the map
+originally claimed, and the 25–60 nElo cluster prior was not sized against it.
+Re-sizing is owed before the bundle is gated.
 
 ## What this map does not license
 

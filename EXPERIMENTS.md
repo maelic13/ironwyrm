@@ -201,23 +201,56 @@ move), and the oracle carries `probcut_tt_served`. The runner's invariant
 becomes `probcut_cut <= probcut_nodes`; the old form held on both engines while
 being incapable of falsifying anything.
 
-Preliminary indication, from the oracle's 47 bench positions at depth 7 — a
-build fingerprint check, **not** the measurement, which is the 4.2 suite at
-depth 8: of 1,623 nodes entering the block, **939 (57.9%) returned from the TT
-unsearched**, and only 218 moves were searched across the remaining 684 nodes.
-Netting the TT path out leaves 179 search-produced cuts from 684 nodes, **26.2%
-per node**, against Rarog's 22.7%. Different suite and depth, so this is not
-yet a finding — but the gap that ranked ProbCut second in the 4.3 map is not
-visible in it, and roughly two-thirds of the nodes reaching the oracle's picker
-search nothing at all, which is the `probcutBeta − staticEval` SEE threshold
-doing work the conversion rate was being credited for.
+**The corrected reading, `analysis/phase4_differential_v3_depth8.txt`.** Same
+suite, same depth, same oracle revision; all invariants pass on both engines and
+the node ratio reproduces v2's 1.861 exactly. `probcut_nodes` reads 8,237 on
+Rarog, the identical value the mislabelled `probcut_attempt` carried in v2, so
+the rename is a pure rename and nothing else moved.
 
-Consequence: **4.7c is not yet a designed candidate.** No code has been written
-against the withdrawn numbers. The 4.3 map's remaining ProbCut entry is
-suspended pending the corrected depth-8 re-run, and the 4.7a+4.7c bundle is not
-sized until then. Also note what this says about 4.1's defect list: the ProbCut
-issue was *seen* at 4.1 and closed by forcing the invariant to hold. Making a
-cross-check pass is not the same as making two counters comparable.
+| | Rarog | oracle | note |
+|---|---|---|---|
+| entries per node | 3.019% | 2.046% | norm 1.48 |
+| — of which TT-served | 0 | 1,305 | Rarog has no such path |
+| reaches the SEARCH stage, per node | 3.019% | 1.156% | **2.61x** |
+| moves searched, per node | 2.099% | 0.406% | **5.17x** |
+| moves per search-stage entry | 0.695 | 0.351 | 1.98x |
+| conversion per search-stage node | **22.7%** | **25.2%** | the gap is gone |
+| conversion per move searched | **32.6%** | **71.9%** | 2.2x, not 4x |
+| search-produced cuts per node | 0.685% | 0.292% | Rarog **2.35x** the oracle |
+
+**The finding is not withdrawn, it is reshaped, and it moved one level down.**
+Three things the old numbers had wrong:
+
+1. **Per node, the conversion gap does not exist.** 22.7% against 25.2%. The
+   headline "22.7% against 91.2%" that ranked ProbCut second in the 4.3 map is
+   dead.
+2. **75.3% of the oracle's ProbCut cutoffs are free.** 1,305 of 1,733 come
+   straight from the TT with no search at all. That is what the 91.2% was
+   mostly measuring.
+3. **Rarog's ProbCut is more productive per node, not less** — 2.35x the
+   oracle's search-produced cutoffs per node searched. It is the *price* that
+   diverges, not the yield.
+
+What survives is a **move-filter** contract, and it has the same failure shape
+as 4.7a one level down: Rarog searches **5.17x** the normalised ProbCut moves
+and converts **32.6%** of them against **71.9%**. Two thirds of Rarog's ProbCut
+move-searches produce nothing. The mechanism is visible in source and needs no
+counter: the oracle admits a capture only when SEE bridges `probcutBeta −
+staticEval` and stops at `2 + 2·cutNode` moves, where Rarog admits any
+`see_ge(mv, 0)` and tries up to 8.
+
+A second, **separable** finding falls out of the same reading: Rarog has no
+TT-served ProbCut shortcut, and the oracle takes one at 0.89% of its nodes for
+zero search cost. That is a different contract from the move filter and must
+not be bundled with it silently — it is cheap, it is not selectivity, and it
+would have to be attributed on its own.
+
+Consequence: 4.7c has a subject again, but **not the one the 4.3 map named**.
+It is the ProbCut move filter, not the entry gate, and the TT shortcut is a
+separate question. Also note what this says about 4.1's defect list: the
+ProbCut issue was *seen* at 4.1 and closed by forcing the invariant to hold.
+Making a cross-check pass is not the same as making two counters comparable —
+that hid the 1,305 free cutoffs for two phases.
 
 Frozen local Stage-1 package SHA-256 hashes: executable
 `DA78A1455BAFE222BD6AF7EF243B8C62450B6BC0913C4AF3B09F8C68E14826E8`;
