@@ -1,0 +1,81 @@
+suite phase4_suite_v1.epd, 50 positions, depth 8, 1 thread
+
+Invariants (per engine; a failure voids the run)
+  all pass
+
+node ratio rarog/oracle = 2.106; norm divides it out
+
+counter                               rarog       oracle      r/o    norm  flag
+------------------------------------------------------------------------------
+q_tt_cut                              76565         9234    8.292    3.94  **
+singular_attempt                       9543         1401    6.812    3.23  **
+singular_multicut                      1639          276    5.938    2.82  *
+q_tt_hit                             125290        24438    5.127    2.43  *
+tt_bound_not_usable                   24997         5191    4.815    2.29  *
+move_seen_quiet                      920878       200343    4.597    2.18  *
+probcut_attempt                        2487          595    4.180    1.98  
+move_seen_tt                          62748        15921    3.941    1.87  
+nmp_cut                                3120         7622    0.409    0.19  **
+see_prune                             20422        48016    0.425    0.20  **
+razor_drop                            13390         3542    3.780    1.79  
+asp_fail_low                            196          358    0.547    0.26  **
+q_stand_pat_cut                      109306        30578    3.575    1.70  
+root_best_changes                       119          180    0.661    0.31  **
+qnodes                               313194        90573    3.458    1.64  
+reduction_depth_sum                  301200        92083    3.271    1.55  
+quiet_futility_prune                  18643        19682    0.947    0.45  *
+probcut_cut                            1701         1733    0.982    0.47  *
+root_iterations                         400          400    1.000    0.47  *
+lmr_research                           2222         2006    1.108    0.53  
+main_store_exact                       3212         2755    1.166    0.55  
+main_store_upper                      32026        26963    1.188    0.56  
+asp_fail_high                           347          291    1.192    0.57  
+probcut_nodes                          9059         3001    3.019    1.43  
+lmp_nodes                             25661        21412    1.198    0.57  
+best_rank_4_7                          1247         1010    1.235    0.59  
+singular_extend_one                    2557          865    2.956    1.40  
+rfp_cut                              137694        47641    2.890    1.37  
+best_rank_2_3                          5959         4444    1.341    0.64  
+move_seen_bad_capture                 40042        29505    1.357    0.64  
+cutoff_capture                        44906        15772    2.847    1.35  
+cutoff_quiet                          29968        21619    1.386    0.66  
+tt_cut_upper                           1519         1090    1.394    0.66  
+tt_cut_exact                            794          563    1.410    0.67  
+nodes_in_check                        31153        11238    2.772    1.32  
+nmp_attempt                           13509         9154    1.476    0.70  
+lmr_applied                          136050        49856    2.729    1.30  
+move_seen_good_capture                34725        22664    1.532    0.73  
+best_rank_8_plus                        787          454    1.733    0.82  
+q_move_cut                            38633        16343    2.364    1.12  
+q_in_check                            27826        11789    2.360    1.12  
+tt_cut_lower                          29021        15634    1.856    0.88  
+main_tt_hits                         202816        88427    2.294    1.09  
+main_store_lower                      74874        37391    2.002    0.95  
+cutoff_first_move                     66881        31483    2.124    1.01  
+best_rank_1                           66881        31483    2.124    1.01  
+main_tt_probes                       308906       146602    2.107    1.00  
+nodes                                308906       146655    2.106    1.00  
+nmp_verify_pass                           0            0        -       -  oracle zero
+nmp_verify_fail                           0            0        -       -  oracle zero
+nmp_verify_attempt                        0            0        -       -  oracle zero
+
+Not differenced (definition differs, not a gap)
+  check_extensions               r=0         o=8513       Rarog removed its in-check extension (+30.75); oracle extends
+  iid_applied                    r=0         o=97         oracle-only; Rarog has IIR, a different mechanism
+  lmp_prune                      r=630140    o=0          Rarog-only: per MOVE skipped; the oracle can only count per node
+  probcut_tt_served              r=0         o=1305       oracle-only: TT-served ProbCut return, a path Rarog does not have. Subtract it before reading the oracle's cut rate as a SEARCH conversion
+  prune_shadow_check_exempt      r=14334     o=7481       see prune_shadow_moves
+  prune_shadow_futility          r=32268     o=20245      see prune_shadow_moves
+  prune_shadow_lmp               r=593352    o=26637      see prune_shadow_moves
+  prune_shadow_moves             r=737687    o=170740     SEE families range over different populations (4.7)
+  prune_shadow_overlap_two_plus  r=12971     o=15026      see prune_shadow_moves
+  prune_shadow_see               r=25708     o=37254      see prune_shadow_moves
+  singular_extend_two            r=2228      o=0          mechanism absent in 9587eeeb
+  singular_negative_extension    r=647       o=0          mechanism absent in 9587eeeb
+
+Per-cohort first-move cutoff rate
+  endgame            rarog  85.9%   oracle  84.3%
+  opening            rarog  88.6%   oracle  83.8%
+  quiet_middlegame   rarog  92.8%   oracle  84.5%
+  tactical           rarog  90.3%   oracle  83.5%
+  zugzwang           rarog  87.3%   oracle  87.0%

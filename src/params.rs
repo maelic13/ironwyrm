@@ -597,6 +597,25 @@ search_params! {
     /// and dropped, H0 -24.5 Elo — see tools/spsa_configs/README.md).
     probcut_margin = 180, "ProbCutMargin", 60..=400;
 
+    /// 4.7c PROBCUT MOVE FILTER. Two constants for the entry contract of the
+    /// speculative capture search; both are categorical-frozen defaults awaiting
+    /// the cluster fit, not tuned values.
+    ///
+    /// `probcut_see_gap_scale` is a percentage applied to the gap the capture
+    /// must bridge, `probcut_beta - static_eval`. At 100 the move must win at
+    /// least the whole gap by SEE; at 0 the gap is ignored and the filter
+    /// degenerates to the pre-4.7c `see_ge(mv, 0)`. The threshold is floored at
+    /// 0, so this can only ever tighten the old contract, never loosen it —
+    /// RAR-S55 v3 measured Rarog searching 5.17x the reference's normalised
+    /// ProbCut moves and converting 32.6% of them against 71.9%.
+    probcut_see_gap_scale = 100, "ProbCutSeeGapScale", 0..=100;
+    /// Base cap on captures searched at one ProbCut node, before the cut-node
+    /// bonus. Replaces a flat 8 that had no stated derivation.
+    probcut_move_cap_base = 2, "ProbCutMoveCapBase", 1..=8;
+    /// Extra captures allowed at an expected cut node, where a fail-high is the
+    /// predicted outcome and the speculative search is likeliest to pay.
+    probcut_move_cap_cut_bonus = 2, "ProbCutMoveCapCutBonus", 0..=8;
+
     /// Lazy-eval margin (Phase 5.1b; mirrors `eval::LAZY_MARGIN` = 600). If the
     /// tapered material + PST + pawn score already exceeds this, the expensive
     /// positional block is skipped [eval.rs lazy path]. Pushed into the evaluator

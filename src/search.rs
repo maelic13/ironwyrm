@@ -2520,14 +2520,53 @@ impl Searcher {
                     crate::diag_count!(shadow_4_4_selectivity);
                 }
                 let probcut_beta = beta + self.params.probcut_margin;
+                // 4.7c PROBCUT MOVE FILTER. The entry contract for the
+                // speculative capture search moves from "this capture does not
+                // lose material" to "this capture can plausibly bridge the gap
+                // to probcut_beta".
+                //
+                // RAR-S55 v3 measured what the old contract costs. Per node the
+                // two engines convert alike -- 22.7% against the reference's
+                // 25.2% -- so the yield was never the divergence. The PRICE was:
+                // Rarog searched 5.17x the normalised ProbCut moves and
+                // converted 32.6% of them against 71.9%. Two in three of its
+                // ProbCut move-searches produced nothing.
+                //
+                // `see_ge(mv, 0)` admits any capture that is not outright
+                // losing, which is unrelated to the question this search asks.
+                // The gap `probcut_beta - static_eval` IS that question in
+                // material terms, and it is floored at 0 so the filter can only
+                // tighten the old contract, never loosen it -- a negative
+                // threshold would admit losing captures at nodes already above
+                // probcut_beta, which is de-selectivity nothing here motivates.
+                //
+                // `static_eval` is real: the whole block is under `!in_check`.
+                // i32 throughout: the gap is bounded by the mate range, so
+                // gap * 100 cannot approach i32's limit.
+                let see_threshold =
+                    ((probcut_beta - static_eval) * self.params.probcut_see_gap_scale / 100).max(0);
+                // The flat cap of 8 had no stated derivation. Scale it by the
+                // node's own prediction instead: a cut node is where a fail-high
+                // is expected and the speculative search is likeliest to pay.
+                let move_cap = self.params.probcut_move_cap_base
+                    + if cut_node {
+                        self.params.probcut_move_cap_cut_bonus
+                    } else {
+                        0
+                    };
                 let captures = board.generate_legal_captures();
                 let mut scored = self.score_tactical_moves(board, captures.as_slice(), tt_move);
-                for index in 0..scored.len().min(8) {
+                let mut searched_here = 0i32;
+                for index in 0..scored.len() {
+                    if searched_here >= move_cap {
+                        break;
+                    }
                     let picked = pick_next(scored.as_mut_slice(), index);
                     let mv = picked.mv;
-                    if !board.see_ge(mv, 0) {
+                    if !board.see_ge(mv, see_threshold) {
                         continue;
                     }
+                    searched_here += 1;
                     // Per MOVE: a ProbCut search is about to start. This is the
                     // counter the oracle's `probcut_attempt` can be differenced
                     // against -- placed after the eligibility filter and before
