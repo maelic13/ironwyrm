@@ -192,20 +192,22 @@ classical fallback (9, last, may never run). Per-item rationale is in
           evidence, prior reduction, statistical score, cutoff count,
           previous-PV following and continuation keys are deliberately NOT
           added: nothing consumes them yet, so they land with 4.5.2–4.5.4.
-    - [~] (2) **Move-picker contract.** Stage skeleton DONE, no games: a
-          named `Stage` enum replaces three implicit cursor comparisons, and
+    - [x] (2) **[DONE, no games]** Move-picker contract: a named `Stage`
+          enum replaces three implicit cursor comparisons, and
           `Stage::GenerateQuiets` replaces the `quiets_generated` bool.
           Behaviour-neutral, bench 6,922,439 / 2.451. Legality and duplicate
-          guarantees are now asserted, not assumed — three tests cover
-          both paths including in-check, 251/245 total. **Still open:**
-          previous-PV following (owned from 4.5.1's deferred list), and quiet
-          suppression, which is BLOCKED — see the note under this cluster.
+          guarantees are now asserted, not assumed — three tests cover both
+          paths including in-check, 251/245 total. Quiet suppression is
+          CLOSED as intentionally different; see the note under this
+          cluster. **Previous-PV following moves to 4.5.3**, whose evidence
+          work is where a previous-PV move would be scored.
     - [ ] (3) **Evidence ownership:** main, capture, continuation, low-ply,
           pawn and correction histories; check/capture context, normalization,
           aging, cutoff and fail-low attribution. Measure update and decay
           candidates; do not import Stockfish constants.
           **Owns from 4.5.1's deferred list: continuation-context keys,
-          cutoff count, statistical score.**
+          cutoff count, statistical score, plus previous-PV following handed
+          over from 4.5.2.**
     - [ ] (4) **Reduction/re-search contract:** LMR populations, PV/cut/all-
           node, statistical, cutoff and prior-reduction authority; accepted
           zero-reduction floor and full-depth verification.
@@ -214,17 +216,23 @@ classical fallback (9, last, may never run). Per-item rationale is in
           each must be added, or explicitly rejected with a reason.
     - [ ] (5) **Fit, gate and ablation:** cluster-only SPSA only if activation
           and curvature justify it, then clean-PGO SPRT and ablation.
-      **Quiet suppression is blocked, found at 4.5.2 and needs a decision.**
-      Stockfish's `skipQuiets` works because its move-count prune is the only
-      gate on the quiet stage. Rarog's is not equivalent: LMP carries a
-      `move_gives_check` exemption, so checking quiets survive pruning, and
-      two of its four disjuncts are per-move history terms rather than
-      monotone in the move count. A picker-level suppression would therefore
-      silently drop quiet checks the search currently keeps. Options are to
-      suppress only non-checking quiets (the picker must then compute
-      `gives_check`, which the caller already does lazily), or to leave
-      suppression in the caller and drop it from 4.5.2's scope. Do not
-      implement the Stockfish shape.
+      **Quiet suppression: CLOSED as intentionally different, 2026-08-18.**
+      Stockfish's `skipQuiets` is a work-saving optimisation, not a search-
+      quality feature, and its shape does not transfer: Rarog's LMP carries a
+      `move_gives_check` exemption, so a picker-level suppression would
+      silently drop quiet checks the search currently keeps. Measured size of
+      the prize on the 4.2 suite: LMP fires at only 8.3% of nodes, discarding
+      ~23 quiets each, and quiets are already generated AND scored before the
+      first is yielded — so suppression saves selection scans only, which must
+      buy a full 0.5% NPS to be worth 1 Elo. Against that, Rarog measured
+      +30.75 Elo for removing its check extension, so check populations are
+      the worst place it has to trim on a guess, and every diagnosis
+      (RAR-S52/S53/S54/S55, and 4.7 itself at +15.56) says the deficit is
+      over-selectivity, not speed. Suppression therefore stays in the caller.
+      **Do not implement the Stockfish shape.** Re-open only at 4.10, which
+      owns second-pass selectivity: LMP's shape is already moving, and if the
+      check exemption does not survive that rework the blocker disappears and
+      this becomes trivially safe.
 - [ ] 4.6 **Cluster B — static eval, TT and quiescence.** Keep raw, corrected/
       pruning and searched evidence distinct. Audit TT admission/replacement,
       PV/bound propagation, qsearch stand-pat, corrected eval, prior-square
