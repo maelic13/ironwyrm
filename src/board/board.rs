@@ -956,9 +956,9 @@ impl Board {
         captured: Option<(Square, Piece)>,
     ) -> bool {
         let atk = &*ATTACKS;
-        let captured_bb = captured
-            .map(|(captured_sq, _)| Bitboard::from(captured_sq))
-            .unwrap_or(Bitboard::EMPTY);
+        let captured_bb = captured.map_or(Bitboard::EMPTY, |(captured_sq, _)| {
+            Bitboard::from(captured_sq)
+        });
         let captured_piece = captured.map(|(_, piece)| piece);
         let pieces = |piece| {
             let bb = self.pieces(attacker, piece);
@@ -1332,7 +1332,7 @@ FEN: {}",
             return gain >= threshold;
         }
 
-        let mut balance = self.captured_piece(mv).map(piece_value).unwrap_or(0);
+        let mut balance = self.captured_piece(mv).map_or(0, piece_value);
         if mv.is_promo() {
             balance += piece_value(mv.promo_piece()) - piece_value(Piece::Pawn);
         }

@@ -1527,7 +1527,7 @@ impl Evaluator {
         // 8.12(f): reused scratch — see `Evaluator::attacks_from_sq`. Debug
         // builds poison it so an unwritten read is detectable.
         #[cfg(debug_assertions)]
-        for side in self.attacks_from_sq.iter_mut() {
+        for side in &mut self.attacks_from_sq {
             side.fill(Bitboard(u64::MAX));
         }
         let mut attacked_by = [[Bitboard::EMPTY; 6]; 2];

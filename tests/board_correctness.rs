@@ -228,7 +228,7 @@ fn threshold_see_matches_full_see_for_tactical_moves() {
     for fen in ORACLE_FENS {
         let mut board = Board::from_fen(fen).unwrap_or_else(|err| panic!("{fen}: {err}"));
         let captures = board.generate_legal_captures();
-        for &mv in captures.iter() {
+        for &mv in &captures {
             let see = board.see(mv);
             for threshold in thresholds {
                 assert_eq!(
@@ -667,7 +667,7 @@ fn custom_move_set(board: &Board) -> BTreeSet<String> {
 }
 
 fn move_set(moves: &[&str]) -> BTreeSet<String> {
-    moves.iter().map(|mv| mv.to_string()).collect()
+    moves.iter().map(std::string::ToString::to_string).collect()
 }
 
 fn custom_perft_divide(board: &mut Board, depth: u32) -> BTreeMap<String, u64> {

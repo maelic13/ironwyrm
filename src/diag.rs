@@ -585,8 +585,7 @@ fn sample_mask() -> u64 {
             .ok()
             .and_then(|raw| raw.trim().parse::<u64>().ok())
             .filter(|stride| *stride >= 1 && stride.is_power_of_two())
-            .map(|stride| stride - 1)
-            .unwrap_or(1023)
+            .map_or(1023, |stride| stride - 1)
     })
 }
 
@@ -624,13 +623,15 @@ mod correction_probe {
     pub fn reset() {
         owners()
             .lock()
-            .unwrap_or_else(|error| error.into_inner())
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .clear();
     }
 
     pub fn record(source: u8, index: usize, key: u64, value: i16) {
         use crate::diag::counters;
-        let mut owners = owners().lock().unwrap_or_else(|error| error.into_inner());
+        let mut owners = owners()
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         match owners.insert((source, index), key) {
             None => counters::correction_slot_first.fetch_add(1, Ordering::Relaxed),
             Some(old) if old == key => {

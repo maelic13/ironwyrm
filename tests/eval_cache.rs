@@ -51,7 +51,7 @@ fn eval_cache_equals_cold_recompute() {
             if moves.is_empty() {
                 break;
             }
-            moves.sort_by_key(|m| m.to_string());
+            moves.sort_by_key(std::string::ToString::to_string);
             let mv = moves[0];
             board.make_move(mv);
         }

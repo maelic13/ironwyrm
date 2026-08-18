@@ -3755,9 +3755,7 @@ impl Searcher {
                 tactical_count += 1;
                 if !mv.is_promo()
                     && stand_pat_for_pruning != VALUE_NONE
-                    && stand_pat_for_pruning
-                        + board.captured_piece(mv).map(piece_value).unwrap_or(0)
-                        + 150
+                    && stand_pat_for_pruning + board.captured_piece(mv).map_or(0, piece_value) + 150
                         <= alpha
                     && !move_gives_check(board, &mut node_ci, mv, &mut gives_check)
                 {
@@ -4783,7 +4781,7 @@ impl Searcher {
             .unwrap_or(nodes as u128);
         let pv = pv
             .iter()
-            .map(|mv| mv.to_string())
+            .map(std::string::ToString::to_string)
             .collect::<Vec<_>>()
             .join(" ");
         println!(
@@ -4811,7 +4809,7 @@ impl Searcher {
         child.make_move_unchecked(bestmove);
         self.tt
             .probe(child.hash)
-            .and_then(|entry| entry.best_move())
+            .and_then(super::tt::TtEntry::best_move)
             .and_then(|mv| child.legal_move(mv))
             .unwrap_or(Move::NULL)
     }
