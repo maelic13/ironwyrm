@@ -541,6 +541,17 @@ struct NodeContext {
     piece: Piece,
     /// Static eval of the position at this ply, or `VALUE_NONE` in check.
     static_eval: i32,
+    /// 4.5.3 CONTINUATION KEY: `piece_to_index(piece, mv.to)`, derived once
+    /// when the move is pushed. Meaningless when `mv` is null; every consumer
+    /// checks that first.
+    ///
+    /// This exists to make a class of bug unrepresentable, not to save the
+    /// multiply. `mv` and `piece` used to be written by hand at four sites and
+    /// ProbCut wrote only `mv`, so continuation history inside a ProbCut child
+    /// search was indexed by the ProbCut move's destination paired with a piece
+    /// left over from a sibling subtree. Deriving the key at push time means
+    /// the three can no longer disagree.
+    cont_key: usize,
 }
 
 impl Default for NodeContext {
@@ -549,6 +560,7 @@ impl Default for NodeContext {
             mv: Move::NULL,
             piece: Piece::Pawn,
             static_eval: VALUE_NONE,
+            cont_key: 0,
         }
     }
 }
@@ -2651,7 +2663,8 @@ impl Searcher {
                     if diag_sample {
                         crate::diag_count!(probcut_attempt);
                     }
-                    self.stack[ply].mv = mv;
+                    let probcut_piece = board.moving_piece(mv);
+                    self.push_move(ply, mv, probcut_piece);
                     board.make_move_unchecked(mv);
                     self.tt.prefetch(board.hash);
                     let score =
@@ -2677,7 +2690,7 @@ impl Searcher {
                         score
                     };
                     board.unmake_move(mv);
-                    self.stack[ply].mv = Move::NULL;
+                    self.clear_move(ply);
                     if self.stopped || self.quit {
                         return 0;
                     }
@@ -3106,8 +3119,7 @@ impl Searcher {
                     gives_check.unwrap_or(false)
                 };
 
-            self.stack[ply].mv = mv;
-            self.stack[ply].piece = moving_piece;
+            self.push_move(ply, mv, moving_piece);
             let nodes_before_move = if ply == 0 { self.nodes } else { 0 };
             // 10.3: the check predicate is cheap here (node masks + two
             // bitboard tests) and lets `make_move` skip `calculate_checkers`
@@ -3274,7 +3286,7 @@ impl Searcher {
                 }
             }
             board.unmake_move(mv);
-            self.stack[ply].mv = Move::NULL;
+            self.clear_move(ply);
 
             if self.stopped || self.quit {
                 return 0;
@@ -3780,13 +3792,12 @@ impl Searcher {
                 }
             }
             let moving_piece = board.moving_piece(mv);
-            self.stack[ply].mv = mv;
-            self.stack[ply].piece = moving_piece;
+            self.push_move(ply, mv, moving_piece);
             board.make_move_unchecked(mv);
             self.tt.prefetch(board.hash);
             let score = -self.quiescence(board, -beta, -alpha, ply + 1, qply + 1, poll);
             board.unmake_move(mv);
-            self.stack[ply].mv = Move::NULL;
+            self.clear_move(ply);
             if self.stopped || self.quit {
                 return 0;
             }
@@ -4408,9 +4419,7 @@ impl Searcher {
             if prev.is_null() {
                 0
             } else {
-                self.continuation_correction_history
-                    [piece_to_index(self.stack[ply - 1].piece as usize, prev.to_sq().index())]
-                    as i32
+                self.continuation_correction_history[self.stack[ply - 1].cont_key] as i32
             }
         } else {
             0
@@ -4600,8 +4609,7 @@ impl Searcher {
             let prev = self.stack[ply - 1].mv;
             if !prev.is_null() {
                 update_hist_entry(
-                    &mut self.continuation_correction_history
-                        [piece_to_index(self.stack[ply - 1].piece as usize, prev.to_sq().index())],
+                    &mut self.continuation_correction_history[self.stack[ply - 1].cont_key],
                     scaled / 2,
                     HISTORY_MAX,
                 );
@@ -4630,6 +4638,25 @@ impl Searcher {
         }
     }
 
+    /// Record the move being searched at `ply`, deriving its continuation key.
+    ///
+    /// The ONLY way to put a move on the stack. Writing `mv` and `piece`
+    /// separately is what let ProbCut desynchronise them (see `NodeContext`).
+    #[inline]
+    fn push_move(&mut self, ply: usize, mv: Move, piece: Piece) {
+        self.stack[ply].mv = mv;
+        self.stack[ply].piece = piece;
+        self.stack[ply].cont_key = piece_to_index(piece as usize, mv.to_sq().index());
+    }
+
+    /// Clear the move at `ply`. The static eval is deliberately preserved: it
+    /// belongs to the node, not to the move being tried at it.
+    #[inline]
+    fn clear_move(&mut self, ply: usize) {
+        self.stack[ply].mv = Move::NULL;
+        self.stack[ply].cont_key = 0;
+    }
+
     /// 4.5b: compact `(piece, to)` key for the move `distance` plies back, or
     /// `None` when that ply does not exist or held a null move.
     #[inline(always)]
@@ -4641,10 +4668,7 @@ impl Searcher {
         if prev.is_null() {
             return None;
         }
-        Some(piece_to_index(
-            self.stack[ply - distance].piece as usize,
-            prev.to_sq().index(),
-        ))
+        Some(self.stack[ply - distance].cont_key)
     }
 
     /// 4.5b: read the distance-`distance` continuation correction, or 0 when the

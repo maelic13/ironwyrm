@@ -201,7 +201,17 @@ classical fallback (9, last, may never run). Per-item rationale is in
           CLOSED as intentionally different; see the note under this
           cluster. **Previous-PV following moves to 4.5.3**, whose evidence
           work is where a previous-PV move would be scored.
-    - [ ] (3) **Evidence ownership:** main, capture, continuation, low-ply,
+    - [~] (3) **Evidence ownership.** IN PROGRESS. Continuation-context key
+          landed in `NodeContext` (`cont_key`), derived once by `push_move`,
+          which is now the only way to put a move on the stack. **That found
+          a real defect:** ProbCut wrote `stack[ply].mv` and never the piece,
+          so continuation history inside a ProbCut child search was indexed
+          by the ProbCut move's destination paired with a piece left over
+          from a sibling subtree. Fixed; **bench moves 6,922,439 → 7,467,143,
+          EBF 2.451 → 2.477 (+7.9% nodes)**, which is the corrected ordering
+          taking effect and is a behaviour change with no game evidence yet —
+          it rides the 4.5 cluster gate. Still owed here: cutoff count,
+          statistical score, previous-PV following. Original scope: main, capture, continuation, low-ply,
           pawn and correction histories; check/capture context, normalization,
           aging, cutoff and fail-low attribution. Measure update and decay
           candidates; do not import Stockfish constants.
