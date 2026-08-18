@@ -8,7 +8,7 @@ lives in `EXPERIMENTS.md`; the operational tracker lives in `GUIDE.md`.
 | Item | State |
 |---|---|
 | Released baseline | **2.3.2** at `f931722` on `master` |
-| Search fingerprint | `bench 13` = **6,856,329 nodes**, geomean EBF **2.458**, 1T (4.7 accepted, RAR-S57; 2.3.2 was 6,519,711 / 2.449) |
+| Search fingerprint | `bench 13` = **6,922,439 nodes**, geomean EBF **2.451**, 1T (4.7c accepted, RAR-S57/S58; 2.3.2 was 6,519,711 / 2.449) |
 | Integration branch | `dev`, reset to `master` and carrying this plan |
 | Frozen oracle | `hybrid` at `75d0d43` — Stockfish `9587eeeb` driving the exact 2.3.2 HCE |
 | Active game jobs | None. The stopped no-adjudication hybrid tournament already settled the architectural decision |

@@ -15,10 +15,10 @@ of method, history, phase numbers and internal naming — see PLAN §2
 | Item | Value |
 |---|---|
 | Released baseline | **2.3.2** at `f931722` on `master` |
-| Accepted fingerprint | **6,856,329 nodes / EBF 2.458** at `bench 13`, 1T |
+| Accepted fingerprint | **6,922,439 nodes / EBF 2.451** at `bench 13`, 1T |
 | Integration branch | `dev`, reset to `master` and carrying this plan |
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
-| Active experiment | None; 4.7 closed ACCEPTED (RAR-S57, +15.44 ± 8.06) |
+| Active experiment | None; 4.7 closed, 4.7c only (RAR-S57/S58, +15.56 ± 10.02) |
 | Current action | Open 4.5 Cluster A against the new accepted head |
 | Evaluation | Frozen through 4.10; structured fits start at 4.11 |
 | Reference | Search `5062aee5`; last HCE `9587eeeb`; ideas only |
@@ -208,8 +208,10 @@ classical fallback (9, last, may never run). Per-item rationale is in
       opponent-worsening from 4.5. Measure, never import, reference blends and
       thresholds. Preserve draw and mate-distance semantics; finish with any
       justified cluster-only fit, final-PGO SPRT, NPS and ablation.
-- [x] 4.7 **[ACCEPTED +15.44 ± 8.06, LOS 99.99%]** Cluster C — main
-      selectivity; nElo +24.50 ± 12.78 over 2,838 games (RAR-S57). Razoring,
+- [x] 4.7 **[ACCEPTED +15.56 ± 10.02, LOS 99.89%]** Cluster C — main
+      selectivity; nElo +24.90 ± 16.01 (RAR-S57 gated the a+c bundle at
+      +24.50 ± 12.78; RAR-S58 showed 4.7c carried all of it, so 4.7a was
+      reverted and the shipped contract is 4.7c alone). Razoring,
       reverse futility, NMP verification, ProbCut, move-count and history
       pruning, quiet/capture futility, in dependency order with prospective
       searched depth used consistently. Categoricals before constants; no
@@ -226,7 +228,7 @@ classical fallback (9, last, may never run). Per-item rationale is in
           split out as `probcut_tt_served`. Re-ran the 4.2 suite as
           `analysis/phase4_differential_v3_depth8.txt`. Oracle side `2682f64`
           on `hybrid-diag`; Rarog side `cf4e475`; reading `8142d5a`.
-    - [x] (b) 4.7a **[ACCEPTED in the bundle]** null-move entry.
+    - [x] (b) 4.7a **[REVERTED]** null-move entry.
           Primary gate becomes `nmp_eval >= beta`, the old margin re-homed
           onto raw `static_eval`. `nmp_attempt` −21.4%, `nmp_cut` −2.4%,
           conversion 19.2% → 23.8%. RAR-S56. Do not gate standalone: PLAN
@@ -249,11 +251,11 @@ classical fallback (9, last, may never run). Per-item rationale is in
           on a re-derived 5–15 prior. ⚠ The bounds and prior were fixed in
           writing before the run and used verbatim, but the ledger row was
           filed after the result. Rule 2 wants it filed first.
-    - [x] (g) **[ACCEPTED]** Gate closed at 2,838 games, a fifth of the cap:
-          LLR 2.96 of ±2.94, LOS 99.99%, zero time forfeits despite +5.16%
-          bench nodes. Merged to `dev`; new accepted fingerprint 6,856,329 /
-          EBF 2.458. No subcomponent credited — rule 7 ablation is owed
-          before any split of the +15.44 between 4.7a and 4.7c.
+    - [x] (g) **[ACCEPTED]** Bundle gate closed at 2,838 games, a fifth of
+          the cap, zero time forfeits. The rule 7 ablation (RAR-S58) then
+          found 4.7c reproduces the whole effect and 4.7a contributes −0.40
+          nElo, so 4.7a was reverted. Shipped head is the 47c-only arm that
+          passed its own SPRT: fingerprint 6,922,439 / EBF 2.451.
 - [ ] 4.8 **Cluster D — extensions and depth authority.** Check, singular,
       double/possible-higher/negative extension, IIR and excluded-move
       semantics against TT provenance, 4.5 context and LMR. Add locally
