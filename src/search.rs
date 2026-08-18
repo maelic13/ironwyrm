@@ -477,6 +477,40 @@ enum MovePicker {
     },
 }
 
+/// 4.5.1 PER-PLY SEARCH CONTEXT.
+///
+/// Replaces three parallel `[_; MAX_PLY]` arrays with one record per ply.
+///
+/// The move and the piece that made it were never independent: every
+/// continuation-history lookup read both at the same ply, so the split cost
+/// two cache lines to answer one question. The static eval joins them because
+/// it is written at the same node and read at `ply - 2` by the improving test.
+///
+/// This is a REPRESENTATION change and nothing else. PLAN 4.5.1 also lists
+/// TT/PV evidence, previous reduction, statistical score, cutoff count,
+/// previous-PV following and continuation keys — none are added here, because
+/// nothing consumes them yet and rule 2 forbids landing speculative state.
+/// They arrive with 4.5.2–4.5.4, which is where their consumers are.
+#[derive(Copy, Clone)]
+struct NodeContext {
+    /// The move made AT this ply. `Move::NULL` when the ply holds no move.
+    mv: Move,
+    /// The piece that made `mv`. Only meaningful when `mv` is not null.
+    piece: Piece,
+    /// Static eval of the position at this ply, or `VALUE_NONE` in check.
+    static_eval: i32,
+}
+
+impl Default for NodeContext {
+    fn default() -> Self {
+        Self {
+            mv: Move::NULL,
+            piece: Piece::Pawn,
+            static_eval: VALUE_NONE,
+        }
+    }
+}
+
 pub struct Searcher {
     tt: TranspositionTable,
     hash_mb: usize,
@@ -495,9 +529,8 @@ pub struct Searcher {
     limits: RuntimeLimits,
     pv_table: [[Move; MAX_PLY]; MAX_PLY],
     pv_len: [usize; MAX_PLY],
-    stack_moves: [Move; MAX_PLY],
-    stack_pieces: [Piece; MAX_PLY],
-    stack_static_eval: [i32; MAX_PLY],
+    /// 4.5.1 per-ply search context. See `NodeContext`.
+    stack: [NodeContext; MAX_PLY],
     killers: [[Move; 2]; MAX_PLY],
     /// Compact root-order/index backbone. Keep this separate from the larger
     /// records below so existing move-membership and SMP hot reads retain
@@ -595,9 +628,7 @@ impl Default for Searcher {
             },
             pv_table: [[Move::NULL; MAX_PLY]; MAX_PLY],
             pv_len: [0; MAX_PLY],
-            stack_moves: [Move::NULL; MAX_PLY],
-            stack_pieces: [Piece::Pawn; MAX_PLY],
-            stack_static_eval: [VALUE_NONE; MAX_PLY],
+            stack: [NodeContext::default(); MAX_PLY],
             killers: [[Move::NULL; 2]; MAX_PLY],
             root_moves: Vec::new(),
             root_move_records: Vec::new(),
@@ -992,9 +1023,7 @@ impl Searcher {
         }
         self.pv_table = [[Move::NULL; MAX_PLY]; MAX_PLY];
         self.pv_len = [0; MAX_PLY];
-        self.stack_moves = [Move::NULL; MAX_PLY];
-        self.stack_pieces = [Piece::Pawn; MAX_PLY];
-        self.stack_static_eval = [VALUE_NONE; MAX_PLY];
+        self.stack = [NodeContext::default(); MAX_PLY];
         // 9.7.5(k): re-seed the LMR-jitter PRNG per search, per thread, so each
         // thread walks a different sequence and a given thread's sequence does
         // not depend on how the previous search happened to end. `thread_id` is
@@ -2179,7 +2208,7 @@ impl Searcher {
             };
             (self.corrected_eval_from_raw(board, raw, ply), raw)
         };
-        self.stack_static_eval[ply] = static_eval;
+        self.stack[ply].static_eval = static_eval;
         // 8.5(b): magnitude of the correction applied to this node's static
         // eval. A large |corr| means the raw eval is being heavily adjusted and
         // is less trustworthy, so the margin/reduction knobs below prune and
@@ -2203,8 +2232,8 @@ impl Searcher {
         };
         let improving = !in_check
             && ply >= 2
-            && self.stack_static_eval[ply - 2] != VALUE_NONE
-            && static_eval > self.stack_static_eval[ply - 2];
+            && self.stack[ply - 2].static_eval != VALUE_NONE
+            && static_eval > self.stack[ply - 2].static_eval;
         let improving_i = if improving { 1 } else { 0 };
         let not_improving_i = 1 - improving_i;
         // 9.7.5 lead: the TT may only stand in for the static eval here if its
@@ -2554,7 +2583,7 @@ impl Searcher {
                     if diag_sample {
                         crate::diag_count!(probcut_attempt);
                     }
-                    self.stack_moves[ply] = mv;
+                    self.stack[ply].mv = mv;
                     board.make_move_unchecked(mv);
                     self.tt.prefetch(board.hash);
                     let score =
@@ -2580,7 +2609,7 @@ impl Searcher {
                         score
                     };
                     board.unmake_move(mv);
-                    self.stack_moves[ply] = Move::NULL;
+                    self.stack[ply].mv = Move::NULL;
                     if self.stopped || self.quit {
                         return 0;
                     }
@@ -2699,7 +2728,7 @@ impl Searcher {
         let mut good_caps = BadCaptureList::new();
         let mut bad_caps = BadCaptureList::new();
         let previous_move = if ply > 0 {
-            self.stack_moves[ply - 1]
+            self.stack[ply - 1].mv
         } else {
             Move::NULL
         };
@@ -3009,8 +3038,8 @@ impl Searcher {
                     gives_check.unwrap_or(false)
                 };
 
-            self.stack_moves[ply] = mv;
-            self.stack_pieces[ply] = moving_piece;
+            self.stack[ply].mv = mv;
+            self.stack[ply].piece = moving_piece;
             let nodes_before_move = if ply == 0 { self.nodes } else { 0 };
             // 10.3: the check predicate is cheap here (node masks + two
             // bitboard tests) and lets `make_move` skip `calculate_checkers`
@@ -3177,7 +3206,7 @@ impl Searcher {
                 }
             }
             board.unmake_move(mv);
-            self.stack_moves[ply] = Move::NULL;
+            self.stack[ply].mv = Move::NULL;
 
             if self.stopped || self.quit {
                 return 0;
@@ -3685,13 +3714,13 @@ impl Searcher {
                 }
             }
             let moving_piece = board.moving_piece(mv);
-            self.stack_moves[ply] = mv;
-            self.stack_pieces[ply] = moving_piece;
+            self.stack[ply].mv = mv;
+            self.stack[ply].piece = moving_piece;
             board.make_move_unchecked(mv);
             self.tt.prefetch(board.hash);
             let score = -self.quiescence(board, -beta, -alpha, ply + 1, qply + 1, poll);
             board.unmake_move(mv);
-            self.stack_moves[ply] = Move::NULL;
+            self.stack[ply].mv = Move::NULL;
             if self.stopped || self.quit {
                 return 0;
             }
@@ -3780,7 +3809,7 @@ impl Searcher {
         scored: &mut ScoredMoveList,
     ) {
         let previous = if ply > 0 {
-            self.stack_moves[ply - 1]
+            self.stack[ply - 1].mv
         } else {
             Move::NULL
         };
@@ -3935,12 +3964,12 @@ impl Searcher {
             if ply < back {
                 continue;
             }
-            let prev = self.stack_moves[ply - back];
+            let prev = self.stack[ply - back].mv;
             if prev.is_null() {
                 continue;
             }
             cont_bases[slot] = Some(cont_row_base(
-                self.stack_pieces[ply - back] as usize,
+                self.stack[ply - back].piece as usize,
                 prev.to_sq().index(),
             ));
         }
@@ -4076,12 +4105,12 @@ impl Searcher {
             if ply < back {
                 continue;
             }
-            let prev = self.stack_moves[ply - back];
+            let prev = self.stack[ply - back].mv;
             if prev.is_null() {
                 continue;
             }
             let index = cont_index(
-                self.stack_pieces[ply - back] as usize,
+                self.stack[ply - back].piece as usize,
                 prev.to_sq().index(),
                 piece,
                 to,
@@ -4309,12 +4338,12 @@ impl Searcher {
             [infra::index(board.non_pawn_key(!color)) & (CORR_SIZE - 1)]
             as i32;
         let continuation = if ply >= 1 {
-            let prev = self.stack_moves[ply - 1];
+            let prev = self.stack[ply - 1].mv;
             if prev.is_null() {
                 0
             } else {
                 self.continuation_correction_history
-                    [piece_to_index(self.stack_pieces[ply - 1] as usize, prev.to_sq().index())]
+                    [piece_to_index(self.stack[ply - 1].piece as usize, prev.to_sq().index())]
                     as i32
             }
         } else {
@@ -4502,11 +4531,11 @@ impl Searcher {
             HISTORY_MAX,
         );
         if ply >= 1 {
-            let prev = self.stack_moves[ply - 1];
+            let prev = self.stack[ply - 1].mv;
             if !prev.is_null() {
                 update_hist_entry(
                     &mut self.continuation_correction_history
-                        [piece_to_index(self.stack_pieces[ply - 1] as usize, prev.to_sq().index())],
+                        [piece_to_index(self.stack[ply - 1].piece as usize, prev.to_sq().index())],
                     scaled / 2,
                     HISTORY_MAX,
                 );
@@ -4542,12 +4571,12 @@ impl Searcher {
         if ply < distance {
             return None;
         }
-        let prev = self.stack_moves[ply - distance];
+        let prev = self.stack[ply - distance].mv;
         if prev.is_null() {
             return None;
         }
         Some(piece_to_index(
-            self.stack_pieces[ply - distance] as usize,
+            self.stack[ply - distance].piece as usize,
             prev.to_sq().index(),
         ))
     }
