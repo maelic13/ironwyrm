@@ -15,7 +15,7 @@
 #[cfg(feature = "diag")]
 // Counter statics are deliberately lower_snake_case: the name is emitted
 // verbatim as the `info string diag <name>` label.
-#[allow(non_upper_case_globals)]
+#[expect(non_upper_case_globals)]
 pub mod counters {
     use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -774,7 +774,7 @@ pub struct RootConfidenceShadow {
 /// intentionally lossy because these are aggregate telemetry units, not search
 /// inputs (effort in ppm, deviation in cp, multipliers in ten-thousandths).
 #[cfg(feature = "diag")]
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+#[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 pub fn record_root_confidence(shadow: &RootConfidenceShadow) {
     use std::sync::atomic::Ordering;
 

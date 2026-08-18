@@ -102,7 +102,11 @@ pub struct SearchOptions {
 
 impl SearchOptions {
     pub fn get_uci_options() -> Vec<String> {
-        // `mut` is needed when compiled with --features tune (the extend below).
+        // `mut` is needed when compiled with --features tune (the extend
+        // below). Stays `allow`, not `expect`: the lint fires under default
+        // features and does NOT under `tune`, so an expectation would be
+        // unfulfilled in one of the two configurations whichever way it is
+        // written. This is the only suppression in the crate with that shape.
         #[allow(unused_mut)]
         let mut opts = vec![
             String::from("option name Hash type spin default 64 min 1 max 33554432"),

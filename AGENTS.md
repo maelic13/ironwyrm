@@ -41,7 +41,14 @@ did what its name suggests.**
 - Run tests in **debug and release**. CI is a matrix; `--release` alone has
   missed real bugs, and a debug-only failure appeared again in 4.7c.
 - `cargo fmt --check` and `cargo clippy --all-features --all-targets` must be
-  clean. Zero warnings, no new `allow` without a written reason.
+  clean. Zero warnings.
+- **Suppress lints with `#[expect(...)]`, not `#[allow(...)]`.** An
+  expectation warns when it stops being needed, so the suppression list
+  cleans itself; an `allow` sits there forever. Converting the crate's 25
+  found six that had been dead for some time. Use `allow` only when the
+  lint fires in one feature configuration and not another — there is
+  exactly one such site, in `search_options.rs`, and it says so. Every
+  suppression still needs a written reason.
 - **Check exit status directly**, never through a pipe: `cmd > out 2>&1; echo
   $?` and then read `out`. `cmd | tail` reports `tail`'s status, which is
   always 0.

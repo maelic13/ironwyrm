@@ -103,11 +103,7 @@ struct LocalTable {
 /// stored through u16; depth is i8 stored through u8, so −1 travels as 255) —
 /// a range-checking helper would be WRONG, not just noisy.
 #[inline(always)]
-#[allow(
-    clippy::cast_possible_truncation,
-    clippy::cast_possible_wrap,
-    clippy::cast_sign_loss
-)]
+#[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 fn unpack_entry(key16: u16, data: u64) -> Option<TtEntry> {
     let flag_age = (data >> 56) as u8;
     Bound::from_bits(flag_age)?;
@@ -124,7 +120,7 @@ fn unpack_entry(key16: u16, data: u64) -> Option<TtEntry> {
 
 /// Bit-exact serialization — the mirror of [`unpack_entry`]; same reasoning.
 #[inline(always)]
-#[allow(clippy::cast_sign_loss)]
+#[expect(clippy::cast_sign_loss)]
 fn pack_entry(entry: TtEntry) -> u64 {
     entry.score as u16 as u64
         | ((entry.static_eval as u16 as u64) << 16)
@@ -136,7 +132,7 @@ fn pack_entry(entry: TtEntry) -> u64 {
 /// XOR-fold of the payload down to 16 bits, used as the tag's checksum half.
 /// The truncation IS the fold, hence the scoped allow.
 #[inline(always)]
-#[allow(clippy::cast_possible_truncation)]
+#[expect(clippy::cast_possible_truncation)]
 fn fold16(data: u64) -> u16 {
     let folded = data ^ (data >> 32);
     let folded = folded ^ (folded >> 16);
@@ -638,7 +634,6 @@ fn prefetch_ptr<T>(ptr: *const T) {
 /// Upper 16 bits of the hash — the cluster-entry verification tag. The
 /// truncation IS the design (a 16-bit tag), hence the scoped allow.
 #[inline(always)]
-#[allow(clippy::cast_possible_truncation)]
 fn key16_of(key: u64) -> u16 {
     (key >> 48) as u16
 }

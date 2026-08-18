@@ -58,7 +58,7 @@ const JITTER_SEED: u64 = 0x9E37_79B9_7F4A_7C15;
 const JITTER_STRIDE: u64 = 0x2545_F491_4F6C_DD1D;
 const SHARED_NODE_BATCH: u64 = 128;
 const SHARED_NODE_BATCH_MASK: u64 = SHARED_NODE_BATCH - 1;
-#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)] // const-evaluated; MAX_PLY = 128
+#[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)] // const-evaluated; MAX_PLY = 128
 const TB_WIN_SCORE: i32 = MATE_SCORE - (MAX_PLY as i32) * 2;
 const SEE_UNKNOWN: i16 = i16::MIN;
 /// Heap-allocate the continuation tables without a ~1.1 MB stack temporary
@@ -73,7 +73,7 @@ fn boxed_cont_tables() -> Box<[[i16; CONT_SIZE]; CONT_TABLES]> {
 
 // Float→int truncation IS the intended rounding of the LMR table formula
 // (kept bit-exact with the pre-9.0b table), hence the scoped cast allow.
-#[allow(clippy::cast_possible_truncation)]
+#[expect(clippy::cast_possible_truncation)]
 fn build_lmr_table(base: i32, div: i32) -> Box<[[i32; 64]; 64]> {
     let base_f = base as f64 / 1024.0;
     let div_f = div as f64 / 1024.0;
@@ -286,7 +286,7 @@ impl RootConfidence {
         // product is provably inside `0..=1000` rather than merely saturating,
         // and `round` is the rounding intended. Same contract as the window
         // centre's cast in `search_root`.
-        #[allow(clippy::cast_possible_truncation)]
+        #[expect(clippy::cast_possible_truncation)]
         let effort = (effort_term(self.effort) * 1000.0).round() as i64;
 
         let fails = i64::from(self.fail_lows.max(0) + self.fail_highs.max(0));
@@ -438,8 +438,9 @@ fn tm_instability_factor(params: &SearchParams, instability: f64) -> f64 {
 // MovePicker is constructed at EVERY interior node, and boxing the large
 // variant would trade a stack-resident list for a heap allocation per node.
 // Measured elsewhere in 9.0: making the move lists heap/initialized cost
-// -10% NPS. The enum size is a deliberate space-for-speed trade.
-#[allow(clippy::large_enum_variant)]
+// -10% NPS. The enum size is a deliberate space-for-speed trade, and the
+// note is kept even though clippy no longer objects: if the variants diverge
+// again the lint fires, and this is the reason not to "fix" it by boxing.
 /// 4.5.2 MOVE-PICKER STAGE CONTRACT.
 ///
 /// The staged picker's transitions used to live implicitly in three cursor
@@ -1233,7 +1234,7 @@ impl Searcher {
         // into the score domain BEFORE the cast, so the conversion is provably
         // exact rather than saturating, and NaN is handled by the clamp instead
         // of the language's float-cast rule.
-        #[allow(clippy::cast_possible_truncation)]
+        #[expect(clippy::cast_possible_truncation)]
         let deviation = variance.sqrt().clamp(0.0, f64::from(INF_SCORE)).round() as i32;
         // Pooling is a CLOCK input, so it is admitted only when its own switch
         // is on and only when a pool exists; a serial search has no shared
@@ -1246,7 +1247,7 @@ impl Searcher {
             .map(|milli| {
                 // KEEP-ALLOW: `u64 -> f64` on a value bounded by the published
                 // thousandths of a decaying count that converges to 2.0.
-                #[allow(clippy::cast_precision_loss)]
+                #[expect(clippy::cast_precision_loss)]
                 let milli = milli as f64;
                 milli / 1000.0
             });
@@ -1347,7 +1348,7 @@ impl Searcher {
                 // inside `i32`, and `.round()` is the rounding intended. The
                 // clamp also makes NaN handling explicit instead of relying on
                 // the language's float-cast NaN rule.
-                #[allow(clippy::cast_possible_truncation)]
+                #[expect(clippy::cast_possible_truncation)]
                 let avg = prev_avg_score
                     .round()
                     .clamp(-f64::from(INF_SCORE), f64::from(INF_SCORE))
@@ -1529,7 +1530,7 @@ impl Searcher {
                 // KEEP-ALLOW: `tot_best_move_changes` is a decaying count that
                 // converges to 2.0, so the thousandths are clamped into a small
                 // range before the cast rather than merely saturating.
-                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let milli = (tot_best_move_changes * 1000.0).clamp(0.0, 1_000_000.0) as u64;
                 shared.publish_instability(self.thread_id, milli);
             }
@@ -1970,7 +1971,7 @@ impl Searcher {
     ///
     /// A `debug_assert` at the LMR site checks that both callers agree, so the
     /// two cannot drift apart the way this arithmetic already did once.
-    #[allow(clippy::too_many_arguments)] // documented policy: search kernels
+    #[expect(clippy::too_many_arguments)] // documented policy: search kernels
     #[inline(always)]
     fn lmr_reduction_units(
         &self,

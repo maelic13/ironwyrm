@@ -147,15 +147,14 @@ macro_rules! eval_params {
             }
         }
 
-        /// (name, length) for every field — addresses the Phase 3.2/3.3
-        /// tune-time loader/dumper and Texel tuner (not wired up yet).
-        #[allow(dead_code)]
+        /// (name, length) for every field. Consumed by the Phase 3.2/3.3
+        /// tune-time loader/dumper and by `tools/texel-tuner`, which imports
+        /// it directly — so this is live, not reserved.
         pub const EVAL_PARAM_NAMES: &[(&str, usize)] = &[
             $( (stringify!($field), $len), )*
         ];
 
         impl EvalParams {
-            #[allow(dead_code)]
             pub fn get(&self, name: &str, idx: usize) -> i32 {
                 match name {
                     $( stringify!($field) => self.$field[idx], )*
@@ -163,7 +162,6 @@ macro_rules! eval_params {
                 }
             }
 
-            #[allow(dead_code)]
             pub fn set(&mut self, name: &str, idx: usize, value: i32) {
                 match name {
                     $( stringify!($field) => self.$field[idx] = value, )*
@@ -269,7 +267,7 @@ macro_rules! eval_params {
             /// 0 (guaranteed by the language since Rust 1.45), and `.round()`
             /// is exactly the rounding the tuner wants. There is no checked
             /// helper to reach for here.
-            #[allow(clippy::cast_possible_truncation)]
+            #[expect(clippy::cast_possible_truncation)]
             pub fn set_from_flat(&mut self, w: &[f64]) {
                 let mut k = 0usize;
                 $( for i in 0..$len { self.$field[i] = w[k].round() as i32; k += 1; } )*
@@ -838,7 +836,7 @@ const fn init_square_rank() -> [usize; 64] {
 // Const-evaluated init: the `infra` helpers are not `const fn` (trait-based),
 // and any out-of-range here would surface at COMPILE time, so plain casts are
 // sound and the lint is scoped off with this justification.
-#[allow(clippy::cast_possible_truncation)]
+#[expect(clippy::cast_possible_truncation)]
 const fn init_relative_ranks() -> [[u8; 64]; 2] {
     let mut table = [[0u8; 64]; 2];
     let mut sq = 0usize;
@@ -852,7 +850,7 @@ const fn init_relative_ranks() -> [[u8; 64]; 2] {
 }
 
 // Const-evaluated init — see `init_relative_ranks` for the lint scoping.
-#[allow(
+#[expect(
     clippy::cast_possible_truncation,
     clippy::cast_possible_wrap,
     clippy::cast_sign_loss
@@ -919,7 +917,7 @@ const fn init_forward_ranks() -> [[Bitboard; 8]; 2] {
 }
 
 // Const-evaluated init — see `init_relative_ranks` for the lint scoping.
-#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+#[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 const fn init_passed_pawn_masks() -> [[Bitboard; 64]; 2] {
     let mut table = [[Bitboard::EMPTY; 64]; 2];
     let mut color = 0usize;

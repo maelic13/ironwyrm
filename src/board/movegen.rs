@@ -883,7 +883,7 @@ const fn aligned(ar: i8, af: i8, br: i8, bf: i8) -> bool {
 
 // Const-evaluated init — helpers are non-const; any out-of-range would fail
 // the compile-time evaluation itself, so plain casts are sound here.
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+#[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 const fn init_between() -> [[Bitboard; 64]; 64] {
     let mut table = [[Bitboard::EMPTY; 64]; 64];
     let mut a = 0usize;
@@ -919,7 +919,7 @@ const fn init_between() -> [[Bitboard; 64]; 64] {
 
 // Const-evaluated init — helpers are non-const; any out-of-range would fail
 // the compile-time evaluation itself, so plain casts are sound here.
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+#[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 const fn init_line() -> [[Bitboard; 64]; 64] {
     let mut table = [[Bitboard::EMPTY; 64]; 64];
     let mut a = 0usize;
