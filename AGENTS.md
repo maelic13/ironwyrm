@@ -62,6 +62,22 @@ did what its name suggests.**
 - Counters explain a candidate; only a registered SPRT accepts one. Node counts
   are not Elo: a measured +7.36% tree change was worth −1.49 ± 2.87 Elo.
 
+## Evidence
+
+- **A ledger row must reproduce its artifact without the branch it came from.**
+  Record the recipe — exact parameter values, or the diff when it is small —
+  plus a fingerprint that proves a rebuild matched. A bare SHA is not evidence;
+  it is a promise that someone else is still storing your evidence.
+- Before deleting any branch or tag, check what the ledger cites on it. A SHA
+  with no output from `git branch -a --contains <sha>` is **dangling** and will
+  disappear at the next `gc`.
+- This is not hypothetical. RAR-S54 — the +4.06 result the whole 4.7 cluster's
+  prior rests on — cited a commit that turned out to be docs-only; its real
+  source sat on a deleted branch, dangling, and the archive tag that was
+  supposed to protect it covered the other arm of the experiment. The probe was
+  twelve parameter values and now lives in `EXPERIMENTS.md`, where it should
+  have been from the start.
+
 ## Gating
 
 - The strength unit is one dependency-complete, locally fitted **cluster**.
