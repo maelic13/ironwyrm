@@ -211,7 +211,8 @@ classical fallback (9, last, may never run). Per-item rationale is in
           EBF 2.451 → 2.477 (+7.9% nodes)**, which is the corrected ordering
           taking effect and is a behaviour change with no game evidence yet —
           it rides the 4.5 cluster gate. Still owed here: cutoff count,
-          statistical score, previous-PV following. Original scope: main, capture, continuation, low-ply,
+          statistical score, previous-PV following. Original scope: main,
+          capture, continuation, low-ply,
           pawn and correction histories; check/capture context, normalization,
           aging, cutoff and fail-low attribution. Measure update and decay
           candidates; do not import Stockfish constants.
