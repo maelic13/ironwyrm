@@ -486,6 +486,12 @@ enum MovePicker {
 /// two cache lines to answer one question. The static eval joins them because
 /// it is written at the same node and read at `ply - 2` by the improving test.
 ///
+/// That locality argument did NOT pay, and the record should say so: a pooled
+/// three-build-per-arm PGO A/B measured **+0.11%, CI −0.14%..+0.48%** — a null
+/// inside this machine's ±0.5% floor (RAR-P17). The justification for this
+/// change is that it is the substrate 4.5.2–4.5.4 consume, not that it is
+/// faster. It is not faster.
+///
 /// This is a REPRESENTATION change and nothing else. PLAN 4.5.1 also lists
 /// TT/PV evidence, previous reduction, statistical score, cutoff count,
 /// previous-PV following and continuation keys — none are added here, because

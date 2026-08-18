@@ -185,10 +185,13 @@ classical fallback (9, last, may never run). Per-item rationale is in
 - [ ] 4.5 **Cluster A — per-ply authority, ordering, histories and LMR.**
       One dependency-complete cluster. Prior 15–45 nElo; it rests on evidence,
       reduction and re-search coordination, not raw ordering quality.
-    - [ ] (1) **Rarog search context:** typed per-ply current/previous move,
-          static eval, TT/PV evidence, prior reduction, statistical score,
-          cutoff count, previous-PV following and continuation context. Land
-          behavior-neutral first: exact fingerprint and pooled-PGO NPS.
+    - [x] (1) **[DONE, no games]** Rarog search context: `NodeContext`
+          replaces the three parallel per-ply arrays. Behaviour-neutral —
+          bench 6,922,439 / 2.451 exactly — and NPS-neutral at +0.11%,
+          CI −0.14%..+0.48% over three PGO builds per arm (RAR-P17). TT/PV
+          evidence, prior reduction, statistical score, cutoff count,
+          previous-PV following and continuation keys are deliberately NOT
+          added: nothing consumes them yet, so they land with 4.5.2–4.5.4.
     - [ ] (2) **Move-picker contract:** named TT/good-capture/killer/counter/
           quiet/bad-capture stages, quiet suppression, legality and duplicate
           guarantees across normal, root and in-check paths.
