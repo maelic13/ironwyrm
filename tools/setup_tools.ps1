@@ -190,14 +190,14 @@ if (Test-Path $wfCute) {
     }
 }
 
-# STRENGTH ADJUDICATION ALIGNMENT (calibrated 2026-08-02). weather-factory
-# ships 400/3 one-sided. Rarog's shared strength-v1 profile is 600/3 one-sided,
-# matching Stockfish's convention and our measured evaluation scale. The
-# retrospective 69,350-game calibration found no chess-result reversals at
-# 600/3 (three apparent reversals were later time forfeits), while 400/3 changed
-# 1,533 outcomes and included 80 eventual opposite winners. SPSA, SPRT, and
-# gauntlets therefore use 600/3 one-sided. Datagen is a separate label-safety
-# profile and remains stricter.
+# STRENGTH ADJUDICATION ALIGNMENT. weather-factory ships 400/3 one-sided.
+# Rarog uses ONE rule everywhere as of 2026-08-18: 600/3 two-sided, which is
+# also fishtest's setting. The retrospective 69,350-game calibration found no
+# chess-result reversals at 600/3 (three apparent reversals were later time
+# forfeits), while 400/3 changed 1,533 outcomes and included 80 eventual
+# opposite winners -- so 400 is the value that must not be used, whichever
+# sidedness. SPSA, SPRT, gauntlets and datagen now share the rule; the values
+# below are read from the profile so they cannot drift apart again.
 #
 # NOT aligned to fishtest, deliberately: the draw rule. Ours is
 # `movenumber=40 movecount=8 score=10` against fishtest's
@@ -209,20 +209,25 @@ if (Test-Path $wfCute) {
 $wfCuteAdj = Join-Path $wfDir "cutechess.py"
 if (Test-Path $wfCuteAdj) {
     $strengthProfile = Get-StrengthTestProfile
-    $targetResign = '"-resign movecount={0} score={1} "  # RAROG_ADJUDICATION_PATCH_V2: strength-v1 one-sided' -f $strengthProfile.ResignMoveCount, $strengthProfile.ResignScore
+    $twoSided = if ($strengthProfile.ResignTwoSided) { 'twosided=true ' } else { '' }
+    $targetResign = '"-resign movecount={0} score={1} {2}"  # RAROG_ADJUDICATION_PATCH_V3: {3}' -f `
+        $strengthProfile.ResignMoveCount, $strengthProfile.ResignScore, $twoSided, $strengthProfile.Name
     $a = Get-Content $wfCuteAdj -Raw
-    if ($a -match 'RAROG_ADJUDICATION_PATCH_V2') {
+    if ($a -match 'RAROG_ADJUDICATION_PATCH_V3') {
         Write-Host "  weather-factory adjudication patch already present."
     } else {
         $anchorResign = '"-resign movecount=3 score=400 "'
         $oldPatchedResign = '"-resign movecount=3 score=600 twosided=true "  # RAROG_ADJUDICATION_PATCH_V1: match sprt.ps1'
+        $v2PatchedResign = '"-resign movecount=3 score=600 "  # RAROG_ADJUDICATION_PATCH_V2: strength-v1 one-sided'
         if ($a.Contains($anchorResign)) {
             $a = $a.Replace($anchorResign, $targetResign)
         } elseif ($a.Contains($oldPatchedResign)) {
             $a = $a.Replace($oldPatchedResign, $targetResign)
+        } elseif ($a.Contains($v2PatchedResign)) {
+            $a = $a.Replace($v2PatchedResign, $targetResign)
         } else {
             throw ("weather-factory/cutechess.py adjudication anchor not found; upstream changed. " +
-                "Expected the upstream 400/3 line or the old V1 patch — inspect it before assuming alignment.")
+                "Expected the upstream 400/3 line or an older V1/V2 patch — inspect it before assuming alignment.")
         }
         Set-Content -Path $wfCuteAdj -Value $a -Encoding utf8
 

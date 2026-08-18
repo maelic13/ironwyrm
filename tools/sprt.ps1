@@ -385,7 +385,7 @@ if (-not $repoSha) { $repoSha = "n/a" } else { $repoSha = $repoSha.Trim() }
     "test_design:     $(if ($Mode -eq 'calibrate') { "fixed ${Games}-game null; tolerance +/-${CalibrationTolerance} nElo" } else { "SPRT elo0=$Elo0 elo1=$Elo1 alpha=$Alpha beta=$Beta model=normalized" })"
     "game_budget:     $(if ($Mode -eq 'calibrate' -or $Mode -eq 'fixed') { $Games } else { $MaxGames })"
     "time_control:    $tcLabel; timemargin=${TimeMargin}ms"
-    "adjudication:    $($strengthProfile.Name); resign=$($strengthProfile.ResignScore)/$($strengthProfile.ResignMoveCount) one-sided; draw=$($strengthProfile.DrawScore)/$($strengthProfile.DrawMoveCount) from move $($strengthProfile.DrawMoveNumber)"
+    "adjudication:    $($strengthProfile.Name); resign=$($strengthProfile.ResignScore)/$($strengthProfile.ResignMoveCount)$(if ($strengthProfile.ResignTwoSided) { ' two-sided' } else { ' one-sided' }); draw=$($strengthProfile.DrawScore)/$($strengthProfile.DrawMoveCount) from move $($strengthProfile.DrawMoveNumber)"
     "hash_mb:         $Hash"
     "threads:         $(if ($ThreadsA -eq $ThreadsB) { $ThreadsA } else { "$NameA=$ThreadsA $NameB=$ThreadsB" })"
     "concurrency:     $Concurrency"
@@ -412,7 +412,7 @@ if ($Mode -eq "calibrate") {
     Write-Host "  Budget: $MaxGames games; no H1 at the cap means park/revert"
 }
 Write-Host "  TC: $tcLabel   Margin: ${TimeMargin} ms   Hash: ${Hash} MB   Conc: $Concurrency"
-Write-Host "  Adjudication: resign $($strengthProfile.ResignScore)/$($strengthProfile.ResignMoveCount) one-sided; profile $($strengthProfile.Name)"
+Write-Host "  Adjudication: resign $($strengthProfile.ResignScore)/$($strengthProfile.ResignMoveCount)$(if ($strengthProfile.ResignTwoSided) { ' two-sided' } else { ' one-sided' }); profile $($strengthProfile.Name)"
 Write-Host "  CPUs: $AffinityCpus"
 Write-Host "  Book: $(Split-Path $Book -Leaf)"
 Write-Host "  Runner: $($fcInfo.Text)"

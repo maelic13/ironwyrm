@@ -27,6 +27,10 @@ feature by feature before it drives another expensive tune.
 >   **`datagen-v1` keeps two-sided 600/3** because a false resignation
 >   mislabels every sampled position in that game. Merging this branch's
 >   harness files would regress that to an uncalibrated setting.
+>   **Superseded 2026-08-18 (RAR-M13):** both profiles are now 600/3
+>   two-sided, so this branch's *value* is what the project uses — but it
+>   arrives by maintainer decision on consistency, on top of the
+>   calibration, not by the "match fishtest" argument this branch made.
 > - **`feature_neutral_values.json` is currently inert.** Nothing on `dev`
 >   reads it; the richer `-ShowValues` that consumes it lives only here. It is
 >   merged as data so the rail/feature-neutral semantics are not lost, and it

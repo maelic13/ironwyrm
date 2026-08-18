@@ -4,18 +4,30 @@ $script:MinimumAffinityFastchessVersion = [version]"1.7.0"
 $script:HarnessIsWindows = [Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT
 
 # One named source of truth for result adjudication in strength measurements.
-# Calibrated 2026-08-02 on 69,350 Rarog games completed under the stricter
-# 600/3 two-sided rule: one-sided 600/3 produced no chess-result reversals
-# (three apparent reversals were later time forfeits) and changed 71 results
-# to wins that later drew, 0.20% of its 35,486 triggers. Datagen intentionally
-# keeps a separate, stricter training-label profile because one wrong result
-# labels many positions.
+#
+# Both profiles are 600/3 TWO-SIDED as of 2026-08-18, by maintainer decision:
+# one rule everywhere is worth more than the small saving one-sided bought.
+# Two-sided requires both engines to agree before a game is called, so this is
+# the CONSERVATIVE direction -- fewer adjudications, more games played out,
+# marginally more wall time.
+#
+# The 2026-08-02 calibration that had split them is retained here as evidence,
+# not as policy: over 69,350 Rarog games completed under two-sided 600/3,
+# one-sided 600/3 produced no chess-result reversals (three apparent reversals
+# were later time forfeits) and changed 71 results to wins that later drew,
+# 0.20% of its 35,486 triggers. That is what makes unifying cheap -- the two
+# rules were measured to differ on 0.20% of triggers and never on a final
+# chess result -- and it is also why unifying is safe rather than merely tidy.
+#
+# Historical note for anyone reading old ledger rows: strength results before
+# 2026-08-18 were adjudicated one-sided. The 0.20% figure above is the measured
+# size of that discontinuity.
 function Get-StrengthTestProfile {
     [pscustomobject]@{
-        Name               = "strength-v1"
+        Name               = "strength-v2"
         ResignMoveCount    = 3
         ResignScore        = 600
-        ResignTwoSided     = $false
+        ResignTwoSided     = $true
         DrawMoveNumber     = 40
         DrawMoveCount      = 8
         DrawScore          = 10
@@ -33,11 +45,12 @@ function Get-StrengthTestResignArgs {
     $args
 }
 
-# Training labels need a stricter result contract than strength tests.  A
-# false resignation assigns the wrong target to every sampled position in that
-# game, so datagen keeps the historical two-sided 600/3 rule deliberately.
-# Keep this separate from strength-v1: SPRT uses one-sided resignation because
-# its only job is to decide a game result quickly and safely.
+# Datagen keeps its own named profile even though the values now match
+# strength-v2 exactly. The reason is ownership, not arithmetic: a false
+# resignation assigns the wrong target to every position sampled from that
+# game, so if strength adjudication is ever loosened again, labels must not
+# follow it silently. Same numbers today, different owner and different
+# justification.
 function Get-DatagenProfile {
     [pscustomobject]@{
         Name               = "datagen-v1"

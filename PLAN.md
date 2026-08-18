@@ -853,7 +853,7 @@ be fitted fairly. Such a probe does not replace the integrated cluster gate.
 10. HCE-changing A/Bs and every cross-engine cohort default to **no
    adjudication**, because evaluator scale and semantics differ. Adjudication
    may be enabled only after a registered calibration demonstrates equivalent
-   behavior for both arms; never reuse the search-only `strength-v1`
+   behavior for both arms; never reuse the search-only `strength-v2`
    assumption automatically.
 11. Every changed HCE feature must reconstruct exactly through `EvalTrace`,
    report activation and covariance, and use train/validation/untouched

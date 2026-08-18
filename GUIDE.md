@@ -562,7 +562,8 @@ table; the working rules are:
 - Rarog solving a problem differently, or deciding it does not apply here, is
   a first-class result — record it with its reason and move on.
 
-Search-only candidates keep the calibrated `strength-v1` adjudication because
+Search-only candidates keep the `strength-v2` adjudication (600/3 two-sided,
+unified with datagen on 2026-08-18) because
 both arms share Rarog's score scale. **HCE-changing candidates and every
 cross-engine cohort run with adjudication off**, because evaluator scales
 differ; RAR-O01 versus RAR-O02 priced that confounder at about 75 Elo. Enable

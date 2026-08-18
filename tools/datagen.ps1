@@ -13,8 +13,10 @@
 
     Adjudication uses the named datagen-v1 profile: draw after move 40 with an
     8-move window at score < 10 cp; resign after 3 moves at score > 600 cp only
-    when both engines agree. This is deliberately stricter than strength-v1:
-    one wrong game result would mislabel many training positions.
+    when both engines agree. Identical to strength-v2 since 2026-08-18, but
+    kept as a separate named profile: one wrong game result mislabels every
+    position sampled from that game, so labels must never silently follow a
+    future loosening of the strength rule.
 
 .PARAMETER Suffix
     Engine binary suffix. Looks for
