@@ -201,41 +201,23 @@ classical fallback (9, last, may never run). Per-item rationale is in
           CLOSED as intentionally different; see the note under this
           cluster. **Previous-PV following moves to 4.5.3**, whose evidence
           work is where a previous-PV move would be scored.
-    - [~] (3) **Evidence ownership.** IN PROGRESS. Continuation-context key
-          landed in `NodeContext` (`cont_key`), derived once by `push_move`,
-          which is now the only way to put a move on the stack. **That found
-          a real defect:** ProbCut wrote `stack[ply].mv` and never the piece,
-          so continuation history inside a ProbCut child search was indexed
-          by the ProbCut move's destination paired with a piece left over
-          from a sibling subtree. Fixed; **bench moves 6,922,439 → 7,467,143,
-          EBF 2.451 → 2.477 (+7.9% nodes)**, which is the corrected ordering
-          taking effect and is a behaviour change with no game evidence yet —
-          it rides the 4.5 cluster gate. Still owed here: cutoff count,
-          statistical score, previous-PV following. Original scope: main,
-          capture, continuation, low-ply,
-          pawn and correction histories; check/capture context, normalization,
-          aging, cutoff and fail-low attribution. Measure update and decay
-          candidates; do not import Stockfish constants.
-          **Owns from 4.5.1's deferred list: continuation-context keys,
-          cutoff count, statistical score, plus previous-PV following handed
-          over from 4.5.2.**
-      **Continuation attribution asymmetry: MEASURED AND REJECTED,
-      2026-08-18.** Failed quiets get a malus in main, low-ply and pawn
-      history but not in continuation history. Adding it leaves ordering
-      FLAT (first-move cutoff 88.04% -> 88.09%, rank8+ share slightly
-      worse) while cutting the tree 7.5% and total cutoffs 9.6% —
-      cutoffs fall faster than nodes, so it is not an ordering gain.
-      Continuation history feeds `quiet_hist`, which drives two of LMP's
-      four disjuncts and the LMR reduction, so a broad negative push
-      just prunes more. That is the direction RAR-S53/S54/S55 and 4.7
-      (+15.56 for pruning less) all say is wrong here. The switch was
-      built, measured and removed rather than left dormant.
-    - [ ] (4) **Reduction/re-search contract:** LMR populations, PV/cut/all-
-          node, statistical, cutoff and prior-reduction authority; accepted
-          zero-reduction floor and full-depth verification.
-          **Owns from 4.5.1's deferred list: previous reduction, TT/PV
-          evidence.** 4.5.5 may not close while any of the six is unowned:
-          each must be added, or explicitly rejected with a reason.
+    - [x] (3) **[DONE, no games]** Evidence ownership. Continuation key in
+          `NodeContext`, derived by `push_move`, which is now the only way to
+          put a move on the stack — that found and fixed the ProbCut piece
+          desync (bench 6,922,439 → 7,467,143). Every continuation site reads
+          the stored key. Continuation-malus asymmetry measured and REJECTED
+          (RAR-S59): it is a disguised selectivity increase, not an ordering
+          fix.
+    - [x] (4) **[DONE, no games]** Reduction/re-search contract. Prior-
+          reduction authority ADOPTED at 512/1024 ply (RAR-S60): cutoffs per
+          node rise faster than nodes and first-move cutoff improves 88.04% →
+          88.18%. bench 7,467,143 → 7,587,235. Cutoff count REJECTED as inert
+          — a cutoff breaks the move loop, so a per-visit count is 0 or 1.
+          Statistical score and TT/PV evidence REJECTED as per-ply fields:
+          both are node-local (`quiet_hist`, `tt_pv`) and already threaded.
+          Previous-PV following REJECTED as redundant with `Stage::TtMove`.
+          **All six of 4.5.1's deferred fields are now disposed**, so (5) may
+          close. No dormant switches were left behind.
     - [ ] (5) **Fit, gate and ablation:** cluster-only SPSA only if activation
           and curvature justify it, then clean-PGO SPRT and ablation.
       **Quiet suppression: CLOSED as intentionally different, 2026-08-18.**

@@ -551,6 +551,9 @@ struct NodeContext {
     /// left over from a sibling subtree. Deriving the key at push time means
     /// the three can no longer disagree.
     cont_key: usize,
+    /// 4.5.4 PRIOR REDUCTION: plies the move at this ply was reduced by, 0 if
+    /// searched full depth. Read by the CHILD at `ply + 1`.
+    reduction: i32,
 }
 
 impl NodeContext {
@@ -572,6 +575,7 @@ impl Default for NodeContext {
             piece: Piece::Pawn,
             static_eval: VALUE_NONE,
             cont_key: 0,
+            reduction: 0,
         }
     }
 }
@@ -2009,6 +2013,7 @@ impl Searcher {
         ev_is_exact: bool,
         tt_move_is_null: bool,
         improving: bool,
+        prior_reduction: i32,
     ) -> i32 {
         let mut r = self.lmr_table[infra::to_usize(depth.min(63))][searched.min(63)];
         if tt_pv {
@@ -2039,6 +2044,17 @@ impl Searcher {
         r -= quiet_hist * 1024 / self.params.lmr_hist_div;
         // 8.5(b): reduce less when the static eval is heavily corrected.
         r -= corr_abs * self.params.corr_lmr_scale / 128;
+        // 4.5.4 PRIOR-REDUCTION AUTHORITY. If the parent move was itself
+        // reduced, this subtree is already speculative and reducing again
+        // compounds the speculation. Measured on the bench corpus: cutoffs per
+        // node rise FASTER than nodes (+4.5% against +1.6% at this value) and
+        // the first-move cutoff rate improves 88.04% -> 88.18%, which is the
+        // signature of a real ordering/verification gain rather than the
+        // disguised selectivity change RAR-S59 caught. Direction agrees with
+        // RAR-S53/S54 and with 4.7 paying +15.56 Elo for pruning less.
+        if prior_reduction > 0 {
+            r -= self.params.lmr_prior_reduction_adj;
+        }
         r
     }
 
@@ -2891,6 +2907,11 @@ impl Searcher {
                 ev.is_exact(),
                 tt_move.is_null(),
                 improving,
+                if ply >= 1 {
+                    self.stack[ply - 1].reduction
+                } else {
+                    0
+                },
             );
             // `depth - 1` is the child's nominal depth; subtract the estimated
             // reduction and floor at 1 so a consumer never reads a depth that
@@ -3192,6 +3213,11 @@ impl Searcher {
                         ev.is_exact(),
                         tt_move.is_null(),
                         improving,
+                        if ply >= 1 {
+                            self.stack[ply - 1].reduction
+                        } else {
+                            0
+                        },
                     );
                     debug_assert_eq!(
                         r, r_units_estimate,
@@ -3218,6 +3244,7 @@ impl Searcher {
                     // full-depth PVS search and must not trigger a redundant
                     // verification search at the same depth.
                     let reduction = lmr_reduction(r, new_depth);
+                    self.stack[ply].reduction = reduction;
                     #[cfg(feature = "diag")]
                     {
                         diag_move_reduced = reduction > 0;

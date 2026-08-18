@@ -608,6 +608,11 @@ search_params! {
     /// 0, so this can only ever tighten the old contract, never loosen it —
     /// RAR-S55 v3 measured Rarog searching 5.17x the reference's normalised
     /// ProbCut moves and converting 32.6% of them against 71.9%.
+    /// 4.5.4 prior-reduction authority: reduce this much LESS (1024ths of a
+    /// ply) when the parent move was itself reduced. 512 is a categorical
+    /// default chosen on the bench sweep, not a fitted value — 4.5.5 owns the
+    /// fit if activation and curvature justify one.
+    lmr_prior_reduction_adj = 512, "LmrPriorReductionAdj", 0..=2048;
     probcut_see_gap_scale = 100, "ProbCutSeeGapScale", 0..=100;
     /// Base cap on captures searched at one ProbCut node, before the cut-node
     /// bonus. Replaces a flat 8 that had no stated derivation.
