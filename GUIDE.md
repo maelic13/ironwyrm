@@ -217,9 +217,9 @@ classical fallback (9, last, may never run). Per-item rationale is in
       **Quiet suppression is blocked, found at 4.5.2 and needs a decision.**
       Stockfish's `skipQuiets` works because its move-count prune is the only
       gate on the quiet stage. Rarog's is not equivalent: LMP carries a
-      `move_gives_check` exemption, so checking quiets survive pruning, and two
-      of its four disjuncts are per-move history terms rather than monotone in
-      the move count. A picker-level suppression would therefore silently drop
+      `move_gives_check` exemption, so checking quiets survive pruning, and
+      two of its four disjuncts are per-move history terms rather than
+      monotone in the move count. A picker-level suppression would therefore silently drop
       quiet checks the search currently keeps. Options are to suppress only
       non-checking quiets (the picker must then compute `gives_check`, which
       the caller already does lazily), or to leave suppression in the caller
