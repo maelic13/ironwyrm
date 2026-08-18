@@ -4159,6 +4159,17 @@ impl Searcher {
         let bonus = self.history_bonus(depth) * bonus_pct / 100;
         let malus = self.history_malus(depth);
         self.update_quiet_history(color, best, best_piece, pawn_key, ply, bonus);
+        // NOTE, 4.5.3: these quiets get a malus in main, low-ply and pawn
+        // history but deliberately NOT in continuation history. That asymmetry
+        // looks like an omission and was measured as a candidate: adding the
+        // continuation malus leaves ordering flat (first-move cutoff 88.04% ->
+        // 88.09%) while cutting the tree 7.5% and total cutoffs 9.6%. Cutoffs
+        // fall FASTER than nodes, so it is not an ordering gain — continuation
+        // history feeds `quiet_hist`, which drives two of LMP's four disjuncts
+        // and the LMR reduction, so a broad negative push simply prunes more.
+        // That is the one direction four independent readings say is wrong for
+        // this engine (RAR-S53/S54/S55, and 4.7 paying +15.56 for pruning
+        // LESS). Rejected on measurement, not left undone.
         for &quiet in quiets {
             let quiet_piece = board.moving_piece(quiet);
             self.update_quiet_history(color, quiet, quiet_piece, pawn_key, ply, -malus);
