@@ -219,11 +219,12 @@ classical fallback (9, last, may never run). Per-item rationale is in
       gate on the quiet stage. Rarog's is not equivalent: LMP carries a
       `move_gives_check` exemption, so checking quiets survive pruning, and
       two of its four disjuncts are per-move history terms rather than
-      monotone in the move count. A picker-level suppression would therefore silently drop
-      quiet checks the search currently keeps. Options are to suppress only
-      non-checking quiets (the picker must then compute `gives_check`, which
-      the caller already does lazily), or to leave suppression in the caller
-      and drop it from 4.5.2's scope. Do not implement the Stockfish shape.
+      monotone in the move count. A picker-level suppression would therefore
+      silently drop quiet checks the search currently keeps. Options are to
+      suppress only non-checking quiets (the picker must then compute
+      `gives_check`, which the caller already does lazily), or to leave
+      suppression in the caller and drop it from 4.5.2's scope. Do not
+      implement the Stockfish shape.
 - [ ] 4.6 **Cluster B — static eval, TT and quiescence.** Keep raw, corrected/
       pruning and searched evidence distinct. Audit TT admission/replacement,
       PV/bound propagation, qsearch stand-pat, corrected eval, prior-square
