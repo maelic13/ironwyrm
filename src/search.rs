@@ -440,12 +440,48 @@ fn tm_instability_factor(params: &SearchParams, instability: f64) -> f64 {
 // Measured elsewhere in 9.0: making the move lists heap/initialized cost
 // -10% NPS. The enum size is a deliberate space-for-speed trade.
 #[allow(clippy::large_enum_variant)]
+/// 4.5.2 MOVE-PICKER STAGE CONTRACT.
+///
+/// The staged picker's transitions used to live implicitly in three cursor
+/// comparisons (`good_index < good_len`, `cap_len + quiet_index < len`,
+/// `good_len + bad_index < cap_len`). Reading the order off that required
+/// reconstructing the buffer partition in your head, and nothing named the
+/// order or made it assertable. This enum is that order.
+///
+/// Contract, and all three parts are covered by tests below:
+///   ORDER      staged: TtMove, GoodCaptures, Quiets, BadCaptures.
+///              full (root and in-check): TtMove, AllRemaining.
+///   DUPLICATES the TT move is emitted at most once, and every later stage
+///              filters it out, so no move is ever emitted twice.
+///   LEGALITY   both paths only ever emit moves from a legal generator; the
+///              TT move is validated by the caller before construction.
+///
+/// Stages are visited in declaration order and never revisited. `Done` is
+/// terminal: once reached the picker yields `None` forever.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+enum Stage {
+    /// Emit the TT move alone, if there is one.
+    TtMove,
+    /// Staged path: captures with SEE >= 0, best-first.
+    GoodCaptures,
+    /// Staged path: generate quiets on demand, once.
+    GenerateQuiets,
+    /// Staged path: quiets, best-first.
+    Quiets,
+    /// Staged path: SEE-losing captures, best-first, deliberately last.
+    BadCaptures,
+    /// Full path: everything except the TT move, best-first from one list.
+    AllRemaining,
+    /// Terminal.
+    Done,
+}
+
 enum MovePicker {
     Full {
         scored: ScoredMoveList,
         index: usize,
         tt_move: Move,
-        emitted_tt: bool,
+        stage: Stage,
     },
     /// 10.3(4): ONE buffer, partitioned in place, instead of three separate
     /// 3,080-byte lists. Layout — `[0, good_len)` good captures,
@@ -463,7 +499,6 @@ enum MovePicker {
         quiet_index: usize,
         /// Cursor within `[good_len, cap_len)`, relative to `good_len`.
         bad_index: usize,
-        quiets_generated: bool,
         /// 10.3(5): the pinned set computed by capture generation, reused when
         /// quiets are generated later at this same node. `board` is restored
         /// by `unmake_move` between the two stages, so the position — and
@@ -472,7 +507,7 @@ enum MovePicker {
         /// a pinned set always exists to share.
         pinned: Bitboard,
         tt_move: Move,
-        emitted_tt: bool,
+        stage: Stage,
         ply: usize,
     },
 }
@@ -674,7 +709,7 @@ impl MovePicker {
             scored,
             index: 0,
             tt_move,
-            emitted_tt: false,
+            stage: Stage::TtMove,
         }
     }
 
@@ -689,37 +724,48 @@ impl MovePicker {
             good_index: 0,
             quiet_index: 0,
             bad_index: 0,
-            quiets_generated: false,
             pinned,
             tt_move,
-            emitted_tt: false,
+            stage: Stage::TtMove,
             ply,
         }
     }
 
+    /// Yield the next move, advancing through `Stage` in declaration order.
+    ///
+    /// Every stage is a `loop`+`match` step rather than a fallthrough chain, so
+    /// a stage that runs dry advances exactly once and the order is readable
+    /// without reconstructing the buffer partition.
     fn next(&mut self, searcher: &Searcher, board: &mut Board) -> Option<ScoredMove> {
         match self {
             Self::Full {
                 scored,
                 index,
                 tt_move,
-                emitted_tt,
-            } => {
-                if !*emitted_tt {
-                    *emitted_tt = true;
-                    if !tt_move.is_null() {
-                        return Some(tt_scored_move(*tt_move));
+                stage,
+            } => loop {
+                match *stage {
+                    Stage::TtMove => {
+                        *stage = Stage::AllRemaining;
+                        if !tt_move.is_null() {
+                            return Some(tt_scored_move(*tt_move));
+                        }
                     }
-                }
-                while *index < scored.len() {
-                    let picked = pick_next(scored.as_mut_slice(), *index);
-                    *index += 1;
-                    if picked.mv != *tt_move {
-                        return Some(picked);
+                    Stage::AllRemaining => {
+                        while *index < scored.len() {
+                            let picked = pick_next(scored.as_mut_slice(), *index);
+                            *index += 1;
+                            // Duplicate guarantee: the TT move already went out
+                            // in Stage::TtMove.
+                            if picked.mv != *tt_move {
+                                return Some(picked);
+                            }
+                        }
+                        *stage = Stage::Done;
                     }
+                    _ => return None,
                 }
-                None
-            }
+            },
             Self::Staged {
                 moves,
                 good_len,
@@ -727,57 +773,72 @@ impl MovePicker {
                 good_index,
                 quiet_index,
                 bad_index,
-                quiets_generated,
                 pinned,
                 tt_move,
-                emitted_tt,
+                stage,
                 ply,
-            } => {
-                if !*emitted_tt {
-                    *emitted_tt = true;
-                    if !tt_move.is_null() {
-                        return Some(tt_scored_move(*tt_move));
+            } => loop {
+                match *stage {
+                    Stage::TtMove => {
+                        *stage = Stage::GoodCaptures;
+                        if !tt_move.is_null() {
+                            return Some(tt_scored_move(*tt_move));
+                        }
                     }
-                }
-                // Good captures — the selection scan is bounded to the good
-                // partition so it can never pull a bad capture forward.
-                while *good_index < *good_len {
-                    let picked = pick_next(&mut moves.as_mut_slice()[..*good_len], *good_index);
-                    *good_index += 1;
-                    if picked.mv != *tt_move {
-                        return Some(picked);
+                    Stage::GoodCaptures => {
+                        // The selection scan is bounded to the good partition,
+                        // so it can never pull a bad capture forward.
+                        while *good_index < *good_len {
+                            let picked =
+                                pick_next(&mut moves.as_mut_slice()[..*good_len], *good_index);
+                            *good_index += 1;
+                            if picked.mv != *tt_move {
+                                return Some(picked);
+                            }
+                        }
+                        *stage = Stage::GenerateQuiets;
                     }
-                }
-                // Quiets, generated on demand and appended after the captures.
-                if !*quiets_generated {
-                    *quiets_generated = true;
-                    let quiet_moves = board.generate_legal_quiets_pinned(*pinned);
-                    searcher.append_scored_moves(
-                        board,
-                        quiet_moves.as_slice(),
-                        *tt_move,
-                        *ply,
-                        moves,
-                    );
-                }
-                while *cap_len + *quiet_index < moves.len() {
-                    let picked = pick_next(&mut moves.as_mut_slice()[*cap_len..], *quiet_index);
-                    *quiet_index += 1;
-                    if picked.mv != *tt_move {
-                        return Some(picked);
+                    Stage::GenerateQuiets => {
+                        // Once, on demand, appended after the captures. The
+                        // stage exists so "have the quiets been generated" is a
+                        // position in the order rather than a bool.
+                        let quiet_moves = board.generate_legal_quiets_pinned(*pinned);
+                        searcher.append_scored_moves(
+                            board,
+                            quiet_moves.as_slice(),
+                            *tt_move,
+                            *ply,
+                            moves,
+                        );
+                        *stage = Stage::Quiets;
                     }
-                }
-                // Bad captures last.
-                while *good_len + *bad_index < *cap_len {
-                    let picked =
-                        pick_next(&mut moves.as_mut_slice()[*good_len..*cap_len], *bad_index);
-                    *bad_index += 1;
-                    if picked.mv != *tt_move {
-                        return Some(picked);
+                    Stage::Quiets => {
+                        while *cap_len + *quiet_index < moves.len() {
+                            let picked =
+                                pick_next(&mut moves.as_mut_slice()[*cap_len..], *quiet_index);
+                            *quiet_index += 1;
+                            if picked.mv != *tt_move {
+                                return Some(picked);
+                            }
+                        }
+                        *stage = Stage::BadCaptures;
                     }
+                    Stage::BadCaptures => {
+                        while *good_len + *bad_index < *cap_len {
+                            let picked = pick_next(
+                                &mut moves.as_mut_slice()[*good_len..*cap_len],
+                                *bad_index,
+                            );
+                            *bad_index += 1;
+                            if picked.mv != *tt_move {
+                                return Some(picked);
+                            }
+                        }
+                        *stage = Stage::Done;
+                    }
+                    _ => return None,
                 }
-                None
-            }
+            },
         }
     }
 }
@@ -5643,6 +5704,87 @@ mod tests {
             losing_capture_seen,
             "test position must include the losing capture"
         );
+    }
+
+    /// Collect everything a picker yields, for the contract tests below.
+    fn drain_picker(picker: &mut MovePicker, searcher: &Searcher, board: &mut Board) -> Vec<Move> {
+        let mut out = Vec::new();
+        while let Some(picked) = picker.next(searcher, board) {
+            out.push(picked.mv);
+        }
+        out
+    }
+
+    /// 4.5.2 CONTRACT — staged path: every legal move, exactly once.
+    ///
+    /// This is the legality and duplicate guarantee in one assertion. It holds
+    /// with a TT move set, which is the case that can double-emit: the TT move
+    /// goes out in `Stage::TtMove` and every later stage must filter it.
+    #[test]
+    fn staged_picker_emits_every_legal_move_exactly_once() {
+        let searcher = Searcher::default();
+        for fen in [
+            "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+            "4k3/8/4p3/3p4/8/2N5/8/4K3 w - - 0 1",
+        ] {
+            let mut board = Board::from_fen(fen).expect("valid FEN");
+            let mut legal: Vec<Move> = board.generate_legal_movelist().as_slice().to_vec();
+            for tt in [Move::NULL, legal[0], legal[legal.len() - 1]] {
+                let mut picker = MovePicker::staged(&searcher, &mut board, tt, 0);
+                let mut got = drain_picker(&mut picker, &searcher, &mut board);
+                got.sort_unstable_by_key(|m| m.0);
+                legal.sort_unstable_by_key(|m| m.0);
+                assert_eq!(
+                    got, legal,
+                    "staged picker must emit every legal move exactly once                      (fen {fen}, tt {tt})"
+                );
+            }
+        }
+    }
+
+    /// 4.5.2 CONTRACT — full path (root and in-check): same guarantee.
+    #[test]
+    fn full_picker_emits_every_legal_move_exactly_once() {
+        let searcher = Searcher::default();
+        // Second FEN is a check position — rook on e2 checking Ke1, with
+        // Kxe2/Kd1/Kf1 legal — which is exactly when the search takes the full
+        // path. Not a mate: a mated position has no legal moves and would test
+        // nothing here.
+        for fen in [
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "4k3/8/8/8/8/8/4r3/4K3 w - - 0 1",
+        ] {
+            let mut board = Board::from_fen(fen).expect("valid FEN");
+            let mut legal: Vec<Move> = board.generate_legal_movelist().as_slice().to_vec();
+            assert!(!legal.is_empty(), "test FEN must have legal moves: {fen}");
+            for tt in [Move::NULL, legal[0]] {
+                let scored = searcher.score_moves(&board, legal.as_slice(), tt, 0);
+                let mut picker = MovePicker::full(scored, tt);
+                let mut got = drain_picker(&mut picker, &searcher, &mut board);
+                got.sort_unstable_by_key(|m| m.0);
+                legal.sort_unstable_by_key(|m| m.0);
+                assert_eq!(
+                    got, legal,
+                    "full picker must emit every legal move exactly once                      (fen {fen}, tt {tt})"
+                );
+            }
+        }
+    }
+
+    /// 4.5.2 CONTRACT — `Stage::Done` is terminal and stays terminal.
+    #[test]
+    fn picker_is_exhausted_permanently() {
+        let searcher = Searcher::default();
+        let mut board = Board::from_fen("4k3/8/8/8/8/8/8/4K3 w - - 0 1").expect("valid FEN");
+        let mut picker = MovePicker::staged(&searcher, &mut board, Move::NULL, 0);
+        while picker.next(&searcher, &mut board).is_some() {}
+        for _ in 0..3 {
+            assert!(
+                picker.next(&searcher, &mut board).is_none(),
+                "an exhausted picker must keep returning None"
+            );
+        }
     }
 
     fn test_search_result(bestmove: Move, score: i32, depth: usize) -> SearchResult {
