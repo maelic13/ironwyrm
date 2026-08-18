@@ -803,42 +803,66 @@ in native Rust, measure them on Rarog, and reject what does not transfer.
 These govern 4.5–4.18 and exist because the closed Phase 4 failed by
 accumulating individually plausible search mechanisms that did not compose.
 
+**The normal strength unit is one dependency-complete, locally fitted
+cluster.** Do not SPRT every feature or internal substep: sparse and interacting
+features are commonly worthless before their consumers and surrounding
+constants move together. Do not implement the whole phase and rely on one final
+tune either: that destroys attribution and allows losing representations to
+hide inside a bundle. The required sequence is:
+
+1. land behavior-neutral substrate under correctness, fingerprint and NPS
+   gates, with no strength claim;
+2. implement all interacting behavior required by the registered cluster;
+3. freeze categorical choices, prove activation and fit that cluster's moved
+   continuous surface with Texel or targeted SPSA where justified;
+4. bake the completed candidate into clean PGO and run the cluster SPRT;
+5. accept or revert before the next cluster, then run the later consolidation
+   fit and its own SPRT only over already accepted structures.
+
+A categorical subcandidate may receive its own preliminary SPRT only when it
+is independently meaningful and does not require the rest of the cluster to
+be fitted fairly. Such a probe does not replace the integrated cluster gate.
+
 1. 4.2, 4.3 and 4.12 are observational and owe exact diagnostic-off
    fingerprint parity with their respective frozen baseline.
 2. Each cluster starts from the last **accepted** integration head, has a
    pre-registered hypothesis, dependency map, baseline SHA, gate, cap and stop
    rule in `EXPERIMENTS.md` before any games, and ends accepted or reverted
    before the next cluster starts.
-3. Implement the smallest dependency-complete change. Substeps may be compiled
-   and diagnosed separately, but an incomplete cluster never becomes the next
-   strength baseline.
-4. Counters explain a candidate; they cannot accept it. Only a registered
-   final-PGO SPRT accepts. Borderline results are not accumulated as hidden
-   debt.
-5. Bounds follow the cluster's prior, chosen before games. A `[3,10]` nElo
+3. Implement the smallest dependency-complete cluster. Internal substeps may
+   be compiled and diagnosed separately, but they are not expected to win
+   standalone and never become the next strength baseline.
+4. Fit after the cluster's representation and categorical choices freeze, but
+   before its primary strength gate. HCE uses a local Texel family fit; search
+   uses targeted SPSA only when activation, interaction and curvature justify
+   the cost. Untuned first-draft weights are not a fair cluster test.
+5. Counters and tuning loss explain a candidate; they cannot accept it. Only a
+   registered final-PGO SPRT accepts. Borderline results are not accumulated as
+   hidden debt.
+6. Bounds follow the cluster's prior, chosen before games. A `[3,10]` nElo
    SPRT is used only when the cluster plausibly pays at least 10 nElo; the §2
    sizing table gives the cap.
-6. Ablate a surprising integrated result before crediting a subcomponent.
-7. **After two fully implemented search clusters fail to produce an accepted
+7. Ablate a surprising integrated result before crediting a subcomponent.
+8. **After two fully implemented search clusters fail to produce an accepted
    gain, stop and re-audit 4.2–4.3.** After two coherent HCE clusters fail,
    stop implementation and re-audit 4.12 and the remaining order. Track H may
    close early only by explicitly conceding the Phase-4 HCE maturity target;
    it may not silently leave UNKNOWN or first-draft contracts behind.
-8. Record both Elo and NPS for every cluster. A richer contract that wins per
+9. Record both Elo and NPS for every cluster. A richer contract that wins per
    node but loses enough depth is not an accepted implementation of it.
-9. HCE-changing A/Bs and every cross-engine cohort default to **no
+10. HCE-changing A/Bs and every cross-engine cohort default to **no
    adjudication**, because evaluator scale and semantics differ. Adjudication
    may be enabled only after a registered calibration demonstrates equivalent
    behavior for both arms; never reuse the search-only `strength-v1`
    assumption automatically.
-10. Every changed HCE feature must reconstruct exactly through `EvalTrace`,
-    report activation and covariance, and use train/validation/untouched
-    separation. Texel proposes a fitted candidate; only its clean PGO SPRT can
-    accept it.
-11. SPSA is reserved for accepted architectures whose game-objective
-    coordinates are not identifiable from the trace, or for search parameters.
-    Freeze categorical choices, complete final theta and never select a
-    checkpoint retrospectively.
+11. Every changed HCE feature must reconstruct exactly through `EvalTrace`,
+   report activation and covariance, and use train/validation/untouched
+   separation. Texel proposes a fitted candidate; only its clean PGO SPRT can
+   accept it.
+12. SPSA is reserved for accepted architectures whose game-objective
+   coordinates are not identifiable from the trace, or for search parameters.
+   Freeze categorical choices, complete final theta and never select a
+   checkpoint retrospectively.
 
 ## 5. Phase 5 — NNUE runway
 

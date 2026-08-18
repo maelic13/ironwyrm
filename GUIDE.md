@@ -456,15 +456,20 @@ reproduction procedure to verify the baseline, not to modify or republish
 
 For every behavioral Phase-4 step:
 
+**Gate the fitted dependency-complete cluster, not each feature and not the
+whole phase at once.** Internal substeps may be too sparse or coupled to win
+before their consumers and weights move together. Conversely, postponing all
+games until the end destroys attribution and lets losing structures hide.
+
 1. **Audit** — name the problem, its Rust owner, all interacting consumers and
    the local diagnostic population. Update `PLAN.md` first if the evidence
    contradicts the planned order.
 2. **Register** — add an `EXPERIMENTS.md` ID with hypothesis, baseline SHA,
    candidate scope, expected direction, gate, cap and stop rule, before games.
    Choose bounds from the cluster's prior and the PLAN §2 sizing table.
-3. **Implement** — the smallest dependency-complete change. Substeps may be
-   compiled and diagnosed separately, but no incomplete cluster becomes the
-   next strength baseline.
+3. **Implement** — the smallest dependency-complete cluster. Substeps may be
+   compiled and diagnosed separately, but are not expected to pass standalone
+   and no incomplete cluster becomes the next strength baseline.
 4. **Prove correctness** — fmt, workspace tests in debug and release,
    all-feature clippy and targeted invariants. A behavior-neutral diagnostic
    seam must preserve the exact accepted fingerprint when disabled.
@@ -472,14 +477,22 @@ For every behavioral Phase-4 step:
    qnodes, move source, cutoff index, TT use, reductions and re-searches,
    pruning, extensions and aspiration against the oracle. Counters explain a
    candidate; they cannot accept it.
-6. **Gate** — build revision-matched final-PGO baseline and candidate binaries
-   and run the registered paired UHO SPRT. Do not change the candidate,
-   bounds, cap, book or adjudication after observing games.
-7. **Close** — accept and commit only a passing result. Otherwise revert the
+6. **Fit** — after structural and categorical choices freeze, fit the moved
+   cluster surface: local Texel for HCE; targeted SPSA for search only when
+   justified. Complete theta; do not select a checkpoint retrospectively.
+7. **Gate** — bake the fitted candidate and revision-matched baseline through
+   clean final PGO, then run the registered paired UHO SPRT. Do not change the
+   candidate, bounds, cap, book or adjudication after observing games.
+8. **Close** — accept and commit only a passing result. Otherwise revert the
    behavior, keep the evidence row and restore the prior fingerprint. Ablate a
    surprising integrated result before crediting a subcomponent.
-8. **Advance** — start the next item only after the preceding one is accepted,
+9. **Advance** — start the next item only after the preceding one is accepted,
    rejected or explicitly closed.
+
+A separable categorical alternative may have a preliminary SPRT, but that
+never replaces the locally fitted integrated cluster SPRT. After accepted
+clusters, 4.10 and 4.17 own consolidation tuning and separate confirmation
+SPRTs; they may not rescue an earlier losing cluster.
 
 Two failed coherent search clusters trigger a return to 4.2–4.3. Two failed
 HCE clusters trigger a 4.12/order re-audit, not silent closure. Track H may
