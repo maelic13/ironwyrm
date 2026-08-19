@@ -218,36 +218,34 @@ classical fallback (9, last, may never run). Per-item rationale is in
           Previous-PV following REJECTED as redundant with `Stage::TtMove`.
           **All six of 4.5.1's deferred fields are now disposed**, so (5) may
           close. No dormant switches were left behind.
-    - [~] (5) **Fit, gate and ablation.** Fit CONSIDERED and DEFERRED: the
-          curvature probe shows a real interior peak in first-move cutoff at
-          `LmrPriorReductionAdj=768`, the first time this project's SPSA
-          condition has been met — but 768 costs +17 pct nodes for +0.23
-          points of a proxy RAR-S59 proved can mislead, and PLAN 4.10 owns
-          consolidation tuning across accepted clusters. Evidence handed to
-          4.10. Gate RAN as RAR-S61 and is **UNRESOLVED at the cap**: Elo
-          +4.50 ± 3.50, nElo +6.92 ± 5.38, LOS 99.41%, LLR 0.39 of ±2.94 over
-          16,000 games. Real but undecidable — it landed 0.42 nElo from the
-          `[3,10]` midpoint, exactly where RAR-M10 says the bracket cannot
-          resolve. **Disposition pending: park, revert, or split the
-          correctness repair from the strength candidate.** Bounds, cap and
-          book are FROZEN — no re-run at different bounds.
-      **Quiet suppression: CLOSED as intentionally different, 2026-08-18.**
-      Stockfish's `skipQuiets` is a work-saving optimisation, not a search-
-      quality feature, and its shape does not transfer: Rarog's LMP carries a
-      `move_gives_check` exemption, so a picker-level suppression would
-      silently drop quiet checks the search currently keeps. Measured size of
-      the prize on the 4.2 suite: LMP fires at only 8.3% of nodes, discarding
-      ~23 quiets each, and quiets are already generated AND scored before the
-      first is yielded — so suppression saves selection scans only, which must
-      buy a full 0.5% NPS to be worth 1 Elo. Against that, Rarog measured
-      +30.75 Elo for removing its check extension, so check populations are
-      the worst place it has to trim on a guess, and every diagnosis
-      (RAR-S52/S53/S54/S55, and 4.7 itself at +15.56) says the deficit is
-      over-selectivity, not speed. Suppression therefore stays in the caller.
-      **Do not implement the Stockfish shape.** Re-open only at 4.10, which
-      owns second-pass selectivity: LMP's shape is already moving, and if the
-      check exemption does not survive that rework the blocker disappears and
-      this becomes trivially safe.
+    - [x] (5) **[REJECTED, no gain]** Fit, gate and ablation. RAR-S61 was
+          unresolved at `[3,10]`; RAR-S64 re-measured after the
+          stale-reduction fix and took H0 at `[0,10]` in 8,088 games,
+          +0.39 ± 4.89 Elo. The whole +4.50 RAR-S61 saw was the defect.
+          `lmr_prior_reduction_adj` removed. Structural work retained at no
+          strength claim.
+      **SCOPE NOT FULLY EXECUTED — read this before treating 4.5 as closed.**
+      Cluster A was aimed at three maturity contracts. Per-ply authority is
+      closed, though as "Rarog needs fewer fields than the plan listed": three
+      of the four named fields (statistical score, cutoff count, previous-PV
+      following) were rejected as node-local, inert or redundant, which the
+      plan's own rule allows as an intentionally different answer. The other
+      two are NOT closed and were marked done prematurely:
+      **History semantics.** 4.5.3 named ageing policy, update attribution,
+      check/capture context in history indexing, and evaluation-difference
+      training and seed/decay policy as Rarog candidates. Only the
+      continuation-key consolidation and one measurement (RAR-S59) were done.
+      Ageing, decay, attribution and check/capture context were never
+      touched.
+      **Reductions and re-search authority as ONE explicit contract.** 4.5.4
+      named it; it does not exist. `lmr_reduction_units` still takes eleven
+      loose arguments and is not a contract over the per-ply context. The
+      accepted zero-reduction floor and full-depth verification were never
+      audited.
+      No later step owns either gap: 4.10 is integration and consolidation
+      TUNING, and its catch-all "resolve every remaining search-map item" is
+      where structural work goes to be forgotten. These need an owner before
+      Phase 4 can claim search maturity.
 - [ ] 4.6 **Cluster B — static eval, TT and quiescence.** Keep raw, corrected/
       pruning and searched evidence distinct. Audit TT admission/replacement,
       PV/bound propagation, qsearch stand-pat, corrected eval, prior-square

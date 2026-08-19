@@ -2063,6 +2063,12 @@ impl Searcher {
         }
         self.pv_len[ply] = ply;
         self.seldepth = self.seldepth.max(ply);
+        // AUDIT FINDING 3: bound how far a killer can travel by clearing the
+        // grandchild's slot on entry, so a ply cannot inherit killers from a
+        // positionally unrelated subtree.
+        if self.params.killer_clear_grandchild != 0 && ply + 2 < MAX_PLY {
+            self.killers[ply + 2] = [Move::NULL; 2];
+        }
 
         if ply > 0 && board.can_declare_draw_in_search() {
             return 0;
@@ -2321,10 +2327,21 @@ impl Searcher {
         } else {
             (static_eval - raw_static_eval).abs()
         };
-        let improving = !in_check
+        // AUDIT FINDING 2: with the fallback on, an unusable `ply - 2` (the
+        // node was in check, so its eval is VALUE_NONE) falls back to
+        // `ply - 4` rather than silently forcing `improving` false.
+        let improving_ref = if self.params.improving_ply4_fallback != 0
             && ply >= 2
-            && self.stack[ply - 2].static_eval != VALUE_NONE
-            && static_eval > self.stack[ply - 2].static_eval;
+            && self.stack[ply - 2].static_eval == VALUE_NONE
+            && ply >= 4
+        {
+            self.stack[ply - 4].static_eval
+        } else if ply >= 2 {
+            self.stack[ply - 2].static_eval
+        } else {
+            VALUE_NONE
+        };
+        let improving = !in_check && improving_ref != VALUE_NONE && static_eval > improving_ref;
         let improving_i = if improving { 1 } else { 0 };
         let not_improving_i = 1 - improving_i;
         // 9.7.5 lead: the TT may only stand in for the static eval here if its
