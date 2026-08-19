@@ -1621,9 +1621,18 @@ impl Evaluator {
                     tr_eg!(self, bishop_outpost_eg, 0, sign);
                 }
 
-                if LONG_DIAGONALS.0 & (1u64 << sq.index()) != 0
-                    && (self.attacks_from_sq[color as usize][sq.index()] & king_zone).any()
-                {
+                if LONG_DIAGONALS.0 & (1u64 << sq.index()) != 0 && {
+                    // AUDIT FINDING 4: the scratch is poisoned with all-ones
+                    // between evaluations, so an unwritten read is now an
+                    // assertion failure in debug rather than a plausible
+                    // wrong answer in both builds.
+                    debug_assert_ne!(
+                        self.attacks_from_sq[color as usize][sq.index()],
+                        Bitboard(u64::MAX),
+                        "attacks_from_sq read for a square this evaluation never wrote"
+                    );
+                    (self.attacks_from_sq[color as usize][sq.index()] & king_zone).any()
+                } {
                     *mg += sign * self.params.bishop_long_diagonal_mg[0];
                     *eg += sign * self.params.bishop_long_diagonal_eg[0];
                     tr_mg!(self, bishop_long_diagonal_mg, 0, sign);
@@ -1741,6 +1750,12 @@ impl Evaluator {
                     let mut pieces = board.pieces(color, $piece);
                     while pieces.any() {
                         let sq = pieces.pop_lsb();
+                        // AUDIT FINDING 4: see the note at the king-zone read.
+                        debug_assert_ne!(
+                            self.attacks_from_sq[color as usize][sq.index()],
+                            Bitboard(u64::MAX),
+                            "attacks_from_sq read for a square this evaluation never wrote"
+                        );
                         let attacks = self.attacks_from_sq[color as usize][sq.index()];
                         let mobility = (attacks & safe & !own_occ).count() as usize;
                         let i = mobility.min(self.params.$mgf.len() - 1);

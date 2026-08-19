@@ -4688,6 +4688,18 @@ impl Searcher {
         self.stack[ply].mv = mv;
         self.stack[ply].piece = piece;
         self.stack[ply].cont_key = piece_to_index(piece as usize, mv.to_sq().index());
+        // AUDIT FINDING 1. The reduction belongs to the move, so it is reset
+        // HERE rather than at the one branch that happens to set it. It used to
+        // be written only on the LMR path: a move that escaped reduction left
+        // the previous sibling's value standing — or, across a node boundary, a
+        // value from an unrelated subtree — and the child read that as "my
+        // parent was reduced". `lmr_prior_reduction_adj` was firing on it.
+        //
+        // Same shape as the ProbCut desync: state written in pieces, one piece
+        // missed, survivor silently stale. Resetting inside `push_move` makes
+        // the field unwritable independently of the move it describes, which is
+        // the structural fix rather than the one-line one.
+        self.stack[ply].reduction = 0;
     }
 
     /// Clear the move at `ply`. The static eval is deliberately preserved: it
@@ -4696,6 +4708,7 @@ impl Searcher {
     fn clear_move(&mut self, ply: usize) {
         self.stack[ply].mv = Move::NULL;
         self.stack[ply].cont_key = 0;
+        self.stack[ply].reduction = 0;
     }
 
     /// 4.5b: compact `(piece, to)` key for the move `distance` plies back, or
