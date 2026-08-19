@@ -15,7 +15,7 @@ of method, history, phase numbers and internal naming — see PLAN §2
 | Item | Value |
 |---|---|
 | Released baseline | **2.3.2** at `f931722` on `master` |
-| Accepted fingerprint | **6,922,439 nodes / EBF 2.451** at `bench 13`, 1T |
+| Accepted fingerprint | **6,922,439 nodes / EBF 2.451**; 4.5 candidate 7,436,275 |
 | Integration branch | `dev`, reset to `master` and carrying this plan |
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
 | Active experiment | None; 4.7 closed, 4.7c only (RAR-S57/S58, +15.56 ± 10.02) |
