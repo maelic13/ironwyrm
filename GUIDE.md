@@ -224,8 +224,13 @@ classical fallback (9, last, may never run). Per-item rationale is in
           condition has been met — but 768 costs +17 pct nodes for +0.23
           points of a proxy RAR-S59 proved can mislead, and PLAN 4.10 owns
           consolidation tuning across accepted clusters. Evidence handed to
-          4.10. Gate REGISTERED as RAR-S61: `[3,10]` nElo, cap 16,000, prior
-          re-derived 15–45 → 5–20. Awaiting the PGO bake and the SPRT.
+          4.10. Gate RAN as RAR-S61 and is **UNRESOLVED at the cap**: Elo
+          +4.50 ± 3.50, nElo +6.92 ± 5.38, LOS 99.41%, LLR 0.39 of ±2.94 over
+          16,000 games. Real but undecidable — it landed 0.42 nElo from the
+          `[3,10]` midpoint, exactly where RAR-M10 says the bracket cannot
+          resolve. **Disposition pending: park, revert, or split the
+          correctness repair from the strength candidate.** Bounds, cap and
+          book are FROZEN — no re-run at different bounds.
       **Quiet suppression: CLOSED as intentionally different, 2026-08-18.**
       Stockfish's `skipQuiets` is a work-saving optimisation, not a search-
       quality feature, and its shape does not transfer: Rarog's LMP carries a
