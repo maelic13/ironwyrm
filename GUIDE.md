@@ -182,7 +182,13 @@ classical fallback (9, last, may never run). Per-item rationale is in
       Bench-identical where behavior-neutral; pooled-PGO NPS gate where it is
       a layout change. The evaluator-facing dirty-piece delta contract stays
       owned by 5.1 — do not let this grow into the NNUE runway.
-- [ ] 4.5 **Cluster A — per-ply authority, ordering, histories and LMR.**
+- [x] 4.5 **[REJECTED, no gain]** Cluster A — per-ply authority, ordering,
+      histories and LMR. All five sub-items closed. RAR-S64 took H0 at
+      +0.39 ± 4.89 once the stale-reduction defect was fixed, so the
+      +4.50 RAR-S61 saw was the defect. Structural work retained at no
+      strength claim; `lmr_prior_reduction_adj` removed. Head
+      7,467,143 / EBF 2.477. **Unexecuted scope was numbered, not
+      dropped: history semantics → 4.9b, reduction contract → 4.8.1.**
       One dependency-complete cluster. Prior 15–45 nElo; it rests on evidence,
       reduction and re-search coordination, not raw ordering quality.
     - [x] (1) **[DONE, no games]** Rarog search context: `NodeContext`
