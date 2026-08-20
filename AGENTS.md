@@ -93,6 +93,25 @@ did what its name suggests.**
 - Register in `EXPERIMENTS.md` — hypothesis, baseline SHA, gate, cap, stop rule
   — **before any games**. Never change bounds, cap, book or adjudication after
   seeing games.
+- **Size the bracket from RAR-M10 BEFORE registering, and expect the 3–7 nElo
+  band.** An SPRT resolves fast only when the truth is far from the bracket
+  midpoint. Rarog's remaining candidates keep arriving in 3–7 nElo, and three
+  gates in a row landed within ~1 nElo of their midpoint: RAR-S61 spent 16,000
+  games at `[3,10]` for LLR 0.39 (true 6.92, midpoint 6.5), and RAR-S65 then
+  landed at 4.26 against `[0,10]`'s midpoint of 5.0. Moving the bracket off the
+  last candidate's value keeps putting it on the next one's. Compute the games
+  needed at the *expected* value before choosing bounds, not after.
+- **The method as configured cannot accept a 3–7 nElo gain, and that is a
+  known, unsolved problem — not something to work around per-run.** No bracket
+  resolves that band cheaply, so candidates there stop unresolved and are
+  reverted. If the project wants to bank small gains it needs a different
+  decision procedure (a fixed-N estimate with a pre-declared acceptance
+  threshold, say), **registered prospectively**. Never reach for one after
+  seeing a result you liked; that is the same act as moving the bounds.
+- **An unresolved stop is not "probably fine".** RAR-S61 measured
+  +4.50 ± 3.50 at LOS 99.41% and the entire effect turned out to be a stale-read
+  bug (RAR-S64 re-measured it at +0.39 once fixed). A high LOS on a point
+  estimate is not evidence a mechanism works.
 - **SPSA is conditional, not owed.** PLAN rule 4 says "only when activation,
   interaction and curvature justify the cost". Establish that first with a
   zero-game sweep over the suite or bench; a flat or monotone surface is
