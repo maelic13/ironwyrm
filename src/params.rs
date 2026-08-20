@@ -608,6 +608,10 @@ search_params! {
     /// 0, so this can only ever tighten the old contract, never loosen it —
     /// RAR-S55 v3 measured Rarog searching 5.17x the reference's normalised
     /// ProbCut moves and converting 32.6% of them against 71.9%.
+    /// 4.10 CANDIDATE: single-thread LMR-reduction jitter, in 1024ths of a
+    /// ply. 0 = off = accepted behaviour. The multi-thread path is unaffected
+    /// and keeps its own magnitude of 64.
+    lmr_jitter_1t = 0, "LmrJitter1t", 0..=512;
     probcut_see_gap_scale = 100, "ProbCutSeeGapScale", 0..=100;
     /// Base cap on captures searched at one ProbCut node, before the cut-node
     /// bonus. Replaces a flat 8 that had no stated derivation.

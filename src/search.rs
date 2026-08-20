@@ -1134,7 +1134,7 @@ impl Searcher {
     /// same amplitude as before, with mean −0.5/1024 — nine times closer to
     /// zero, so the jitter now diversifies without also pruning harder.
     #[inline(always)]
-    fn next_jitter(&mut self) -> i32 {
+    fn next_jitter(&mut self, magnitude: i32) -> i32 {
         let mut x = self.jitter_state;
         x ^= x << 13;
         x ^= x >> 7;
@@ -1143,7 +1143,12 @@ impl Searcher {
         // Top 7 bits, not the bottom ones: xorshift64's low bits are its
         // weakest (they carry the least mixing), and taking them measurably
         // skewed the mean. `>> 57` yields 0..=127, so the result is [−64, 63].
-        i32::try_from(x >> 57).expect("7-bit shift fits i32") - 64
+        // `magnitude` in 1024ths of a ply; the result is [−magnitude,
+        // +magnitude]. At magnitude 64 this is EXACTLY the pre-4.5 expression
+        // `(x >> 57) - 64`, since `bits * 64 / 64 - 64 == bits - 64`, so the
+        // SMP path is unchanged by construction rather than by measurement.
+        let bits = i32::try_from(x >> 57).expect("7-bit shift fits i32");
+        bits * magnitude / 64 - magnitude
     }
 
     fn no_legal_moves_result(&mut self, board: &Board) -> SearchResult {
@@ -3215,8 +3220,25 @@ impl Searcher {
                     // with the counter and biased +4.5/1024. Only in a parallel
                     // search — `shared_state` is None at Threads=1, which is
                     // what keeps bench identical.
+                    // SMP diversification, unchanged: magnitude 64 reproduces
+                    // the original expression exactly.
+                    //
+                    // 4.10 CANDIDATE — 1T selectivity jitter. Three independent
+                    // results say perturbing this surface beats leaving it
+                    // alone: RAR-S54 (+4.06 ± 3.71 over 14,196 games for a
+                    // blind uniform de-selectivity shift), RAR-S62 (a ProbCut
+                    // desync reading an arbitrary continuation row beat correct
+                    // indexing by ~5 Elo) and RAR-S64 (a stale prior-reduction
+                    // firing on a quasi-random subset beat the correct one by
+                    // ~4.5). Twice a BUG that scattered noise into selectivity
+                    // beat its own correction. The machinery already existed
+                    // and was disabled at 1T only to keep bench deterministic
+                    // for SMP work — the PRNG is re-seeded per search from a
+                    // fixed seed, so 1T stays reproducible.
                     if self.shared_state.is_some() {
-                        r += self.next_jitter();
+                        r += self.next_jitter(64);
+                    } else if self.params.lmr_jitter_1t != 0 {
+                        r += self.next_jitter(self.params.lmr_jitter_1t);
                     }
                     // 10.2.5 candidate: strong late moves may escape the old
                     // mandatory one-ply reduction. A zero reduction is a normal
