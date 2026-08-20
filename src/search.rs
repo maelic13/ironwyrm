@@ -2063,12 +2063,6 @@ impl Searcher {
         }
         self.pv_len[ply] = ply;
         self.seldepth = self.seldepth.max(ply);
-        // AUDIT FINDING 3: bound how far a killer can travel by clearing the
-        // grandchild's slot on entry, so a ply cannot inherit killers from a
-        // positionally unrelated subtree.
-        if self.params.killer_clear_grandchild != 0 && ply + 2 < MAX_PLY {
-            self.killers[ply + 2] = [Move::NULL; 2];
-        }
 
         if ply > 0 && board.can_declare_draw_in_search() {
             return 0;
