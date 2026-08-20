@@ -160,13 +160,13 @@ search_params! {
 
     /// Futility pruning base margin.
     /// Formula: `(base + not_improving_coeff * not_improving_i) * depth`. [search.rs:1003]
-    futility_base = 52, "FutilityBase", 20..=200;  // was 70 → 82 → 86 → 60 → 52
+    futility_base = 60, "FutilityBase", 20..=200;  // was 70 → 82 → 86 → 60 → 52
     /// Extra futility margin added when *not* improving (multiplied by
     /// `not_improving_i`). Larger value → prune less when not improving.
-    futility_not_improving = 51, "FutilityNotImproving", 0..=120;  // was 20 → 51 → 49 → 42 → 51
+    futility_not_improving = 59, "FutilityNotImproving", 0..=120;  // was 20 → 51 → 49 → 42 → 51
 
     /// Razoring coefficient. Prune if `eval + coeff * depth < alpha`. [search.rs:1007]
-    razoring_coeff = 274, "RazoringCoeff", 50..=300;  // was 150 → 194 → 191 → 193 → 274
+    razoring_coeff = 300, "RazoringCoeff", 50..=300;  // was 150 → 194 → 191 → 193 → 274
 
     /// Null-move pruning depth coefficient. [search.rs:1012]
     /// Allow NMP when `eval >= beta - coeff * depth - improving_bonus * improving`.
@@ -176,21 +176,21 @@ search_params! {
 
     /// LMP prune-margin base.
     /// Formula: `(base + not_improving_coeff * not_improving_i) * depth`. [search.rs:1182]
-    lmp_base = 80, "LmpBase", 30..=200;  // was 90 → 115 → 88 → 80
+    lmp_base = 92, "LmpBase", 30..=200;  // was 90 → 115 → 88 → 80
     /// Extra LMP prune-margin added when *not* improving (multiplied by
     /// `not_improving_i`). Larger value → prune less when not improving.
-    lmp_not_improving = 64, "LmpNotImproving", 0..=120;  // was 25 → 53 → 57 → 63 → 64
+    lmp_not_improving = 74, "LmpNotImproving", 0..=120;  // was 25 → 53 → 57 → 63 → 64
 
     /// Quiet-history pruning coefficient (stored positive; applied as `-(coeff * depth)`).
     /// [search.rs:1186]
-    quiet_hist_prune_coeff = 5_617, "QuietHistPruneCoeff", 1000..=10000;  // was 4000 → 4372 → 4419 → 5069 → 5617
+    quiet_hist_prune_coeff = 6_460, "QuietHistPruneCoeff", 1000..=10000;  // was 4000 → 4372 → 4419 → 5069 → 5617
 
 
     /// SEE bad-capture threshold coefficient (stored positive; applied as `-(coeff * depth)`).
     /// [search.rs:1195]
-    see_pruning_coeff = 66, "SeePruningCoeff", 20..=200;  // was 83 → 51 → 66
+    see_pruning_coeff = 76, "SeePruningCoeff", 20..=200;  // was 83 → 51 → 66
     /// SEE bad-capture threshold maximum magnitude (floor of `-(coeff * depth)`). [search.rs:1195]
-    see_pruning_max = 955, "SeePruningMax", 200..=1600;  // was 804 → 869 → 955
+    see_pruning_max = 1098, "SeePruningMax", 200..=1600;  // was 804 → 869 → 955
 
     // ── Qsearch SEE thresholds (Phase 7.2 SEE bundle) ────────────────────────
     // Exposed so the `config_see` SPSA can re-tune SEE's consumers alongside
@@ -586,9 +586,9 @@ search_params! {
     // (depth <= 8, not in check, move doesn't give check). Centipawn-scaled —
     // re-tuned in the Phase 4 SPSA wave after the eval re-fit.
     /// Quiet futility base margin (cp).
-    fp_base = 211, "FpBase", 0..=400;
+    fp_base = 243, "FpBase", 0..=400;
     /// Quiet futility per-depth coefficient (cp).
-    fp_coeff = 135, "FpCoeff", 0..=300;
+    fp_coeff = 155, "FpCoeff", 0..=300;
 
     /// ProbCut beta margin (cp). `probcut_beta = beta + margin`. [search.rs:1108]
     /// Re-tuned in the Phase 5 SPSA wave after the Phase 4 eval re-fit changed
