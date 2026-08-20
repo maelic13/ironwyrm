@@ -2044,6 +2044,11 @@ impl Searcher {
         r -= quiet_hist * 1024 / self.params.lmr_hist_div;
         // 8.5(b): reduce less when the static eval is heavily corrected.
         r -= corr_abs * self.params.corr_lmr_scale / 128;
+        // 4.10 CANDIDATE: unconditional relief. Applied last, inside
+        // `lmr_reduction_units`, so both call sites see it and the
+        // prospective-depth estimate keeps agreeing with the real reduction —
+        // the `debug_assert_eq!` between them is what enforces that.
+        r -= self.params.lmr_relief;
         r
     }
 
