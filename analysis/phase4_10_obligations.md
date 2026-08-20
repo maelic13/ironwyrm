@@ -180,13 +180,11 @@ inflating the LMP margin.
   nodes, first-move cutoff improving) measured **exactly zero** in games.
 - **Measure cutoffs-per-node alongside the cutoff RATE.** The rate alone waved
   RAR-S59's candidate through; the ratio caught it.
-- **The 3–7 nElo band is where Rarog's remaining gains live, and the method
-  cannot bank them.** Three gates in a row landed within ~1 nElo of their
-  bracket midpoint. Moving the bracket off the last candidate's value keeps
-  putting it on the next one's. This is an unsolved methodological problem,
-  not a per-run annoyance — see the Gating section of `AGENTS.md`. If 4.10
-  wants to accept small consolidation gains it must register a different
-  decision procedure **prospectively**.
+- **Wide brackets REJECT small gains — use narrow ones anchored at zero.**
+  `[0,10]` drives a true +4 nElo to H0 in ~35k games; `[0,3]` accepts it in
+  ~47k. Fishtest's shape is `[0,2]` STC / `[0,1]` LTC. 4.10's consolidation
+  gains are the most likely of all to be small, so this matters most here.
+  See the Gating section of `AGENTS.md`.
 - **Size the SPRT bracket from RAR-M10 before registering.** RAR-S61 spent
   16,000 games at `[3,10]` for LLR 0.39 because the candidate landed 0.42 nElo
   from the midpoint. `[0,10]` then resolved the same question in 8,088.

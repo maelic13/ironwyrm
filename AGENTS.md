@@ -93,25 +93,30 @@ did what its name suggests.**
 - Register in `EXPERIMENTS.md` — hypothesis, baseline SHA, gate, cap, stop rule
   — **before any games**. Never change bounds, cap, book or adjudication after
   seeing games.
-- **Size the bracket from RAR-M10 BEFORE registering, and expect the 3–7 nElo
-  band.** An SPRT resolves fast only when the truth is far from the bracket
-  midpoint. Rarog's remaining candidates keep arriving in 3–7 nElo, and three
-  gates in a row landed within ~1 nElo of their midpoint: RAR-S61 spent 16,000
-  games at `[3,10]` for LLR 0.39 (true 6.92, midpoint 6.5), and RAR-S65 then
-  landed at 4.26 against `[0,10]`'s midpoint of 5.0. Moving the bracket off the
-  last candidate's value keeps putting it on the next one's. Compute the games
-  needed at the *expected* value before choosing bounds, not after.
-- **The method as configured cannot accept a 3–7 nElo gain, and that is a
-  known, unsolved problem — not something to work around per-run.** No bracket
-  resolves that band cheaply, so candidates there stop unresolved and are
-  reverted. If the project wants to bank small gains it needs a different
-  decision procedure (a fixed-N estimate with a pre-declared acceptance
-  threshold, say), **registered prospectively**. Never reach for one after
-  seeing a result you liked; that is the same act as moving the bounds.
+- **Use NARROW bounds anchored at zero, and size them from RAR-M10 before
+  registering.** Fishtest uses `[0, 2]` STC and `[0, 1]` LTC in normalized Elo
+  — narrow, near zero — with large budgets and GSPRT. Wide brackets do not
+  merely resolve slowly on a small gain, they **reject it**: `[0,10]` drives a
+  true +4 nElo to H0 in ~35k games and `[3,10]` does it in ~20k. Three gates
+  were registered at those bounds against candidates measuring 4–7 nElo, so
+  they were configured to reject what they were measuring. `[0,3]` is the
+  bracket to prefer here — RAR-M10 was fitted on `[0,3]` gates, so it is the
+  in-regime choice rather than an extrapolation — and it accepts a true +4 in
+  ~47k games.
+- **A real gate is now an overnight run, and that is the honest price.** At
+  ~98 games/min, `[0,3]` needs roughly 8 hours for a true +4 and 13 for a
+  true +3, and about the same to reject a dud. Zero-game bench and counter
+  screening is what decides WHICH candidates earn that budget; it never
+  decides whether one works (RAR-S64: a mechanism with a clean bench signal
+  measured exactly zero in games).
+- **Do not invent an acceptance rule after seeing a result.** A threshold like
+  "accept if the CI excludes zero at 20,000 games" is arbitrary and is the same
+  act as moving the bounds. If small gains need to be bankable, register the
+  narrower bracket PROSPECTIVELY.
 - **An unresolved stop is not "probably fine".** RAR-S61 measured
   +4.50 ± 3.50 at LOS 99.41% and the entire effect turned out to be a stale-read
   bug (RAR-S64 re-measured it at +0.39 once fixed). A high LOS on a point
-  estimate is not evidence a mechanism works.
+  estimate is not evidence that a mechanism works.
 - **SPSA is conditional, not owed.** PLAN rule 4 says "only when activation,
   interaction and curvature justify the cost". Establish that first with a
   zero-game sweep over the suite or bench; a flat or monotone surface is
