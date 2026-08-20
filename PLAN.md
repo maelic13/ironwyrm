@@ -665,14 +665,42 @@ Named now so every step has a concrete surface:
       66.7–75% elsewhere. Endgame is also where a shared evaluation should make
       two searches agree MOST, which is what makes 50% interesting. **n = 10,
       so widen the cohort before building anything on it.**
-    - **4.6.7 Premature conviction, and it SURVIVED the correction.** Rarog
-      revises its root move **1.50** times against the oracle's **2.16**, and
-      its own depth-7 answer survives to its final depth more often (72% vs
-      60%) — yet it lands on a different move than the oracle a third of the
-      time. It converges faster and more confidently to somewhere else. This
-      is the strongest surviving lead from the answer harness, and it is
-      consistent with `root_best_changes` 0.29x measured independently. Connects
-      to 4.9's aspiration ownership.
+    - **4.6.7 Premature conviction — CAUSE FOUND, folded into the root-answer
+      cluster.** Rarog revises its root move **1.50** times against the
+      oracle's **2.16**, and its own depth-7 answer survives to its final depth
+      more often (72% vs 60%) — yet it lands on a different move than the
+      oracle a third of the time. It converges faster and more confidently to
+      somewhere else; consistent with `root_best_changes` 0.29x measured
+      independently. **Cause:** `lmr_reduction_units` is not passed the ply and
+      `reducible` has no `ply == 0` term, so the reduction formula cannot see
+      the root. From the third root move onward an alternative is searched at
+      reduced depth and can displace the incumbent only by beating alpha
+      *while reduced*. **Screened and NOT a standalone lead:** `LmrRootRelief`
+      (default 0, committed off) leaves settle depth, revisions and volatility
+      identical at 0, 512 and 1024 while measurably changing the tree — the
+      mechanism is real, moving it alone changes no answer.
+
+- **4.6c The root-answer cluster — 4.6.7 + 4.8.1 + 4.9 as ONE unit.** These
+  three own a single object: how deep a root alternative is searched before it
+  may displace the incumbent. 4.6.7 owns the root's term in the reduction
+  formula, 4.8.1 owns the reduction/re-search contract that term is subtracted
+  from, and 4.9 owns the aspiration that sets the alpha an alternative must
+  beat. Fitting any one against the others' accepted values fits it against a
+  baseline that is about to move.
+      - **Build and screen each alone behind its own default-off switch; fit
+        them together; gate ONCE at `[0,3]`.** Bundling the gate is not
+        bundling the work — a bundle built blind costs an overnight run and,
+        on failure, names no culprit.
+      - **Areas of this search are co-adapted, and that is measured.** Rarog
+        gained **+30.75 Elo removing its check extension**, the opposite of
+        the reference. "Match the oracle in area X" is therefore not a safe
+        per-area objective, and improving one area toward the oracle can cost
+        another.
+      - The record is the argument: the only accepted gain in ~86,000 games
+        (4.7c, +15.56) came from inside a cluster; all five failures after it
+        were isolated singletons.
+      - **Agreement stays a PROXY.** The objective is playing strength. None
+        of the trajectory metrics is a gate, and the cluster still owes one.
     - **4.6.8 Score volatility.** **422** cp mean absolute change per
       iteration against the oracle's **199** — more than double — while the
       MOVE is more stable than the oracle's. A stable move with an unstable score is a search whose value

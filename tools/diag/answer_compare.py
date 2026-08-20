@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 """Compare what Rarog and the oracle ANSWER, not how often their mechanisms fire.
+        for opt in options:
+            name, _, value = opt.partition("=")
+            proc.stdin.write("setoption name %s value %s\n" % (name, value))
+        proc.stdin.flush()
 
 PLAN 4.6/4.10 diagnostic. The differential suite measures RATES -- how often
 each mechanism fires per node. It cannot say whether the search returns the
@@ -78,7 +82,7 @@ def is_mate(cp):
     return abs(cp) > 20000
 
 
-def run_engine(exe, positions, depth):
+def run_engine(exe, positions, depth, options=()):
     """One process for the whole suite. Returns {fen: {depth: (cp, pv_list)}}."""
     exe_path = pathlib.Path(exe).resolve()
     proc = subprocess.Popen(
@@ -177,6 +181,8 @@ def main():
     ap.add_argument("--rarog", required=True)
     ap.add_argument("--oracle", required=True)
     ap.add_argument("--depth", type=int, default=14)
+    ap.add_argument("--rset", action="append", default=[],
+                    help="UCI option NAME=VALUE for the rarog side (repeatable)")
     ap.add_argument("--disagree", action="store_true",
                     help="list the disagreeing positions instead of the summary")
     args = ap.parse_args()
@@ -187,7 +193,7 @@ def main():
     sys.stdout.write("evaluation is HELD CONSTANT: the oracle runs Rarog's HCE "
                      "through the FFI, so every\ndifference below is search.\n\n")
 
-    r = run_engine(args.rarog, positions, args.depth)
+    r = run_engine(args.rarog, positions, args.depth, args.rset)
     o = run_engine(args.oracle, positions, args.depth)
 
     if args.disagree:
