@@ -255,28 +255,33 @@ classical fallback (9, last, may never run). Per-item rationale is in
       mate-distance semantics; finish with any justified cluster-only
       fit, final-PGO SPRT, NPS and ablation.
 
-      **4.6 audit, first pass — the headline divergence was a
-      denominator error, again.** The differential normalised every
-      `q_*` counter by main-search NODES. Rarog runs 1.60x more qsearch
-      per node, so that ratio contaminated all of them. Fixed in the
-      runner; `analysis/ phase4_differential_v4_depth8.txt` is the
-      corrected reading. What moved: `q_tt_cut` 4.25x → **2.46x**,
-      `q_stand_pat_cut` 1.62x → **1.05x, i.e. parity**, and `q_move_cut`
-      and `q_in_check` FLIP from 1.08x (slightly high) to **0.66x /
-      0.64x (notably low)**. Same class as the probcut and lmp
-      corrections, this time inside the tooling rather than the engine.
-      **The real 4.6 leads, corrected:** (1) `qnodes` **1.60x** — Rarog
-      spends 60% more of its tree in quiescence, and that is the
-      headline, not a normalisation artifact; (2) `q_tt_cut` **2.46x** —
-      it takes a qsearch TT cutoff at 26.8% of qnodes against the
-      oracle's 10.2%; (3) `q_move_cut` **0.66x** — it earns
-      proportionally FEWER cutoffs from actually searching moves.
-      **Mechanism found for (2), contract-shaped:** the oracle guards
-      its qsearch TT cutoff with `!PvNode`; Rarog's `quiescence` has no
-      PV concept at all — no `is_pv` parameter in its signature — so it
-      takes TT cutoffs everywhere including PV lines. That is the same
-      shape as 4.7c, the one change that paid in this phase: a contract
-      the reference states and Rarog does not.
+      **4.6 AUDIT COMPLETE — `analysis/phase4_6_audit.md`.** It began by
+      invalidating its own headline: the runner normalised every `q_*`
+      counter by main-search NODES while Rarog runs 1.60x more qsearch
+      per node. Fixed in the tool (v4 reading). `q_tt_cut` 4.25x →
+      **2.46x**, `q_stand_pat_cut` 1.62x → **1.05x, parity**, and
+      `q_move_cut` / `q_in_check` FLIP from slightly high to **0.66x /
+      0.64x**. Third instance of this denominator class, first one
+      inside the tooling. **Leads, ranked:** (1) `qnodes` **1.60x**, the
+      headline and not an artifact; (2) `q_tt_cut` **2.46x** — the
+      oracle guards its qsearch TT cutoff with `!PvNode` and Rarog's
+      `quiescence` has NO PV concept at all; (3) `q_move_cut` **0.66x**
+      — Rarog generates captures only in qsearch, the oracle also
+      generates quiet checks at the first qply — ⚠ but Rarog measured
+      **+30.75 for REMOVING its check extension**, so this population
+      has the worst track record for casual changes; (4) TT bound
+      composition — Rarog hits MORE (67.4% vs 60.3%) and converts LESS
+      (16.7% vs 19.5%), with `tt_bound_not_usable` at **2.13x** and a
+      smaller Exact share of stores (3.2% vs 4.1%); (5) **opponent-
+      worsening is absent** and PLAN 4.6 names it — 4.5.1 already built
+      the substrate (`stack[ply-1].static_eval`) and the consumer does
+      not exist. **NOT leads:** qsearch stand-pat is at parity;
+      raw/corrected/pruning separation is already present from 4.3a;
+      delta pruning and evasions are present; TT probing is at exact
+      parity. All three top leads are contract distinctions the
+      reference draws and Rarog does not — the 4.7c profile, not the
+      profile of the five candidates that failed after it. That ranks
+      them; it does not make them true. Each needs its own `[0,3]` gate.
 - [x] 4.7 **[ACCEPTED +15.56 ± 10.02, LOS 99.89%]** Cluster C — main
       selectivity; nElo +24.90 ± 16.01 (RAR-S57 gated the a+c bundle at
       +24.50 ± 12.78; RAR-S58 showed 4.7c carried all of it, so 4.7a was
