@@ -3741,6 +3741,15 @@ impl Searcher {
                     crate::diag_count!(q_stand_pat_cut);
                     crate::diag_count!(q_stand_pat_store);
                 }
+                // 4.6.1 MEASURED AND KEPT. A bare stand-pat is a Lower bound
+                // at depth 0 that searched no move and carries none, and it is
+                // 35.87% of all stores (RAR-S23), so the audit suspected it of
+                // causing `tt_bound_not_usable` 2.13x. Suppressing it makes
+                // that metric WORSE, not better: not-usable per hit rises
+                // 9.5% -> 14.9%, hit rate falls 20.6pp, and total TT cutoffs
+                // fall 10.3% against a 7.5% smaller tree — cutoffs dropping
+                // faster than nodes, which is the RAR-S59 signature of a bad
+                // change. These entries earn their slot. Do not re-derive.
                 self.tt.store(TtStore {
                     key: hash,
                     depth: 0,
@@ -3750,7 +3759,6 @@ impl Searcher {
                     ply,
                     static_eval: q_raw_static_eval,
                     is_pv: false,
-                    // No move was searched. RAR-S22: 37% of sampled stores.
                     kind: OutcomeKind::StandPat,
                 });
                 return stand_pat;
