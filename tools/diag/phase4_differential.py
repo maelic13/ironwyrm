@@ -183,8 +183,16 @@ def main():
     # means "in line with tree size", and only a value far from 1.00 is a
     # real divergence in how often the mechanism fires per node searched.
     scale = (r_total["nodes"] / o_total["nodes"]) if o_total["nodes"] else 1.0
-    sys.stdout.write("node ratio rarog/oracle = %.3f; norm divides it out"
-                     % scale + NL + NL)
+    # 4.6 AUDIT: a qsearch counter must be normalised by QNODES, not by
+    # main-search nodes. Rarog runs 1.62x more qsearch per node than the
+    # oracle, and that ratio was contaminating every q_* reading: q_tt_cut read
+    # 4.25x when it is 2.63x, and q_stand_pat_cut read 1.62x when the two
+    # engines are at EXACT parity. Same denominator class as the probcut and
+    # lmp corrections, this time inside the runner itself.
+    q_scale = (r_total["qnodes"] / o_total["qnodes"]) if o_total["qnodes"] else scale
+    sys.stdout.write("node ratio rarog/oracle = %.3f; norm divides it out" % scale + NL)
+    sys.stdout.write("QNODE ratio = %.3f; q_* counters are normalised by THAT"
+                     % q_scale + NL + NL)
     sys.stdout.write("%-30s %12s %12s %8s %7s  %s"
                      % ("counter", "rarog", "oracle", "r/o", "norm", "flag")
                      + NL)
@@ -198,7 +206,11 @@ def main():
             rows.append((0.0, name, r, o, "-", "-", "oracle zero"))
             continue
         ratio = r / o
-        norm = ratio / scale if scale else 0.0
+        # q_* counters live in the qsearch, so their denominator is qnodes.
+        # `qnodes` itself keeps the node denominator: it IS the ratio in
+        # question, not a rate within it.
+        den = q_scale if (name.startswith("q_") and name != "qnodes") else scale
+        norm = ratio / den if den else 0.0
         flag = ""
         if norm >= 2.0 or (norm and norm <= 0.5):
             flag = "**" if (norm >= 3.0 or norm <= 0.34) else "*"
