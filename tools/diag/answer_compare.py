@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
 """Compare what Rarog and the oracle ANSWER, not how often their mechanisms fire.
-        for opt in options:
-            name, _, value = opt.partition("=")
-            proc.stdin.write("setoption name %s value %s\n" % (name, value))
-        proc.stdin.flush()
 
 PLAN 4.6/4.10 diagnostic. The differential suite measures RATES -- how often
 each mechanism fires per node. It cannot say whether the search returns the
@@ -98,6 +94,15 @@ def run_engine(exe, positions, depth, options=()):
             line = proc.stdout.readline()
             if not line or line.startswith("uciok"):
                 break
+        # Options for the rarog side only; sent after uciok and before the
+        # first ucinewgame, so every position sees them. Anchored on the
+        # function body: the first attempt matched this same uciok line
+        # inside the MODULE DOCSTRING, so the block was inserted as prose
+        # and every --rset run silently measured the defaults.
+        for opt in options:
+            name, _, value = opt.partition("=")
+            proc.stdin.write("setoption name %s value %s\n" % (name, value))
+        proc.stdin.flush()
         for fen, _cohort in positions:
             # Streaming stdin, as the differential runner does: a piped
             # `go ... quit` aborts the search before it starts on both engines.
@@ -181,8 +186,8 @@ def main():
     ap.add_argument("--rarog", required=True)
     ap.add_argument("--oracle", required=True)
     ap.add_argument("--depth", type=int, default=14)
-    ap.add_argument("--rset", action="append", default=[],
-                    help="UCI option NAME=VALUE for the rarog side (repeatable)")
+    ap.add_argument("--rset", action="append", default=[], metavar="NAME=VALUE",
+                    help="UCI option for the rarog side (repeatable)")
     ap.add_argument("--disagree", action="store_true",
                     help="list the disagreeing positions instead of the summary")
     args = ap.parse_args()

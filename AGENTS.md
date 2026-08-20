@@ -54,7 +54,16 @@ did what its name suggests.**
   always 0.
 - **Every scripted edit must assert its anchor matched.** A `str.replace` that
   finds nothing changes nothing and reports success. If you edit with a script,
-  `assert old in text` before writing, and re-read the region after.
+  `assert old in text` before writing, and re-read the region after. Assert the anchor is **unique** and lands in executable code:
+  a `--rset` block anchored on a line that also appears in the module
+  docstring was inserted as prose, parsed fine, and silently measured
+  default parameters in every run for two screens.
+- **Prove a harness wire is live before trusting a null from it.** Set a
+  deliberately absurd value and require the numbers to move. Two candidates
+  were recorded as null results by a dead `--rset`; one of them, re-measured,
+  moved oracle agreement 66% -> 78%. Verifying the ENGINE responds is not the
+  same check -- a standalone probe confirmed the option worked while the
+  instrument reporting on it did not.
 - Before claiming a behavior-neutral change, prove it: `bench 13` must
   reproduce the accepted fingerprint **6,519,711 / EBF 2.449** exactly.
 
