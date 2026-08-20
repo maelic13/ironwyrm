@@ -567,7 +567,10 @@ games until the end destroys attribution and lets losing structures hide.
    contradicts the planned order.
 2. **Register** — add an `EXPERIMENTS.md` ID with hypothesis, baseline SHA,
    candidate scope, expected direction, gate, cap and stop rule, before games.
-   Choose bounds from the cluster's prior and the PLAN §2 sizing table.
+   Bounds default to `[0,3]` nElo; widen only for a genuinely large prior and
+   justify it in the row. Removals need a bracket permitting a small loss;
+   unknown-sign repairs need a symmetric one. Size from RAR-M10 at the
+   EXPECTED value before choosing, and use the PLAN §2 sizing table.
 3. **Implement** — the smallest dependency-complete cluster. Substeps may be
    compiled and diagnosed separately, but are not expected to pass standalone
    and no incomplete cluster becomes the next strength baseline.

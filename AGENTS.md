@@ -93,9 +93,24 @@ did what its name suggests.**
 - Register in `EXPERIMENTS.md` — hypothesis, baseline SHA, gate, cap, stop rule
   — **before any games**. Never change bounds, cap, book or adjudication after
   seeing games.
-- **Use NARROW bounds anchored at zero, and size them from RAR-M10 before
-  registering.** Fishtest uses `[0, 2]` STC and `[0, 1]` LTC in normalized Elo
-  — narrow, near zero — with large budgets and GSPRT. Wide brackets do not
+- **`[0,3]` nElo is the DEFAULT bracket.** Widen only when the prior is
+  genuinely large, and say why in the registration. This is not "narrow is
+  better": 4.7 had a 25–60 nElo prior, measured +24.90, and `[3,10]` resolved
+  it in **2,838 games** — a wide bracket is the right instrument for a large
+  effect. The error is using one for a small candidate. Compute the games at
+  the EXPECTED value from RAR-M10 before choosing, every time.
+- **A removal or simplification needs a bracket that permits a small loss**,
+  fishtest-style (`[-1.75, 0.25]`), not `[0,3]`. A repair of unknown sign wants
+  a symmetric bracket that can detect harm — RAR-S62 used `[-5,5]` and resolved
+  in 4,436 games.
+- **The harness already runs GSPRT; nothing to change.** `tools/sprt.ps1`
+  passes `model=normalized` to fastchess and the output carries `Ptnml(0-2)`,
+  so it is the pentanomial GSPRT — the same mathematics fishtest uses, with
+  nuisance parameters replaced by maximum-likelihood estimates. The gap between
+  this project and fishtest is bounds and budget, never the test.
+- **Wide bounds anchored high REJECT small gains — size them from RAR-M10
+  before registering.** Fishtest uses `[0, 2]` STC and `[0, 1]` LTC in
+  normalized Elo — narrow, near zero — with large budgets. Wide brackets do not
   merely resolve slowly on a small gain, they **reject it**: `[0,10]` drives a
   true +4 nElo to H0 in ~35k games and `[3,10]` does it in ~20k. Three gates
   were registered at those bounds against candidates measuring 4–7 nElo, so
