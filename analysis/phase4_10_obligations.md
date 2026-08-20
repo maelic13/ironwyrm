@@ -14,11 +14,19 @@ the evidence needed to act without re-deriving it.
 
 ---
 
-## A. Structural work that 4.10 does NOT own and needs a real owner
+## A. Structural work that 4.10 does NOT own — NOW ASSIGNED, 2026-08-19
 
 These came out of Cluster A's closure. They are implementation, not tuning, and
-assigning them to 4.10 by default would be the mistake this document exists to
-prevent.
+assigning them to 4.10 by default would have been the mistake this document
+exists to prevent. **Both now have owners in PLAN:**
+
+- **A1 → new step 4.9b**, before 4.10, because 4.10 re-runs the 4.2 suite as
+  its evidence base and that is not meaningful while history is unsettled.
+- **A2 → 4.8.1**, a sub-item of 4.8, which already owns LMR and depth authority
+  against the 4.5 per-ply context. Written as a sub-item so it cannot be closed
+  by implication a second time.
+
+They stay listed here with their evidence so 4.10 knows what it depends on.
 
 ### A1. History semantics — the unexecuted half of 4.5.3
 

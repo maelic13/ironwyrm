@@ -632,6 +632,14 @@ Named now so every step has a concrete surface:
   extension had gained +30.75, which is co-adaptation, not a portable verdict.
   Owns the singular provenance switches and `SingularTtDepthMargin`; refit only
   the activated depth-authority surface before final-PGO SPRT.
+    - **4.8.1 Reduction and re-search contract (inherited from 4.5.4).** 4.5.4
+      named reductions and re-search authority as ONE explicit contract and did
+      not build it: `lmr_reduction_units` still takes eleven loose arguments
+      and is not a contract over the per-ply context, and the accepted
+      zero-reduction floor and full-depth verification were never audited. It
+      lands here because 4.8 already owns LMR and depth authority against the
+      4.5 per-ply context. It is written as a sub-item, not a sentence, so it
+      cannot be closed by implication a second time.
 
 - **4.9 Cluster E — root search and clock handoff.** Rework aspiration
   retries, completed-root authority, PV and interrupted fallback ownership,
@@ -641,6 +649,21 @@ Named now so every step has a concrete surface:
   **Total time allocation must not move until the root evidence is coherent**;
   then tune and gate any real-clock change separately. Owns the aspiration
   shape and the root-confidence aspiration and time inputs.
+
+- **4.9b History semantics (inherited from 4.5.3).** The unexecuted half of
+  Cluster A, given its own number rather than folded into a neighbour because
+  it fits none of them: 4.6 owns eval/TT/qsearch evidence and 4.8 owns depth
+  authority, while this is the ORDERING histories. 4.5.3 named main, capture,
+  continuation, low-ply, pawn and correction history **ageing, decay and seed
+  policy, update attribution, check/capture context in indexing**, and
+  evaluation-difference training as Rarog candidates. Only the
+  continuation-key consolidation and one measurement (RAR-S59, the
+  continuation-malus asymmetry, rejected) were done. Placed BEFORE 4.10 on
+  purpose: 4.10 re-runs the 4.2 differential suite as its evidence base, and
+  that re-run is not meaningful while the history contract is unsettled.
+  Stockfish's history events and constants are candidates here, not defaults —
+  RAR-S59 already caught one that looked like an omission and measured as a
+  disguised selectivity increase.
 
 - **4.10 Search integration, second-pass selectivity, calibration, freeze and
   EV review.** Re-run the 4.2 suite after 4.5, 4.6, 4.8 and 4.9, because those

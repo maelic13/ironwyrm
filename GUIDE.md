@@ -224,28 +224,21 @@ classical fallback (9, last, may never run). Per-item rationale is in
           +0.39 ± 4.89 Elo. The whole +4.50 RAR-S61 saw was the defect.
           `lmr_prior_reduction_adj` removed. Structural work retained at no
           strength claim.
-      **SCOPE NOT FULLY EXECUTED — read this before treating 4.5 as closed.**
-      Cluster A was aimed at three maturity contracts. Per-ply authority is
-      closed, though as "Rarog needs fewer fields than the plan listed": three
-      of the four named fields (statistical score, cutoff count, previous-PV
-      following) were rejected as node-local, inert or redundant, which the
-      plan's own rule allows as an intentionally different answer. The other
-      two are NOT closed and were marked done prematurely:
-      **History semantics.** 4.5.3 named ageing policy, update attribution,
-      check/capture context in history indexing, and evaluation-difference
-      training and seed/decay policy as Rarog candidates. Only the
-      continuation-key consolidation and one measurement (RAR-S59) were done.
-      Ageing, decay, attribution and check/capture context were never
-      touched.
-      **Reductions and re-search authority as ONE explicit contract.** 4.5.4
-      named it; it does not exist. `lmr_reduction_units` still takes eleven
-      loose arguments and is not a contract over the per-ply context. The
-      accepted zero-reduction floor and full-depth verification were never
-      audited.
-      No later step owns either gap: 4.10 is integration and consolidation
-      TUNING, and its catch-all "resolve every remaining search-map item" is
-      where structural work goes to be forgotten. These need an owner before
-      Phase 4 can claim search maturity.
+      **SCOPE NOT FULLY EXECUTED — both halves now have owners.** Cluster A
+      aimed at three maturity contracts. Per-ply authority closed, though as
+      "Rarog needs fewer fields than the plan listed" — three of four rejected
+      as node-local, inert or redundant, which the plan's own rule allows as
+      an intentionally different answer. The other two were marked done
+      prematurely and are now numbered rather than left to a catch-all:
+      **history semantics → 4.9b** (ageing, decay and seed policy, update
+      attribution, check/capture context in indexing, evaluation-difference
+      training). Placed before 4.10 because 4.10 re-runs the 4.2 suite as its
+      evidence base and that is not meaningful while the history contract is
+      unsettled.
+      **reductions and re-search as ONE contract → 4.8.1**, where 4.8 already
+      owns LMR and depth authority. `lmr_reduction_units` still takes eleven
+      loose arguments; the zero-reduction floor and full-depth verification
+      were never audited.
 - [ ] 4.6 **Cluster B — static eval, TT and quiescence.** Keep raw, corrected/
       pruning and searched evidence distinct. Audit TT admission/replacement,
       PV/bound propagation, qsearch stand-pat, corrected eval, prior-square
@@ -309,6 +302,13 @@ classical fallback (9, last, may never run). Per-item rationale is in
       activated surface, then gate the integrated contract.
 - [ ] 4.9 **Cluster E — root search and clock handoff.** Aspiration retries,
       completed-root and interrupted-fallback authority, stability and the
+- [ ] 4.9b **History semantics — inherited from 4.5.3.** Ageing, decay and
+      seed policy; update attribution; check/capture context in history
+      indexing; evaluation-difference training as a Rarog candidate. The
+      unexecuted half of Cluster A. Runs BEFORE 4.10, whose 4.2 suite re-run
+      is not meaningful while this is unsettled. Stockfish's history events
+      are candidates, not defaults — RAR-S59 caught one that looked like a
+      plain omission and measured as a disguised selectivity increase.
       decision to start another iteration. Measure extra-iteration behavior
       against Rarog's root-confidence model. Settle root evidence before total
       time; tune and gate real-clock changes separately.
