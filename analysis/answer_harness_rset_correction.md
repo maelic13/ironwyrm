@@ -69,6 +69,42 @@ live in the same run: set an absurd value first and require the numbers to
 move. That check is now cheap and it is the only thing that would have caught
 this on the first screen rather than the second.
 
+## Replication across depths: only ONE metric survives
+
+The depth-12 table above is a single depth. Repeated at 10 and 14, relief 1536
+against the default:
+
+| metric | d10 | d12 | d14 | oracle d10/d12/d14 |
+|---|---|---|---|---|
+| agreement | 62 -> 64% | 66 -> **78%** | 76 -> 76% | -- |
+| revisions | 1.44 -> 1.62 | 1.50 -> 1.70 | 1.70 -> 2.04 | 2.06 / 2.16 / 2.28 |
+| settle | 4.56 -> 4.76 | 5.30 -> 4.98 | 5.96 -> 6.14 | 4.96 / 5.40 / 5.98 |
+| volatility | 265.6 -> 337.0 | 421.9 -> 269.7 | 240.4 -> 288.0 | 229.6 / 198.8 / 309.2 |
+
+**Agreement does not replicate.** The +12pp at depth 12 is +2pp at depth 10 and
+zero at depth 14. On fifty paired positions that is an outlier, and it was the
+number that made this look like the strongest candidate since 4.7c. It is not.
+
+**Revisions do replicate.** Toward the oracle at every depth, monotone, and
+growing with depth: +0.18, +0.20, +0.34, closing 29%, 30% and 59% of the gap.
+That is exactly what the mechanism predicts -- less root reduction lets an
+alternative displace the incumbent -- so the relief demonstrably does what it
+was built to do.
+
+**Volatility and settle depth are not usable metrics.** The ORACLE's own
+volatility moves 229.6 / 198.8 / 309.2 across three adjacent depths, so a
+Rarog change of similar size against a fixed reference value carries no
+information. Both metrics move in different directions at different depths
+here. They should not be quoted again without a depth sweep behind them.
+
+## Where that leaves the candidate
+
+The mechanism is confirmed and the quality proxy is flat. That is precisely
+the RAR-S64 profile -- a clean instrument signal that measured exactly zero in
+games -- and it is the reason no zero-game result accepts anything here. What
+the relief has going for it beyond the mechanism is that it costs nothing:
+6.6% fewer bench nodes at 1536.
+
 ## Standing caveat, unchanged
 
 Agreement with the oracle is a **proxy**, not the objective. n = 50, the
