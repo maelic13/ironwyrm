@@ -87,8 +87,14 @@ fn build_lmr_table(base: i32, div: i32) -> Box<[[i32; 64]; 64]> {
 }
 
 #[inline]
-fn lmr_reduction(r: i32, new_depth: i32) -> i32 {
-    (r >> 10).clamp(0, new_depth.max(0))
+fn lmr_reduction(r: i32, new_depth: i32, min_reduced_depth: i32) -> i32 {
+    // 4.8.1: the ceiling is what the reduced search is allowed to consume.
+    // At `min_reduced_depth == 0` this is the accepted behaviour and the
+    // reduced search may run at depth 0, i.e. in quiescence. `max(0)` keeps
+    // the ceiling non-negative when new_depth is already below the floor,
+    // so a shallow move is simply left unreduced rather than extended.
+    let ceiling = (new_depth - min_reduced_depth).max(0);
+    (r >> 10).clamp(0, ceiling)
 }
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum SearchEvent {
@@ -2918,7 +2924,14 @@ impl Searcher {
             // reduction and floor at 1 so a consumer never reads a depth that
             // would make its own `depth <= N` guards nonsensical.
             let prospective_depth = if depth >= 3 && searched >= 2 {
-                (depth - 1 - lmr_reduction(r_units_estimate, depth - 1)).max(1)
+                (depth
+                    - 1
+                    - lmr_reduction(
+                        r_units_estimate,
+                        depth - 1,
+                        self.params.lmr_min_reduced_depth,
+                    ))
+                .max(1)
             } else {
                 depth
             };
@@ -3257,7 +3270,7 @@ impl Searcher {
                     // mandatory one-ply reduction. A zero reduction is a normal
                     // full-depth PVS search and must not trigger a redundant
                     // verification search at the same depth.
-                    let reduction = lmr_reduction(r, new_depth);
+                    let reduction = lmr_reduction(r, new_depth, self.params.lmr_min_reduced_depth);
                     #[cfg(feature = "diag")]
                     {
                         if r < 0 {
@@ -5045,11 +5058,19 @@ mod tests {
 
     #[test]
     fn lmr_reduction_allows_strong_late_moves_to_reach_zero() {
-        assert_eq!(lmr_reduction(1023, 8), 0);
-        assert_eq!(lmr_reduction(1024, 8), 1);
-        assert_eq!(lmr_reduction(4096, 3), 3);
-        assert_eq!(lmr_reduction(-1, 8), 0);
-        assert_eq!(lmr_reduction(1024, 0), 0);
+        assert_eq!(lmr_reduction(1023, 8, 0), 0);
+        assert_eq!(lmr_reduction(1024, 8, 0), 1);
+        assert_eq!(lmr_reduction(4096, 3, 0), 3);
+        assert_eq!(lmr_reduction(-1, 8, 0), 0);
+        assert_eq!(lmr_reduction(1024, 0, 0), 0);
+        // 4.8.1: with a floor of one ply the reduced search keeps a ply.
+        // The 4096/3 case is exactly the one the audit counts: it consumed
+        // the whole of new_depth and ran in quiescence.
+        assert_eq!(lmr_reduction(4096, 3, 1), 2);
+        assert_eq!(lmr_reduction(4096, 1, 1), 0);
+        // new_depth already at or below the floor: leave it unreduced,
+        // never extend it.
+        assert_eq!(lmr_reduction(4096, 0, 1), 0);
     }
 
     #[test]

@@ -630,6 +630,15 @@ search_params! {
     /// beating alpha while reduced. The answer harness measures the
     /// consequence: Rarog revises its root move 1.50 times against the
     /// oracle's 2.16 and lands on a different move a third of the time.
+    /// 4.8.1 MINIMUM REDUCED DEPTH, in plies. 0 = off = accepted behaviour.
+    ///
+    /// `lmr_reduction` clamps to `new_depth`, so a reduced search may run at
+    /// depth 0 and be answered by quiescence. Measured at bench 13: that is
+    /// **46.7%** of all applied reductions -- a prune wearing a reduction's
+    /// name, counted in no pruning family, and able to fail high off a
+    /// stand-pat. The reference guarantees the reduced search is at least one
+    /// ply. 1 reproduces that contract.
+    lmr_min_reduced_depth = 0, "LmrMinReducedDepth", 0..=2;
     lmr_root_relief = 0, "LmrRootRelief", 0..=2048;
     probcut_see_gap_scale = 100, "ProbCutSeeGapScale", 0..=100;
     /// Base cap on captures searched at one ProbCut node, before the cut-node
