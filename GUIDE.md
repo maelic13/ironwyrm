@@ -288,7 +288,8 @@ classical fallback (9, last, may never run). Per-item rationale is in
           stores — makes `tt_bound_not_usable` WORSE, 9.5% → 14.9% per hit,
           with total TT cutoffs −10.3% against a 7.5% smaller tree. Those
           entries earn their slot. **Replacement:** quality is
-          `depth − age_delta/4`, so depth-0 qsearch entries are already evicted
+          `depth − age_delta/4`, so depth-0 qsearch entries are already
+          evicted
           first; the reference weights age ~2x harder but keeps the same depth
           dominance. **Conclusion:** the 2.13x not-usable divergence is a
           SYMPTOM, not a policy defect. It follows arithmetically from a
