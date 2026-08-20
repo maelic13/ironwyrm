@@ -608,13 +608,6 @@ search_params! {
     /// 0, so this can only ever tighten the old contract, never loosen it —
     /// RAR-S55 v3 measured Rarog searching 5.17x the reference's normalised
     /// ProbCut moves and converting 32.6% of them against 71.9%.
-    /// AUDIT FINDING 2. When the node two plies back was in check its static
-    /// eval is `VALUE_NONE`, so `improving` is forced false regardless of the
-    /// real trend — at 9.7% of Rarog's nodes. `improving` is worth a full ply
-    /// of LMR reduction and feeds the LMP margin, so the bias is toward MORE
-    /// selectivity, the one direction four readings contradict. 1 walks back to
-    /// `ply - 4` instead. Default 0 = accepted behaviour.
-    improving_ply4_fallback = 0, "ImprovingPly4Fallback", 0..=1;
     probcut_see_gap_scale = 100, "ProbCutSeeGapScale", 0..=100;
     /// Base cap on captures searched at one ProbCut node, before the cut-node
     /// bonus. Replaces a flat 8 that had no stated derivation.
