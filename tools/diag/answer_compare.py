@@ -97,6 +97,17 @@ def run_engine(exe, positions, depth):
         for fen, _cohort in positions:
             # Streaming stdin, as the differential runner does: a piped
             # `go ... quit` aborts the search before it starts on both engines.
+            # Clear the TT between positions. Without this the table carries
+            # across unrelated positions and the ANSWER changes: on
+            # k7/p4p2/P1q1b1p1/3p3p/3Q4/7P/5PP1/1R4K1 Rarog reports mate in 6
+            # from depth 9 when searched alone, and cp 1036 when it follows
+            # other positions in the same process.
+            proc.stdin.write("ucinewgame\nisready\n")
+            proc.stdin.flush()
+            while True:
+                line = proc.stdout.readline()
+                if not line or line.startswith("readyok"):
+                    break
             proc.stdin.write("position fen %s\ngo depth %d\n" % (fen, depth))
             proc.stdin.flush()
             traj = {}
@@ -166,6 +177,8 @@ def main():
     ap.add_argument("--rarog", required=True)
     ap.add_argument("--oracle", required=True)
     ap.add_argument("--depth", type=int, default=14)
+    ap.add_argument("--disagree", action="store_true",
+                    help="list the disagreeing positions instead of the summary")
     args = ap.parse_args()
 
     positions = load_suite()
@@ -176,6 +189,30 @@ def main():
 
     r = run_engine(args.rarog, positions, args.depth)
     o = run_engine(args.oracle, positions, args.depth)
+
+    if args.disagree:
+        # 4.6.5: the summary says HOW MANY disagree; this says WHICH, so each
+        # case can be diagnosed individually.
+        for fen, cohort in positions:
+            if args.depth not in r.get(fen, {}) or args.depth not in o.get(fen, {}):
+                continue
+            a, b = r[fen][args.depth], o[fen][args.depth]
+            kinds = []
+            if is_mate(a[0]) != is_mate(b[0]):
+                kinds.append('MATE-DISAGREE')
+            elif is_mate(a[0]) and is_mate(b[0]) and a[0] != b[0]:
+                kinds.append('mate-distance')
+            if a[1][0] != b[1][0]:
+                kinds.append('move')
+            if not is_mate(a[0]) and not is_mate(b[0]) and abs(a[0] - b[0]) >= 100:
+                kinds.append('dcp>=100')
+            if not kinds:
+                continue
+            sys.stdout.write("%-14s %-22s rarog %7d %-6s | oracle %7d %-6s\n"
+                             % (cohort, ','.join(kinds), a[0], a[1][0],
+                                b[0], b[1][0]))
+            sys.stdout.write("    %s\n" % fen)
+        return 0
 
     # --- agreement and score delta, per depth -------------------------------
     sys.stdout.write("AGREEMENT BY DEPTH (both engines answered at that depth)\n")

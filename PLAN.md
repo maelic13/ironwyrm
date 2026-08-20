@@ -639,6 +639,46 @@ Named now so every step has a concrete surface:
       **+30.75 for removing its check extension** while RAR-X02 has Basilisk
       losing 10.17 doing the opposite.
 
+  **Answer-led sub-steps (4.6.5–4.6.8), from `tools/diag/answer_compare.py`.**
+  A different generator from 4.6.1–4.6.4: those came from counter divergences,
+  these from what the search RETURNS. `hybrid-diag` runs Rarog's own HCE, so at
+  equal depth every difference is search alone.
+
+  ⚠ **Agreement with the oracle is a PROXY, not the objective.** The objective
+  is playing strength, and a different move is not automatically a worse one.
+  The proxy is justified only because RAR-O02 measured that search as ~196 Elo
+  stronger *with this same evaluation*, so where it disagrees it is usually
+  right. Every candidate below still owes a registered strength gate; raising
+  agreement is evidence for a candidate, never acceptance of one.
+    - **4.6.5 Mate-answer disagreements.** In **5 of 50** positions one engine
+      returns a forced mate and the other does not. First because it is the one
+      finding that does NOT depend on the proxy: missing a forced mate is worse
+      play, not merely different play. Each case is individually diagnosable —
+      deepen both engines to establish which is right, then find the mechanism
+      that discards the line. Related: `nmp_cut_unproven_mate` reads 0, and
+      RAR-S51's mate clamp is retained but was never resolved.
+    - **4.6.6 Cohort agreement — ENDGAME, and the zugzwang lead is withdrawn.**
+      The first reading had zugzwang at 25% and called it the sharpest cohort
+      signal in the project. It was an artifact: the harness did not send
+      `ucinewgame` between positions, so the TT carried across unrelated ones.
+      Clean, zugzwang is **62.5%** and **endgame is the worst at 50%**, against
+      66.7–75% elsewhere. Endgame is also where a shared evaluation should make
+      two searches agree MOST, which is what makes 50% interesting. **n = 10,
+      so widen the cohort before building anything on it.**
+    - **4.6.7 Premature conviction, and it SURVIVED the correction.** Rarog
+      revises its root move **1.50** times against the oracle's **2.16**, and
+      its own depth-7 answer survives to its final depth more often (72% vs
+      60%) — yet it lands on a different move than the oracle a third of the
+      time. It converges faster and more confidently to somewhere else. This
+      is the strongest surviving lead from the answer harness, and it is
+      consistent with `root_best_changes` 0.29x measured independently. Connects
+      to 4.9's aspiration ownership.
+    - **4.6.8 Score volatility.** **422** cp mean absolute change per
+      iteration against the oracle's **199** — more than double — while the
+      MOVE is more stable than the oracle's. A stable move with an unstable score is a search whose value
+      keeps being revised without changing its mind, which should be explained
+      before it is trusted.
+
 - **4.7 Cluster C — main selectivity.** In observed dependency order, rework
   razoring, reverse futility, null-move verification, ProbCut, move-count and
   history pruning, and quiet/capture futility. Use prospective searched depth

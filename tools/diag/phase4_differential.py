@@ -123,6 +123,17 @@ def run_engine(exe, positions, depth, env_extra):
             if not line or line.startswith("uciok"):
                 break
         for fen, cohort in positions:
+            # Clear the TT between positions. Without this the table carries
+            # across unrelated positions and the ANSWER changes: on
+            # k7/p4p2/P1q1b1p1/3p3p/3Q4/7P/5PP1/1R4K1 Rarog reports mate in 6
+            # from depth 9 when searched alone, and cp 1036 when it follows
+            # other positions in the same process.
+            proc.stdin.write("ucinewgame\nisready\n")
+            proc.stdin.flush()
+            while True:
+                line = proc.stdout.readline()
+                if not line or line.startswith("readyok"):
+                    break
             proc.stdin.write("position fen %s\ngo depth %d\n" % (fen, depth))
             proc.stdin.flush()
             while True:

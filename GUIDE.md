@@ -306,6 +306,25 @@ classical fallback (9, last, may never run). Per-item rationale is in
     - [ ] (4) **Quiet checks in quiescence.** Explains `q_move_cut` 0.66x.
           LAST: adds work to a qsearch already at 1.60x, and touches the
           population where removing the check extension measured **+30.75**.
+      **Answer-led sub-steps (5)-(8), from `answer_compare.py` — a different
+      generator: what the search RETURNS, not how often it fires. ⚠ agreement
+      is a PROXY; the objective is strength, and each still owes a gate.**
+    - [ ] (5) **Mate-answer disagreements.** **5 of 50** positions where one
+          engine sees a forced mate and the other does not. FIRST because it
+          does not depend on the proxy: missing a mate is worse play, not
+          merely different. Each case individually diagnosable.
+    - [ ] (6) **Cohort agreement — ENDGAME; the zugzwang lead is WITHDRAWN.**
+          25% for zugzwang was a TT-contamination artifact (no `ucinewgame`
+          between positions). Clean: zugzwang **62.5%**, and **endgame worst
+          at 50%** against 66.7-75%. Endgame is where a shared eval should
+          make two searches agree MOST. **n=10: widen before building.**
+    - [ ] (7) **Premature conviction — SURVIVED the correction.** Rarog
+          revises **1.50** vs **2.16** and self-survives more (72% vs 60% at
+          depth 7) yet lands elsewhere a third of the time. Strongest
+          surviving lead; matches `root_best_changes` 0.29x independently.
+    - [ ] (8) **Score volatility.** **422** cp/iteration against **199** —
+          more than double — with a MORE stable move. Explain before trusting.
+
 - [x] 4.7 **[ACCEPTED +15.56 ± 10.02, LOS 99.89%]** Cluster C — main
       selectivity; nElo +24.90 ± 16.01 (RAR-S57 gated the a+c bundle at
       +24.50 ± 12.78; RAR-S58 showed 4.7c carried all of it, so 4.7a was
