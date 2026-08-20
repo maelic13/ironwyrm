@@ -610,6 +610,35 @@ Named now so every step has a concrete surface:
   evidence consumers; ends with a cluster-only fit if justified, final-PGO
   SPRT, NPS and ablation.
 
+  Sub-steps ordered by the 4.6 audit (`analysis/phase4_6_audit.md`), most
+  promising first:
+    - **4.6.1 TT admission and bound composition.** RAR-S23's census: **67.5%
+      of stores are depth-0 qsearch entries and 35.87% are bare stand-pats**
+      that searched no move and carry none. Composition follows — Rarog stores
+      Lower 67.8% / Upper 29.2% / Exact 3.0% against the reference's 55.7 /
+      40.2 / 4.1. Downstream: `q_tt_hit` 1.49x, `q_tt_cut` 2.46x and
+      `tt_bound_not_usable` **2.13x** (8.7% of hits against 5.9%). Rarog finds
+      an entry more often than the reference and can use it less often. First
+      because it is the only lead that is direction-NEUTRAL: it makes the same
+      tree yield more usable evidence rather than pushing selectivity either
+      way, and five consecutive selectivity candidates have now failed.
+    - **4.6.2 Quiescence PV contract.** The reference guards its qsearch TT
+      cutoff with `!PvNode`; Rarog's `quiescence` has no PV concept at all, no
+      `is_pv` in its signature, so it cuts on PV lines too. Second rather than
+      first because `q_tt_cut` is partly downstream of 4.6.1's store density,
+      and running it after keeps the attribution clean.
+    - **4.6.3 Opponent-worsening.** Named by this cluster and absent from the
+      engine. 4.5.1 already built the substrate (`stack[ply - 1].static_eval`);
+      the consumer does not exist. ⚠ The reference's form makes reverse
+      futility fire MORE, and Rarog already runs `rfp_cut` 1.41x and
+      `razor_drop` 1.65x, so the direction needs deciding before the code.
+    - **4.6.4 Quiet checks in quiescence.** The reference generates quiet
+      checks at the first qply; Rarog generates captures only when not in
+      check. Explains `q_move_cut` 0.66x and `q_in_check` 0.64x. Last: it adds
+      work to a quiescence already running `qnodes` 1.60x, and Rarog measured
+      **+30.75 for removing its check extension** while RAR-X02 has Basilisk
+      losing 10.17 doing the opposite.
+
 - **4.7 Cluster C — main selectivity.** In observed dependency order, rework
   razoring, reverse futility, null-move verification, ProbCut, move-count and
   history pruning, and quiet/capture futility. Use prospective searched depth

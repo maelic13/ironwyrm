@@ -282,6 +282,22 @@ classical fallback (9, last, may never run). Per-item rationale is in
       reference draws and Rarog does not — the 4.7c profile, not the
       profile of the five candidates that failed after it. That ranks
       them; it does not make them true. Each needs its own `[0,3]` gate.
+    - [ ] (1) **TT admission and bound composition.** 67.5% of stores are
+          depth-0 qsearch entries, 35.87% bare stand-pats. Lower 67.8% /
+          Exact 3.0% against 55.7 / 4.1. `tt_bound_not_usable` **2.13x** —
+          Rarog finds an entry more often and can use it less often. FIRST
+          because it is the only direction-NEUTRAL lead: more usable evidence
+          from the same tree, after five selectivity candidates in a row
+          failed.
+    - [ ] (2) **Quiescence PV contract.** Oracle guards its qsearch TT cutoff
+          with `!PvNode`; Rarog's `quiescence` has no `is_pv` at all.
+          `q_tt_cut` 2.46x, but partly downstream of (1), so it runs after.
+    - [ ] (3) **Opponent-worsening.** Named by 4.6, absent from the engine;
+          4.5.1 built the substrate. ⚠ the reference's form makes RFP fire
+          MORE and Rarog already runs `rfp_cut` 1.41x — direction first.
+    - [ ] (4) **Quiet checks in quiescence.** Explains `q_move_cut` 0.66x.
+          LAST: adds work to a qsearch already at 1.60x, and touches the
+          population where removing the check extension measured **+30.75**.
 - [x] 4.7 **[ACCEPTED +15.56 ± 10.02, LOS 99.89%]** Cluster C — main
       selectivity; nElo +24.90 ± 16.01 (RAR-S57 gated the a+c bundle at
       +24.50 ± 12.78; RAR-S58 showed 4.7c carried all of it, so 4.7a was
