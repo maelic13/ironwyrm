@@ -16,6 +16,12 @@ did what its name suggests.**
 
 ## Measurement
 
+- **`--all-features` enables `texel`, which must never be measured.** The
+  manifest says it bypasses the eval and pawn caches. `cargo test --release
+  --all-features` leaves that binary in `target/release/rarog.exe`, and a
+  depth sweep run on it produced a confident, wrong conclusion — reversed
+  once rebuilt. The tell was that the BASELINE moved between two sweeps; if a
+  number you are not changing changes, stop and check the binary.
 - **Rebuild immediately before measuring, with the exact feature set.**
   `cargo test`, `cargo clippy` and `cargo bench` all build the `rarog` binary
   too, with *their* features, and leave it in `target/release/rarog.exe`. A
