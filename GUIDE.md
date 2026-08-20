@@ -282,17 +282,20 @@ classical fallback (9, last, may never run). Per-item rationale is in
       reference draws and Rarog does not — the 4.7c profile, not the
       profile of the five candidates that failed after it. That ranks
       them; it does not make them true. Each needs its own `[0,3]` gate.
-    - [~] (1) **TT admission and bound composition. FIRST HYPOTHESIS
-          REFUTED, zero games.** The audit suspected the bare qsearch
-          stand-pat store — a depth-0 Lower bound that searched no move,
-          35.87% of all stores — of causing `tt_bound_not_usable` 2.13x.
-          Suppressing it makes that metric WORSE: not-usable per hit
-          **9.5% → 14.9%**, hit rate −20.6pp, and total TT cutoffs −10.3%
-          against a 7.5% smaller tree, i.e. cutoffs falling faster than nodes.
-          Those entries earn their slot; the finding is recorded at the call
-          site so it is not re-derived. **Still open:** the not-usable
-          divergence has no identified cause, and replacement policy — not
-          admission — is the remaining producer-side candidate.
+    - [x] (1) **[DONE, no games]** TT admission and bound composition. BOTH
+          producer-side hypotheses checked and neither is a defect.
+          **Admission:** suppressing the bare stand-pat store — 35.87% of all
+          stores — makes `tt_bound_not_usable` WORSE, 9.5% → 14.9% per hit,
+          with total TT cutoffs −10.3% against a 7.5% smaller tree. Those
+          entries earn their slot. **Replacement:** quality is
+          `depth − age_delta/4`, so depth-0 qsearch entries are already evicted
+          first; the reference weights age ~2x harder but keeps the same depth
+          dominance. **Conclusion:** the 2.13x not-usable divergence is a
+          SYMPTOM, not a policy defect. It follows arithmetically from a
+          Lower-heavy store mix (67.8% vs 55.7%), which follows from 67.5% of
+          stores being depth-0 qsearch entries, which follows from `qnodes`
+          1.60x. The cause is the search shape, and it is lead (1) of the
+          audit — not the TT.
     - [ ] (2) **Quiescence PV contract.** Oracle guards its qsearch TT cutoff
           with `!PvNode`; Rarog's `quiescence` has no `is_pv` at all.
           `q_tt_cut` 2.46x, but partly downstream of (1), so it runs after.
