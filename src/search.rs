@@ -3260,6 +3260,22 @@ impl Searcher {
                     let reduction = lmr_reduction(r, new_depth);
                     #[cfg(feature = "diag")]
                     {
+                        if r < 0 {
+                            crate::diag_count!(lmr_floor_clamped);
+                        }
+                        if new_depth > 0 && reduction == new_depth {
+                            crate::diag_count!(lmr_qs_clamped);
+                        }
+                        if ply == 0 {
+                            crate::diag_count!(lmr_root_applied);
+                            crate::diag_add!(
+                                lmr_root_reduction_sum,
+                                u64::try_from(reduction).unwrap_or(0)
+                            );
+                        }
+                    }
+                    #[cfg(feature = "diag")]
+                    {
                         diag_move_reduced = reduction > 0;
                         // 4.2: EXACT, because its denominator `lmr_applied` is
                         // exact. Sampling only the numerator made the mean

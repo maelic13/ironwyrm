@@ -70,6 +70,23 @@ pub mod counters {
         // 10.2.5 — late moves whose confidence estimate removes the old
         // mandatory one-ply reduction.
         lmr_zero_reduction,
+        // 4.8.1 AUDIT of the reduction floor, which 4.5.4 named and never
+        // measured. `lmr_reduction` is `(r >> 10).clamp(0, new_depth)`, so
+        // both ends silently discard information:
+        //   lmr_floor_clamped -- r was NEGATIVE. The formula asked for an
+        //     extension and the floor refused it. Every relief term
+        //     (tt_pv, improving, corr, and 4.6.7's root relief) is eaten
+        //     here once the accumulated r crosses zero.
+        //   lmr_qs_clamped -- reduction reached new_depth, so the "reduced
+        //     search" ran at depth 0 and was answered by quiescence. That
+        //     is a prune wearing a reduction's name, and it is counted
+        //     nowhere in the pruning family.
+        lmr_floor_clamped,
+        lmr_qs_clamped,
+        // Root-only reduction census: the denominator 4.6.7 needs to know
+        // whether a root relief can move anything at all.
+        lmr_root_applied,
+        lmr_root_reduction_sum,
         lmr_research,
         // History / correction learning events. `cutoff_quiet + cutoff_capture`
         // is also the count of every beta cutoff at a real (non-excluded)
