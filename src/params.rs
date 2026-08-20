@@ -620,6 +620,17 @@ search_params! {
     /// that is about reducing LESS.
     lmr_relief = 0, "LmrRelief", 0..=512;
     lmr_jitter_1t = 0, "LmrJitter1t", 0..=512;
+    /// 4.6.7 ROOT REDUCTION RELIEF, in 1024ths of a ply. 0 = off = accepted
+    /// behaviour.
+    ///
+    /// `lmr_reduction_units` is not passed the ply and `reducible` has no
+    /// `ply == 0` term, so the root is reduced exactly like an interior node
+    /// from the third move onward. An alternative root move is therefore
+    /// searched at REDUCED depth and can only displace the incumbent by
+    /// beating alpha while reduced. The answer harness measures the
+    /// consequence: Rarog revises its root move 1.50 times against the
+    /// oracle's 2.16 and lands on a different move a third of the time.
+    lmr_root_relief = 0, "LmrRootRelief", 0..=2048;
     probcut_see_gap_scale = 100, "ProbCutSeeGapScale", 0..=100;
     /// Base cap on captures searched at one ProbCut node, before the cut-node
     /// bonus. Replaces a flat 8 that had no stated derivation.

@@ -2014,6 +2014,7 @@ impl Searcher {
         ev_is_exact: bool,
         tt_move_is_null: bool,
         improving: bool,
+        is_root: bool,
     ) -> i32 {
         let mut r = self.lmr_table[infra::to_usize(depth.min(63))][searched.min(63)];
         if tt_pv {
@@ -2044,6 +2045,11 @@ impl Searcher {
         r -= quiet_hist * 1024 / self.params.lmr_hist_div;
         // 8.5(b): reduce less when the static eval is heavily corrected.
         r -= corr_abs * self.params.corr_lmr_scale / 128;
+        // 4.6.7: the root is where the answer is chosen, and it was the
+        // one node type the reduction could not see.
+        if is_root {
+            r -= self.params.lmr_root_relief;
+        }
         // 4.10 CANDIDATE: unconditional relief. Applied last, inside
         // `lmr_reduction_units`, so both call sites see it and the
         // prospective-depth estimate keeps agreeing with the real reduction —
@@ -2906,6 +2912,7 @@ impl Searcher {
                 ev.is_exact(),
                 tt_move.is_null(),
                 improving,
+                ply == 0,
             );
             // `depth - 1` is the child's nominal depth; subtract the estimated
             // reduction and floor at 1 so a consumer never reads a depth that
@@ -3207,6 +3214,7 @@ impl Searcher {
                         ev.is_exact(),
                         tt_move.is_null(),
                         improving,
+                        ply == 0,
                     );
                     debug_assert_eq!(
                         r, r_units_estimate,
