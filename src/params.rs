@@ -611,7 +611,7 @@ search_params! {
     /// 4.10 CANDIDATE: single-thread LMR-reduction jitter, in 1024ths of a
     /// ply. 0 = off = accepted behaviour. The multi-thread path is unaffected
     /// and keeps its own magnitude of 64.
-    lmr_jitter_1t = 0, "LmrJitter1t", 0..=512;
+    lmr_jitter_1t = 128, "LmrJitter1t", 0..=512;
     probcut_see_gap_scale = 100, "ProbCutSeeGapScale", 0..=100;
     /// Base cap on captures searched at one ProbCut node, before the cut-node
     /// bonus. Replaces a flat 8 that had no stated derivation.
