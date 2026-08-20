@@ -618,7 +618,7 @@ search_params! {
     /// RAR-S67 built the symmetric form (jitter) and it failed: symmetric noise
     /// has zero mean effect on the reduction, so it cannot reproduce an effect
     /// that is about reducing LESS.
-    lmr_relief = 0, "LmrRelief", 0..=512;
+    lmr_relief = 336, "LmrRelief", 0..=512;
     lmr_jitter_1t = 0, "LmrJitter1t", 0..=512;
     probcut_see_gap_scale = 100, "ProbCutSeeGapScale", 0..=100;
     /// Base cap on captures searched at one ProbCut node, before the cut-node
