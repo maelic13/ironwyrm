@@ -314,6 +314,15 @@ classical fallback (9, last, may never run). Per-item rationale is in
       time; tune and gate real-clock changes separately.
 - [ ] 4.10 **Search integration, second selectivity pass, fit and freeze.**
       Re-run 4.2 after 4.5/4.6/4.8/4.9 and close every search-map contract.
+      **Read `analysis/phase4_10_obligations.md` FIRST.** Every deferral
+      to this step is collected there with its evidence: the structural
+      work 4.10 does NOT own (history ageing/decay/attribution, and the
+      reduction contract — both unexecuted halves of 4.5), the live
+      leads (deliberate selectivity randomisation,
+      `NullMoveImprovingBonus` as a volume knob, TT-served ProbCut), the
+      rejections with their evidence so they are not retried blind, and
+      the two live switches owed a disposition. Written because a catch-
+      all clause is where structural work goes to be forgotten.
       **Inherited from 4.5.4 (RAR-S60): Stockfish `cutoffCnt`.** A ply-
       slot recency counter — reset via `(ss+2)->cutoffCnt = 0`, so it
       accumulates across sibling visits — consumed as `if
