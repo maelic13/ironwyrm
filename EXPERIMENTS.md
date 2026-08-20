@@ -159,6 +159,28 @@ Basilisk 1.9.1, so magnitudes are not comparable to the 2.3.2-era oracle rows.
 | RAR-S68 | **Unconditional LMR-reduction relief — REGISTERED, NOT YET RUN.** Subtracts a fixed **336/1024 ply (15% of the 2.19-ply mean reduction)** from every LMR reduction. The DIRECTIONAL form of what RAR-S54 and RAR-S64 measured, replacing the symmetric form RAR-S67 disproved. Arm A `rarog-47relief` `5dbeb52`, bench **6,539,063 / EBF 2.449**. Arm B `rarog-47base2` `23b21b8`, bench **7,467,143 / EBF 2.477** — the accepted head. Final-PGO both, `3+0.03`, 1T, 64 MB, paired UHO, RAR-M13 adjudication. **Registered bounds `[0,3]` nElo, cap 60,000, fixed before any games.** | *Pending.* | **The magnitude comes from the evidence, not from the sweep, and the distinction matters after RAR-S64.** Mean reduction is 2.19 ply = 2,243/1024; RAR-S54 shifted its twelve selectivity constants by **15%**, which is 336. That the sweep's best `cut/node` (0.0890 against 0.0853 at zero) also lands at 336 is corroboration only — RAR-S64 adopted a value picked off a clean bench sweep and it measured exactly zero in games. ⚠ **Directly tests whether RAR-S54's headroom survived 4.7.** That +4.06 ± 3.71 over 14,196 games was measured against the 2.3.1 head; 4.7 has since banked +15.56 Elo of structural de-selectivity, so some or all of it may already be spent. A null here is therefore informative rather than merely disappointing: it would say the blind-shift headroom is gone. ⚠ **Not a bake candidate for the scalar itself.** PLAN is explicit that RAR-S54 licenses a structural rework and does not license shipping a uniform scalar. If this gates positive the right response is to find where the reduction is systematically too aggressive, as 4.7 did for ProbCut — not to ship 336 and call it done. | `tools/test_engines/rarog-47{base2,relief}-pext-pgo.exe`; branch `p410-lmr-relief`; RAR-S54; RAR-S64; RAR-S67; RAR-S57 |
 | RAR-S69 | **RAR-S54's ten pruning margins, ×1.15 on the current head — REGISTERED, NOT YET RUN.** The last candidate in this line. Shifts only the **ten pruning-margin** constants RAR-S54 moved — futility (×2), razoring, LMP (×2), quiet-history, SEE (×2), quiet futility (×2) — at their CURRENT values, leaving the two LMR-table constants alone because RAR-S68 measured that half at zero. `razoring_coeff` is clamped at its declared rail of 300 (×1.095 rather than ×1.15). Arm A `rarog-47margin` `e950f03`, bench **7,483,775 / EBF 2.471**. Arm B `rarog-47base2` `23b21b8`, bench **7,467,143 / EBF 2.477**. Final-PGO both, `3+0.03`, 1T, 64 MB, paired UHO, RAR-M13 adjudication. **Registered bounds `[0,3]` nElo, cap 80,000, fixed before any games.** | *Pending.* | **Cap raised to 80,000 deliberately, because RAR-S68's 60,000 could not decide a true +3 (it needs 78,715) and would have died at the cap.** At 80,000 both a true +3 accept and a true 0 rejection land inside the budget, so this run returns an answer either way — the first in this line that can. ⚠ **This is the direct re-test of RAR-S54 on the current head.** That +4.06 ± 3.71 over 14,196 games was measured against 2.3.1, and 4.7's +15.56 came from the ProbCut move filter, a different mechanism — so these ten constants are untouched since. A null says the blind-shift headroom is spent and the whole line closes. ⚠ **Not a bake candidate for the scalar**, per PLAN: RAR-S54 licenses a structural rework, not shipping a uniform multiplier. A pass means locating which margin is systematically too aggressive, as 4.7 did for ProbCut. Worth noting on its own: `razoring_coeff` has moved 193 → 274 since 2.3.1 and now sits within 10% of its rail, so that one term has already been tuned hard in this direction. | `tools/test_engines/rarog-47{base2,margin}-pext-pgo.exe`; branch `p410-margin-relief`; RAR-S54 recipe; RAR-S68; RAR-S67 |
 
+**RAR-S69 stop note, 2026-08-20.** Stopped at 4,642 games: Elo **+4.64 ± 6.49**,
+nElo **+7.14 ± 9.99**, LLR **+0.65**. Not promoted. The margin shift stays
+unmerged; the branch `p410-margin-relief` carries it and the recipe is the ten
+values in the row above.
+
+Stopped on a budget judgement, not on the reading: even at 80,000 this line was
+worth a few Elo at best against a ~196 Elo deficit, and the machine is better
+spent on 4.6. **The blind-shift line is closed** — RAR-S54's headroom was
+re-tested in two halves (LMR at RAR-S68, margins here) and neither half
+produced a resolvable gain on the current head.
+
+**Line summary, so nobody re-opens it.** Five consecutive candidates —
+killer clearing, the `improving` fallback, 1T jitter, LMR relief, margin relief
+— went to a gate and none cleared it, at a cost of ~39,500 games. Three were
+design differences from Stockfish; two were blind scalar shifts. Against them,
+the one change that DID pay in this phase was 4.7c: a structural contract
+replacement ("can this capture bridge the margin" for "does it lose material")
+that closed a measured 5.17× divergence against the oracle. **A difference from
+Stockfish is not latent Elo, and neither is a scalar.** Candidate selection
+should follow measured contract divergence, which is what 4.6 has in
+abundance.
+
 **RAR-S68 stop note, 2026-08-20.** Stopped at 4,716 games: Elo **−1.40 ± 6.24**,
 nElo **−2.22 ± 9.92**, LLR **−0.44**. Dead flat rather than negative — unlike
 RAR-S67, which was clearly the wrong direction by this point. Not promoted; the
