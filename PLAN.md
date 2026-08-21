@@ -12,8 +12,8 @@ lives in `EXPERIMENTS.md`; the operational tracker lives in `GUIDE.md`.
 | Integration branch | `dev`, reset to `master` and carrying this plan |
 | Frozen oracle | `hybrid` at `75d0d43` — Stockfish `9587eeeb` driving the exact 2.3.2 HCE |
 | Active game jobs | None. The stopped no-adjudication hybrid tournament already settled the architectural decision |
-| Current phase | **Phase 4 — reference-accelerated search and HCE development**; 4.0–4.4 closed. **4.7 open and unchanged** (order frozen at 4.3), then the audited maturity programme in 4.5–4.19 |
-| Next release | **2.4.0 at 4.19** if the work transfers; a larger cumulative gain may justify a higher minor version. Baseline NNUE then targets **2.5.0** |
+| Current phase | **Phase 4 — reference-accelerated search and HCE development**; 4.0–4.4 closed. **RENUMBERED 2026-08-21** on the ablation decomposition: search track 4.5–4.9 (selectivity, which holds 240 of the 250.8 Elo deficit), HCE track 4.10–4.14, release 4.15 |
+| Next release | **2.4.0 at 4.15** if the work transfers; a larger cumulative gain may justify a higher minor version. Baseline NNUE then targets **2.5.0** |
 | Reference posture | Search maturity is audited against local Stockfish `5062aee5`; HCE maturity against `9587eeeb`, its last pure-HCE master. Both are read for **ideas** only. No Stockfish code or tuned constant enters Rarog |
 | HCE status | Frozen through 4.10. The evaluator has mature infrastructure but incomplete feature contracts. Structural work, local Texel refits and narrowly justified SPSA reopen at 4.11 |
 
@@ -29,7 +29,7 @@ blindly.
 The old partial rating observation — an unfinished development binary roughly
 +11 pool Elo over 2.3.1 and 39 below Basilisk 1.9.3 — remains diagnostic only
 (RAR-M08). It was never a release gate or a forecast. The target-engine ladder
-moves to the 4.19 release gate and, afterward, the post-NNUE frontier gate at
+moves to the 4.15 release gate and, afterward, the post-NNUE frontier gate at
 7.4.
 
 ## 2. Development process, rules and gates
@@ -215,11 +215,11 @@ must be accepted or removed there.
 
 | Owner | Retained work | Required disposition |
 |---|---|---|
-| 4.5 Cluster A | Continuation and capture correction weights; `CorrSkipWhenTtRefined` | Supersede or remove inside the ordering/history cluster |
-| 4.6 Cluster B | TT provenance switches; typed evidence consumers | Supersede or remove inside the eval/TT/qsearch cluster |
-| 4.7 Cluster C | NMP and IIR provenance switches; `SelectivityProspectiveDepth` | Supersede or remove inside the selectivity cluster |
-| 4.8 Cluster D | Singular provenance switches; `SingularTtDepthMargin` | Supersede or remove inside the extensions cluster |
-| 4.9 Cluster E | Aspiration shape; root-confidence aspiration and time inputs | Supersede or remove inside the root/clock cluster |
+| 4.7 selectivity inputs | Continuation and capture correction weights; `CorrSkipWhenTtRefined` | Supersede or remove inside the history cluster |
+| PARKED (was Cluster B) | TT provenance switches; typed evidence consumers | No owner: the eval/TT/qsearch cluster is parked inside the ~30 Elo residual. Remove at 4.9 unless a measurement revives it |
+| 4.6 shallow-depth pruning | NMP and IIR provenance switches; `SelectivityProspectiveDepth` | `SelectivityProspectiveDepth` is settled in 4.6.2. The NMP and IIR switches are parked with their mechanisms |
+| PARKED (was Cluster D) | Singular provenance switches; `SingularTtDepthMargin` | Extensions measured at a 1.2 sigma null. Remove at 4.9 unless a measurement revives them |
+| PARKED (was Cluster E) | Aspiration shape; root-confidence aspiration and time inputs | Inside the ~30 Elo residual. Remove at 4.9 unless a measurement revives them |
 | 7.3 post-NNUE fit | Anything no Phase-4 cluster actually reached | Re-measure after NNUE scale freezes; gate architecture first, remove losers |
 | 8.0 multi-thread scaling | `RootConfPoolInstability`, `SmpIterationSkip` | Test only on representative 4T/8T+ topology; accept or remove |
 | 8.1 runtime ISA dispatch | Universal baseline dispatcher | Consider only as a complete Stockfish-style dispatch architecture, not a dead per-tier startup guard |
@@ -313,44 +313,53 @@ Read these with discipline:
    survives reimplementation into a different engine is unknown, and measuring
    that fraction is exactly what this phase does.
 
-### Where the Elo is expected to come from
+### Where the Elo is — MEASURED, 2026-08-21
 
-Priors, for budget sizing and stop-rule design only. They are **not additive**
-and no cluster is entitled to its prior.
+This section used to hold priors. It now holds measurements. The whole deficit
+was decomposed in about four hours with matched cross-engine ablation
+(`analysis/ablation_results.md`), and the priors it replaces were wrong in both
+directions — they gave main selectivity 25–60 nElo when it is worth ~240 Elo,
+and gave extensions 5–25 when it is worth zero.
 
-| Step | Cluster | Prior (STC nElo) | Reasoning |
-|---|---|---:|---|
-| 4.7 | C — main selectivity | 25–60 | **The only cluster with a positive local result already in hand.** RAR-S54: a blind, untuned, uniform 15% de-selectivity shift beat the fitted values at +4.06 ± 3.71 over 14,196 games while spending +23.2% nodes. RAR-S53 reaches the same place independently. A structural rework with its own refit should beat a blind scalar |
-| 4.5 | A — ordering, histories, LMR | 15–45 | Largest coordinated contract and feeds every downstream consumer, but RAR-S52 puts the first-move cutoff rate at 87.65%, only marginally under the ~90% healthy band. The prior therefore rests on the history, reduction and re-search contracts — not on raw ordering quality. Rarog's `MovePicker` is an enum inside `search.rs` with no staged guarantee contract |
-| 4.6 | B — static eval, TT, qsearch | 5–25 | Raw/pruning/searched evidence separation is already partly present |
-| 4.8 | D — extensions and depth authority | 5–25 | Rarog's check extension already gained +30.75, so co-adaptation risk is high and headroom is narrower |
-| 4.9 | E — root search and clock | 5–20 | Root confidence and TM are locally tuned, and RAR-S53 priced speed plus time management together at a ~0 point estimate, so this cluster is about root authority rather than about the clock |
-| 4.13–4.16 | F–I — HCE structural clusters | 15–50 each | Drawn from the 328-Elo evaluator population, discounted hard for co-adaptation with a search that is not Stockfish's |
+**The deficit against the oracle is `G(0) = 250.77 ± 13.12 Elo`**, a direct
+adjudicated 2,000-game measurement on the current head. It supersedes RAR-O02's
+~196, which came from ~205 games per pair with adjudication off. Netting out
+Rarog's 1.80x NPS advantage (~51 Elo) the true search-quality gap is **~302
+Elo**.
 
-**Execution order was changed at 4.3, on 4.2's evidence: 4.7 runs first and
-remains the protected in-progress step.** After it closes, run 4.5, 4.6, 4.8,
-4.9 and the 4.10 integration pass. The original order put 4.5 first because selectivity
-consumes the depth and history evidence cluster A owns — but that assumed A
-would *improve* those inputs, and RAR-S52/S55 refute the premise: Rarog's
-first-move cutoff rate is already **above** the reference's in every cohort.
-There is little for 4.5 to improve and correspondingly little for 4.7 to wait
-on, while 4.7 is the only cluster with a positive local result already in hand
-(RAR-S54, +4.06 ± 3.71). Item numbers do not move; this is execution order, not
-renumbering. The accepted risk — that 4.5 could later disturb 4.7's result — is
-handled by re-verifying 4.7 against the accepted head if ordering moves
-materially, and by 4.10 verifying the combination rather than assuming it.
+| mechanism | mask | deficit explained | status |
+|---|---:|---:|---|
+| shallow-depth pruning | 32 | **124.6 ± 17.7** | → 4.6 |
+| late move reductions | 128 | **116.0 ± 17.9** | → 4.5 |
+| both together | 160 | **272.2 ± 17.9** | near-additive: interaction +31.6 ± 30.9 |
+| extensions | 64 | 11.8 ± 18.8 | **null at 1.2 sigma — parked** |
+| everything else | — | **~30 total** | residual after speed adjustment — parked |
 
-**RAR-S52–S54 predate the oracle and reach the same conclusion from a
-different direction.** At exactly equal nodes and equal speed, Rarog searched
-**2.5 plies deeper** than Basilisk 1.9.1 and still lost by 65 Elo: it buys
-depth it cannot use by discarding width it needs. That gives this phase a
-concrete, falsifiable progress metric that costs nothing to run — see 4.10.
+**Two mechanisms hold 109% of the measured deficit, and they are separate
+failures rather than one seen twice.** With both removed from both engines,
+Rarog is +21.4 ± 12.2 ahead on the board — about 30 behind once its speed
+advantage is netted out. Move ordering, TT, quiescence, extensions, null move,
+futility, aspiration and time management are collectively ~30 Elo.
 
-**Programme target: cumulative ≥ +100 Elo STC over 2.3.2.** That is what makes
-this phase worth its delay to NNUE. The release bar below is lower, because a
-smaller confirmed gain still deserves to ship rather than be discarded; but if
-the phase looks like it will land near the release bar rather than near the
-target, the 4.10 expected-value review is where it closes.
+**HCE is the larger prize and is not yet decomposed.** Swapping Rarog's HCE for
+the reference's under one search is worth **+328.6 Elo** (RAR-O02). That number
+has never been broken down by term family, and 4.10–4.11 do to evaluation
+exactly what was just done to search.
+
+**RAR-S52–S54 predate the oracle and corroborate this from another direction.**
+At equal nodes and equal speed, Rarog searched **2.5 plies deeper** than
+Basilisk 1.9.1 and still lost by 65 Elo: it buys depth it cannot use by
+discarding width it needs. That is the same finding as "Rarog's LMR is worth a
+third of the reference's" — the reductions produce depth, but not depth that
+holds up.
+
+**Programme target: cumulative ≥ +100 Elo STC over 2.3.2**, unchanged as the
+bar that justifies this phase's delay to NNUE — but it is no longer a hopeful
+number. The search track alone now has ~240 Elo of measured, localised headroom
+against the oracle, and the HCE track has a ~328 Elo population behind it.
+Capturing even a third of the search half clears the target. What the phase
+cannot claim in advance is transfer: a mechanism worth 116 Elo to the oracle is
+not automatically worth 116 to Rarog, and only registered gates decide.
 
 ### Two tracks
 
@@ -358,7 +367,7 @@ target, the 4.10 expected-value review is where it closes.
 throughout. The end state is a mature single-thread search architecture that
 also transfers at 4T; NUMA and high-thread scaling remain owned by Phase 8.
 
-**HCE track (4.11–4.18).** Entered only after 4.10 freezes one search head, so
+**HCE track (4.10–4.14).** Entered only after 4.9 freezes one search head, so
 evaluation is measured against a settled search. Scope is **mature structural
 coverage plus calibration**: every material contract in the last Stockfish HCE
 must be classified, and every accepted representation carries its own local
@@ -566,344 +575,234 @@ Named now so every step has a concrete surface:
   dirty-piece delta contract; that stays owned by 5.1, which consumes the same
   per-ply structure. Do not let 4.4 grow into the NNUE runway.
 
-- **4.5 Cluster A — per-ply authority, move ordering, histories and LMR.**
-  Implement in dependency order, as one coherent cluster:
-    - **4.5.1 Rarog search context:** replace the scattered minimum arrays with
-      a typed per-ply context owning current/previous move and piece, static
-      eval, TT/PV evidence, previous reduction, statistical score and cutoff
-      count. Add previous-PV following and continuation-context keys. Land the
-      representation behavior-neutral first: exact fingerprint, tests and
-      pooled-PGO NPS, with no copied Stockfish `Stack` shape.
-    - **4.5.2 Move-picker contract:** TT move, good captures, killers and
-      counters, quiets, deferred bad captures; named stage transitions, quiet
-      suppression, legality and duplicate guarantees in normal, root and
-      in-check paths.
-    - **4.5.3 Evidence ownership:** main, capture, continuation, low-ply, pawn
-      and correction history indexing, check/capture context, normalization,
-      aging and cutoff/fail-low attribution. Measure evaluation-difference
-      training and seed/decay policy as Rarog candidates; Stockfish's events and
-      constants are not defaults.
-    - **4.5.4 Reduction and re-search contract:** LMR population,
-      improving/PV/cut/all-node adjustments, statistical and cutoff feedback,
-      prior-reduction authority, the accepted zero-reduction floor and
-      full-depth verification. Previously rejected deeper/shallower re-search
-      remains rejected unless the completed context creates a new registered
-      reason to retry it.
-    - **4.5.5 Integrated fit, gate and ablation:** if activation and curvature
-      show that the changed contract displaced continuous optima, run a
-      cluster-only SPSA after all categorical choices freeze. Bake the final
-      theta into clean PGO, SPRT the coherent cluster, then ablate surprising
-      contributors. Revert if no supported subset clears its registered gate.
+- **4.5 Selectivity rework I — LATE MOVE REDUCTIONS. Target: 116 Elo.**
+  The largest single measured component of the deficit.
+  `analysis/ablation_results.md`: removing LMR from both engines closes
+  **116.0 ± 17.9 Elo** of the gap, and Rarog's LMR is worth **33%** of what the
+  oracle's is (−62.89 against −188.39 in self-play). Two independent methods
+  agreeing to 0.8 sigma.
+    - **4.5.1 Replace the reduction contract, do not tune it.** Rarog's
+      `lmr_reduction_units` takes twelve loose arguments and could not see the
+      root at all until RAR-S70. The reference's Step 16 is a formula plus seven
+      annotated adjustments: history-based ~30 Elo, on-PV ~10, cut-node ~10,
+      stat-score ~10, tt-capture ~5, opponent move count ~5, singularly-extended
+      ttMove ~3. Implement the CONTRACT in Rust from the principle; the 0-for-5
+      record on constant shifts says the constants were never the problem.
+    - **4.5.2 Land `LmrMinReducedDepth`, already built and default-off.** The
+      4.8.1 audit found **46.7%** of Rarog's applied reductions reduce the move
+      to depth 0, i.e. answered by quiescence — a prune wearing a reduction's
+      name, counted in no pruning family. At floor 1: `lmr_qs_clamped`
+      686,179 → 0, qnodes −29.8%, nodes −18.4%. It belongs in this cluster, not
+      in a gate of its own.
+    - **4.5.3 Re-fit the root term against the new contract.** `LmrRootRelief`
+      sits at 1536 from RAR-S70, fitted against the OLD interior contract. It
+      has to move when the contract underneath it does.
+    - **4.5.4 Use matched ablation as the progress meter, not agreement.** After
+      each substep, `G(128)` should shrink toward `G(0)`. That is a direct
+      readout of how much of the 116 has been captured, at ~20 minutes a
+      measurement, and it needs no SPRT to be informative.
 
-  This cluster owns the retained continuation and capture correction weights
-  and `CorrSkipWhenTtRefined`. Rule 12 applies directly: do not repair a member
-  of this cluster standalone.
+- **4.6 Selectivity rework II — SHALLOW-DEPTH PRUNING. Target: 124.6 Elo.**
+  Marginally the larger of the two, and **separate**: the joint ablation
+  measured interaction at only +31.6 ± 30.9, so these are two failures rather
+  than one seen twice. Removing it from both engines closes
+  **124.6 ± 17.7 Elo**.
+    - **4.6.1 Rework the Step 13 families as one contract:** move-count pruning,
+      countermove/history pruning (~20 Elo annotated), parent-node futility
+      (~5), and the two SEE-based prunes (~20 and ~25). Rarog has all of them
+      and captures a fraction of their value.
+    - **4.6.2 Settle the prospective-depth question inside this cluster.**
+      `SelectivityProspectiveDepth` exists because the pruning consumers and the
+      reduction disagreed about the depth a move would actually be searched at.
+      That is a selectivity contract, so it is fitted here and nowhere else.
+    - **4.6.3 Audit the pruning shadow counters against the live block.** The
+      `prune_shadow_*` family shadows the real decision, and an ablation anchor
+      landed on the shadow instead of the live site during this work. Either
+      make the shadow provably track the live block, or delete it.
 
-- **4.6 Cluster B — static eval, TT and quiescence.** Separate raw evaluation,
-  corrected/pruning evaluation and searched bounds end to end. Audit TT
-  admission, replacement, PV and bound propagation, qsearch stand-pat,
-  corrected eval, previous-square futility, capture/promotion ordering, evasions
-  and check handling. Derive opponent-worsening from the 4.5 context and give it
-  an explicit consumer. Stockfish's stand-pat blends and thresholds are
-  measured candidates, never imported defaults. Preserve Rarog's proven draw
-  and mate-distance semantics. Owns the TT provenance switches and typed
-  evidence consumers; ends with a cluster-only fit if justified, final-PGO
-  SPRT, NPS and ablation.
+- **4.7 Selectivity inputs — HISTORY AND ORDERING. Inside the selectivity budget.**
+  Absorbs the old 4.5.3 and 4.9b. This is NOT a separate lever: histories are
+  what 4.5 and 4.6 CONSUME. The reference's single largest LMR adjustment is
+  history-based (~30 Elo) and its largest shallow-pruning term after move count
+  is countermove history (~20). A history rework is worth doing only to the
+  extent it improves the two clusters above, and is measured that way.
+    - Semantics: bonus/malus symmetry, aging, continuation-table
+      dimensionality, and which tables each consumer reads.
+    - ⚠ Ordering quality is NOT separately measurable by matched ablation.
+      Ordering was intact on both sides at mask 160, so its direct effect sits
+      inside the ~30 Elo residual — but it also determines how SAFE the pruning
+      is, and that part is inside the 240 Elo. Do not read the residual as
+      "ordering does not matter".
 
-  Sub-steps ordered by the 4.6 audit (`analysis/phase4_6_audit.md`), most
-  promising first:
-    - **4.6.1 TT admission and bound composition.** RAR-S23's census: **67.5%
-      of stores are depth-0 qsearch entries and 35.87% are bare stand-pats**
-      that searched no move and carry none. Composition follows — Rarog stores
-      Lower 67.8% / Upper 29.2% / Exact 3.0% against the reference's 55.7 /
-      40.2 / 4.1. Downstream: `q_tt_hit` 1.49x, `q_tt_cut` 2.46x and
-      `tt_bound_not_usable` **2.13x** (8.7% of hits against 5.9%). Rarog finds
-      an entry more often than the reference and can use it less often. First
-      because it is the only lead that is direction-NEUTRAL: it makes the same
-      tree yield more usable evidence rather than pushing selectivity either
-      way, and five consecutive selectivity candidates have now failed.
-    - **4.6.2 Quiescence PV contract.** The reference guards its qsearch TT
-      cutoff with `!PvNode`; Rarog's `quiescence` has no PV concept at all, no
-      `is_pv` in its signature, so it cuts on PV lines too. Second rather than
-      first because `q_tt_cut` is partly downstream of 4.6.1's store density,
-      and running it after keeps the attribution clean.
-    - **4.6.3 Opponent-worsening.** Named by this cluster and absent from the
-      engine. 4.5.1 already built the substrate (`stack[ply - 1].static_eval`);
-      the consumer does not exist. ⚠ The reference's form makes reverse
-      futility fire MORE, and Rarog already runs `rfp_cut` 1.41x and
-      `razor_drop` 1.65x, so the direction needs deciding before the code.
-    - **4.6.4 Quiet checks in quiescence.** The reference generates quiet
-      checks at the first qply; Rarog generates captures only when not in
-      check. Explains `q_move_cut` 0.66x and `q_in_check` 0.64x. Last: it adds
-      work to a quiescence already running `qnodes` 1.60x, and Rarog measured
-      **+30.75 for removing its check extension** while RAR-X02 has Basilisk
-      losing 10.17 doing the opposite.
+- **4.8 ONE seeded selectivity SPSA, after the architecture is in.**
+  PLAN rule 4 and RAR-S13 both apply: RAR-S13 ran an LMR-family SPSA before the
+  architecture was settled and lost **7.78 ± 8.00**, because the tuner found a
+  sibling-local optimum that beat its own siblings and then lost to the head.
+    - **Seed from the reference, not from Rarog's current values.** The
+      constants are readable in `hybrid/stockfish/src/search.cpp`, they are the
+      values that produced the measured 188 and 200 Elo, and starting there
+      turns SPSA into a local refit rather than a search.
+    - **One run, one coordinate set: the selectivity surface only.** No HCE
+      coordinates, no undirected full-surface tune, and no second run "to be
+      sure".
+    - **Entry condition:** 4.5 and 4.6 have landed their contracts, and `G(128)`
+      and `G(32)` have both measurably shrunk. A flat or monotone zero-game
+      sweep is evidence AGAINST spending the budget, per rule 4.
 
-  **Answer-led sub-steps (4.6.5–4.6.8), from `tools/diag/answer_compare.py`.**
-  A different generator from 4.6.1–4.6.4: those came from counter divergences,
-  these from what the search RETURNS. `hybrid-diag` runs Rarog's own HCE, so at
-  equal depth every difference is search alone.
+- **4.9 Search residual, integration and freeze.**
+  Everything else in search is **~30 Elo collectively, measured** — see the
+  parked table below for what that covers. This step does not chase it.
+    - Integrate 4.5–4.8, re-verify the bench fingerprint, run the correctness
+      suite in debug and release, and confirm no NPS regression: Rarog's
+      **2.95 Mnps against the oracle's 1.64** is a real asset and must survive.
+    - Re-measure `G(0)`. That single 20-minute run prices the whole search track
+      against the 250.8 baseline, and it is the number the release claim rests
+      on.
+    - Freeze the search head as the immutable HCE baseline. Record source hash,
+      binary hash, bench fingerprint and NPS.
 
-  ⚠ **Agreement with the oracle is a PROXY, not the objective.** The objective
-  is playing strength, and a different move is not automatically a worse one.
-  The proxy is justified only because RAR-O02 measured that search as ~196 Elo
-  (SUPERSEDED: a direct 2,000-game adjudicated match on the current head
-  measures the deficit at **250.77 +/- 13.12**; RAR-O02 had ~205 games per
-  pair with adjudication off. See `analysis/ablation_results.md`.)
-  stronger *with this same evaluation*, so where it disagrees it is usually
-  right. Every candidate below still owes a registered strength gate; raising
-  agreement is evidence for a candidate, never acceptance of one.
-    - **4.6.5 Mate-answer disagreements.** In **5 of 50** positions one engine
-      returns a forced mate and the other does not. First because it is the one
-      finding that does NOT depend on the proxy: missing a forced mate is worse
-      play, not merely different play. Each case is individually diagnosable —
-      deepen both engines to establish which is right, then find the mechanism
-      that discards the line. Related: `nmp_cut_unproven_mate` reads 0, and
-      RAR-S51's mate clamp is retained but was never resolved.
-    - **4.6.6 Cohort agreement — ENDGAME, and the zugzwang lead is withdrawn.**
-      The first reading had zugzwang at 25% and called it the sharpest cohort
-      signal in the project. It was an artifact: the harness did not send
-      `ucinewgame` between positions, so the TT carried across unrelated ones.
-      Clean, zugzwang is **62.5%** and **endgame is the worst at 50%**, against
-      66.7–75% elsewhere. Endgame is also where a shared evaluation should make
-      two searches agree MOST, which is what makes 50% interesting. **n = 10,
-      so widen the cohort before building anything on it.**
-    - **4.6.7 Premature conviction — CAUSE FOUND, folded into the root-answer
-      cluster.** Rarog revises its root move **1.50** times against the
-      oracle's **2.16**, and its own depth-7 answer survives to its final depth
-      more often (72% vs 60%) — yet it lands on a different move than the
-      oracle a third of the time. It converges faster and more confidently to
-      somewhere else; consistent with `root_best_changes` 0.29x measured
-      independently. **Cause:** `lmr_reduction_units` is not passed the ply and
-      `reducible` has no `ply == 0` term, so the reduction formula cannot see
-      the root. From the third root move onward an alternative is searched at
-      reduced depth and can displace the incumbent only by beating alpha
-      *while reduced*. **Screened and NOT a standalone lead:** `LmrRootRelief`
-      (default 0, committed off) leaves settle depth, revisions and volatility
-      identical at 0, 512 and 1024 while measurably changing the tree — the
-      mechanism is real, moving it alone changes no answer.
+### HCE track — ordered work, and it is the LARGER prize
 
-- **4.6c The root-answer cluster — 4.6.7 + 4.8.1 + 4.9 as ONE unit.** These
-  three own a single object: how deep a root alternative is searched before it
-  may displace the incumbent. 4.6.7 owns the root's term in the reduction
-  formula, 4.8.1 owns the reduction/re-search contract that term is subtracted
-  from, and 4.9 owns the aspiration that sets the alpha an alternative must
-  beat. Fitting any one against the others' accepted values fits it against a
-  baseline that is about to move.
-      - **Build and screen each alone behind its own default-off switch; fit
-        them together; gate ONCE at `[0,3]`.** Bundling the gate is not
-        bundling the work — a bundle built blind costs an overnight run and,
-        on failure, names no culprit.
-      - **Areas of this search are co-adapted, and that is measured.** Rarog
-        gained **+30.75 Elo removing its check extension**, the opposite of
-        the reference. "Match the oracle in area X" is therefore not a safe
-        per-area objective, and improving one area toward the oracle can cost
-        another.
-      - The record is the argument: the only accepted gain in ~86,000 games
-        (4.7c, +15.56) came from inside a cluster; all five failures after it
-        were isolated singletons.
-      - **Agreement stays a PROXY.** The objective is playing strength. None
-        of the trajectory metrics is a gate, and the cluster still owes one.
-    - **4.6.8 Score volatility.** **422** cp mean absolute change per
-      iteration against the oracle's **199** — more than double — while the
-      MOVE is more stable than the oracle's. A stable move with an unstable score is a search whose value
-      keeps being revised without changing its mind, which should be explained
-      before it is trusted.
+Under the SAME search, swapping Rarog's HCE for the reference's is worth
+**+328.6 Elo** (RAR-O02, adjudication off; +304.8 with adjudication in RAR-O01).
+That is bigger than the entire search deficit. It rests on ~205 games per pair,
+so treat it as "large" rather than as 328.6 exactly — and re-measure it properly
+in 4.10, which now costs 20 minutes.
 
-- **4.7 Cluster C — main selectivity.** In observed dependency order, rework
-  razoring, reverse futility, null-move verification, ProbCut, move-count and
-  history pruning, and quiet/capture futility. Use prospective searched depth
-  consistently. Gate categorical architecture before any narrow constant fit;
-  do not launch a broad SPSA. The 2.3.2 broad selectivity fit (+15.33 nElo)
-  was a constant fit around the current architecture and does not pre-empt
-  this. Owns the NMP and IIR provenance switches and
-  `SelectivityProspectiveDepth`. RAR-S54 licenses a structural rework here
-  with its own refit; it does **not** license shipping the uniform 15% scalar
-  that produced the evidence.
+**The method changes, and this is the lesson the search track paid for.** The
+old track went straight into Clusters F–I without ever measuring which
+evaluation family carries the Elo. The search track made exactly that mistake
+for months — five gates, ~39,500 games, 0 for 5, every one aimed at what is now
+measured to be a ~30 Elo bucket — until matched ablation found the answer in
+four hours. **Decompose first, build second.**
 
-- **4.8 Cluster D — extensions and depth authority.** Rework check, singular,
-  double, possible higher and negative extension, IIR and excluded-move
-  semantics against TT provenance, the 4.5 per-ply context and LMR. Add a
-  Rarog-owned TT-move reliability signal, multi-cut correction feedback and a
-  repetition/shuffling guard where local populations justify them. Preserve
-  mate and abort correctness, including the accepted NMP unproven-mate clamp.
-  Gate the integrated contract, never copied formulas or isolated extensions —
-  RAR-X02 showed check-extension removal cost Basilisk −10.17 while Rarog's
-  extension had gained +30.75, which is co-adaptation, not a portable verdict.
-  Owns the singular provenance switches and `SingularTtDepthMargin`; refit only
-  the activated depth-authority surface before final-PGO SPRT.
-    - **4.8.1 Reduction and re-search contract (inherited from 4.5.4).** 4.5.4
-      named reductions and re-search authority as ONE explicit contract and did
-      not build it: `lmr_reduction_units` still takes eleven loose arguments
-      and is not a contract over the per-ply context, and the accepted
-      zero-reduction floor and full-depth verification were never audited. It
-      lands here because 4.8 already owns LMR and depth authority against the
-      4.5 per-ply context. It is written as a sub-item, not a sentence, so it
-      cannot be closed by implication a second time.
+- **4.10 Reciprocal HCE oracle and matched-ablation harness.** Mirror of the
+  search instrument, which is built and validated. Both evaluators run under ONE
+  search — the frozen 4.9 head, or the oracle's — with an `EvalAblationMask`
+  exposing one bit per term family on each side. Every bit proved live before
+  use by a mechanical check that the term actually moves scores: a dead guard
+  reads as a null, and that cost two false results in this phase. Re-measure the
+  RAR-O02 gap under the frozen search. Register the budget and stop rules before
+  touching evaluation code.
 
-- **4.9 Cluster E — root search and clock handoff.** Rework aspiration
-  retries, completed-root authority, PV and interrupted fallback ownership,
-  stability inputs and the decision to start or suppress another iteration.
-  Measure extra-iteration/search-again behavior against Rarog's stronger
-  root-confidence model rather than assuming Stockfish's policy transfers.
-  **Total time allocation must not move until the root evidence is coherent**;
-  then tune and gate any real-clock change separately. Owns the aspiration
-  shape and the root-confidence aspiration and time inputs.
+- **4.11 HCE decomposition — measure which families carry the 328.**
+  Matched cross-engine at equal mask, exactly as `G(mask)` was used for search:
+  material/PST, mobility, king safety, pawns and passers, threats, imbalance,
+  scaling and winnability. One ~20-minute run per family. The output is the
+  eval equivalent of "LMR 116, shallow pruning 124.6, extensions zero".
+    - ⚠ **Ablate one family at a time until the readable band is known.** The
+      mask-163 search run collapsed both arms to 4–8%, where the Elo scale
+      amplifies 4.4x and the measurement means nothing. Keep the ablated arm
+      inside roughly 20–80%.
+    - ⚠ **A lower aggregate Texel loss cannot accept a candidate.** RAR-E03
+      already disproved that proxy for this HCE, and the 4.6 answer harness was
+      a second instance of the same mistake in the same phase.
 
-- **4.9b History semantics (inherited from 4.5.3).** The unexecuted half of
-  Cluster A, given its own number rather than folded into a neighbour because
-  it fits none of them: 4.6 owns eval/TT/qsearch evidence and 4.8 owns depth
-  authority, while this is the ORDERING histories. 4.5.3 named main, capture,
-  continuation, low-ply, pawn and correction history **ageing, decay and seed
-  policy, update attribution, check/capture context in indexing**, and
-  evaluation-difference training as Rarog candidates. Only the
-  continuation-key consolidation and one measurement (RAR-S59, the
-  continuation-malus asymmetry, rejected) were done. Placed BEFORE 4.10 on
-  purpose: 4.10 re-runs the 4.2 differential suite as its evidence base, and
-  that re-run is not meaningful while the history contract is unsettled.
-  Stockfish's history events and constants are candidates here, not defaults —
-  RAR-S59 already caught one that looked like an omission and measured as a
-  disguised selectivity increase.
+- **4.12 Rework the families 4.11 ranks, in that order, as coherent clusters.**
+  Content preserved from the old 4.13–4.16; the ORDER is now an output of 4.11
+  rather than an assumption, and a family 4.11 prices near zero is not built.
+    - **Score foundation, winnability, endgame dispatch** — material/PST
+      ownership, phase interpolation, tempo, score grain and POV, rule-50
+      damping, and the specialized dispatcher (queen-vs-rook,
+      rook-and-pawn-vs-rook, rook-vs-pawn, bishop/pawn, KPKP). Preserve proven
+      draw and mate semantics; tablebase invariants precede any refit.
+    - **Pawns, passers and pawn-dependent scaling** — pawn-cache inputs and
+      lifetime, weak-unopposed and lever semantics, doubled/backward/opposed
+      classification, blocked-passer support, edge files, path safety,
+      progression, king distances, and the scaling consumers that read them.
+      Terms planted at zero are activation- and covariance-audited, not assumed
+      disproven.
+    - **Piece activity, threats and space** — pin-aware mobility areas,
+      bishop/rook x-rays, reachable and bad outposts, bishop-pawn severity,
+      trapped-rook geometry, king-ring and queen pressure,
+      weak/restricted/hanging threats, material-gated space. Hot attack
+      generation owes a pooled-PGO NPS gate.
+    - **King safety and nonlinear imbalance** — replace the low-dimensional
+      shelter/storm approximation with rank/file-sensitive, blocked/unblocked,
+      castling-destination-aware inputs; rework attack units, safe and unsafe
+      checks, weak squares, pinned defenders, flank camp/pressure, pawnless
+      flanks and the mobility/score feedback. A coupled Rarog model, not
+      independent bonus copying. Existing zero weak-ring, flank,
+      missing-shelter, storm and shelter-storm inputs are unidentified, not
+      disproven.
 
-- **4.10 Search integration, second-pass selectivity, calibration, freeze and
-  EV review.** Re-run the 4.2 suite after 4.5, 4.6, 4.8 and 4.9, because those
-  contracts change the evidence consumed by selectivity. Resolve every
-  remaining search-map item as equivalent, intentionally different, accepted
-  or rejected. This is the owner for any 4.7-adjacent issue deliberately left
-  outside the protected in-progress 4.7 scope, including shallow TT-served
-  cutoffs and a changed NMP/ProbCut/futility population.
+- **4.13 Texel consolidation of the upgraded HCE.** Only after the
+  representations in 4.12 have frozen — fitting a representation that is about
+  to change is the same error as tuning a reduction contract before replacing
+  it. Anchored whole-HCE fit over activated, identifiable weights, with fixed
+  train/validation/untouched splits. Bake and SPRT each completed cycle; repeat
+  only while both held-out fit AND games improve; stop on the first failed or
+  no-gain cycle rather than selecting a lucky checkpoint.
+    - Then, and only then, audit the cp-valued SEARCH margins whose populations
+      moved under the new evaluation. Any search-margin SPSA is a separate,
+      narrow compatibility candidate with frozen HCE. **Never mix HCE and search
+      coordinates in one tune.**
 
-  If the accepted structural work displaced continuous optima, run one
-  **targeted search SPSA** over only the activated LMR, history, selectivity,
-  qsearch and root coordinates identified by activation and curvature. Freeze
-  categorical choices, complete the final theta, bake clean PGO and SPRT it;
-  do not turn this into a full `params.rs` tune.
-
-  Build the accepted search head and 2.3.2 through the same pinned final-PGO
-  path. Run a direct fixed-protocol comparison at 1T STC, explain it with the
-  updated diagnostics, close every open search candidate and freeze the
-  resulting head. Then perform a new expected-value review before entering
-  4.11:
-    - if the search track banked a material gain, continue into the maturity-
-      scoped HCE programme;
-    - if it banked little, reprice the HCE population and budget explicitly,
-      but do not discard the independently measured HCE maturity gap merely
-      because search disappointed;
-    - close early only by explicitly conceding the Phase-4 implementation-
-      maturity target, listing the contracts left open and resuming Phase 5
-      from `master`. Opportunity cost can justify that decision; it cannot be
-      presented as successful Phase-4 maturity.
-
-  The frozen head may equal 2.3.2 if no search cluster won. That is an accepted
-  outcome and is recorded as such.
-
-  Also re-run the RAR-S53 fixed-node depth readout here, because it is free and
-  falsifiable: at `-Nodes 250000`, mean depth should have **fallen** toward ~14
-  while Elo **rose**. An accepted head that still carries the +2.5-ply lead over
-  Basilisk 1.9.1 has not fixed the over-selectivity, whatever its gate said, and
-  that contradiction must be explained before the head is frozen.
-
-### HCE track — ordered work
-
-Track H learns from the reference evaluator the same way track S learns from
-its search: map behavioral contracts and interacting consumers, implement them
-in native Rust, measure them on Rarog, and reject what does not transfer.
-
-- **4.11 HCE baseline and reciprocal-oracle freeze.** Make the 4.10 search
-  head the immutable HCE baseline; record source and binary hashes, benchmark
-  and NPS, and a no-adjudication reproduction slice of Stockfish-HCE versus
-  Rarog-HCE under the frozen oracle search. Register the HCE budget and stop
-  rules before changing evaluation code.
-
-- **4.12 Differential evaluator harness and contract map.** On a versioned,
-  legal corpus containing quiet, tactical, king-attack, pawn-structure,
-  endgame, rule-50 and search-disagreement positions, record the `9587eeeb`
-  HCE and Rarog raw white-POV and side-to-move scores, phase, term breakdown,
-  activation, covariance and cost. Map score/lazy semantics, mobility and
-  x-rays, pawn shelter/storm, king danger, passers, winnability/material
-  scaling and the specialized-endgame registry onto owners in `src/eval.rs`.
-  Classify every reference contract as equivalent, intentionally different,
-  missing or locally rejected; generic non-reference ideas stay outside unless
-  local evidence admits them. Diagnostics off must reproduce the 4.11 baseline
-  fingerprint exactly. A lower aggregate teacher-fit loss cannot accept a
-  candidate; RAR-E03 already disproved that proxy for this HCE.
-
-- **4.13 Cluster F — score foundation, winnability and endgame dispatch.**
-  Rework material/PST ownership, phase interpolation, tempo, score grain and
-  units, evaluation POV, rule-50 damping, space phase/material gating and
-  winnability/complexity as one score contract. Treat the Stockfish formulae as
-  hypotheses, not correctness fixes. Expand the specialized dispatcher and
-  generic scaling coverage where the 4.12/Syzygy cohorts show gaps, including
-  queen-versus-rook, rook-and-pawn-versus-rook, rook-versus-pawn and the
-  bishop/pawn and KPKP families. Preserve proven draw and mate semantics.
-  Structural choices and tablebase invariants precede a local Texel refit;
-  final-PGO no-adjudication SPRT and NPS decide.
-
-- **4.14 Cluster G — pawns, passers and pawn-dependent scaling.** Rework
-  pawn-cache inputs and lifetime, weak-unopposed and lever semantics, doubled/
-  backward/opposed classification, blocked-passer support, edge-file effects,
-  path safety, progression and first/second-push king distances together with
-  the endgame scaling consumers that read them. Terms already planted at zero
-  must be activation- and covariance-audited, not assumed disproven. After the
-  representation freezes, run a joint pawn/passer Texel fit; repeat a cycle
-  only after the previous fitted bake improved validation and passed SPRT.
-  Gate the coherent cluster including NPS; do not retain a prettier static fit
-  that loses games.
-
-- **4.15 Cluster H — piece activity, threats and space.** Rework pin-aware
-  mobility areas, selected bishop/rook x-rays, reachable and bad outposts,
-  bishop-pawn severity, trapped-rook geometry, files, king-ring and queen
-  pressure, weak/restricted/hanging threats, king threats and material-gated
-  space as one interacting group. Hot attack generation owes a pooled-PGO NPS
-  gate. Refit all mobility tables after their representation changes, Texel-fit
-  direct traced terms, use held-out ablations for duplicate signals, then run
-  the registered final-PGO game gate.
-
-- **4.16 Cluster I — king safety and nonlinear imbalance.** Replace the
-  low-dimensional shelter/storm approximation with rank/file-sensitive,
-  blocked/unblocked and castling-destination-aware inputs. Rework attack units,
-  single/multiple safe and unsafe checks, weak squares, pinned defenders,
-  flank camp/pressure, pawnless flanks and mobility/score feedback together
-  with activity and threat consumers. Treat this as a coupled Rarog model, not
-  independent bonus copying. Texel-fit direct terms and one-hot shelter/
-  king-safety tables; only after the representation passes its structural gate
-  may a targeted SPSA fit the danger-index drivers that select those buckets.
-  Bake and SPRT the final theta. Existing zero weak-ring, flank, missing-
-  shelter, storm and shelter-storm inputs are unidentified, not disproven.
-
-- **4.17 HCE convergence, search compatibility and cost.** Measure lazy
-  evaluation and cache behavior, parent-child stability, pruning-bound
-  populations, NPS and endgame pathologies on the frozen search. Then run an
-  anchored whole-HCE Texel consolidation over activated, identifiable weights
-  using fixed train/validation/untouched splits. Bake and SPRT each completed
-  cycle; repeat only while both held-out fit and games improve, and stop on the
-  first failed/no-gain cycle rather than selecting a lucky checkpoint.
-
-  After HCE convergence, audit the cp-valued search margins whose populations
-  moved. Any search-margin SPSA is a separate, narrow compatibility candidate
-  with frozen HCE, completed theta, PGO and SPRT. Do not mix HCE and search
-  coordinates in one tune and do not run undirected full-surface SPSA.
-
-- **4.18 Cumulative HCE checkpoint and ablation.** Compare the accepted HCE
-  head directly with the 4.10 baseline using revision-matched final-PGO builds
-  and adjudication off. Ablate surprising contributors, remove rejected or
-  dormant HCE alternatives with no later owner, close every 4.12 contract
-  classification, and record the exact search-versus-HCE attribution. An
-  unclassified or first-draft contract fails the maturity bar even if the
-  cumulative Elo result is positive.
+- **4.14 HCE checkpoint and ablation.** Compare the accepted HCE head with the
+  4.9 baseline, revision-matched final-PGO, adjudication off. Ablate surprising
+  contributors. Close every contract classification from 4.10. Record the exact
+  search-versus-HCE attribution — with both tracks measured by the same
+  instrument, that attribution is a number rather than an argument.
 
 ### Transfer, cleanup and release
 
-- **4.19 Transfer, portability, SMP and release gate.** Compare the final
-  accepted head directly with 2.3.2. Confirm direction at LTC `10+0.1` and at
-  4T, benchmark and pooled NPS, the platform and ISA matrix, UCI conformance
-  and the correctness suite. Remove diagnostic scaffolding that has no future
-  owner and resolve obsolete dormant switches. Verify zero UNKNOWN items in
-  both maturity maps and distinguish accepted implementations from measured
-  intentional departures. Run a final no-adjudication target cohort including
-  Basilisk 1.9.3 and the 4.1 oracle as the diagnostic reference point. Harness
-  caveat: drop `-use-affinity` for the 4T cells and re-calibrate the null pair
-  under that configuration.
+- **4.15 Transfer, portability, SMP and release gate.** Retained in full: the
+  new evidence says nothing against it, and SMP is a product requirement rather
+  than a strength lever.
+    - Compare the final head with 2.3.2 directly. Confirm direction at LTC
+      `10+0.1` and at 4T, benchmark and pooled NPS, the platform and ISA matrix,
+      UCI conformance and the correctness suite.
+    - **NPS is a first-class release criterion now, not an afterthought.**
+      Rarog's 1.80x speed over the oracle is worth roughly 51 Elo and is doing
+      real work in every measurement above.
+    - Remove diagnostic scaffolding with no future owner. The `ablate` feature
+      and the `hybrid-ablate` branch **stay** — they are the instrument that
+      produced this plan, and they are needed again in every later phase.
+    - Harness caveat: drop `-use-affinity` for the 4T cells and re-calibrate the
+      null pair under that configuration.
+    - Final no-adjudication target cohort including Basilisk 1.9.3 and the
+      oracle as the diagnostic reference point.
+
+### Parked by measurement — preserved, not deleted
+
+These were real ideas and several are well argued. They are parked because
+matched ablation bounds **all of them together** at ~30 Elo, not because any one
+was examined and found wrong. Any of them becomes live again the moment a
+measurement puts Elo behind it.
+
+| old item | content | why parked |
+|---|---|---|
+| 4.6 Cluster B | static-eval separation, TT admission/replacement/bounds, quiescence PV contract, quiet checks in qsearch | inside the ~30 Elo residual at mask 160 |
+| 4.8 Cluster D | check, singular, double and negative extensions; IIR; excluded-move | **measured at 11.8 ± 18.8 Elo, a 1.2 sigma null** — the strongest parking evidence in this table |
+| 4.9 Cluster E | aspiration retries, completed-root authority, PV and interrupted fallback, stability inputs, extra-iteration policy | inside the ~30 Elo residual; RAR-S70 already took the root's reduction term |
+| 4.6.1–4.6.8 | answer-harness sub-steps: mate answers, cohort agreement, premature conviction, score volatility | the instrument was calibrated and **cannot rank candidates** — `analysis/answer_harness_calibration.md` |
+| 4.10 second-pass selectivity | broad re-fit after integration | superseded by 4.8, which is narrower, seeded and single-run |
+| razoring, IID | ~1 Elo each by the reference's own annotation | **unmeasurable at `3+0.03`** — 10 forfeits per 3,000 games is worth ~1 Elo, so noise equals signal |
+
+**What is NOT parked and must not be lost:** `LmrMinReducedDepth` (built,
+default-off, now 4.5.2), the reduction-contract audit inherited from 4.5.4 and
+4.8.1 (now 4.5.1), history semantics (now 4.7), and the entire HCE track, which
+gains scope rather than losing it.
+
+### Old-to-new item map
+
+| old | new | note |
+|---|---|---|
+| 4.5 Cluster A | 4.5, 4.7 | LMR half promoted to its own cluster; histories to 4.7 |
+| 4.6 Cluster B | parked | ~30 Elo residual |
+| 4.6c root-answer cluster | 4.5.3 | root term is a reduction-contract term |
+| 4.7 Cluster C | 4.6 | main selectivity, now measured at 124.6 Elo |
+| 4.8 Cluster D | parked | measured null |
+| 4.8.1 reduction contract | 4.5.1 | promoted; it is the 116 Elo item |
+| 4.9 Cluster E | parked | ~30 Elo residual |
+| 4.9b history semantics | 4.7 | folded into the selectivity inputs |
+| 4.10 integration/second pass | 4.8, 4.9 | SPSA split out and narrowed; integration kept |
+| 4.11 HCE baseline | 4.10 | now also builds the eval ablation instrument |
+| 4.12 evaluator harness | 4.10, 4.11 | decomposition step added ahead of any rework |
+| 4.13–4.16 Clusters F–I | 4.12 | content preserved; order becomes an output of 4.11 |
+| 4.17 HCE convergence | 4.13 | Texel consolidation plus the search-margin audit |
+| 4.18 HCE checkpoint | 4.14 | unchanged in substance |
+| 4.19 transfer/SMP/release | 4.15 | unchanged in substance; NPS promoted to a criterion |
 
 ### Release rule
 
@@ -923,7 +822,7 @@ in native Rust, measure them on Rarog, and reject what does not transfer.
 
 ### Cluster discipline and stop rules
 
-These govern 4.5–4.18 and exist because the closed Phase 4 failed by
+These govern 4.5–4.14 and exist because the closed Phase 4 failed by
 accumulating individually plausible search mechanisms that did not compose.
 
 **The normal strength unit is one dependency-complete, locally fitted
@@ -1234,7 +1133,8 @@ retried.**
   family. Activation instrumentation by queen presence and phase, legal versus
   geometric safe checks, blocked/unblocked/lever-supported storms,
   current-versus-reachable castling shelter, defender overload and pin inputs
-  only where cheap, joint danger-input fits. Closed if 4.16 landed it.
+  only where cheap, joint danger-input fits. Closed if 4.12's king-safety
+  cluster landed it.
 - **9.1 Winnability and material-specific scaling** — replace the sign-only
   initiative term, which can only push a nonzero endgame score away from zero.
   Residual tables by exact material signature first, Syzygy WDL/DTZ as direct

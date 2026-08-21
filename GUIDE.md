@@ -15,15 +15,42 @@ of method, history, phase numbers and internal naming — see PLAN §2
 | Item | Value |
 |---|---|
 | Released baseline | **2.3.2** at `f931722` on `master` |
-| Accepted fingerprint | **6,922,439 nodes / EBF 2.451**; 4.5 candidate 7,436,275 |
+| Accepted fingerprint | **6,977,070 nodes / EBF 2.466** (RAR-S70) |
 | Integration branch | `dev`, reset to `master` and carrying this plan |
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
-| Active experiment | None; 4.7 closed, 4.7c only (RAR-S57/S58, +15.56 ± 10.02) |
-| Current action | Open 4.5 Cluster A against the new accepted head |
-| Evaluation | Frozen through 4.10; structured fits start at 4.11 |
+| Ablation instrument | `hybrid-ablate` (oracle) + `--features ablate` (Rarog); one shared bitmask |
+| Measured deficit | **`G(0)` = 250.77 ± 13.12 Elo** vs the oracle; ~302 once Rarog's 1.80x NPS is netted out |
+| Active experiment | None. RAR-S70 accepted (+2.33 ± 1.85); the four ablation runs are observations, not gates |
+| Current action | **PLAN 4.5 — rework LMR.** 116 Elo measured, largest single item |
+| Evaluation | Frozen through 4.9; the HCE decomposition starts at 4.10 |
 | Reference | Search `5062aee5`; last HCE `9587eeeb`; ideas only |
-| Next releases | Conditional 2.4.0 at 4.19; then NNUE 2.5.0 |
+| Next releases | Conditional 2.4.0 at 4.15; then NNUE 2.5.0 |
 | Work after Phase 4 | PLAN 5.0, the frozen NNUE measurement corpus |
+
+**PLAN's Phase 4 was RENUMBERED on 2026-08-21.** Matched cross-engine ablation
+decomposed the deficit in about four hours and the old cluster order did not
+survive it. **This tracker's own item numbers are unchanged and stay retired**
+— the checklist below is history and is not renumbered. Use it to see what was
+done; use PLAN for what to do next.
+
+The new order, and what each item is worth:
+
+| PLAN item | work | measured target |
+|---|---|---:|
+| 4.5 | LMR rework | **116.0 ± 17.9 Elo** |
+| 4.6 | shallow-depth pruning rework | **124.6 ± 17.7 Elo** |
+| 4.7 | history and ordering, as inputs to 4.5/4.6 | inside the above |
+| 4.8 | ONE seeded selectivity SPSA | refit only |
+| 4.9 | integrate, re-measure `G(0)`, freeze the search head | — |
+| 4.10–4.11 | reciprocal HCE oracle, then decompose the **+328.6 Elo** eval gap | to be measured |
+| 4.12–4.14 | rework the eval families 4.11 ranks; Texel; checkpoint | to be measured |
+| 4.15 | transfer, portability, SMP, release gate | — |
+
+**Parked by measurement, not by judgement:** extensions (11.8 ± 18.8, a 1.2
+sigma null), TT/quiescence, root and clock, and the whole 4.6.x answer-harness
+line. Matched ablation bounds all of them together at ~30 Elo. See PLAN's
+"Parked by measurement" table and `analysis/ablation_results.md`. Any of them
+revives the moment a measurement puts Elo behind it.
 
 **Phase 4 changed scope on 2026-08-12.** The old Phase 4 closed with 2.3.2 and
 a cancelled SPSA; the number is reused for a different programme. The
