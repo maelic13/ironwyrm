@@ -702,3 +702,50 @@ Outcomes, fixed in advance:
 reference carries — countermove-history pruning and the history conjunct on
 parent futility — have Rarog analogues, and 4.5 is what happens when a
 difference is assumed to be a deficit. They are not built until measured.
+
+## 4.6.5 — the selectivity core, rebuilt on the reference's structure
+
+Four structural gaps, assembled as one candidate. Three already existed in
+Rarog but were **switched off**; the fourth did not exist at all.
+
+| piece | what Rarog did | bench 13 alone |
+|---|---|---:|
+| `SelectivityProspectiveDepth` | judged a late move by the node's RAW depth; the reference judges it by the depth it will actually be searched at | x0.866 |
+| `SelectivityCountConsidered` | counted only moves SEARCHED, so a pruned move never advanced the index feeding both the reduction and the LMP threshold | x1.018 |
+| `QuietSeePruneDepth` | had no SEE prune for quiets, and `see_ge` could not evaluate one | x0.970 |
+| `SkipQuietsOnMoveCount` | **absent.** Generated, scored and individually rejected every quiet instead of telling the picker to stop | x1.012 |
+
+**Assembled: 5,602,176 nodes, EBF 2.466 → 2.427, x0.803.**
+
+That EBF movement is the first of the phase. It matters in a way node count
+does not: **growth rate compounds into depth**, and the whole equal-node
+deficit is 4.18 plies. A node count at fixed depth is not Elo — a 7.36% tree
+change once measured −1.49 ± 2.87 — but a lower branching factor is the
+mechanism by which the oracle reaches 28.86 plies where Rarog reaches 24.68.
+
+### Why one sweep rather than four candidates
+
+4.5 spent four runs and ~6,000 games proving that increments to a co-adapted
+local optimum measure zero. Every one of these pieces is worth 1–3% of the tree
+alone, which is invisible at any affordable game count. Together they change the
+branching factor. That is the shape 4.7c had — the only structural change that
+has paid in this phase — and it is the case the cluster rule was written for.
+
+### Registered before the games
+
+Screen first with `G(0)`, baseline **250.77 ± 13.12** on the same binary at
+defaults, still benching 6,977,070.
+
+- **Drop beyond ~30 Elo** → the sweep works; take it to a registered gate.
+- **Flat** → the structure is right and the CONSTANTS are wrong, which is
+  expected: every selectivity constant in Rarog was SPSA-fitted against the raw
+  depth and the starved counter, so all of them now see different inputs.
+  `LmpCountBase` pinned at its lower rail is the clearest case, and it should
+  come OFF that rail once the counter is honest. A flat screen sends this to
+  4.8's seeded SPSA, not to the bin.
+- **Rise** → the tree is now too selective; back off `QuietSeePruneDepth` and
+  the LMR additions first, since those add pruning on top of a structure that
+  already prunes harder at the node level (`rfp_cut` 1.41x, `razor_drop` 1.65x).
+
+⚠ **The constants are the known weak point, not the structure.** Do not read a
+flat screen as "the reference's structure does not transfer".
