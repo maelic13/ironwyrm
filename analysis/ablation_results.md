@@ -346,3 +346,69 @@ defaults, which still benches 6,977,070 so the baseline transfers unchanged.
 `G(128)` is the CONTROL and must not move: with LMR ablated on both sides, none
 of these parameters is reachable, so a change there means the ablation is not
 removing what it claims to.
+
+## 4.5 seeded contract: FLAT, and one term was mis-specified
+
+`G(0)` with all seven seeds: **−246.58 ± 13.13** against the baseline
+**−250.77 ± 13.12**. Gap closed **+4.19 ± 18.56 Elo**, 0.4 sigma. The whole
+95% interval sits below +23, against a 116 Elo target.
+
+**The wire was live.** The manifest records all seven options, fastchess
+rejected none, every parameter was proved to move the tree by direct UCI probe
+before the run, and the combined seeds move bench 12 by 15%. This is a real
+null, not a third dead instrument.
+
+### Why flat is the EXPECTED result here, in hindsight
+
+The four terms do not push the same way, and the combination was dominated by
+the two that ADD reduction — `LmrTtCapture` (bench x0.868) and `LmrStatSwing`
+(x0.812) — while the two reliefs barely moved anything. Net, the candidate is a
+**broad de-selectivity shift in the reducing direction**, and this project has
+now measured that class three times:
+
+- RAR-S54: +4.06 ± 3.71 (a blind uniform 15% shift, against the 2.3.1 head)
+- RAR-S68: **−1.40 ± 6.24** (the directional form, on the current head)
+- here: **+4.19 ± 18.56**
+
+All three are flat within their intervals. A broad shift of Rarog's selectivity
+is worth approximately nothing, and that is now a settled result rather than a
+suspicion.
+
+### `LmrStatSwing` is fed the wrong quantity
+
+Three terms are faithful to the reference's mechanism. This one is not, and the
+error is the INPUT rather than the constant:
+
+- The reference compares a specific composite — main history plus three
+  continuation histories, minus a fixed offset — against **absolute thresholds
+  near zero**, in both directions. It selects a narrow transition: *my move
+  looks acceptable and the move that led here looked bad*, or the reverse.
+- What I built compares Rarog's `quiet_history` **difference** against a
+  symmetric margin. And `quiet_history` is not that composite: it is the full
+  move-ORDERING score — main, pawn, low-ply, continuation, plus the check-class
+  bonuses that `quiet_history_score` itself describes as *enormous*.
+
+So the term fires on a much wider distribution than the mechanism intends, at a
+margin (4,000) chosen for a scale it does not have. That makes it a broad shift
+wearing a transition detector's name, which is exactly the class the three
+results above price at zero.
+
+Rarog's existing continuous term, `r -= quiet_hist * 1024 / lmr_hist_div`, uses
+the same composite — but `lmr_hist_div` was SPSA-fitted **for** that scale. The
+new term was not.
+
+### What this does and does not say about 4.5
+
+It does NOT say the contract is wrong. It says one first guess at a
+six-dimensional point, seeded by analogy, is worth zero — which was registered
+in advance as the "flat" outcome, and is the least surprising of the three.
+
+The combined run cannot say which term carries sign, and that is the next
+measurement: **one `G(0)` per term, ~20 minutes each.** At that price the
+one-at-a-time form is affordable, and it is the only thing that separates "this
+mechanism does not transfer to Rarog" from "this mechanism needs a different
+constant".
+
+`LmrStatSwing` is excluded from that sweep until its input is rebuilt on a
+statScore-shaped composite. Fitting a mis-specified term would only find the
+constant that best hides the misspecification.
