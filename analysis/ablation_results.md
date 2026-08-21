@@ -600,3 +600,75 @@ first thing to check if it pays.
 Registered before the games: `G(0)` at fixed time, baseline **250.77 ± 13.12**.
 This is a structural change to the index feeding both mechanisms; if the
 diagnosis is right it should move tens of Elo, which this instrument can see.
+
+## 4.5 closes: four nulls, and the decomposition was misread
+
+`SelectivityCountConsidered=1`: **−0.56 ± 18.52 Elo**. Flat. Every intervention
+on Rarog's LMR, against the same `G(0)` = 250.77 baseline:
+
+| candidate | gap closed |
+|---|---:|
+| seeded contract, 4 terms + depth floor | +4.19 ± 18.56 |
+| `LmrTtCapture` alone | −2.0 ± 23.7 |
+| `LmrMinReducedDepth` alone | −12.7 ± 26.5 |
+| `SelectivityCountConsidered` | −0.56 ± 18.5 |
+
+### Why: a marginal-value gap is not headroom
+
+The counter finding was real — Rarog's index genuinely is starved relative to
+the reference's, and the LMP rail corroborated it. It was still worth zero, and
+the rank buckets say why. Share of cutoff nodes by where the best move was
+found:
+
+| rank | Rarog | oracle |
+|---|---:|---:|
+| 1 | **89.0%** | 84.2% |
+| 2–3 | 8.1% | 11.9% |
+| 4–7 | 1.8% | 2.7% |
+| 8+ | 1.1% | 1.2% |
+| **non-first** | **11.0%** | **15.8%** |
+
+**Rarog orders better at every bucket**, so it has **30% fewer late moves for a
+reduction to act on**. The oracle's LMR is worth more because the oracle has
+more work for it to do — not because Rarog's is worse.
+
+That reframes `G(0) − G(mask)` for the whole phase. It measures a mechanism's
+**marginal value inside each engine**, and a difference can mean the engine
+*needs it less*, not that it is missing Elo. This document called 116 a "target"
+and built four candidates against it. The instrument was sound; the inference
+from it was not.
+
+**The check that would have prevented all four cost one command**: the rank
+buckets were already in `phase4_differential_v4_depth8.txt` before any of this
+started.
+
+### The residual is 83 Elo, not 30
+
+The mask-160 residual was speed-adjusted with my estimated ~51 Elo. The
+measured value is **104.5**, so at equal nodes:
+
+    G(160) fixed time  = Rarog +21.4
+    minus measured speed 104.5
+    => residual        = 83 Elo BEHIND at equal nodes
+
+and the decomposition closes: **355 total = 272 selectivity + 83 residual.**
+
+That residual is where quiescence and the TT live — Rarog runs **1.60x** the
+oracle's quiescence per node, hits the TT more often and converts less. It was
+parked at "~30 Elo collectively" on the strength of a bad speed conversion, and
+83 Elo is a different proposition.
+
+### Recommendation
+
+**Close 4.5.** Rarog's LMR is contract-equivalent, well ordered, and four
+candidates measured zero. Keep the `ReductionInputs` refactor and the
+default-off switches; claim nothing for them.
+
+**Do not open 4.6 on the strength of its 124.6 either** — that number is the
+same kind of marginal-value difference, and shallow-depth pruning acts on the
+same late-move population Rarog has 30% less of. Measure before building: if
+Rarog's move-count pruning fires on a smaller population for the same reason,
+the 124.6 is not headroom.
+
+**The unexplored 83 Elo is quiescence and the TT**, and it is now the largest
+piece of the search deficit with no measurement against it.
