@@ -1238,6 +1238,8 @@ impl Searcher {
             let mut score;
 
             if searched == 0 {
+                // Step 17, first move: full window at full depth. The PV is
+                // established here and every later move is tested against it.
                 score = -self.negamax_core(
                     board,
                     new_depth,
@@ -1251,75 +1253,61 @@ impl Searcher {
                     poll,
                 );
             } else {
-                // Late evasions are intentionally not reduced. The alternative
-                // increased the deterministic tree by 14.83% and had no owner.
+                // ─────────────────────────────────────────────────────────
+                // Step 16. Reduced depth search.
+                //
+                // Three changes against the node this was copied from.
+                //
+                //  1. CAPTURES are reducible. The reference reduces a capture
+                //     when the quiet stage is already closed, when winning the
+                //     captured piece outright still does not reach alpha, or
+                //     at a cut node. The old node reduced a capture only when
+                //     its SEE was already negative, so every even-looking
+                //     capture was searched at FULL depth no matter how late it
+                //     appeared — and captures are the population that arrives
+                //     first, so "late capture" means "the ordering already
+                //     doubts it".
+                //  2. The reduced search keeps at least one ply. The 4.8.1
+                //     audit found 46.7% of the old node's reductions landing at
+                //     depth 0, answered by quiescence: a prune wearing a
+                //     reduction's name, counted in no pruning family.
+                //  3. The reduced search FEEDS BACK into continuation history.
+                //     A move that was reduced and then beat alpha anyway was
+                //     mis-ordered, and one that was reduced and stayed below it
+                //     was correctly doubted. The old node threw that signal
+                //     away; it is the cheapest ordering evidence in the search,
+                //     because the work has already been done.
+                let captured_value = captured_piece.map_or(0, piece_value);
+                let capture_reducible =
+                    skip_quiets_latched || eval_for_pruning + captured_value <= alpha || cut_node;
+                // The root gets two extra full-depth moves, as the reference
+                // does: the answer is chosen here and a reduced root move can
+                // only displace the incumbent by beating alpha while reduced.
+                let first_reducible = if ply == 0 { 4 } else { 2 };
                 let reducible = !self.ablated(7)
                     && depth >= 3
-                    && move_index >= 2
-                    && (is_quiet || see < 0)
+                    && move_index >= first_reducible
+                    && (is_quiet || capture_reducible)
                     && !mv.is_promo()
                     && !in_check
                     && !checking_move;
+                let mut did_lmr = false;
                 if reducible {
-                    // Accumulate in 1024ths; `>> 10` gives integer ply reduction.
-                    // Defaults for lmr_* params = 1024, reproducing the original ±1 ply
-                    // behavior exactly. SPSA tunes from this baseline.
-                    // `reducible` already guarantees depth >= 3 && searched >= 2, so the
-                    // table lookup is always in the populated region.
-                    // 4.6b: ONE formula, shared with the prospective depth the
-                    // pruning consumers can use. Previously this arithmetic lived
-                    // only here, so LMP/futility/SEE had no way to know how deep
-                    // the move would actually be searched.
                     let mut r = self.lmr_reduction_units(reduction_inputs);
                     debug_assert_eq!(
                         r, r_units_estimate,
-                        "4.6b: LMR and the prospective depth must share one formula"
+                        "4.6.6: Step 13 and Step 16 must read ONE reduction"
                     );
-                    // 8.13: per-thread reduction jitter, the Reckless
-                    // diversification shape. `r` is in 1024ths of a ply, so
-                    // ±64 is ±6% of one ply: enough to send threads down
-                    // different trees, small enough not to distort the mean
-                    // reduction. It composes WITH rotation and pool ordering —
-                    // pool knowledge correlates the threads' root ordering, so
-                    // in-tree decorrelation matters more here than it did
-                    // standalone (jitter-for-rotation alone measured ±0).
-                    // 9.7.5(k): a real per-thread PRNG (see `next_jitter`),
-                    // replacing a node-counter modulo that was both correlated
-                    // with the counter and biased +4.5/1024. Only in a parallel
-                    // search — `shared_state` is None at Threads=1, which is
-                    // what keeps bench identical.
-                    // SMP diversification, unchanged: magnitude 64 reproduces
-                    // the original expression exactly.
-                    //
-                    // 4.10 CANDIDATE — 1T selectivity jitter. Three independent
-                    // results say perturbing this surface beats leaving it
-                    // alone: RAR-S54 (+4.06 ± 3.71 over 14,196 games for a
-                    // blind uniform de-selectivity shift), RAR-S62 (a ProbCut
-                    // desync reading an arbitrary continuation row beat correct
-                    // indexing by ~5 Elo) and RAR-S64 (a stale prior-reduction
-                    // firing on a quasi-random subset beat the correct one by
-                    // ~4.5). Twice a BUG that scattered noise into selectivity
-                    // beat its own correction. The machinery already existed
-                    // and was disabled at 1T only to keep bench deterministic
-                    // for SMP work — the PRNG is re-seeded per search from a
-                    // fixed seed, so 1T stays reproducible.
                     if self.shared_state.is_some() {
                         r += self.next_jitter(64);
                     } else if self.params.lmr_jitter_1t != 0 {
                         r += self.next_jitter(self.params.lmr_jitter_1t);
                     }
-                    // 10.2.5 candidate: strong late moves may escape the old
-                    // mandatory one-ply reduction. A zero reduction is a normal
-                    // full-depth PVS search and must not trigger a redundant
-                    // verification search at the same depth.
-                    let reduction = lmr_reduction(r, new_depth, self.params.lmr_min_reduced_depth);
+                    let reduction = lmr_reduction(r, new_depth, 1);
                     #[cfg(feature = "diag")]
                     {
                         if r < 0 {
                             crate::diag_count!(lmr_floor_clamped);
-                        }
-                        if new_depth > 0 && reduction == new_depth {
-                            crate::diag_count!(lmr_qs_clamped);
                         }
                         if ply == 0 {
                             crate::diag_count!(lmr_root_applied);
@@ -1328,23 +1316,18 @@ impl Searcher {
                                 u64::try_from(reduction).unwrap_or(0)
                             );
                         }
-                    }
-                    #[cfg(feature = "diag")]
-                    {
                         diag_move_reduced = reduction > 0;
-                        // 4.2: EXACT, because its denominator `lmr_applied` is
-                        // exact. Sampling only the numerator made the mean
-                        // reduction read 1024x low at the default stride.
                         crate::diag_add!(
                             reduction_depth_sum,
                             u64::try_from(reduction).unwrap_or(0)
                         );
+                        if reduction == 0 {
+                            crate::diag_count!(lmr_zero_reduction);
+                        } else {
+                            crate::diag_count!(lmr_applied);
+                        }
                     }
-                    if reduction == 0 {
-                        crate::diag_count!(lmr_zero_reduction);
-                    } else {
-                        crate::diag_count!(lmr_applied);
-                    }
+                    did_lmr = true;
                     score = -self.negamax_core(
                         board,
                         new_depth - reduction,
@@ -1357,14 +1340,11 @@ impl Searcher {
                         true,
                         poll,
                     );
+                    // Verify at full depth only when the search was actually
+                    // shortened. A zero reduction already WAS the full-depth
+                    // search, and re-running it is pure waste.
                     if reduction > 0 && score > alpha {
                         crate::diag_count!(lmr_research);
-                        // Full-depth verification re-search. (A do-deeper / do-shallower
-                        // LMR re-search adjustment was tried as Phase 2.8 and dropped:
-                        // do_shallower was proven dead, and SPSA-tuned do_deeper failed
-                        // its SPRT gate at st=0.1 — -1.38 Elo for ~4% more nodes
-                        // (bench 5,612,008 vs 5,401,662), a TC-transfer failure like the
-                        // 2.4 LMR tune. See PLAN §5 2.8.)
                         score = -self.negamax_core(
                             board,
                             new_depth,
@@ -1392,7 +1372,26 @@ impl Searcher {
                         poll,
                     );
                 }
-                if score > alpha && score < beta {
+                // Ordering feedback from the reduction, using the score the
+                // move finally returned.
+                if did_lmr && is_quiet {
+                    let feedback = if score > alpha {
+                        self.history_bonus(new_depth)
+                    } else {
+                        -self.history_malus(new_depth)
+                    };
+                    self.update_continuation_histories(
+                        ply,
+                        moving_piece,
+                        mv.to_sq().index(),
+                        feedback,
+                    );
+                }
+                // PV re-search. Guarded on `is_pv` explicitly rather than
+                // relying on a null window making it unreachable, and the root
+                // re-searches even on a fail-high because it must report a
+                // score it can play.
+                if is_pv && score > alpha && (ply == 0 || score < beta) {
                     score = -self.negamax_core(
                         board,
                         new_depth,

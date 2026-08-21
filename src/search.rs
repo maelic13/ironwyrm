@@ -4489,6 +4489,31 @@ impl Searcher {
         }
     }
 
+    /// 4.6.6: apply `bonus` to every continuation slot for `(piece, to)` at
+    /// `ply`, divided by the slot's weight, exactly as a cutoff would.
+    ///
+    /// Split out of `update_cutoff_tables` so the reduced search can feed its
+    /// own outcome back: a move that was reduced and beat alpha anyway was
+    /// mis-ordered, and that is the cheapest ordering evidence available,
+    /// because the work has already been paid for.
+    fn update_continuation_histories(&mut self, ply: usize, piece: Piece, to: usize, bonus: i32) {
+        let piece = piece as usize;
+        for (slot, &(back, divisor)) in CONT_PLY_BACK.iter().enumerate() {
+            if ply < back {
+                continue;
+            }
+            if self.stack[ply - back].mv.is_null() {
+                continue;
+            }
+            let index = self.stack[ply - back].cont_row_base() + piece_to_index(piece, to);
+            update_hist_entry(
+                &mut self.cont_history[slot][index],
+                bonus / divisor,
+                HISTORY_MAX,
+            );
+        }
+    }
+
     fn update_quiet_history(
         &mut self,
         color: Color,
