@@ -26,6 +26,14 @@ resolver = "3"
 # Build: cargo xtask build --arch pext --pgo (+ add --features tune to the xtask or
 # pass CARGO_ENCODED_RUSTFLAGS directly if needed).
 tune = []
+
+# Paired-ablation instrument (analysis/ablation_design.md). Exposes
+# `AblationMask`, one bit per search mechanism, mirroring the bit assignment of
+# the oracle's own AblationMask so the SAME number ablates the SAME mechanism on
+# both engines. Behaviour-changing by design, so it is NOT `diag`: never in a
+# shipped binary, and never in a strength gate except as the arm under test.
+# Production compiles every guard out entirely -- `ablated()` is a const `false`.
+ablate = []
 # Phase 4.1 search diagnostics: exact legacy events plus deterministic sampled
 # interaction traces, dumped as `info string diag ...` at search end.
 # Diagnostic-only — never in a shipped or SPRT binary. The feature may observe

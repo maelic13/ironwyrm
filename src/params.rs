@@ -639,6 +639,11 @@ search_params! {
     /// stand-pat. The reference guarantees the reduced search is at least one
     /// ply. 1 reproduces that contract.
     lmr_min_reduced_depth = 0, "LmrMinReducedDepth", 0..=2;
+    /// Paired-ablation mask. Bit per mechanism, matching the oracle's:
+    /// 0 razoring, 1 futility-child, 2 nullmove, 3 probcut, 4 iir,
+    /// 5 shallow-pruning, 6 extensions, 7 lmr. 0 = shipped behaviour.
+    /// Only consulted when built with `--features ablate`.
+    ablation_mask = 0, "AblationMask", 0..=255;
     lmr_root_relief = 1536, "LmrRootRelief", 0..=2048;
     probcut_see_gap_scale = 100, "ProbCutSeeGapScale", 0..=100;
     /// Base cap on captures searched at one ProbCut node, before the cut-node

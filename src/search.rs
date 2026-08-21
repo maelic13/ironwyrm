@@ -2286,7 +2286,8 @@ impl Searcher {
             crate::diag_count!(contradict_iir_suppressed);
         }
         // IIR: reduce depth when we lack a good TT entry to guide move ordering
-        if excluded.is_null()
+        if !self.ablated(4)
+            && excluded.is_null()
             && depth >= 4
             && (tt_move.is_null() || (!is_pv && ev.too_shallow_to_order(depth)))
         {
@@ -2476,11 +2477,16 @@ impl Searcher {
                     }
                 }
             }
-            if rfp_tt_pv_ok && depth <= 8 && eval_for_pruning - futility_margin >= beta {
+            if !self.ablated(1)
+                && rfp_tt_pv_ok
+                && depth <= 8
+                && eval_for_pruning - futility_margin >= beta
+            {
                 crate::diag_count!(rfp_cut);
                 return eval_for_pruning;
             }
-            if razor_tt_pv_ok
+            if !self.ablated(0)
+                && razor_tt_pv_ok
                 && depth <= 3
                 && eval_for_pruning + self.params.razoring_coeff * depth < alpha
             {
@@ -2494,7 +2500,8 @@ impl Searcher {
             } else {
                 eval_for_pruning
             };
-            if allow_null
+            if !self.ablated(2)
+                && allow_null
                 && nmp_tt_pv_ok
                 // 4.4a: with the switch on, a null-verification subtree may not
                 // null-prune anywhere inside itself, not merely at its root.
@@ -2632,7 +2639,7 @@ impl Searcher {
                 }
             }
 
-            if probcut_tt_pv_ok && depth >= 4 {
+            if !self.ablated(3) && probcut_tt_pv_ok && depth >= 4 {
                 // Per NODE entering the block, before capture generation, so
                 // nodes with no eligible capture are counted here too. This
                 // carried the `probcut_attempt` name until 4.7c prep, and was
@@ -3004,18 +3011,18 @@ impl Searcher {
                     let prune_margin = (self.params.lmp_base
                         + self.params.lmp_not_improving * not_improving_i)
                         * sel_depth;
-                    let prune_candidate = (sel_depth <= 3
-                        && eval_for_pruning + prune_margin <= alpha)
-                        || (sel_depth <= 8
-                            && searched
-                                > late_move_prune_count(
-                                    sel_depth,
-                                    improving,
-                                    self.params.lmp_count_base,
-                                ))
-                        || (sel_depth <= 4 && quiet_hist < -10_000)
-                        || (sel_depth <= 7
-                            && quiet_hist < -(self.params.quiet_hist_prune_coeff * sel_depth));
+                    let prune_candidate = !self.ablated(5)
+                        && ((sel_depth <= 3 && eval_for_pruning + prune_margin <= alpha)
+                            || (sel_depth <= 8
+                                && searched
+                                    > late_move_prune_count(
+                                        sel_depth,
+                                        improving,
+                                        self.params.lmp_count_base,
+                                    ))
+                            || (sel_depth <= 4 && quiet_hist < -10_000)
+                            || (sel_depth <= 7
+                                && quiet_hist < -(self.params.quiet_hist_prune_coeff * sel_depth)));
                     if prune_candidate
                         && !move_gives_check(board, &mut node_ci, mv, &mut gives_check)
                     {
@@ -3062,7 +3069,7 @@ impl Searcher {
             let child_is_pv = is_pv && searched == 0;
             let mut extension = 0;
             let singular_move_candidate =
-                ply > 0 && mv == tt_move && excluded.is_null() && depth >= 4;
+                !self.ablated(6) && ply > 0 && mv == tt_move && excluded.is_null() && depth >= 4;
             #[cfg(feature = "diag")]
             if singular_move_candidate
                 && ev.speculative_singular_seed_blocked(depth, self.params.singular_tt_depth_margin)
@@ -3199,7 +3206,8 @@ impl Searcher {
             } else {
                 // Late evasions are intentionally not reduced. The alternative
                 // increased the deterministic tree by 14.83% and had no owner.
-                let reducible = depth >= 3
+                let reducible = !self.ablated(7)
+                    && depth >= 3
                     && searched >= 2
                     && (is_quiet || see < 0)
                     && !mv.is_promo()
@@ -4777,6 +4785,21 @@ impl Searcher {
         };
         self.continuation_index(ply, distance)
             .map_or(0, |index| i32::from(table[index]))
+    }
+
+    /// True when mechanism `bit` is ablated. Const `false` without the
+    /// feature, so every guard below folds away in a shipped build.
+    #[cfg(feature = "ablate")]
+    #[inline]
+    fn ablated(&self, bit: u32) -> bool {
+        (self.params.ablation_mask >> bit) & 1 == 1
+    }
+
+    #[cfg(not(feature = "ablate"))]
+    #[inline]
+    #[expect(clippy::unused_self, reason = "mirrors the ablate-feature signature")]
+    fn ablated(&self, _bit: u32) -> bool {
+        false
     }
 
     fn check_stop<P: FnMut() -> SearchEvent + ?Sized>(&mut self, poll: &mut P) -> bool {
