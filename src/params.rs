@@ -639,7 +639,7 @@ search_params! {
     /// stand-pat. The reference guarantees the reduced search is at least one
     /// ply. 1 reproduces that contract.
     lmr_min_reduced_depth = 0, "LmrMinReducedDepth", 0..=2;
-    lmr_root_relief = 0, "LmrRootRelief", 0..=2048;
+    lmr_root_relief = 1536, "LmrRootRelief", 0..=2048;
     probcut_see_gap_scale = 100, "ProbCutSeeGapScale", 0..=100;
     /// Base cap on captures searched at one ProbCut node, before the cut-node
     /// bonus. Replaces a flat 8 that had no stated derivation.
