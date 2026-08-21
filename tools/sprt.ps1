@@ -426,6 +426,20 @@ Write-Host ""
 # so ONE binary can be A/B-tested on a knob without a rebuild. Empty by
 # default, so the emitted fastchess command is byte-identical to before -
 # no null-pair re-calibration is required for the default path.
+# Each element may itself be a comma-separated list. `pwsh -File script.ps1`
+# passes every argument as a LITERAL STRING, so PowerShell array syntax
+# (-OptionsA a=1,b=2) does not survive that invocation form: the whole list
+# arrives as one element and fastchess is handed `option.a=1,b=2` as a single
+# option name. Splitting here makes both forms work -- native array elements
+# and a single quoted list -- instead of silently measuring defaults.
+$splitOpts = {
+    param($items)
+    @($items | ForEach-Object { $_ -split ',' } |
+        ForEach-Object { $_.Trim().Trim('"') } |
+        Where-Object { $_ })
+}
+$OptionsA = & $splitOpts $OptionsA
+$OptionsB = & $splitOpts $OptionsB
 $optArgsA = @($OptionsA | ForEach-Object { "option.$_" })
 $optArgsB = @($OptionsB | ForEach-Object { "option.$_" })
 
