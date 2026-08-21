@@ -298,3 +298,51 @@ against a 188 Elo effect and irrelevant there. But razoring and IID are
 annotated at ~1 Elo each, so forfeit noise EXCEEDS the signal for the small
 mechanisms at this time control. Those need fixed nodes or a longer TC, and
 should not be run at `3+0.03` as-is.
+
+## 4.5 progress: the seeded LMR contract, registered before its run
+
+Seeds derived from **Rarog's own scale**, not the reference's constants — its
+existing LMR adjustments sit at 656–887 (`LmrTtPvAdj` 887, `LmrCutNode` 780,
+`LmrShallowTt` 656), and `LmrHistDiv` 8395 means ~8,400 history units is worth
+one ply, with 4,000 already used in-code as the "good history" threshold.
+
+| parameter | seed | where the number comes from |
+|---|---:|---|
+| `LmrTtCapture` | 780 | same order as `LmrCutNode`; both add reduction |
+| `LmrSingularRelief` | 780 | same order, opposite sign |
+| `LmrParentMoveCountRelief` | 780 | same order |
+| `LmrParentMoveCountMin` | 12 | ⚠ **judgement, the weakest of the five.** Rarog's first-move cutoff rate is 87.65%, so a parent still searching at move 12 is genuinely late — but this is not derived from a measurement and is the first thing 4.8 should fit |
+| `LmrStatSwing` | 780 | same order |
+| `LmrStatSwingMargin` | 4000 | the "good history" threshold already in `search.rs` |
+| `LmrMinReducedDepth` | 1 | the 4.8.1 audit: 46.7% of reductions were landing in quiescence |
+
+Bench 12 sanity, baseline 5,073,397 / EBF 2.585 — magnitudes are in range and
+nothing is pathological:
+
+| arm | nodes | EBF | ratio |
+|---|---:|---:|---:|
+| `LmrTtCapture` | 4,405,131 | 2.555 | 0.868 |
+| `LmrSingularRelief` | 4,918,372 | 2.584 | 0.969 |
+| `LmrParentMoveCount` | 4,813,291 | 2.572 | 0.949 |
+| `LmrStatSwing` | 4,120,931 | 2.546 | 0.812 |
+| `LmrMinReducedDepth` | 4,310,483 | 2.558 | 0.850 |
+| **all together** | **4,332,680** | **2.555** | **0.854** |
+
+⚠ **This is a sanity check, not a fit.** Node count is not Elo — a measured
++7.36% tree change was once worth −1.49 ± 2.87 Elo in this project. The
+numbers say only that the seeds are the right order of magnitude.
+
+**The measurement that decides it is `G(0)`**, and it is registered here before
+the games. Baseline **250.77 ± 13.12**, measured with this same binary at
+defaults, which still benches 6,977,070 so the baseline transfers unchanged.
+
+- `G(0)` **drops** → the contract is capturing part of the 116 Elo, and by how
+  much is read directly off the drop.
+- `G(0)` **flat** → the mechanisms are present but the seeds are wrong, and
+  4.8 has a surface worth fitting.
+- `G(0)` **rises** → the contract is worse than what it replaced, and the
+  cluster is reverted rather than tuned.
+
+`G(128)` is the CONTROL and must not move: with LMR ablated on both sides, none
+of these parameters is reachable, so a change there means the ablation is not
+removing what it claims to.
