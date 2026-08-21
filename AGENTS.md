@@ -165,6 +165,16 @@ did what its name suggests.**
 - **GUIDE carries STATUS, not just a list.** Its Phase-4 checkboxes are how
   the maintainer sees what is done. Tick one only when the step is finished
   AND verified, in the commit that finishes it — never in advance.
+- **Tick the PARENT when its last sub-step is ticked.** A step whose sub-steps
+  are all done is done; leaving it open makes finished work look outstanding.
+- **Sub-items indent by 4 spaces, never 6.** Under a `- ` parent the content
+  column is 2, so 6 spaces is the indented-code threshold and the sub-list
+  silently renders as a code block. Both rules are checked mechanically —
+  run it rather than reading the file:
+
+  ```bash
+  python tools/diag/check_guide.py
+  ```
 - **Keep GUIDE short.** If a change to GUIDE runs past a few lines, it belongs
   somewhere else: what a step INVOLVES goes in `PLAN.md`; a completed step's
   record goes in `TRACKER.md`; a repeatable procedure goes in `PROCESS.md`;

@@ -39,14 +39,14 @@ file and `PLAN.md` in the same commit.
 **Search track — selectivity holds 240 of the 250.8 Elo**
 
 - [ ] **4.5 LMR rework — target 116.0 ± 17.9 Elo** ← CURRENT
-      - [ ] 4.5.1 replace the reduction contract (twelve loose args; could not see the root)
-      - [x] 4.5.2 `LmrMinReducedDepth` built, default-off — 46.7% of reductions land in qsearch
-      - [x] 4.5.3 root term measured and accepted — RAR-S70, +2.33 ± 1.85; **refit needed once 4.5.1 lands**
-      - [ ] 4.5.4 re-measure `G(128)` as the progress meter
+    - [ ] 4.5.1 replace the reduction contract (twelve loose args; could not see the root)
+    - [x] 4.5.2 `LmrMinReducedDepth` built, default-off — 46.7% of reductions land in qsearch
+    - [x] 4.5.3 root term measured and accepted — RAR-S70, +2.33 ± 1.85; **refit needed once 4.5.1 lands**
+    - [ ] 4.5.4 re-measure `G(128)` as the progress meter
 - [ ] **4.6 Shallow-depth pruning rework — target 124.6 ± 17.7 Elo**
-      - [ ] 4.6.1 move-count, history, parent futility, the two SEE prunes, as one contract
-      - [ ] 4.6.2 settle `SelectivityProspectiveDepth` here
-      - [ ] 4.6.3 make `prune_shadow_*` track the live block, or delete it
+    - [ ] 4.6.1 move-count, history, parent futility, the two SEE prunes, as one contract
+    - [ ] 4.6.2 settle `SelectivityProspectiveDepth` here
+    - [ ] 4.6.3 make `prune_shadow_*` track the live block, or delete it
 - [ ] **4.7** History and ordering, as inputs to 4.5/4.6
 - [ ] **4.8** ONE seeded selectivity SPSA, after the contracts land
 - [ ] **4.9** Integrate, re-measure `G(0)`, freeze the search head
