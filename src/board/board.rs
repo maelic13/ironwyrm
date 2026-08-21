@@ -1323,7 +1323,28 @@ FEN: {}",
 
     #[inline(always)]
     pub fn see_ge(&self, mv: Move, threshold: i32) -> bool {
-        if !mv.is_capture() {
+        self.see_ge_impl(mv, threshold, false)
+    }
+
+    /// As [`Board::see_ge`], but a QUIET move is put through the full exchange
+    /// instead of being answered with its immediate gain.
+    ///
+    /// `see_ge` short-circuits every non-capture to `gain >= threshold`, and
+    /// `gain` is 0 for a plain quiet move — so against any negative threshold
+    /// it is trivially true and the caller learns nothing. That makes it
+    /// impossible to ask the one question a quiet SEE prune exists to ask:
+    /// does this move hang the piece it just moved? The reference's SEE
+    /// answers it, and prices the pruning it enables at ~20 Elo.
+    ///
+    /// The exchange body needs no special case: `captured_piece` is `None` for
+    /// a quiet move, so the immediate balance starts at 0, which is exactly
+    /// right — nothing was won, and the moved piece is now the thing at risk.
+    pub fn see_ge_quiet_aware(&self, mv: Move, threshold: i32) -> bool {
+        self.see_ge_impl(mv, threshold, true)
+    }
+
+    fn see_ge_impl(&self, mv: Move, threshold: i32, evaluate_quiet: bool) -> bool {
+        if !mv.is_capture() && !(evaluate_quiet && !mv.is_promo()) {
             let gain = if mv.is_promo() {
                 piece_value(mv.promo_piece()) - piece_value(Piece::Pawn)
             } else {

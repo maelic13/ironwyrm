@@ -3178,6 +3178,23 @@ impl Searcher {
                         crate::diag_count!(quiet_futility_prune);
                         continue;
                     }
+                    // 4.6.4: a quiet move that hangs material. Rarog's only
+                    // SEE prune is in the capture branch, so this population
+                    // was never pruned for losing material. Gated OFF by a
+                    // zero depth limit, which is why the accepted fingerprint
+                    // survives.
+                    if self.params.quiet_see_prune_depth != 0
+                        && sel_depth <= self.params.quiet_see_prune_depth
+                        && !board.see_ge_quiet_aware(
+                            mv,
+                            (-self.params.quiet_see_prune_coeff * sel_depth * sel_depth)
+                                .max(-self.params.see_pruning_max),
+                        )
+                        && !move_gives_check(board, &mut node_ci, mv, &mut gives_check)
+                    {
+                        crate::diag_count!(quiet_see_prune);
+                        continue;
+                    }
                 } else if is_capture && see < 0 {
                     let cap_hist = captured_piece.map_or(0, |cap| {
                         self.cap_history[moving_piece as usize][mv.to_sq().index()][cap as usize]

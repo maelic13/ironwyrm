@@ -190,7 +190,25 @@ search_params! {
     /// [search.rs:1195]
     see_pruning_coeff = 66, "SeePruningCoeff", 20..=200;  // was 83 → 51 → 66
     /// SEE bad-capture threshold maximum magnitude (floor of `-(coeff * depth)`). [search.rs:1195]
-    see_pruning_max = 955, "SeePruningMax", 200..=1600;  // was 804 → 869 → 955
+    see_pruning_max = 955, "SeePruningMax", 200..=1600;
+
+    /// 4.6.4 QUIET SEE PRUNING. `depth` 0 = OFF = accepted behaviour.
+    ///
+    /// Rarog's only SEE prune lives in the CAPTURE branch, behind `see < 0`.
+    /// Its quiet branch has move-count and futility pruning and nothing else,
+    /// so a quiet move that simply hangs material is never pruned for that
+    /// reason. The reference prunes exactly that case, and annotates it at
+    /// ~20 Elo. This is the one gap in Step 13 that the counters could not
+    /// explain as a population effect: `see_prune` runs at 0.20x the oracle's
+    /// per-node rate, five times down, against a 30% shrinkage in the late-move
+    /// population.
+    ///
+    /// Threshold is quadratic in the prospective depth, as the reference's is:
+    /// `-coeff * d * d`, floored by `see_pruning_max`. `coeff` is seeded from
+    /// Rarog's own capture-side `see_pruning_coeff` (66), not from the
+    /// reference's constants.
+    quiet_see_prune_depth = 0, "QuietSeePruneDepth", 0..=12;
+    quiet_see_prune_coeff = 25, "QuietSeePruneCoeff", 1..=200;  // was 804 → 869 → 955
 
     // ── Qsearch SEE thresholds (Phase 7.2 SEE bundle) ────────────────────────
     // Exposed so the `config_see` SPSA can re-tune SEE's consumers alongside

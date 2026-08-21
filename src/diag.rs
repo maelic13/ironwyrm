@@ -65,6 +65,9 @@ pub mod counters {
         lmp_nodes,
         quiet_futility_prune,
         see_prune,
+        // 4.6.4: quiet moves pruned for hanging material. Rarog had no
+        // such population before; the capture-side `see_prune` is separate.
+        quiet_see_prune,
         // LMR reduction and its verification re-search.
         lmr_applied,
         // 10.2.5 — late moves whose confidence estimate removes the old
