@@ -233,6 +233,58 @@ concentrated in selectivity, so the sweep that is justified is a selectivity
 rework — not a whole-search rewrite, and not the mechanism-at-a-time
 transplants that went 0 for 5.
 
+## RESULT, mask 160: the deficit IS selectivity, and nothing else is
+
+`G(160) = **+21.39 ± 12.16 in Rarog's favour**`. Score 53.08% -- the
+best-centred, most reliable run of the whole series.
+
+**LMR and shallow-depth pruning together explain 272.2 ± 17.9 Elo**, against a
+measured deficit of 250.8. That is 109% of it.
+
+**They are near-additive, not a double count.** Sum of the parts 240.6 ± 25.2,
+joint 272.2 ± 17.9, interaction **+31.6 ± 30.9** -- 2 sigma, mildly synergistic.
+Two separate failures, not one seen twice. That was the question mask 160 was
+registered to answer and it answered it cleanly.
+
+## The speed confound, and what it does and does not touch
+
+Rarog runs **2.95 Mnps against the oracle's 1.64 -- 1.80x faster**, because the
+oracle calls Rarog's HCE across an FFI boundary on every evaluation. At the
+usual ~60 Elo per doubling that is roughly **51 Elo of pure speed** handed to
+Rarog in every one of these matches.
+
+**It does not touch the headline.** The offset is present in `G(0)` and `G(160)`
+alike, so it cancels in the difference. The 272.2 stands.
+
+**It reverses one tempting reading.** "Rarog's non-selectivity search beats
+Stockfish's by 21 Elo" is false. Net out the speed and it is roughly **30 Elo
+BEHIND**. Better than expected, still behind.
+
+**And it makes the real deficit larger.** At equal speed the gap is nearer
+**~302 Elo**, of which selectivity explains 272 and everything else ~30. Those
+numbers close, which is a coherence check the raw figures do not provide.
+
+⚠ The 60-Elo-per-doubling conversion is a rule of thumb, not a measurement on
+this hardware, and 1.8x is far outside the range where the project's own
+"~2 Elo per 1% NPS" figure is valid (that would give 160 Elo and is plainly an
+extrapolation failure). Treat ~51 as an estimate with real uncertainty; the
+sign and rough magnitude are what matter here.
+
+## What this settles
+
+1. **The entire build programme is a selectivity rework.** LMR and shallow-depth
+   pruning, both of them, separately.
+2. **Nothing else is worth touching for strength.** Move ordering, TT,
+   quiescence, extensions, null move, futility, aspiration and time management
+   are collectively ~30 Elo, and that bucket is measured, not assumed.
+3. **The remaining registered runs are cancelled.** Futility-child (mask 2) and
+   nullmove (mask 4) were ON during the mask-160 run, so they sit inside that
+   ~30 Elo bucket and cannot individually be large. Two runs saved, and the
+   reason is a measurement rather than a guess.
+4. **Extensions were retired for 20 minutes**, and the whole 4.6 answer-led
+   programme -- which spent this phase on quiescence, TT bound composition and
+   opponent-worsening -- was aimed at that ~30 Elo bucket the entire time.
+
 ## Bit-assignment asymmetry to remember
 
 Bit 6 is not symmetric. On the oracle it removes singular AND check extensions;
