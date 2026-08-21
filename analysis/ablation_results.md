@@ -703,7 +703,16 @@ reference carries — countermove-history pruning and the history conjunct on
 parent futility — have Rarog analogues, and 4.5 is what happens when a
 difference is assumed to be a deficit. They are not built until measured.
 
-## 4.6.5 — the selectivity core, rebuilt on the reference's structure
+## 4.6.5 — four targeted selectivity changes (NOT a reimplementation)
+
+⚠ **Correction, same day.** This section was first written as "the selectivity
+core, rebuilt" and the candidate was called V2. That was inflation and it is
+withdrawn. The commit changed **53 lines**; the whole day changed 454 lines in
+`src/`; Rarog's search is **8,026 lines**. One of the four pieces
+(`SelectivityProspectiveDepth`) was pre-existing code switched from 0 to 1 —
+no new lines at all. Genuinely new search logic today is roughly 220 lines,
+under 3% of the search. Whatever this candidate turns out to be worth, it is
+four targeted changes, not a rewrite.
 
 Four structural gaps, assembled as one candidate. Three already existed in
 Rarog but were **switched off**; the fourth did not exist at all.
