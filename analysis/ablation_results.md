@@ -55,6 +55,54 @@ these mechanisms silently assumes: if effects were additive, the two family
 deltas would sum to the delta of removing all eight. The gap between them is
 the interaction, measured rather than assumed.
 
+## The selectivity family (mask 163) — SATURATED, and it decides nothing
+
+| | delta | score | games |
+|---|---:|---:|---:|
+| oracle | −534.80 ± 27.11 | 4.40% | 2,000 |
+| Rarog | −430.27 ± 22.37 | 7.75% | 2,000 |
+
+Gap 104.5 ± 35.1. **This number should not be used.** Both ablated arms are
+being crushed, and in that tail the Elo scale amplifies: 30.8 Elo per score
+point at 6%, against 6.9 near parity, a **4.4x** amplification. The reported
+104.5 Elo is a **3.35 percentage-point** score difference between two engines
+that have both collapsed. It measures how a no-pruning engine dies, not what
+the mechanism is worth.
+
+That was a design error in this document's previous section: removing four
+mechanisms at once does not produce a weaker engine, it produces a broken one.
+Ablation deltas are only readable while the ablated arm stays inside a
+measurable band, roughly 20–80%.
+
+## The design that replaces it: cross-engine at MATCHED ablation
+
+Stop comparing each engine to itself. Play **Rarog against the oracle** with
+the SAME mask on both sides, and watch how the gap between them moves.
+
+    G(mask) = Elo(oracle at mask) − Elo(Rarog at mask)
+
+`G(0)` is the deficit itself. If a mechanism explains part of it, removing that
+mechanism from BOTH engines shrinks the gap by the amount the oracle's version
+was outperforming Rarog's.
+
+This fixes both defects of the self-play form at once. There is no self-play
+inflation, because every number is one head-to-head Elo on a single scale. And
+there is no saturation, because both sides are equally crippled and the score
+stays near where it already was instead of collapsing to 4%.
+
+**It also makes the LMR result falsifiable.** The self-play deltas say the
+oracle's LMR outperforms Rarog's by 125 Elo. If that is real and the two
+self-play scales are comparable, then removing LMR from both should shrink the
+gap by ~125:
+
+    G(0)   ≈ 180   (to be measured on the current head; the ~196 figure
+                    predates 4.7c's +15.56 and RAR-S70's +2.33)
+    G(128) ≈ 55    PREDICTED, if LMR explains the 125
+
+If `G(128)` comes back near `G(0)`, the 125 Elo was an artifact of comparing two
+self-play scales and there is no LMR headroom. If it comes back near 55, the
+localisation holds and it is measured on one scale with no saturation.
+
 ## Bit-assignment asymmetry to remember
 
 Bit 6 is not symmetric. On the oracle it removes singular AND check extensions;
