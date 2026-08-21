@@ -810,6 +810,25 @@ impl MovePicker {
         }
     }
 
+    /// Abandon the remaining quiet moves.
+    ///
+    /// 4.6.5: the reference feeds its move-count-pruning flag back INTO the
+    /// picker, so once the flag is set it stops emitting quiets altogether.
+    /// Rarog had no such path: it generated every quiet, scored it, and then
+    /// rejected them one at a time in the move loop. Skipping from
+    /// `GenerateQuiets` also avoids generating and scoring them at all, which
+    /// is where most of the saving is.
+    ///
+    /// Safe from either stage: `BadCaptures` is next in declaration order, and
+    /// the bad-capture partition is independent of the quiet buffer.
+    fn skip_quiets(&mut self) {
+        if let Self::Staged { stage, .. } = self
+            && matches!(*stage, Stage::GenerateQuiets | Stage::Quiets)
+        {
+            *stage = Stage::BadCaptures;
+        }
+    }
+
     /// Yield the next move, advancing through `Stage` in declaration order.
     ///
     /// Every stage is a `loop`+`match` step rather than a fallthrough chain, so
@@ -2948,6 +2967,8 @@ impl Searcher {
         // the node's later moves, which is safe because the TT move is searched
         // first, so the flag is settled before any move LMR can apply to.
         let mut tt_move_singular = false;
+        // 4.6.5: latch so `skip_quiets_nodes` counts NODES, not calls.
+        let mut skip_quiets_latched = false;
         // 4.7b: latch so `lmp_nodes` counts NODES, not moves -- the oracle can
         // only observe the per-node event, so that is the comparable unit.
         #[cfg(feature = "diag")]
@@ -3140,15 +3161,29 @@ impl Searcher {
                     let prune_margin = (self.params.lmp_base
                         + self.params.lmp_not_improving * not_improving_i)
                         * sel_depth;
+                    // 4.6.5: the move-count component ALONE, so it can be fed
+                    // back to the picker the way the reference feeds its
+                    // `moveCountPruning` flag into `next_move`.
+                    let move_count_pruning = sel_depth <= 8
+                        && move_index
+                            > late_move_prune_count(
+                                sel_depth,
+                                improving,
+                                self.params.lmp_count_base,
+                            );
+                    if move_count_pruning
+                        && self.params.skip_quiets_on_move_count != 0
+                        && !self.ablated(5)
+                    {
+                        if !skip_quiets_latched {
+                            skip_quiets_latched = true;
+                            crate::diag_count!(skip_quiets_nodes);
+                        }
+                        move_picker.skip_quiets();
+                    }
                     let prune_candidate = !self.ablated(5)
                         && ((sel_depth <= 3 && eval_for_pruning + prune_margin <= alpha)
-                            || (sel_depth <= 8
-                                && move_index
-                                    > late_move_prune_count(
-                                        sel_depth,
-                                        improving,
-                                        self.params.lmp_count_base,
-                                    ))
+                            || move_count_pruning
                             || (sel_depth <= 4 && quiet_hist < -10_000)
                             || (sel_depth <= 7
                                 && quiet_hist < -(self.params.quiet_hist_prune_coeff * sel_depth)));

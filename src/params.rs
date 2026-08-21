@@ -208,7 +208,15 @@ search_params! {
     /// Rarog's own capture-side `see_pruning_coeff` (66), not from the
     /// reference's constants.
     quiet_see_prune_depth = 0, "QuietSeePruneDepth", 0..=12;
-    quiet_see_prune_coeff = 25, "QuietSeePruneCoeff", 1..=200;  // was 804 → 869 → 955
+    quiet_see_prune_coeff = 25, "QuietSeePruneCoeff", 1..=200;
+
+    /// 4.6.5 SKIP QUIETS once move-count pruning fires. 0 = off = accepted.
+    ///
+    /// The reference sets a `moveCountPruning` flag and passes it to the move
+    /// picker, which then stops emitting quiets entirely. Rarog generated,
+    /// scored and individually rejected every remaining quiet instead — the
+    /// same decision, paid for once per move rather than once per node.
+    skip_quiets_on_move_count = 0, "SkipQuietsOnMoveCount", 0..=1;  // was 804 → 869 → 955
 
     // ── Qsearch SEE thresholds (Phase 7.2 SEE bundle) ────────────────────────
     // Exposed so the `config_see` SPSA can re-tune SEE's consumers alongside

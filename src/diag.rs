@@ -68,6 +68,8 @@ pub mod counters {
         // 4.6.4: quiet moves pruned for hanging material. Rarog had no
         // such population before; the capture-side `see_prune` is separate.
         quiet_see_prune,
+        // 4.6.5: nodes where the picker was told to stop emitting quiets.
+        skip_quiets_nodes,
         // LMR reduction and its verification re-search.
         lmr_applied,
         // 10.2.5 — late moves whose confidence estimate removes the old
