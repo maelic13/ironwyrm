@@ -216,7 +216,12 @@ search_params! {
     /// picker, which then stops emitting quiets entirely. Rarog generated,
     /// scored and individually rejected every remaining quiet instead — the
     /// same decision, paid for once per move rather than once per node.
-    skip_quiets_on_move_count = 0, "SkipQuietsOnMoveCount", 0..=1;  // was 804 → 869 → 955
+    skip_quiets_on_move_count = 0, "SkipQuietsOnMoveCount", 0..=1;
+
+    /// 4.6.6 SEARCH CORE. 0 = the accepted node, 1 = the rebuilt one in
+    /// `search/core.rs`. One branch at `negamax`'s entry, so every recursive
+    /// call inside the rebuilt node stays inside it.
+    search_core = 0, "SearchCore", 0..=1;  // was 804 → 869 → 955
 
     // ── Qsearch SEE thresholds (Phase 7.2 SEE bundle) ────────────────────────
     // Exposed so the `config_see` SPSA can re-tune SEE's consumers alongside

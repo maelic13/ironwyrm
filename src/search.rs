@@ -1,5 +1,7 @@
 // `clippy::too_many_arguments` is accepted crate-wide for search kernels —
 // see the rationale in Cargo.toml's [lints.clippy] section.
+mod core;
+
 use std::sync::{Arc, atomic::Ordering, mpsc};
 use std::time::Instant;
 
@@ -2187,6 +2189,13 @@ impl Searcher {
         cut_node: bool,
         poll: &mut P,
     ) -> i32 {
+        // 4.6.6: one branch, at the only entry point, so every recursive
+        // call inside the rebuilt node stays inside it.
+        if self.params.search_core != 0 {
+            return self.negamax_core(
+                board, depth, alpha, beta, ply, is_pv, allow_null, excluded, cut_node, poll,
+            );
+        }
         if self.check_stop(poll) {
             return 0;
         }
