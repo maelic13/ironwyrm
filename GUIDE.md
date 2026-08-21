@@ -39,7 +39,7 @@ file and `PLAN.md` in the same commit.
 **Search track — selectivity holds 240 of the 250.8 Elo**
 
 - [ ] **4.5 LMR rework — target 116.0 ± 17.9 Elo** ← CURRENT
-    - [ ] 4.5.1 replace the reduction contract (twelve loose args; could not see the root)
+    - [x] 4.5.1 reduction is a contract (`ReductionInputs`) + 4 missing terms, all default-off
     - [x] 4.5.2 `LmrMinReducedDepth` built, default-off — 46.7% of reductions land in qsearch
     - [x] 4.5.3 root term measured and accepted — RAR-S70, +2.33 ± 1.85; **refit needed once 4.5.1 lands**
     - [ ] 4.5.4 re-measure `G(128)` as the progress meter

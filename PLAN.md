@@ -638,10 +638,15 @@ Named now so every step has a concrete surface:
   PLAN rule 4 and RAR-S13 both apply: RAR-S13 ran an LMR-family SPSA before the
   architecture was settled and lost **7.78 ± 8.00**, because the tuner found a
   sibling-local optimum that beat its own siblings and then lost to the head.
-    - **Seed from the reference, not from Rarog's current values.** The
-      constants are readable in `hybrid/stockfish/src/search.cpp`, they are the
-      values that produced the measured 188 and 200 Elo, and starting there
-      turns SPSA into a local refit rather than a search.
+    - **Seed from Rarog's own measurements, NOT from the reference's
+      constants.** An earlier draft of this line said to read the constants out
+      of `search.cpp`. That was wrong twice over: the independence boundary in
+      `PROCESS.md` forbids tuned constants and margins from crossing, and the
+      reference's thresholds are expressed in ITS history units, which are not
+      Rarog's — so they would not transfer even if copying them were allowed.
+      What crosses is the MECHANISM. Seed each 4.5.1 term from a zero-game
+      sweep of its own parameter on the bench and the suite, and let SPSA
+      refine from there.
     - **One run, one coordinate set: the selectivity surface only.** No HCE
       coordinates, no undirected full-surface tune, and no second run "to be
       sure".
