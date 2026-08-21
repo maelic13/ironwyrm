@@ -645,6 +645,22 @@ search_params! {
     /// Only consulted when built with `--features ablate`.
     ablation_mask = 0, "AblationMask", 0..=255;
     lmr_root_relief = 1536, "LmrRootRelief", 0..=2048;
+    /// 4.5.5 MOVE-INDEX SEMANTICS. 0 = accepted behaviour, 1 = count every
+    /// move CONSIDERED.
+    ///
+    /// Rarog increments `searched` at the END of the move loop, after the LMP,
+    /// quiet-futility and SEE `continue`s, so a pruned move never advances it.
+    /// The reference increments before its Step 13 pruning, so its count
+    /// includes every legal move it looked at. Both then feed the SAME
+    /// log(depth)*log(count) reduction — whose two engines' constants agree to
+    /// within 2% — and the SAME move-count pruning threshold.
+    ///
+    /// So Rarog applies the identical formula to a systematically smaller
+    /// argument, and its move-count pruning is self-limiting: pruning a move
+    /// withholds the increment that would trigger more pruning. `LmpCountBase`
+    /// sitting pinned at its lower rail is what that looks like from the
+    /// tuner's side.
+    selectivity_count_considered = 0, "SelectivityCountConsidered", 0..=1;
     /// 4.5.1 reduction-contract additions, in 1024ths of a ply. All 0 =
     /// accepted behaviour; the accepted fingerprint holds until they are
     /// fitted. The MECHANISMS come from the reference, the constants do not:

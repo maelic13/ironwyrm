@@ -2926,6 +2926,10 @@ impl Searcher {
         let mut best_move = Move::NULL;
         let mut best_score = -INF_SCORE;
         let mut searched = 0usize;
+        // 4.5.5: every move the loop LOOKED at, pruned or not. `searched`
+        // counts only those actually searched and keeps that meaning, because
+        // the PVS first-move logic and the mate/stalemate test depend on it.
+        let mut considered = 0usize;
         #[cfg(feature = "diag")]
         let diag_order_sample = diag_sample && excluded.is_null();
         #[cfg(feature = "diag")]
@@ -2962,6 +2966,16 @@ impl Searcher {
                 continue;
             }
             legal_move_seen = true;
+            // 4.5.5: incremented HERE, where the reference increments, so a
+            // move pruned below still advances the index.
+            considered += 1;
+            // The index the selectivity mechanisms use. Behind a switch, so
+            // the accepted fingerprint holds while it is 0.
+            let move_index = if self.params.selectivity_count_considered != 0 {
+                considered - 1
+            } else {
+                searched
+            };
             let is_capture = mv.is_capture();
             let is_quiet = board.is_quiet_move(mv);
             let mut see = if is_capture { picked.see as i32 } else { 0 };
@@ -3017,7 +3031,7 @@ impl Searcher {
             // parent, and 0 is the inert value for both parent inputs.
             let reduction_inputs = ReductionInputs {
                 depth,
-                searched,
+                searched: move_index,
                 is_quiet,
                 see,
                 tt_pv,
@@ -3045,7 +3059,7 @@ impl Searcher {
             // `depth - 1` is the child's nominal depth; subtract the estimated
             // reduction and floor at 1 so a consumer never reads a depth that
             // would make its own `depth <= N` guards nonsensical.
-            let prospective_depth = if depth >= 3 && searched >= 2 {
+            let prospective_depth = if depth >= 3 && move_index >= 2 {
                 (depth
                     - 1
                     - lmr_reduction(
@@ -3077,7 +3091,7 @@ impl Searcher {
                             * depth;
                         let lmp = (depth <= 3 && eval_for_pruning + lmp_margin <= alpha)
                             || (depth <= 8
-                                && searched
+                                && move_index
                                     > late_move_prune_count(
                                         depth,
                                         improving,
@@ -3129,7 +3143,7 @@ impl Searcher {
                     let prune_candidate = !self.ablated(5)
                         && ((sel_depth <= 3 && eval_for_pruning + prune_margin <= alpha)
                             || (sel_depth <= 8
-                                && searched
+                                && move_index
                                     > late_move_prune_count(
                                         sel_depth,
                                         improving,
@@ -3282,7 +3296,7 @@ impl Searcher {
             }
 
             let checking_move =
-                if depth >= 3 && searched >= 2 && (is_quiet || see < 0) && !mv.is_promo() {
+                if depth >= 3 && move_index >= 2 && (is_quiet || see < 0) && !mv.is_promo() {
                     move_gives_check(board, &mut node_ci, mv, &mut gives_check)
                 } else {
                     gives_check.unwrap_or(false)
@@ -3334,7 +3348,7 @@ impl Searcher {
                 // increased the deterministic tree by 14.83% and had no owner.
                 let reducible = !self.ablated(7)
                     && depth >= 3
-                    && searched >= 2
+                    && move_index >= 2
                     && (is_quiet || see < 0)
                     && !mv.is_promo()
                     && !in_check

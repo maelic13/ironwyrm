@@ -550,3 +550,53 @@ speed confound removed, selectivity remains the answer and the question becomes
 what INPUTS make the same formula worth three times more elsewhere. If their
 share collapses, the mass is somewhere the fixed-time measurement hid — with
 quiescence, at 1.60x the oracle's per node, the first candidate.
+
+## THE MISSED THING: Rarog's selectivity is indexed by a different counter
+
+Rarog's LMR formula matches the reference to within 2%, and adding its missing
+adjustments measured zero. That left one way for an identical formula to be
+worth a third as much: **it is not given the same argument.**
+
+| | increments the move counter | |
+|---|---|---|
+| reference `search.cpp` | line **1000**, `ss->moveCount = ++moveCount` | before Step 13 pruning (1017) and Step 16 LMR (1171) |
+| Rarog `search.rs` | line **3501**, `searched += 1` | AFTER the LMP, quiet-futility and SEE `continue`s |
+
+So a pruned move never advances Rarog's counter. Both engines then feed that
+counter into the same two places:
+
+- the reduction, `base + ln(depth)·ln(count)/div` — agreeing to 2% on constants
+- the move-count pruning threshold, `count > late_move_prune_count(...)`
+
+Rarog therefore applies the identical formula to a **systematically smaller
+argument**, and its move-count pruning is **self-limiting**: pruning a move
+withholds the very increment that would trigger more pruning. The mechanism
+suppresses its own trigger.
+
+**The tuner already told us.** `LmpCountBase` sits pinned at **1**, its lower
+rail, marked "10.4.6 lower rail; active" — SPSA pushed the move-count threshold
+as low as the range allows and could still not get enough pruning. That is what
+a starved counter looks like from the optimizer's side.
+
+**One root cause under BOTH mechanisms holding 77% of the deficit.** LMR is
+indexed by it and move-count pruning is thresholded on it. That fits the
+evidence better than anything else this phase has produced: it explains why the
+formulas match yet the value does not, why the missing adjustments changed
+nothing, and why the LMP rail is pinned.
+
+`SelectivityCountConsidered` (default 0) switches the index to every move
+considered. Proved live before use — one position at depth 11: 97,267 → 74,602
+nodes, **x0.767**. Bench 13 moves the other way, 6,977,070 → 7,103,495 with EBF
+2.466 → 2.463, so this is a redistribution of the tree rather than a uniform
+shift, which is what a changed INDEX should do and a scalar should not.
+
+⚠ **Every selectivity constant is now mis-fitted for the new semantics.** They
+were SPSA'd against the starved counter, so with the switch on the same
+constants see a larger index and prune and reduce harder than they were tuned
+to. A null here would be ambiguous between "the semantics do not matter" and
+"the constants need refitting" — and `LmpCountBase` coming off its rail is the
+first thing to check if it pays.
+
+Registered before the games: `G(0)` at fixed time, baseline **250.77 ± 13.12**.
+This is a structural change to the index feeding both mechanisms; if the
+diagnosis is right it should move tens of Elo, which this instrument can see.
