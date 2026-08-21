@@ -185,6 +185,54 @@ annotated at ~1 Elo, and the oracle run showed 10 time forfeits in 3,000 games
 these two are unmeasurable and would only produce a number that looks like
 data.
 
+## The map so far — the deficit is CONCENTRATED
+
+All matched cross-engine against `G(0) = 250.77 ± 13.12`.
+
+| mechanism | mask | G(mask) | deficit explained | |
+|---|---:|---:|---:|---|
+| shallow pruning | 32 | −126.18 ± 11.82 | **124.6 ± 17.7** | 13.8σ |
+| LMR | 128 | −134.75 ± 12.13 | **116.0 ± 17.9** | 12.7σ |
+| extensions | 64 | −238.93 ± 13.40 | 11.8 ± 18.8 | 1.2σ — **zero** |
+
+**Extensions are not a lead, and that is a clean null.** Rarog's score barely
+moved, 19.10% at `G(0)` against 20.18% here. It holds despite the asymmetric
+bit favouring a positive reading — the oracle also loses its check extension
+there, and Rarog has none — and it is consistent with Rarog having gained
++30.75 Elo by deleting its own check extension. A candidate retired for 20
+minutes.
+
+**The two selectivity mechanisms sum to 96% of the whole deficit.** That is
+either the answer or a double count, and the two readings are very different
+things:
+
+- **Additive** — they are separate failures, together explaining essentially
+  all of it, and `G(32|128)` would come back near zero.
+- **Overlapping** — they are one selectivity failure measured twice, each
+  ablation shifting the same work onto the other, and `G(32|128)` would come
+  back near 120.
+
+## Registered before its games: mask 160
+
+One matched cross-engine run at `AblationMask=160` (bits 5 and 7 together)
+separates them.
+
+- `G(160) ≈ 0–30` → **LMR and shallow pruning explain the entire deficit.**
+  Move ordering, TT, qsearch, extensions and time management would then be
+  collectively worth almost nothing, and the whole build programme is one
+  selectivity rework.
+- `G(160) ≈ 120` → they overlap heavily. There is ~120 Elo of shared
+  selectivity value and only one thing to fix, not two.
+
+Either answer is decisive and neither is expensive. Saturation is not a risk
+here: both engines lose the same mechanisms, so the score stays in the band
+rather than collapsing the way the mask-163 SELF-PLAY runs did.
+
+This also settles the "one sweep" question with evidence. The deficit is
+concentrated in selectivity, so the sweep that is justified is a selectivity
+rework — not a whole-search rewrite, and not the mechanism-at-a-time
+transplants that went 0 for 5.
+
 ## Bit-assignment asymmetry to remember
 
 Bit 6 is not symmetric. On the oracle it removes singular AND check extensions;
