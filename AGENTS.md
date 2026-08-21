@@ -156,6 +156,23 @@ did what its name suggests.**
   zero-game sweep over the suite or bench; a flat or monotone surface is
   evidence *against* spending it.
 
+## Documents
+
+- **`GUIDE.md` and `PLAN.md` are updated in the SAME commit.** GUIDE is the
+  overview of PLAN — current state and the ordered steps, nothing else. A
+  GUIDE that disagrees with PLAN is worse than no GUIDE, because it is the
+  file that says what to do next and it will be believed.
+- **Keep GUIDE short.** If a change to GUIDE runs past a few lines, it belongs
+  somewhere else: what a step INVOLVES goes in `PLAN.md`; a completed step's
+  record goes in `TRACKER.md`; a repeatable procedure goes in `PROCESS.md`;
+  durable evidence goes in `EXPERIMENTS.md`; a measurement's derivation goes in
+  `analysis/`. GUIDE grew to 898 lines by absorbing all five and stopped being
+  readable as an overview.
+- `TRACKER.md` is HISTORY. Its numbering is retired and does not correspond to
+  PLAN's. Never take a next step from it.
+- When two documents disagree, source, defaults and reproducible artifacts
+  outrank prose. Fix the prose in the same change.
+
 ## Handing work back
 
 - Give runnable commands, in their own fenced block, and restate them rather
