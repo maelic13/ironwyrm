@@ -485,3 +485,68 @@ question, never a gate.
 
 One 20-minute run separates the two, and it is the difference between spending
 the phase on quiescence and spending it on decision quality.
+
+## Fixed nodes: the deficit is 355, not 251 — and my discriminator was backwards
+
+| condition | `G(0)` |
+|---|---:|
+| fixed TIME, `3+0.03` | −250.77 ± 13.12 |
+| fixed NODES, 300k | **−355.26 ± 27.03** |
+
+**The framing I registered was wrong.** I wrote that a gap collapsing at equal
+nodes would mean tree efficiency, and a gap staying near 250 would mean worse
+decisions. That is backwards: if Rarog converts nodes to depth less
+efficiently, taking away its speed makes it WORSE at equal nodes, so the gap
+must grow. Both of my named outcomes were compatible with one hypothesis and
+the test could not discriminate. It still produced the two most useful numbers
+of the day.
+
+### Rarog's speed is worth 104.5 ± 30.0 Elo, measured
+
+The difference between the two conditions is the whole value of Rarog's 1.80x
+NPS advantage at this time control. My earlier rule-of-thumb conversion — ~60
+Elo per doubling, giving ~51 — was **low by a factor of two**. Every
+speed-adjusted figure in this document that used ~51 should read ~105.
+
+This is a real asset and it is already banked. It is also the reason the
+fixed-time deficit looked smaller than it is.
+
+### The true equal-budget search deficit is ~355 Elo
+
+Everything this phase has quoted — including PLAN's headline — is the
+fixed-TIME number, which flatters Rarog by ~105 Elo of speed. Against 355 the
+decomposition re-bases:
+
+| mechanism | Elo | share of 251 | share of **355** |
+|---|---:|---:|---:|
+| shallow-depth pruning | 124.6 | 50% | **35%** |
+| LMR | 116.0 | 46% | **33%** |
+| both together | 272.2 | 109% | **77%** |
+
+⚠ Those ablation numbers were themselves measured at fixed TIME, so they carry
+the same confound. Re-measuring the two big ones at fixed nodes is the way to
+get a decomposition free of it.
+
+### Depth alone does not explain it
+
+At 300k nodes Rarog reaches 24.68 plies and the oracle 28.86 — 4.18 plies. For
+depth to account for 355 Elo it would have to be worth 85 Elo per ply, which is
+far above any plausible figure at this depth. **So the oracle is better than
+"Rarog plus four plies."** Its advantage is not only that it searches deeper on
+the same nodes; the tree it builds is better at every depth.
+
+That is a harder problem than tree efficiency, and it is the honest reading.
+
+### What it means for 4.5, and what it does not
+
+It does not revive 4.5. Rarog's LMR is still contract-equivalent to the
+reference's, and the small terms still measure zero. What changed is the size
+of the prize and where it is likely to sit: not in the reduction formula, and
+not merely in reaching the same depth.
+
+Next measurement, and it is cheap: **re-run the two large ablations at fixed
+nodes.** If LMR and shallow pruning still explain ~77% of the deficit with the
+speed confound removed, selectivity remains the answer and the question becomes
+what INPUTS make the same formula worth three times more elsewhere. If their
+share collapses, the mass is somewhere the fixed-time measurement hid — with
+quiescence, at 1.60x the oracle's per node, the first candidate.
