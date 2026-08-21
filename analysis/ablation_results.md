@@ -103,6 +103,55 @@ If `G(128)` comes back near `G(0)`, the 125 Elo was an artifact of comparing two
 self-play scales and there is no LMR headroom. If it comes back near 55, the
 localisation holds and it is measured on one scale with no saturation.
 
+## RESULT: matched cross-engine, and the prediction held
+
+| run | Elo | Rarog's score | games |
+|---|---:|---:|---:|
+| `G(0)` Rarog vs oracle, both full | **−250.77 ± 13.12** | 19.10% | 2,000 |
+| `G(128)` both without LMR | **−134.75 ± 12.13** | 31.52% | 2,000 |
+
+**Removing LMR from both engines closes 116.0 ± 17.9 Elo of the gap.**
+
+The prediction registered before these games was 125.5 ± 15.3, derived from the
+self-play pair. Measured 116.0 ± 17.9 — **0.8 sigma apart.** Two methods that
+share no games and have different failure modes agree, so:
+
+- **LMR accounts for ~46% of the deficit**, and it is now measured on a single
+  head-to-head scale with no self-play inflation.
+- **The self-play paired ablation is validated as an instrument.** Its scales
+  WERE comparable across the two engines, which was the open question. It can
+  be used for the remaining mechanisms at a quarter of the cost.
+
+Neither run is saturated: 11.2 and 8.0 Elo per score point against 6.9 at
+parity, so 1.6x and 1.2x amplification. Both sit inside the readable band that
+the mask-163 run left.
+
+## The deficit is 250.8, not 196
+
+`G(0)` is a direct, adjudicated, 2,000-game measurement of the thing this whole
+phase is chasing, and it comes out at **250.77 ± 13.12** on the current head.
+
+PLAN quotes ~196 from RAR-O02. That row records ~205 games per pair with all
+adjudication OFF, so its interval is on the order of ±40 and the two are not
+strictly in conflict — but the new number is better powered by an order of
+magnitude and should be the one quoted. It is also the more conservative
+reading, because the current head has gained ~18 Elo since RAR-O02 (4.7c +15.56
+and RAR-S70 +2.33), so the deficit should have SHRUNK.
+
+## Where that leaves the work
+
+One mechanism, LMR, is 46% of the deficit, measured twice. That is the first
+time this project has had a build target with a number on it.
+
+The remaining ~135 Elo is spread across the rest, and the cheap way to map it
+is now the self-play form, since this run validated it: one 2,000-game pair per
+mechanism at ~20 minutes each. Stockfish's own annotations give the order to
+try — shallow pruning ~200, extensions ~75, futility-child ~50, nullmove ~40.
+
+**This does not license a whole-search rewrite.** It licenses reworking ONE
+mechanism against a measured 116 Elo target, which is the scoped version of the
+"one sweep" hypothesis rather than the whole-engine version.
+
 ## Bit-assignment asymmetry to remember
 
 Bit 6 is not symmetric. On the oracle it removes singular AND check extensions;

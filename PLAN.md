@@ -647,6 +647,9 @@ Named now so every step has a concrete surface:
   ⚠ **Agreement with the oracle is a PROXY, not the objective.** The objective
   is playing strength, and a different move is not automatically a worse one.
   The proxy is justified only because RAR-O02 measured that search as ~196 Elo
+  (SUPERSEDED: a direct 2,000-game adjudicated match on the current head
+  measures the deficit at **250.77 +/- 13.12**; RAR-O02 had ~205 games per
+  pair with adjudication off. See `analysis/ablation_results.md`.)
   stronger *with this same evaluation*, so where it disagrees it is usually
   right. Every candidate below still owes a registered strength gate; raising
   agreement is evidence for a candidate, never acceptance of one.
