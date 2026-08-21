@@ -645,6 +645,24 @@ search_params! {
     /// Only consulted when built with `--features ablate`.
     ablation_mask = 0, "AblationMask", 0..=255;
     lmr_root_relief = 1536, "LmrRootRelief", 0..=2048;
+    /// 4.5.1 reduction-contract additions, in 1024ths of a ply. All 0 =
+    /// accepted behaviour; the accepted fingerprint holds until they are
+    /// fitted. The MECHANISMS come from the reference, the constants do not:
+    /// its thresholds are in its own history units, and the independence
+    /// boundary forbids importing them regardless.
+    ///
+    /// Extra reduction for a quiet move when the TT move is a capture.
+    lmr_tt_capture = 0, "LmrTtCapture", 0..=2048;
+    /// Relief when the TT move was proved singular at this node.
+    lmr_singular_relief = 0, "LmrSingularRelief", 0..=2048;
+    /// Relief when the parent was still searching late; `min` is the move
+    /// count at which it applies and is inert while the relief is 0.
+    lmr_parent_movecount_relief = 0, "LmrParentMoveCountRelief", 0..=2048;
+    lmr_parent_movecount_min = 0, "LmrParentMoveCountMin", 0..=64;
+    /// Swing from comparing this move's history with the parent move's.
+    /// `margin` is the dead zone in history units.
+    lmr_stat_swing = 0, "LmrStatSwing", 0..=2048;
+    lmr_stat_swing_margin = 0, "LmrStatSwingMargin", 0..=32768;
     probcut_see_gap_scale = 100, "ProbCutSeeGapScale", 0..=100;
     /// Base cap on captures searched at one ProbCut node, before the cut-node
     /// bonus. Replaces a flat 8 that had no stated derivation.

@@ -538,6 +538,42 @@ enum MovePicker {
 /// previous-PV following and continuation keys — none are added here, because
 /// nothing consumes them yet and rule 2 forbids landing speculative state.
 /// They arrive with 4.5.2–4.5.4, which is where their consumers are.
+/// 4.5.1 THE REDUCTION CONTRACT'S INPUTS.
+///
+/// `lmr_reduction_units` took thirteen positional arguments and PLAN 4.5.1
+/// named that as the defect: it was a pile of parameters rather than a
+/// contract over the per-ply context, and adding an input meant editing three
+/// signatures and hoping the two call sites stayed in step. They must, because
+/// one computes the PROSPECTIVE depth the pruning consumers read and the other
+/// computes the reduction actually applied; a `debug_assert_eq!` between them
+/// is what keeps 4.6b's "ONE formula" rule honest.
+///
+/// Naming the inputs also removes the whole class of bug where two `bool`s or
+/// two `i32`s are passed in the wrong order and still compile.
+#[derive(Copy, Clone)]
+struct ReductionInputs {
+    depth: i32,
+    searched: usize,
+    is_quiet: bool,
+    see: i32,
+    tt_pv: bool,
+    cut_node: bool,
+    quiet_hist: i32,
+    corr_abs: i32,
+    ev_is_exact: bool,
+    tt_move_is_null: bool,
+    improving: bool,
+    is_root: bool,
+    /// Move count at the PARENT when it played into this node.
+    parent_move_count: i32,
+    /// Quiet history of the move that led to this node.
+    parent_stat_score: i32,
+    /// The node's TT move is a capture.
+    tt_move_is_capture: bool,
+    /// The node's TT move was proved singular by the extension search.
+    tt_move_singular: bool,
+}
+
 #[derive(Copy, Clone)]
 struct NodeContext {
     /// The move made AT this ply. `Move::NULL` when the ply holds no move.
@@ -546,6 +582,17 @@ struct NodeContext {
     piece: Piece,
     /// Static eval of the position at this ply, or `VALUE_NONE` in check.
     static_eval: i32,
+    /// 4.5.1 MOVE COUNT at this ply when `mv` was made, i.e. how many moves
+    /// this node had already searched. Read by the CHILD, which reduces less
+    /// when its parent had to look at many moves before this one — a node
+    /// whose parent was still searching late is less likely to be a clean cut.
+    move_count: i32,
+    /// 4.5.1 STAT SCORE of `mv`: the quiet history the reduction saw when this
+    /// move was chosen. Read by the CHILD, which compares its own move's
+    /// history against it. An absolute history says how good a move looks; the
+    /// comparison says whether the position is getting better or worse for the
+    /// side to move, which is what the reduction wants to know.
+    stat_score: i32,
     /// 4.5.3 CONTINUATION KEY: `piece_to_index(piece, mv.to)`, derived once
     /// when the move is pushed. Meaningless when `mv` is null; every consumer
     /// checks that first.
@@ -578,6 +625,8 @@ impl Default for NodeContext {
             piece: Piece::Pawn,
             static_eval: VALUE_NONE,
             cont_key: 0,
+            move_count: 0,
+            stat_score: 0,
         }
     }
 }
@@ -2003,25 +2052,35 @@ impl Searcher {
     ///   extension is known (pruning at the top of the move loop, extension
     ///   after it), so a shared pre-move depth cannot include it.
     ///
-    /// A `debug_assert` at the LMR site checks that both callers agree, so the
-    /// two cannot drift apart the way this arithmetic already did once.
-    #[expect(clippy::too_many_arguments)] // documented policy: search kernels
+    /// Both callers pass the SAME `ReductionInputs` value, built once per move,
+    /// so the prospective depth and the applied reduction cannot drift apart
+    /// the way this arithmetic already did once. The `debug_assert` at the LMR
+    /// site is kept as a cheap restatement of that, not as the guarantee.
+    ///
+    /// 4.5.1 removed this function's `#[expect(clippy::too_many_arguments)]`:
+    /// the thirteen positional arguments are now one named struct, and the
+    /// expectation went unfulfilled the moment they did. That is the
+    /// self-cleaning property `#[expect]` is used for.
     #[inline(always)]
-    fn lmr_reduction_units(
-        &self,
-        depth: i32,
-        searched: usize,
-        is_quiet: bool,
-        see: i32,
-        tt_pv: bool,
-        cut_node: bool,
-        quiet_hist: i32,
-        corr_abs: i32,
-        ev_is_exact: bool,
-        tt_move_is_null: bool,
-        improving: bool,
-        is_root: bool,
-    ) -> i32 {
+    fn lmr_reduction_units(&self, i: ReductionInputs) -> i32 {
+        let ReductionInputs {
+            depth,
+            searched,
+            is_quiet,
+            see,
+            tt_pv,
+            cut_node,
+            quiet_hist,
+            corr_abs,
+            ev_is_exact,
+            tt_move_is_null,
+            improving,
+            is_root,
+            parent_move_count,
+            parent_stat_score,
+            tt_move_is_capture,
+            tt_move_singular,
+        } = i;
         let mut r = self.lmr_table[infra::to_usize(depth.min(63))][searched.min(63)];
         if tt_pv {
             r -= self.params.lmr_tt_pv_adj;
@@ -2051,6 +2110,38 @@ impl Searcher {
         r -= quiet_hist * 1024 / self.params.lmr_hist_div;
         // 8.5(b): reduce less when the static eval is heavily corrected.
         r -= corr_abs * self.params.corr_lmr_scale / 128;
+        // ─── 4.5.1 contract additions. All default to 0, so the accepted
+        // fingerprint is preserved until they are fitted. Each is a MECHANISM
+        // taken from the reference; none of its constants are, both because
+        // the independence boundary forbids it and because its thresholds are
+        // in its own history units, which are not Rarog's.
+        //
+        // (a) The TT move is a capture, so a quiet sibling is a worse bet.
+        if is_quiet && tt_move_is_capture {
+            r += self.params.lmr_tt_capture;
+        }
+        // (b) The TT move proved singular here, so this node's value rests on
+        // one move and its siblings deserve a fairer look.
+        if tt_move_singular {
+            r -= self.params.lmr_singular_relief;
+        }
+        // (c) The parent was still searching late when it played into this
+        // node, so this node is less likely to be a clean cut.
+        if parent_move_count >= self.params.lmr_parent_movecount_min {
+            r -= self.params.lmr_parent_movecount_relief;
+        }
+        // (d) Compare this move's history with the move that led here. The
+        // absolute history already has a term above; this asks whether the
+        // position is IMPROVING for the side to move, which the absolute
+        // value cannot say.
+        if is_quiet {
+            let swing = quiet_hist - parent_stat_score;
+            if swing > self.params.lmr_stat_swing_margin {
+                r -= self.params.lmr_stat_swing;
+            } else if swing < -self.params.lmr_stat_swing_margin {
+                r += self.params.lmr_stat_swing;
+            }
+        }
         // 4.6.7: the root is where the answer is chosen, and it was the
         // one node type the reduction could not see.
         if is_root {
@@ -2709,7 +2800,10 @@ impl Searcher {
                         crate::diag_count!(probcut_attempt);
                     }
                     let probcut_piece = board.moving_piece(mv);
-                    self.push_move(ply, mv, probcut_piece);
+                    // ProbCut's child is a verification search, not a
+                    // reduced sibling, so it consumes neither selectivity
+                    // input. Written explicitly rather than left stale.
+                    self.push_move(ply, mv, probcut_piece, 0, 0);
                     board.make_move_unchecked(mv);
                     self.tt.prefetch(board.hash);
                     let score =
@@ -2846,6 +2940,10 @@ impl Searcher {
         // and for the `make_move` check hint below. `board` is restored by
         // `unmake_move` each iteration, so these stay valid for the whole loop.
         let mut node_ci: Option<CheckInfo> = None;
+        // 4.5.1: set when the TT move is proved singular at THIS node. Read by
+        // the node's later moves, which is safe because the TT move is searched
+        // first, so the flag is settled before any move LMR can apply to.
+        let mut tt_move_singular = false;
         // 4.7b: latch so `lmp_nodes` counts NODES, not moves -- the oracle can
         // only observe the per-node event, so that is the comparable unit.
         #[cfg(feature = "diag")]
@@ -2913,7 +3011,11 @@ impl Searcher {
             // what remains after it. Both are computed pre-move so the pruning
             // consumers can see them, and the LMR site debug-asserts it derives
             // the same units.
-            let r_units_estimate = self.lmr_reduction_units(
+            // 4.5.1: built ONCE and used at both sites, so the prospective
+            // depth and the applied reduction cannot drift apart by
+            // construction rather than by assertion. At the root there is no
+            // parent, and 0 is the inert value for both parent inputs.
+            let reduction_inputs = ReductionInputs {
                 depth,
                 searched,
                 is_quiet,
@@ -2922,11 +3024,24 @@ impl Searcher {
                 cut_node,
                 quiet_hist,
                 corr_abs,
-                ev.is_exact(),
-                tt_move.is_null(),
+                ev_is_exact: ev.is_exact(),
+                tt_move_is_null: tt_move.is_null(),
                 improving,
-                ply == 0,
-            );
+                is_root: ply == 0,
+                parent_move_count: if ply > 0 {
+                    self.stack[ply - 1].move_count
+                } else {
+                    0
+                },
+                parent_stat_score: if ply > 0 {
+                    self.stack[ply - 1].stat_score
+                } else {
+                    0
+                },
+                tt_move_is_capture: !tt_move.is_null() && tt_move.is_capture(),
+                tt_move_singular,
+            };
+            let r_units_estimate = self.lmr_reduction_units(reduction_inputs);
             // `depth - 1` is the child's nominal depth; subtract the estimated
             // reduction and floor at 1 so a consumer never reads a depth that
             // would make its own `depth <= N` guards nonsensical.
@@ -3117,6 +3232,7 @@ impl Searcher {
                     return 0;
                 }
                 if singular_score < singular_beta {
+                    tt_move_singular = true;
                     extension = if !is_pv
                         && singular_score < singular_beta - self.params.singular_double_margin
                     {
@@ -3172,7 +3288,17 @@ impl Searcher {
                     gives_check.unwrap_or(false)
                 };
 
-            self.push_move(ply, mv, moving_piece);
+            // 4.5.1: the child reduces using its parent's move count and the
+            // history of the move that led there. `searched` is the count
+            // BEFORE this move, so +1 makes it this move's index.
+            let searched_i32 = i32::try_from(searched).unwrap_or(i32::MAX);
+            self.push_move(
+                ply,
+                mv,
+                moving_piece,
+                searched_i32.saturating_add(1),
+                if is_quiet { quiet_hist } else { 0 },
+            );
             let nodes_before_move = if ply == 0 { self.nodes } else { 0 };
             // 10.3: the check predicate is cheap here (node masks + two
             // bitboard tests) and lets `make_move` skip `calculate_checkers`
@@ -3223,20 +3349,7 @@ impl Searcher {
                     // pruning consumers can use. Previously this arithmetic lived
                     // only here, so LMP/futility/SEE had no way to know how deep
                     // the move would actually be searched.
-                    let mut r = self.lmr_reduction_units(
-                        depth,
-                        searched,
-                        is_quiet,
-                        see,
-                        tt_pv,
-                        cut_node,
-                        quiet_hist,
-                        corr_abs,
-                        ev.is_exact(),
-                        tt_move.is_null(),
-                        improving,
-                        ply == 0,
-                    );
+                    let mut r = self.lmr_reduction_units(reduction_inputs);
                     debug_assert_eq!(
                         r, r_units_estimate,
                         "4.6b: LMR and the prospective depth must share one formula"
@@ -3888,7 +4001,9 @@ impl Searcher {
                 }
             }
             let moving_piece = board.moving_piece(mv);
-            self.push_move(ply, mv, moving_piece);
+            // Quiescence does not reduce, so it has no reduction inputs to
+            // hand its children.
+            self.push_move(ply, mv, moving_piece, 0, 0);
             board.make_move_unchecked(mv);
             self.tt.prefetch(board.hash);
             let score = -self.quiescence(board, -beta, -alpha, ply + 1, qply + 1, poll);
@@ -4742,10 +4857,12 @@ impl Searcher {
     /// The ONLY way to put a move on the stack. Writing `mv` and `piece`
     /// separately is what let ProbCut desynchronise them (see `NodeContext`).
     #[inline]
-    fn push_move(&mut self, ply: usize, mv: Move, piece: Piece) {
+    fn push_move(&mut self, ply: usize, mv: Move, piece: Piece, move_count: i32, stat_score: i32) {
         self.stack[ply].mv = mv;
         self.stack[ply].piece = piece;
         self.stack[ply].cont_key = piece_to_index(piece as usize, mv.to_sq().index());
+        self.stack[ply].move_count = move_count;
+        self.stack[ply].stat_score = stat_score;
     }
 
     /// Clear the move at `ply`. The static eval is deliberately preserved: it
@@ -4754,6 +4871,8 @@ impl Searcher {
     fn clear_move(&mut self, ply: usize) {
         self.stack[ply].mv = Move::NULL;
         self.stack[ply].cont_key = 0;
+        self.stack[ply].move_count = 0;
+        self.stack[ply].stat_score = 0;
     }
 
     /// 4.5b: compact `(piece, to)` key for the move `distance` plies back, or
