@@ -71,7 +71,9 @@ did what its name suggests.**
   same check -- a standalone probe confirmed the option worked while the
   instrument reporting on it did not.
 - Before claiming a behavior-neutral change, prove it: `bench 13` must
-  reproduce the accepted fingerprint **6,519,711 / EBF 2.449** exactly.
+  reproduce the accepted fingerprint **6,977,070 / EBF 2.466** exactly
+  (RAR-S70; it was 7,467,143 / EBF 2.477 before that promotion). The ARM64
+  head is a DIFFERENT number and is not this check.
 
 ## Changes
 
