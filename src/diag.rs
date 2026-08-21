@@ -70,6 +70,9 @@ pub mod counters {
         quiet_see_prune,
         // 4.6.5: nodes where the picker was told to stop emitting quiets.
         skip_quiets_nodes,
+        // 4.6.6: capture-side prunes the old node did not have.
+        capture_hist_prune,
+        capture_futility_prune,
         // LMR reduction and its verification re-search.
         lmr_applied,
         // 10.2.5 — late moves whose confidence estimate removes the old

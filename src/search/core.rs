@@ -925,149 +925,128 @@ impl Searcher {
             // `depth - 1` is the child's nominal depth; subtract the estimated
             // reduction and floor at 1 so a consumer never reads a depth that
             // would make its own `depth <= N` guards nonsensical.
-            let prospective_depth = if depth >= 3 && move_index >= 2 {
-                (depth
-                    - 1
-                    - lmr_reduction(
-                        r_units_estimate,
-                        depth - 1,
-                        self.params.lmr_min_reduced_depth,
-                    ))
-                .max(1)
-            } else {
-                depth
-            };
+            // 4.6.6: the prospective depth is computed inside Step 13 now,
+            // as `lmr_depth`, floored at 0 rather than 1 — a move reduced to
+            // nothing should be judged as depth 0, not as depth 1.
             // At the seeded 0 every consumer keeps reading raw `depth`, so this
             // lands inert; 1 switches all four onto the shared depth together,
             // because switching them one at a time would recreate exactly the
             // incoherence 4.6 exists to remove.
-            let sel_depth = if self.params.selectivity_prospective_depth != 0 {
-                prospective_depth
-            } else {
-                depth
-            };
-            if !tt_pv && !in_check && searched > 0 {
-                #[cfg(feature = "diag")]
-                if diag_order_sample {
-                    crate::diag_count!(prune_shadow_moves);
-                    crate::diag_count!(shadow_4_6_prospective_depth);
-                    if is_quiet {
-                        let lmp_margin = (self.params.lmp_base
-                            + self.params.lmp_not_improving * not_improving_i)
-                            * depth;
-                        let lmp = (depth <= 3 && eval_for_pruning + lmp_margin <= alpha)
-                            || (depth <= 8
-                                && move_index
-                                    > late_move_prune_count(
-                                        depth,
-                                        improving,
-                                        self.params.lmp_count_base,
-                                    ))
-                            || (depth <= 4 && quiet_hist < -10_000)
-                            || (depth <= 7
-                                && quiet_hist < -(self.params.quiet_hist_prune_coeff * depth));
-                        let futility = depth <= 8
-                            && eval_for_pruning
-                                + self.params.fp_base
-                                + self.params.fp_coeff * depth
-                                + corr_abs * self.params.corr_fut_scale / 128
-                                <= alpha;
-                        let checking = (lmp || futility)
-                            && move_gives_check(board, &mut node_ci, mv, &mut gives_check);
-                        if lmp {
-                            crate::diag_count!(prune_shadow_lmp);
-                        }
-                        if futility {
-                            crate::diag_count!(prune_shadow_futility);
-                        }
-                        if lmp && futility {
-                            crate::diag_count!(prune_shadow_overlap_two_plus);
-                        }
-                        if checking {
-                            crate::diag_count!(prune_shadow_check_exempt);
-                        }
-                    } else if is_capture && see < 0 {
-                        let cap_hist = captured_piece.map_or(0, |cap| {
-                            self.cap_history[moving_piece as usize][mv.to_sq().index()]
-                                [cap as usize] as i32
-                        });
-                        let threshold = (-self.params.see_pruning_coeff * depth - cap_hist / 8)
-                            .max(-self.params.see_pruning_max);
-                        let see_shadow = depth <= 8 && !board.see_ge(mv, threshold);
-                        if see_shadow {
-                            crate::diag_count!(prune_shadow_see);
-                            if move_gives_check(board, &mut node_ci, mv, &mut gives_check) {
-                                crate::diag_count!(prune_shadow_check_exempt);
-                            }
-                        }
-                    }
-                }
+            // 4.6.6: `sel_depth` and `SelectivityProspectiveDepth` are GONE from
+            // the rebuilt node. The switch existed because the pruning consumers
+            // and the reduction disagreed about which depth a move would be
+            // searched at; Step 13 now keys on `lmr_depth` unconditionally, so
+            // there is no longer a question for a flag to answer.
+            // ─────────────────────────────────────────────────────────────
+            // Step 13. Pruning at shallow depth.
+            //
+            // Rebuilt as one contract. Four things changed against the node
+            // this was copied from, and each was measured or read out of the
+            // differential rather than guessed:
+            //
+            //  1. Every gate is keyed on `lmr_depth`, the depth this move will
+            //     ACTUALLY be searched at, not on the node's raw depth. The old
+            //     node had this available and switched OFF, so a move about to
+            //     be searched three plies shallower was judged as if it were
+            //     not. This is the single largest piece: x0.866 of the tree on
+            //     its own.
+            //  2. `move_index` counts every move CONSIDERED. The old counter
+            //     advanced only for moves actually searched, so pruning a move
+            //     withheld the increment that drives more pruning — a
+            //     mechanism suppressing its own trigger. `LmpCountBase` pinned
+            //     at its lower rail is what that looked like from the tuner.
+            //  3. Once move-count pruning fires the picker is told to stop
+            //     emitting quiets, instead of generating and scoring every one
+            //     of them and rejecting them individually.
+            //  4. The quiet branch gains a SEE prune and the capture branch
+            //     gains history and futility prunes. Rarog had one SEE prune in
+            //     total, in the capture branch, behind `see < 0` — which is why
+            //     `see_prune` ran at 0.20x the reference's per-node rate.
+            //
+            // The gate itself follows the reference: no `!tt_pv` term, because
+            // the reference prunes on PV lines too, and `best_score` above the
+            // mate floor stands in for "at least one move has returned".
+            if !in_check
+                && ply > 0
+                && best_score > -MATE_SCORE + infra::to_i32(MAX_PLY)
+                && board.has_non_pawn_material(board.side_to_move())
+            {
+                let new_depth = depth - 1;
+                let lmr_depth = (new_depth
+                    - lmr_reduction(
+                        r_units_estimate,
+                        new_depth,
+                        self.params.lmr_min_reduced_depth,
+                    ))
+                .max(0);
+
                 if is_quiet {
-                    let prune_margin = (self.params.lmp_base
-                        + self.params.lmp_not_improving * not_improving_i)
-                        * sel_depth;
-                    // 4.6.5: the move-count component ALONE, so it can be fed
-                    // back to the picker the way the reference feeds its
-                    // `moveCountPruning` flag into `next_move`.
-                    let move_count_pruning = sel_depth <= 8
-                        && move_index
-                            > late_move_prune_count(
-                                sel_depth,
-                                improving,
-                                self.params.lmp_count_base,
-                            );
-                    if move_count_pruning
-                        && self.params.skip_quiets_on_move_count != 0
-                        && !self.ablated(5)
-                    {
+                    // Move count. Computed first because it also closes the
+                    // quiet stage of the picker.
+                    let move_count_pruning = move_index
+                        > late_move_prune_count(lmr_depth, improving, self.params.lmp_count_base);
+                    if move_count_pruning && !self.ablated(5) {
                         if !skip_quiets_latched {
                             skip_quiets_latched = true;
                             crate::diag_count!(skip_quiets_nodes);
                         }
                         move_picker.skip_quiets();
                     }
-                    let prune_candidate = !self.ablated(5)
-                        && ((sel_depth <= 3 && eval_for_pruning + prune_margin <= alpha)
-                            || move_count_pruning
-                            || (sel_depth <= 4 && quiet_hist < -10_000)
-                            || (sel_depth <= 7
-                                && quiet_hist < -(self.params.quiet_hist_prune_coeff * sel_depth)));
-                    if prune_candidate
+
+                    // Eval-based move-count prune, kept from the old node: a
+                    // late quiet in a position already far below alpha.
+                    let prune_margin = (self.params.lmp_base
+                        + self.params.lmp_not_improving * not_improving_i)
+                        * lmr_depth;
+                    let lmp = move_count_pruning
+                        || (lmr_depth <= 3 && eval_for_pruning + prune_margin <= alpha);
+
+                    // History. One threshold on Rarog's own composite rather
+                    // than the reference's two continuation slots — the same
+                    // information, expressed in the units this engine already
+                    // tunes.
+                    let history_prune = lmr_depth < self.params.quiet_hist_prune_depth
+                        && quiet_hist < -(self.params.quiet_hist_prune_coeff * (lmr_depth + 1));
+
+                    if (lmp || history_prune)
+                        && !self.ablated(5)
                         && !move_gives_check(board, &mut node_ci, mv, &mut gives_check)
                     {
-                        crate::diag_count!(lmp_prune);
                         #[cfg(feature = "diag")]
                         if !diag_node_lmp_seen {
                             diag_node_lmp_seen = true;
                             crate::diag_count!(lmp_nodes);
                         }
+                        crate::diag_count!(lmp_prune);
                         continue;
                     }
-                    // Per-move quiet futility pruning (Phase 2.7): a quiet move
-                    // whose TT-refined static eval plus a margin can't reach alpha
-                    // is skipped. Plain skip (no fail-soft best_score update), to
-                    // match the existing LMP/SEE prunes in this loop.
-                    if sel_depth <= 8
+
+                    // Futility, with the history conjunct the old node lacked:
+                    // a quiet move that looks hopeless on eval is still worth a
+                    // look when its history is good.
+                    if !self.ablated(5)
+                        && lmr_depth < self.params.fp_depth
                         && eval_for_pruning
                             + self.params.fp_base
-                            + self.params.fp_coeff * sel_depth
-                            + corr_abs * self.params.corr_fut_scale / 128 // 8.5(b)
+                            + self.params.fp_coeff * lmr_depth
+                            + corr_abs * self.params.corr_fut_scale / 128
                             <= alpha
+                        && quiet_hist < self.params.fp_hist_cap
                         && !move_gives_check(board, &mut node_ci, mv, &mut gives_check)
                     {
                         crate::diag_count!(quiet_futility_prune);
                         continue;
                     }
-                    // 4.6.4: a quiet move that hangs material. Rarog's only
-                    // SEE prune is in the capture branch, so this population
-                    // was never pruned for losing material. Gated OFF by a
-                    // zero depth limit, which is why the accepted fingerprint
-                    // survives.
-                    if self.params.quiet_see_prune_depth != 0
-                        && sel_depth <= self.params.quiet_see_prune_depth
+
+                    // A quiet move that hangs material. Requires the
+                    // quiet-aware SEE: the plain one answers every non-capture
+                    // with its immediate gain, which is 0, so it can never
+                    // report that a quiet move loses a piece.
+                    if !self.ablated(5)
+                        && lmr_depth < self.params.quiet_see_prune_depth
                         && !board.see_ge_quiet_aware(
                             mv,
-                            (-self.params.quiet_see_prune_coeff * sel_depth * sel_depth)
+                            (-self.params.quiet_see_prune_coeff * lmr_depth * lmr_depth)
                                 .max(-self.params.see_pruning_max),
                         )
                         && !move_gives_check(board, &mut node_ci, mv, &mut gives_check)
@@ -1075,14 +1054,45 @@ impl Searcher {
                         crate::diag_count!(quiet_see_prune);
                         continue;
                     }
-                } else if is_capture && see < 0 {
+                } else if is_capture {
                     let cap_hist = captured_piece.map_or(0, |cap| {
                         self.cap_history[moving_piece as usize][mv.to_sq().index()][cap as usize]
                             as i32
                     });
-                    let see_threshold = (-self.params.see_pruning_coeff * sel_depth - cap_hist / 8)
+
+                    // Capture history. A capture the history says has never
+                    // worked, at a depth where it will barely be searched.
+                    if !self.ablated(5)
+                        && lmr_depth < 1
+                        && cap_hist < 0
+                        && !move_gives_check(board, &mut node_ci, mv, &mut gives_check)
+                    {
+                        crate::diag_count!(capture_hist_prune);
+                        continue;
+                    }
+
+                    // Futility for captures: even winning the captured piece
+                    // outright does not reach alpha.
+                    let captured_value = captured_piece.map_or(0, piece_value);
+                    if !self.ablated(5)
+                        && lmr_depth < self.params.fp_depth
+                        && eval_for_pruning
+                            + self.params.cap_fp_base
+                            + captured_value
+                            + self.params.fp_coeff * lmr_depth
+                            <= alpha
+                        && !move_gives_check(board, &mut node_ci, mv, &mut gives_check)
+                    {
+                        crate::diag_count!(capture_futility_prune);
+                        continue;
+                    }
+
+                    // SEE. No `see < 0` precondition any more: the threshold
+                    // scales with depth and decides on its own, so a capture
+                    // that merely looks even is still tested.
+                    let see_threshold = (-self.params.see_pruning_coeff * depth - cap_hist / 8)
                         .max(-self.params.see_pruning_max);
-                    if sel_depth <= 8
+                    if !self.ablated(5)
                         && !board.see_ge(mv, see_threshold)
                         && !move_gives_check(board, &mut node_ci, mv, &mut gives_check)
                     {
