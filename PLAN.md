@@ -575,7 +575,15 @@ Named now so every step has a concrete surface:
   dirty-piece delta contract; that stays owned by 5.1, which consumes the same
   per-ply structure. Do not let 4.4 grow into the NNUE runway.
 
-- **4.5 Selectivity rework I — LATE MOVE REDUCTIONS. Target: 116 Elo.**
+- **4.5 Selectivity rework I — LMR. CLOSED 2026-08-21, NO GAIN.** Four
+  candidates measured flat; see `analysis/ablation_results.md`. Rarog's LMR is
+  contract-equivalent to the reference's — the base formulas agree to 2% — and
+  it orders BETTER at every rank bucket, so it has 30% fewer late moves for a
+  reduction to act on. **The 116 was marginal value inside each engine, not
+  headroom**, and that inference was the most expensive error of the phase.
+  Original scope kept below for the record.
+
+- **4.5-ORIGINAL (superseded) — LATE MOVE REDUCTIONS.**
   The largest single measured component of the deficit.
   `analysis/ablation_results.md`: removing LMR from both engines closes
   **116.0 ± 17.9 Elo** of the gap, and Rarog's LMR is worth **33%** of what the
@@ -602,7 +610,12 @@ Named now so every step has a concrete surface:
       readout of how much of the 116 has been captured, at ~20 minutes a
       measurement, and it needs no SPRT to be informative.
 
-- **4.6 Selectivity rework II — SHALLOW-DEPTH PRUNING. Target: 124.6 Elo.**
+- **4.6 Selectivity rework II — SHALLOW-DEPTH PRUNING.** ⚠ **124.6 is marginal
+  value, not a target.** Live item is 4.6.4, the quiet SEE prune — the one
+  Step-13 gap the counters cannot explain as a population effect (`see_prune`
+  0.20x, and `see_ge` short-circuits every non-capture, so it could not
+  evaluate a quiet move at all). Every other gap here is measured BEFORE it is
+  built.
   Marginally the larger of the two, and **separate**: the joint ablation
   measured interaction at only +31.6 ± 30.9, so these are two failures rather
   than one seen twice. Removing it from both engines closes

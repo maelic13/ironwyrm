@@ -13,9 +13,9 @@ it probably belongs in `PLAN.md`, `TRACKER.md` or `PROCESS.md` instead.
 | Integration branch | `dev` |
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
 | Ablation instrument | `hybrid-ablate` (oracle) + `--features ablate` (Rarog); one shared bitmask |
-| Measured deficit | **`G(0)` = 250.77 ± 13.12 Elo** vs the oracle; ~302 once Rarog's 1.80x NPS is netted out |
+| Measured deficit | **355.26 ± 27.03 Elo at equal NODES**; 250.77 ± 13.12 at equal time, the difference being Rarog's speed at a measured **104.5 Elo** |
 | Active experiment | None |
-| Current step | **PLAN 4.5 — rework LMR.** 116 Elo measured, the largest single item |
+| Current step | **PLAN 4.6.4 — quiet SEE prune.** The one Step-13 gap the counters cannot explain as a population effect |
 | Evaluation | Frozen through 4.9; the HCE decomposition starts at 4.10 |
 | Next releases | Conditional 2.4.0 at 4.15; then NNUE 2.5.0 |
 
@@ -38,13 +38,18 @@ file and `PLAN.md` in the same commit.
 
 **Search track — selectivity holds 240 of the 250.8 Elo**
 
-- [ ] **4.5 LMR rework — target 116.0 ± 17.9 Elo** ← CURRENT
-    - [x] 4.5.1 reduction is a contract (`ReductionInputs`) + 4 missing terms, all default-off
-    - [x] 4.5.2 `LmrMinReducedDepth` built, default-off — 46.7% of reductions land in qsearch
-    - [x] 4.5.3 root term measured and accepted — RAR-S70, +2.33 ± 1.85; **refit needed once 4.5.1 lands**
-    - [ ] 4.5.4 re-measure `G(128)` as the progress meter
-- [ ] **4.6 Shallow-depth pruning rework — target 124.6 ± 17.7 Elo**
-    - [ ] 4.6.1 move-count, history, parent futility, the two SEE prunes, as one contract
+- [x] **4.5 LMR rework — CLOSED, NO GAIN.** Four candidates, all flat. Rarog's LMR is
+      contract-equivalent to the reference's and orders BETTER, so it has 30% fewer late
+      moves to reduce: the 116 was marginal value, not headroom
+    - [x] 4.5.1 reduction is a contract (`ReductionInputs`) + 4 missing terms — **+4.19 ± 18.56**
+    - [x] 4.5.2 `LmrMinReducedDepth` built, default-off — alone **−12.7 ± 26.5**
+    - [x] 4.5.3 root term accepted earlier — RAR-S70 **+2.33 ± 1.85**, the phase's only LMR gain
+    - [x] 4.5.5 `SelectivityCountConsidered` — starved move index, real, worth **−0.56 ± 18.5**
+- [ ] **4.6 Shallow-depth pruning.** ⚠ 124.6 is marginal value, NOT a target — 4.5 spent
+      four runs learning that distinction. Measure each gap before building it
+    - [x] 4.6.4 quiet SEE prune built, default-off. `see_prune` runs at **0.20x** and
+      `see_ge` could not evaluate a quiet move at all ← **MEASURING**
+    - [ ] 4.6.1 countermove-history and parent-futility gaps, if measurement supports them
     - [ ] 4.6.2 settle `SelectivityProspectiveDepth` here
     - [ ] 4.6.3 make `prune_shadow_*` track the live block, or delete it
 - [ ] **4.7** History and ordering, as inputs to 4.5/4.6
