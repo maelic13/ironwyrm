@@ -85,8 +85,18 @@
 
 .PARAMETER Mode
     "gainer"       -> H0: elo<=3,  H1: elo>=10 (default; demand a material gain).
+                      NOTE these are the HARNESS defaults, not the project's.
+                      AGENTS.md makes [0,3] the default bracket: wide bounds
+                      anchored high REJECT a small true gain, so pass
+                      -Elo0 0 -Elo1 3 for an ordinary candidate.
     "simplify"     -> H0: elo<=-5, H1: elo>=0     (non-regression / cleanup).
-    "calibrate"    -> fixed-size identical-binary null match; no SPRT.
+    "calibrate"    -> fixed-size identical-binary null match; no SPRT. Asserts
+                      the two arms are symmetric.
+    "fixed"        -> fixed-size match of -Games games between DIFFERENT arms;
+                      no SPRT and no early stop. This is the ablation and
+                      observation mode: it reports an Elo with an interval and
+                      never decides anything. Use it for matched ablation
+                      (see PROCESS.md), never as a strength gate.
     The explicit -Elo0/-Elo1 parameters override the mode if supplied.
 
 .PARAMETER Elo0 / Elo1
@@ -407,6 +417,12 @@ Write-Host "======================================================="
 Write-Host "  SPRT ($Mode): $NameA  vs  $NameB"
 if ($Mode -eq "calibrate") {
     Write-Host "  Fixed null calibration: $Games games; 95% nElo CI must fit inside +/-$CalibrationTolerance"
+} elseif ($Mode -eq "fixed") {
+    # No SPRT is run in this mode -- `$sprtArgs` is empty -- so printing H0/H1
+    # and a park/revert cap described a test that was not happening. An
+    # observation that looks like a gate invites being read as one.
+    Write-Host "  Fixed-size observation: $Games games, no SPRT and no early stop"
+    Write-Host "  Reports an Elo with an interval; it decides nothing"
 } else {
     Write-Host "  H0: elo<=$Elo0   H1: elo>=$Elo1   alpha=$Alpha  beta=$Beta  (nElo)"
     Write-Host "  Budget: $MaxGames games; no H1 at the cap means park/revert"
