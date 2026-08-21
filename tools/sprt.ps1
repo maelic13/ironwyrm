@@ -456,6 +456,45 @@ $splitOpts = {
 }
 $OptionsA = & $splitOpts $OptionsA
 $OptionsB = & $splitOpts $OptionsB
+# Refuse to start when an engine does not expose an option we are setting.
+# fastchess only WARNS and then plays the whole match with that option at its
+# default, which is a completed run that measures nothing -- it has happened
+# twice in this project, once from a malformed name and once from a binary that
+# predated the switch. Asking the engine costs about a second.
+function Assert-EngineOptions {
+    param([string]$Exe, [string[]]$Wanted, [string]$Label)
+    if (-not $Wanted -or $Wanted.Count -eq 0) { return }
+    $full = (Resolve-Path $Exe).Path
+    $psi = [System.Diagnostics.ProcessStartInfo]::new()
+    $psi.FileName = $full
+    $psi.WorkingDirectory = Split-Path $full -Parent
+    $psi.RedirectStandardInput = $true
+    $psi.RedirectStandardOutput = $true
+    $psi.UseShellExecute = $false
+    $proc = [System.Diagnostics.Process]::Start($psi)
+    $proc.StandardInput.WriteLine("uci")
+    $proc.StandardInput.Flush()
+    $have = @{}
+    while (-not $proc.StandardOutput.EndOfStream) {
+        $line = $proc.StandardOutput.ReadLine()
+        if ($line -match '^option name (.+?) type ') { $have[$Matches[1]] = $true }
+        if ($line -match '^uciok') { break }
+    }
+    $proc.StandardInput.WriteLine("quit")
+    $proc.StandardInput.Flush()
+    if (-not $proc.WaitForExit(5000)) { $proc.Kill() }
+    $missing = @($Wanted | ForEach-Object { ($_ -split '=')[0].Trim() } |
+        Where-Object { -not $have.ContainsKey($_) })
+    if ($missing.Count -gt 0) {
+        throw ("$Label does not expose: " + ($missing -join ', ') +
+               ". The binary predates the option, or was built without the feature " +
+               "that registers it. Rebuild it before measuring -- fastchess would " +
+               "only warn and then play the whole match at the DEFAULT value.")
+    }
+}
+Assert-EngineOptions -Exe $EngineA -Wanted $OptionsA -Label $NameA
+Assert-EngineOptions -Exe $EngineB -Wanted $OptionsB -Label $NameB
+
 $optArgsA = @($OptionsA | ForEach-Object { "option.$_" })
 $optArgsB = @($OptionsB | ForEach-Object { "option.$_" })
 

@@ -127,6 +127,12 @@ One shared bitmask on both engines — 0 razoring, 1 futility-child, 2 nullmove,
 ablates the same mechanism on each side. Oracle: branch `hybrid-ablate`.
 Rarog: `--features ablate`, which compiles every guard away in a shipped build.
 
+0. **The harness now refuses to start when an engine does not expose an option
+   being set.** fastchess only WARNS and then plays the whole match at the
+   DEFAULT, which is a completed run that measures nothing. That happened twice
+   here — once from a malformed option name, once from a binary that predated
+   the switch. If `sprt.ps1` aborts with "does not expose", rebuild the arm;
+   never work around it by dropping the option.
 1. **Prove every bit live before trusting any number from it.** Nodes to a
    fixed depth must MOVE for each bit. A guard that reads x1.00 is dead — one
    did, because its anchor landed on the diagnostic `prune_shadow_*` block
