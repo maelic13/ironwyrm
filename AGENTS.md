@@ -72,8 +72,10 @@ did what its name suggests.**
   instrument reporting on it did not.
 - Before claiming a behavior-neutral change, prove it: `bench 13` must
   reproduce the accepted fingerprint **6,977,070 / EBF 2.466** exactly
-  (RAR-S70; it was 7,467,143 / EBF 2.477 before that promotion). The ARM64
-  head is a DIFFERENT number and is not this check.
+  (RAR-S70; it was 7,467,143 / EBF 2.477 before that promotion). The fingerprint is
+  platform-INDEPENDENT: RAR-P14 recorded three platforms agreeing exactly,
+  and `aaa715a` rebuilds to 6,519,711 on x86 which is the number RAR-P16
+  recorded on ARM64. A differing number means differing CODE.
 
 ## Changes
 
