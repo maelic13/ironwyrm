@@ -412,3 +412,76 @@ constant".
 `LmrStatSwing` is excluded from that sweep until its input is rebuilt on a
 statScore-shaped composite. Fitting a mis-specified term would only find the
 constant that best hides the misspecification.
+
+## Per-term runs are flat too — and they were the wrong measurement
+
+| term | gap closed | games |
+|---|---:|---:|
+| `LmrTtCapture=780` | −2.0 ± 23.7 | 880 |
+| `LmrMinReducedDepth=1` | −12.7 ± 26.5 | 678 (stopped) |
+
+### 1. The instrument was used below its resolution. That is my error.
+
+At ~800 games a single arm carries ±20–26 Elo. An individual LMR term is worth
+5–15 Elo at best, so these runs could not have detected one. Resolving ±5 Elo
+needs ~13,800 games per arm — 2.3 hours each, five terms, for numbers that a
+registered gate would produce more honestly.
+
+`PROCESS.md` already says this: *"Mechanisms under ~10 Elo are NOT measurable
+this way at 3+0.03."* I wrote that rule and then proposed exactly that sweep.
+The matched-ablation instrument is for 40–250 Elo effects. It does not scale
+down, and no further per-term runs should be made.
+
+### 2. Rarog's LMR was ALREADY the reference's contract
+
+The base reduction formula, converted to the same units:
+
+    reference   0.521 + 0.468 · ln(depth) · ln(moveCount)
+    Rarog       0.631 + 0.439 · ln(depth) · ln(moveCount)   (SPSA-fitted)
+
+At depth 20, move 10: **3.75 plies against 3.66.** The same functional form, the
+same magnitude, already locally fitted. Rarog also already had the two largest
+adjustments — the continuous history term (~30 Elo in the reference) and the
+tt-pv and cut-node terms (~10 each).
+
+**So there was no contract to replace.** 4.5.1's premise — that Rarog's LMR is
+structurally behind — is false, and that is why adding the remaining ~23 Elo of
+small adjustments measures zero. The refactor into `ReductionInputs` was worth
+having; the hypothesis behind it was not.
+
+### 3. What the 116 Elo actually is
+
+`G(0) − G(128) = 116` says the LMR mechanism has three times the marginal value
+inside the oracle that it has inside Rarog. It does **not** say Rarog is missing
+116 Elo of LMR, and this document previously called it a "target", which
+oversold it.
+
+The likely cause is now visible and does not involve the reduction formula at
+all. At 300k nodes:
+
+| | depth reached | effective EBF |
+|---|---:|---:|
+| Rarog | 24.68 | **1.667** |
+| oracle | 28.86 | **1.548** |
+
+Same reduction formula, and Rarog's other pruning fires HARDER (`rfp_cut` 1.41x,
+`razor_drop` 1.65x) — yet its tree grows 7% faster per ply, costing it four
+plies at equal nodes. A reduction is worth more in a deeper search, so the
+oracle's identical formula is simply applied deeper. The 4.6 audit already
+measured a candidate cause: Rarog runs **1.60x** the oracle's quiescence per
+node.
+
+### 4. The discriminating measurement
+
+**Run `G(0)` at fixed NODES per move instead of a clock.** `sprt.ps1 -Nodes`
+exists for exactly this and is documented as a cross-engine search-accuracy
+question, never a gate.
+
+- Gap **collapses** at equal nodes → Rarog's deficit is tree efficiency, not
+  decision quality. It reaches the same conclusions when given the same tree
+  budget, and the work is in what its nodes are spent on — quiescence first.
+- Gap **stays near 250** → Rarog's decisions are genuinely worse at equal
+  budget, and tree efficiency is a side issue.
+
+One 20-minute run separates the two, and it is the difference between spending
+the phase on quiescence and spending it on decision quality.
