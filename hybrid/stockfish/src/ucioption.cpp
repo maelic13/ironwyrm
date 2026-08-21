@@ -66,6 +66,11 @@ void init(OptionsMap& o) {
   o["Contempt"]              << Option(0, -100, 100);
   o["Analysis Contempt"]     << Option("Off var Off var White var Black var Both", "Off");
   o["Threads"]               << Option(1, 1, 512, on_threads);
+  // Rarog ablation instrument: one bit per Stockfish search step, so any
+  // SUBSET is a single number and a bisection over mechanisms needs no
+  // rebuild. Bit 0 razoring, 1 futility-child, 2 nullmove, 3 probcut,
+  // 4 iid, 5 shallow-pruning, 6 extensions, 7 lmr. 0 = stock Stockfish.
+  o["AblationMask"]          << Option(0, 0, 255);
   o["Hash"]                  << Option(16, 1, MaxHashMB, on_hash_size);
   o["Clear Hash"]            << Option(on_clear_hash);
   o["Ponder"]                << Option(false);

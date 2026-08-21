@@ -214,7 +214,14 @@ void Search::clear() {
 /// MainThread::search() is started when the program receives the UCI 'go'
 /// command. It searches from the root position and outputs the "bestmove".
 
+// Rarog ablation instrument. Read once per search rather than per node:
+// an Options[] lookup is a map lookup on a string key.
+int ablationMask = 0;
+#define ABL(b) ((ablationMask >> (b)) & 1)
+
 void MainThread::search() {
+
+  ablationMask = int(Options["AblationMask"]);
 
   if (Limits.perft)
   {
@@ -806,7 +813,8 @@ namespace {
     }
 
     // Step 7. Razoring (~1 Elo)
-    if (   !rootNode // The required rootNode PV handling is not available in qsearch
+    if ( !ABL(0)
+        &&   !rootNode // The required rootNode PV handling is not available in qsearch
         &&  depth == 1
         &&  eval <= alpha - RazorMargin)
         return qsearch<NT>(pos, ss, alpha, beta);
@@ -815,14 +823,16 @@ namespace {
               || (ss-4)->staticEval == VALUE_NONE) : ss->staticEval > (ss-2)->staticEval;
 
     // Step 8. Futility pruning: child node (~50 Elo)
-    if (   !PvNode
+    if ( !ABL(1)
+        &&   !PvNode
         &&  depth < 6
         &&  eval - futility_margin(depth, improving) >= beta
         &&  eval < VALUE_KNOWN_WIN) // Do not return unproven wins
         return eval;
 
     // Step 9. Null move search with verification search (~40 Elo)
-    if (   !PvNode
+    if ( !ABL(2)
+        &&   !PvNode
         && (ss-1)->currentMove != MOVE_NULL
         && (ss-1)->statScore < 23824
         &&  eval >= beta
@@ -876,7 +886,8 @@ namespace {
     // Step 10. ProbCut (~10 Elo)
     // If we have a good enough capture and a reduced search returns a value
     // much above beta, we can (almost) safely prune the previous move.
-    if (   !PvNode
+    if ( !ABL(3)
+        &&   !PvNode
         &&  depth > 4
         &&  abs(beta) < VALUE_TB_WIN_IN_MAX_PLY
         && !(   ttHit
@@ -937,7 +948,7 @@ namespace {
     }
 
     // Step 11. Internal iterative deepening (~1 Elo)
-    if (depth >= 7 && !ttMove)
+    if (depth >= 7 && !ttMove && !ABL(4))
     {
         search<NT>(pos, ss, alpha, beta, depth - 7, cutNode);
 
@@ -1004,7 +1015,8 @@ moves_loop: // When in check, search starts from here
       newDepth = depth - 1;
 
       // Step 13. Pruning at shallow depth (~200 Elo)
-      if (  !rootNode
+      if ( !ABL(5)
+        &&  !rootNode
           && pos.non_pawn_material(us)
           && bestValue > VALUE_TB_LOSS_IN_MAX_PLY)
       {
@@ -1068,7 +1080,8 @@ moves_loop: // When in check, search starts from here
       // then that move is singular and should be extended. To verify this we do
       // a reduced search on all the other moves but the ttMove and if the
       // result is lower than ttValue minus a margin, then we will extend the ttMove.
-      if (    depth >= 6
+      if ( !ABL(6)
+        &&    depth >= 6
           &&  move == ttMove
           && !rootNode
           && !excludedMove // Avoid recursive singular search
@@ -1112,7 +1125,8 @@ moves_loop: // When in check, search starts from here
       }
 
       // Check extension (~2 Elo)
-      else if (    givesCheck
+      else if (   !ABL(6)
+               &&  givesCheck
                && (pos.is_discovery_check_on_king(~us, move) || pos.see_ge(move)))
           extension = 1;
 
@@ -1156,7 +1170,8 @@ moves_loop: // When in check, search starts from here
 
       // Step 16. Reduced depth search (LMR, ~200 Elo). If the move fails high it will be
       // re-searched at full depth.
-      if (    depth >= 3
+      if ( !ABL(7)
+        &&    depth >= 3
           &&  moveCount > 1 + 2 * rootNode
           && (!rootNode || thisThread->best_move_count(move) == 0)
           && (  !captureOrPromotion
