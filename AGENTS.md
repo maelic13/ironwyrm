@@ -162,6 +162,9 @@ did what its name suggests.**
   overview of PLAN — current state and the ordered steps, nothing else. A
   GUIDE that disagrees with PLAN is worse than no GUIDE, because it is the
   file that says what to do next and it will be believed.
+- **GUIDE carries STATUS, not just a list.** Its Phase-4 checkboxes are how
+  the maintainer sees what is done. Tick one only when the step is finished
+  AND verified, in the commit that finishes it — never in advance.
 - **Keep GUIDE short.** If a change to GUIDE runs past a few lines, it belongs
   somewhere else: what a step INVOLVES goes in `PLAN.md`; a completed step's
   record goes in `TRACKER.md`; a repeatable procedure goes in `PROCESS.md`;

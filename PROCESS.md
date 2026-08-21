@@ -6,7 +6,7 @@ step-by-step procedures those rules assume.
 
 ## Recurring procedures
 
-### Phase-4 step lifecycle (4.4–4.18)
+### Phase-4 step lifecycle (4.5–4.14)
 
 For every behavioral Phase-4 step:
 
@@ -48,11 +48,12 @@ games until the end destroys attribution and lets losing structures hide.
 
 A separable categorical alternative may have a preliminary SPRT, but that
 never replaces the locally fitted integrated cluster SPRT. After accepted
-clusters, 4.10 and 4.17 own consolidation tuning and separate confirmation
-SPRTs; they may not rescue an earlier losing cluster.
+clusters, **4.8/4.9** own search consolidation and **4.13** owns HCE
+consolidation, with separate confirmation SPRTs; they may not rescue an
+earlier losing cluster.
 
 Two failed coherent search clusters trigger a return to 4.2–4.3. Two failed
-HCE clusters trigger a 4.12/order re-audit, not silent closure. Track H may
+HCE clusters trigger a **4.11** decomposition re-audit, not silent closure. Track H may
 close early only by explicitly conceding the Phase-4 HCE maturity target; no
 UNKNOWN or first-draft contract may be presented as mature.
 
@@ -111,7 +112,43 @@ verdict.
 NPS work: validate on a self pair first (it must read about 0.00%), pool
 several PGO builds per arm because two PGO builds of identical source differ
 by about 0.36%, and keep compilation, profiling and unrelated load off the
-match host. Roughly 2 Elo per 1% NPS at `3+0.03`.
+match host. Roughly 2 Elo per 1% NPS at `3+0.03` — **for SMALL deltas only.**
+That figure does not extrapolate: applied to the oracle's 1.80x NPS deficit it
+predicts 160 Elo, where the standard ~60 Elo per doubling gives ~51. Above a
+few percent, convert through doublings and say which conversion was used.
+
+### Matched ablation (the Phase-4 measurement instrument)
+
+How the deficit was decomposed, and the procedure for every later use.
+`analysis/ablation_design.md` holds the reasoning; this is the operation.
+
+One shared bitmask on both engines — 0 razoring, 1 futility-child, 2 nullmove,
+3 probcut, 4 iir, 5 shallow-pruning, 6 extensions, 7 lmr — so the same number
+ablates the same mechanism on each side. Oracle: branch `hybrid-ablate`.
+Rarog: `--features ablate`, which compiles every guard away in a shipped build.
+
+1. **Prove every bit live before trusting any number from it.** Nodes to a
+   fixed depth must MOVE for each bit. A guard that reads x1.00 is dead — one
+   did, because its anchor landed on the diagnostic `prune_shadow_*` block
+   instead of the live site.
+2. **Prefer matched CROSS-ENGINE runs to self-play deltas.** Play Rarog against
+   the oracle at the SAME mask and read `G(0) − G(mask)` as the Elo that
+   mechanism explains. One run per mechanism, one scale, no self-play
+   inflation.
+3. **Keep the ablated arm inside roughly 20–80%.** Outside it the Elo curve
+   saturates: at 6% it runs 30.8 Elo per score point against 6.9 near parity,
+   a 4.4x amplification, and a 3-point score difference reads as 105 Elo of
+   nothing. Ablating four mechanisms at once collapsed both arms and produced
+   exactly that.
+4. **~2,000 games is enough.** These are 40–250 Elo effects; stop as soon as
+   the intervals separate. Large effects are cheap, which is the whole reason
+   this instrument beats gating candidates one at a time.
+5. **Mechanisms under ~10 Elo are NOT measurable this way at `3+0.03`.**
+   Roughly 10 time forfeits per 3,000 games is worth ~1 Elo, so for razoring
+   and IID the noise equals the signal. Use fixed nodes or a longer TC.
+6. **Net out NPS before comparing engines.** Rarog runs 1.80x the oracle's
+   speed, worth ~51 Elo. It cancels in `G(0) − G(mask)` but not in any absolute
+   statement about which search is better.
 
 ### Texel convergence procedure
 
@@ -124,7 +161,7 @@ loss is not a strength verdict:
    untouched test set.
 4. Run a local family fit after each structural HCE cluster. Bake the fit into
    clean PGO and SPRT the cluster; a lower loss alone accepts nothing.
-5. At 4.17, run an anchored whole-HCE consolidation over only activated,
+5. At 4.13, run an anchored whole-HCE consolidation over only activated,
    identifiable weights. Repeat a cycle only if validation and the baked SPRT
    both improve. Stop at the first no-gain/failed cycle; never choose a lucky
    intermediate checkpoint retrospectively.
@@ -132,10 +169,16 @@ loss is not a strength verdict:
 
 ### SPSA go/no-go procedure
 
-The generic harness is retained. Phase 4 uses it only for justified cluster-A
-search coordinates at 4.5, the targeted search fit at 4.10, king-danger bucket
-selectors at 4.16, and HCE-induced search compatibility at 4.17. It still
-forbids an undirected broad tune. Before any SPSA:
+The generic harness is retained. **Phase 4 budgets exactly one search SPSA:
+the seeded selectivity fit at 4.8**, entered only after 4.5 and 4.6 have landed
+their contracts and both `G(128)` and `G(32)` have measurably shrunk. Seed its
+constants from the reference rather than from Rarog's current values — those
+are the values that produced the measured 188 and 200 Elo, so it becomes a
+local refit rather than a search. On the HCE side, 4.12's king-danger bucket
+selectors and 4.13's HCE-induced search-margin compatibility are the only other
+admissible surfaces, each separate and narrow. An undirected broad tune stays
+forbidden, and HCE and search coordinates are never mixed in one run.
+Before any SPSA:
 
 1. Name the strength-bearing mechanism and show local evidence that its
    consumers are misfit.
@@ -198,8 +241,8 @@ becomes a product goal, 8.1 may add a Stockfish-style baseline dispatcher.
 - Borderline results are not accumulated as hidden debt. Accept or revert.
 - Commit after each finished and verified step, and keep tooling changes in
   separate commits from engine changes.
-- Mirror any tracker status or number change into `PLAN.md` in the same
-  commit.
+- Mirror any status or number change into **both `GUIDE.md` and `PLAN.md` in
+  the same commit**. `TRACKER.md` is history and is not updated for new work.
 
 ## Common commands
 
@@ -215,9 +258,11 @@ cargo xtask verify-isa --arch pext
 ```
 
 ```powershell
-# Primary SPRT [3,10] nElo; add -TC "10+0.1" for the LTC confirmation
+# Primary SPRT [0,3] nElo — the DEFAULT bracket. Add -TC "10+0.1" for LTC.
+# [3,10] is the harness default and is WRONG for a small candidate: wide bounds
+# anchored high drive a true +4 to H0. Size from RAR-M10 before registering.
 ./tools/sprt.ps1 -EngineA <candidate.exe> -EngineB <baseline.exe> `
-  -NameA candidate -NameB baseline -Elo0 3 -Elo1 10
+  -NameA candidate -NameB baseline -Elo0 0 -Elo1 3 -MaxGames 80000
 
 # Harness calibration after any runner change — same binary on both sides
 ./tools/sprt.ps1 -EngineA <same.exe> -EngineB <same.exe> -NameA a -NameB b

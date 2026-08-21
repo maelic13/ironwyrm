@@ -19,31 +19,62 @@ it probably belongs in `PLAN.md`, `TRACKER.md` or `PROCESS.md` instead.
 | Evaluation | Frozen through 4.9; the HCE decomposition starts at 4.10 |
 | Next releases | Conditional 2.4.0 at 4.15; then NNUE 2.5.0 |
 
-## Phase 4 — the ordered steps
+## Phase 4 — status
 
 Renumbered 2026-08-21 on the ablation decomposition
-(`analysis/ablation_results.md`). `PLAN.md` holds what each step actually
-involves; this is the order and the price.
+(`analysis/ablation_results.md`). `PLAN.md` holds what each step involves.
+**Tick a box only when the step is finished AND verified**, and update this
+file and `PLAN.md` in the same commit.
 
-| step | work | measured target |
-|---|---|---:|
-| **4.5** | LMR rework — replace the reduction contract, land `LmrMinReducedDepth`, refit the root term | **116.0 ± 17.9 Elo** |
-| **4.6** | shallow-depth pruning rework — move-count, history, futility, the two SEE prunes | **124.6 ± 17.7 Elo** |
-| 4.7 | history and ordering, as INPUTS to 4.5/4.6 | inside the above |
-| 4.8 | ONE seeded selectivity SPSA, after the contracts land | refit only |
-| 4.9 | integrate, re-measure `G(0)`, freeze the search head | — |
-| 4.10 | reciprocal HCE oracle + eval ablation instrument | — |
-| 4.11 | decompose the **+328.6 Elo** eval gap by term family, BEFORE building | to be measured |
-| 4.12 | rework the eval families 4.11 ranks, in that order | to be measured |
-| 4.13 | Texel consolidation, after the representations freeze | — |
-| 4.14 | HCE checkpoint and ablation | — |
-| **4.15** | transfer, portability, SMP, release gate → **2.4.0** | — |
+**Observation and instruments — closed**
+
+- [x] **4.0** Evidence, baseline and oracle freeze — RAR-M12
+- [x] **4.1** Instrumented oracle — `hybrid-diag` `de568b3`
+- [x] **4.2** Differential observation harness — RAR-S55
+- [x] **4.3** Mechanism map and order freeze
+- [x] **4.4** Search-consumed board state — nothing required
+- [x] **4.4a** Matched-ablation instrument — `hybrid-ablate` + `--features ablate`, every bit proved live
+- [x] **4.4b** Deficit decomposed — `G(0)` = 250.77 ± 13.12; LMR 116.0, shallow pruning 124.6, extensions null
+
+**Search track — selectivity holds 240 of the 250.8 Elo**
+
+- [ ] **4.5 LMR rework — target 116.0 ± 17.9 Elo** ← CURRENT
+      - [ ] 4.5.1 replace the reduction contract (twelve loose args; could not see the root)
+      - [x] 4.5.2 `LmrMinReducedDepth` built, default-off — 46.7% of reductions land in qsearch
+      - [x] 4.5.3 root term measured and accepted — RAR-S70, +2.33 ± 1.85; **refit needed once 4.5.1 lands**
+      - [ ] 4.5.4 re-measure `G(128)` as the progress meter
+- [ ] **4.6 Shallow-depth pruning rework — target 124.6 ± 17.7 Elo**
+      - [ ] 4.6.1 move-count, history, parent futility, the two SEE prunes, as one contract
+      - [ ] 4.6.2 settle `SelectivityProspectiveDepth` here
+      - [ ] 4.6.3 make `prune_shadow_*` track the live block, or delete it
+- [ ] **4.7** History and ordering, as inputs to 4.5/4.6
+- [ ] **4.8** ONE seeded selectivity SPSA, after the contracts land
+- [ ] **4.9** Integrate, re-measure `G(0)`, freeze the search head
+
+**HCE track — the larger prize, +328.6 Elo, not yet decomposed**
+
+- [ ] **4.10** Reciprocal HCE oracle + eval ablation instrument
+- [ ] **4.11** Decompose the +328.6 Elo by term family — BEFORE building anything
+- [ ] **4.12** Rework the families 4.11 ranks, in that order
+- [ ] **4.13** Texel consolidation, after the representations freeze
+- [ ] **4.14** HCE checkpoint and ablation
+
+**Release**
+
+- [ ] **4.15** Transfer, portability, SMP, release gate → **2.4.0**
+
+**Accepted in Phase 4 so far:** 4.7c ProbCut move filter **+15.56 ± 10.02**
+(RAR-S57/S58) and RAR-S70 root relief **+2.33 ± 1.85**. Programme target is
+≥ +100 Elo cumulative over 2.3.2.
 
 **Parked by measurement, not by judgement:** extensions (11.8 ± 18.8, a 1.2
 sigma null), TT and quiescence, root and clock, and the whole answer-harness
 line. Matched ablation bounds all of them together at ~30 Elo. PLAN's "Parked
-by measurement" table keeps each one with the evidence that parked it; any of
-them revives the moment a measurement puts Elo behind it.
+by measurement" table keeps each with the evidence that parked it; any revives
+the moment a measurement puts Elo behind it.
+
+**After Phase 4:** Phase 5 NNUE runway → Phase 6 baseline NNUE (2.5.0) →
+Phases 7–9. See `PLAN.md`.
 
 ## What you run now
 
