@@ -672,3 +672,33 @@ the 124.6 is not headroom.
 
 **The unexplored 83 Elo is quiescence and the TT**, and it is now the largest
 piece of the search deficit with no measurement against it.
+
+## Registered before its games: 4.6.4, the quiet SEE prune
+
+`QuietSeePruneDepth=6`, `QuietSeePruneCoeff=25` (seeded from Rarog's own
+capture-side `SeePruningCoeff` 66, quadratic in prospective depth, floored by
+`SeePruningMax`).
+
+Baseline `G(0)` = **250.77 ± 13.12** at fixed time, on the same binary at
+defaults — which still benches 6,977,070 / EBF 2.466, so the baseline transfers.
+
+**4,000 games, not 2,000, and that is a lesson from today.** The reference
+annotates this mechanism at ~20 Elo. At 2,000 games the difference resolves to
+±18.5, which cannot see 20 Elo — four runs today proved that the hard way. At
+4,000 it is ±16. Still a screen, not a verdict.
+
+Outcomes, fixed in advance:
+
+- **Drop beyond ~25 Elo** → the mechanism transfers and earns a registered
+  `[0,3]` gate.
+- **Flat** → it is under ~25 Elo. That does NOT close it: at ~20 Elo annotated,
+  flat at ±16 is the expected reading even if it works, and only a gate can
+  separate "small and real" from "zero". This is the first candidate of the
+  phase where a null would be genuinely uninformative, and that is registered
+  now rather than argued later.
+- **Rise** → revert; a prune that costs Elo is not a tuning problem.
+
+⚠ **This is the only Step-13 gap with evidence behind it.** The other two the
+reference carries — countermove-history pruning and the history conjunct on
+parent futility — have Rarog analogues, and 4.5 is what happens when a
+difference is assumed to be a deficit. They are not built until measured.
