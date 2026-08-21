@@ -152,6 +152,39 @@ try — shallow pruning ~200, extensions ~75, futility-child ~50, nullmove ~40.
 mechanism against a measured 116 Elo target, which is the scoped version of the
 "one sweep" hypothesis rather than the whole-engine version.
 
+## Registered before the games: the four remaining mechanisms
+
+Matched cross-engine, same mask on both sides, against `G(0) = 250.77 ± 13.12`.
+Deficit explained by M is `G(0) − G(mask_M)`. One run each, not two: the
+cross-engine form needs a single match per mechanism, where the self-play form
+needs one per engine.
+
+| mechanism | mask | SF's annotation | registered expectation |
+|---|---:|---:|---|
+| shallow pruning | 32 | ~200 | the only candidate that could rival LMR |
+| extensions | 64 | ~75 | ⚠ ASYMMETRIC BIT, see below |
+| futility-child | 2 | ~50 | modest |
+| nullmove | 4 | ~40 | modest |
+
+**Registered structural expectation.** LMR already explains 116.0 of 250.77. If
+the four closures sum to much more than the remaining ~135, that is not an
+error — it proves strong interaction, since each is measured with all the
+others still present. The sum overshooting is the additivity check the
+bisection idea assumes, and it is being taken here for free.
+
+**Bit 6 cannot be read as "singular extensions".** On the oracle it removes
+singular AND check extensions; on Rarog it removes singular only, because Rarog
+has no check extension — it gained +30.75 Elo deleting one. So a matched mask-64
+run ablates different things on the two sides, and a large closure there cannot
+be attributed to singular. Splitting the oracle's bit 6 in two is a few minutes
+of rebuild and should be done before that number is trusted.
+
+**Razoring (bit 0) and IID (bit 4) are deliberately excluded.** Both are
+annotated at ~1 Elo, and the oracle run showed 10 time forfeits in 3,000 games
+— worth ~1 Elo. The forfeit noise equals the entire signal, so at `3+0.03`
+these two are unmeasurable and would only produce a number that looks like
+data.
+
 ## Bit-assignment asymmetry to remember
 
 Bit 6 is not symmetric. On the oracle it removes singular AND check extensions;
