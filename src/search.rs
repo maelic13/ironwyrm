@@ -1,7 +1,5 @@
 // `clippy::too_many_arguments` is accepted crate-wide for search kernels —
 // see the rationale in Cargo.toml's [lints.clippy] section.
-mod core;
-
 use std::sync::{Arc, atomic::Ordering, mpsc};
 use std::time::Instant;
 
@@ -2189,13 +2187,6 @@ impl Searcher {
         cut_node: bool,
         poll: &mut P,
     ) -> i32 {
-        // 4.6.6: one branch, at the only entry point, so every recursive
-        // call inside the rebuilt node stays inside it.
-        if self.params.search_core != 0 {
-            return self.negamax_core(
-                board, depth, alpha, beta, ply, is_pv, allow_null, excluded, cut_node, poll,
-            );
-        }
         if self.check_stop(poll) {
             return 0;
         }
@@ -4478,31 +4469,6 @@ impl Searcher {
             }
             let prev = self.stack[ply - back].mv;
             if prev.is_null() {
-                continue;
-            }
-            let index = self.stack[ply - back].cont_row_base() + piece_to_index(piece, to);
-            update_hist_entry(
-                &mut self.cont_history[slot][index],
-                bonus / divisor,
-                HISTORY_MAX,
-            );
-        }
-    }
-
-    /// 4.6.6: apply `bonus` to every continuation slot for `(piece, to)` at
-    /// `ply`, divided by the slot's weight, exactly as a cutoff would.
-    ///
-    /// Split out of `update_cutoff_tables` so the reduced search can feed its
-    /// own outcome back: a move that was reduced and beat alpha anyway was
-    /// mis-ordered, and that is the cheapest ordering evidence available,
-    /// because the work has already been paid for.
-    fn update_continuation_histories(&mut self, ply: usize, piece: Piece, to: usize, bonus: i32) {
-        let piece = piece as usize;
-        for (slot, &(back, divisor)) in CONT_PLY_BACK.iter().enumerate() {
-            if ply < back {
-                continue;
-            }
-            if self.stack[ply - back].mv.is_null() {
                 continue;
             }
             let index = self.stack[ply - back].cont_row_base() + piece_to_index(piece, to);

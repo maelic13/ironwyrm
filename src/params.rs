@@ -216,28 +216,7 @@ search_params! {
     /// picker, which then stops emitting quiets entirely. Rarog generated,
     /// scored and individually rejected every remaining quiet instead — the
     /// same decision, paid for once per move rather than once per node.
-    skip_quiets_on_move_count = 0, "SkipQuietsOnMoveCount", 0..=1;
-
-    /// 4.6.6 SEARCH CORE. 0 = the accepted node, 1 = the rebuilt one in
-    /// `search/core.rs`. One branch at `negamax`'s entry, so every recursive
-    /// call inside the rebuilt node stays inside it.
-    search_core = 0, "SearchCore", 0..=1;
-
-    /// 4.6.6 Step-13 shape. Depth limits were hard-coded literals in the old
-    /// node (`<= 3`, `<= 4`, `<= 7`, `<= 8`) against RAW depth; the rebuilt
-    /// node keys them on the reduced depth, where the same numbers mean
-    /// something different, so they become parameters and are seeded from
-    /// what the old literals meant.
-    quiet_hist_prune_depth = 6, "QuietHistPruneDepth", 0..=16;
-    fp_depth = 6, "FpDepth", 0..=16;
-    /// Futility's history conjunct: a quiet move whose history is at least
-    /// this good is searched even when the eval says it is hopeless. Seeded at
-    /// four times the in-code "good history" threshold of 4,000, since this is
-    /// a ceiling rather than a floor.
-    fp_hist_cap = 16000, "FpHistCap", 0..=65536;
-    /// Capture futility base. Seeded from `fp_base`, since it plays the same
-    /// role on the capture side.
-    cap_fp_base = 200, "CapFpBase", 0..=1000;  // was 804 → 869 → 955
+    skip_quiets_on_move_count = 0, "SkipQuietsOnMoveCount", 0..=1;  // was 804 → 869 → 955
 
     // ── Qsearch SEE thresholds (Phase 7.2 SEE bundle) ────────────────────────
     // Exposed so the `config_see` SPSA can re-tune SEE's consumers alongside
