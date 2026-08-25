@@ -97,6 +97,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
 . "$PSScriptRoot\harness_common.ps1"
 
 function Get-TextLineCount([string]$Path) {
@@ -196,13 +197,31 @@ try {
     if ($engineManifest.git_dirty) {
         throw "Datagen engine was built from a dirty tree; rebuild a reproducible binary before generating labels."
     }
+    if ($engineManifest.verification -and $engineManifest.verification -ne "bench") {
+        throw "Datagen engine manifest records '$($engineManifest.verification)', not bench verification."
+    }
+    if ($engineManifest.flavor -like "*-tune") {
+        throw "Datagen requires a production PGO build, not a tune binary."
+    }
 
     $fastchessInfo = Get-FastchessVersion -Path $FastchessPath
     $profile = Get-DatagenProfile
     # Hash before launch so the manifest identifies the inputs fastchess
     # actually opened, even if a file is changed after the run begins.
     $engineHash = Get-HarnessSha256 -Path $enginePath
+    if (-not $engineManifest.binary_sha256) {
+        throw "Datagen requires a hash-bound engine manifest; rebuild with tools\build_test.ps1."
+    }
+    if ($engineManifest.binary_sha256 -ne $engineHash) {
+        throw "Engine binary SHA-256 does not match its sidecar; rebuild before generating labels."
+    }
+    foreach ($requiredOption in @("Hash", "Threads")) {
+        if (-not (Test-EngineSupportsOption -Path $enginePath -Name $requiredOption)) {
+            throw "Datagen engine does not advertise required UCI option '$requiredOption'."
+        }
+    }
     $bookHash = Get-HarnessSha256 -Path $Book
+    $fastchessHash = Get-HarnessSha256 -Path $FastchessPath
     $resignArgs = @(Get-DatagenResignArgs)
     $fastchessArgs = @(
         '-engine', "cmd=$enginePath", 'name=A', "option.Hash=$Hash", 'option.Threads=1',
@@ -214,7 +233,8 @@ try {
         '-concurrency', "$Concurrency",
         '-draw', "movenumber=$($profile.DrawMoveNumber)", "movecount=$($profile.DrawMoveCount)", "score=$($profile.DrawScore)"
     ) + $resignArgs + @(
-        '-pgnout', "file=$OutputPgn",
+        '-maxmoves', '200',
+        '-pgnout', "file=$OutputPgn", 'append=false',
         '-output', 'format=fastchess'
     )
 
@@ -256,23 +276,29 @@ try {
         New-Item -ItemType Directory -Force -Path $outDir | Out-Null
     }
 
+    $startedUtc = (Get-Date).ToUniversalTime()
     & $FastchessPath @fastchessArgs
 
     if ($LASTEXITCODE -ne 0) {
-        throw "fastchess exited with code $LASTEXITCODE."
+        throw "fastchess exited with code $LASTEXITCODE; partial PGN retained at $OutputPgn."
+    }
+    if (-not (Test-Path -LiteralPath $OutputPgn -PathType Leaf)) {
+        throw "fastchess exited successfully without producing $OutputPgn."
     }
 
     Write-Host ""
     Write-Host "Done. PGN: $OutputPgn"
 
     $runManifest = [ordered]@{
-        schema             = "rarog-datagen-v1"
+        schema             = "rarog-fastchess-datagen-v2"
+        started_utc        = $startedUtc.ToString("yyyy-MM-ddTHH:mm:ssZ")
         completed_utc      = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-        output_pgn         = $OutputPgn
         engine             = [ordered]@{
             path        = $enginePath
             sha256      = $engineHash
+            manifest    = $engineManifestPath
             git_sha     = $engineManifest.git_sha
+            git_tree    = $engineManifest.git_tree
             git_branch  = $engineManifest.git_branch
             git_dirty   = [bool]$engineManifest.git_dirty
             bench_nodes = [int64]$engineManifest.bench_nodes
@@ -290,11 +316,21 @@ try {
         games              = $Rounds
         nodes_per_move     = $Nodes
         hash_mb            = $Hash
+        effective_threads  = 1
         concurrency        = $Concurrency
-        fastchess          = $fastchessInfo.Text
+        fastchess          = [ordered]@{
+            version = $fastchessInfo.Text
+            sha256  = $fastchessHash
+        }
         adjudication       = $profile
+        max_moves          = 200
+        output             = [ordered]@{
+            path   = $OutputPgn
+            bytes  = (Get-Item -LiteralPath $OutputPgn).Length
+            sha256 = Get-HarnessSha256 -Path $OutputPgn
+        }
     }
-    $runManifest | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $outputManifest -Encoding utf8
+    Write-JsonAtomic -Path $outputManifest -Value $runManifest
     Write-Host "Manifest: $outputManifest"
 
     # Do not re-read a multi-GB PGN merely to count lines. The bounded preflight

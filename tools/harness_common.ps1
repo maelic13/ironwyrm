@@ -263,6 +263,119 @@ function Get-HarnessSha256 {
     (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash
 }
 
+function Get-EngineUciOptions {
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [int]$TimeoutMs = 15000,
+        [switch]$Detailed
+    )
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "Engine not found: $Path"
+    }
+
+    $full = (Resolve-Path -LiteralPath $Path).Path
+    $psi = [System.Diagnostics.ProcessStartInfo]::new()
+    $psi.FileName               = $full
+    $psi.WorkingDirectory       = Split-Path -Parent $full
+    $psi.RedirectStandardInput  = $true
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError  = $true
+    $psi.UseShellExecute        = $false
+
+    $proc = [System.Diagnostics.Process]::Start($psi)
+    $text = ""
+    try {
+        # Read asynchronously before writing. Otherwise a verbose engine can
+        # fill the stdout pipe while WaitForExit waits for a process that can
+        # no longer make progress.
+        $stdout = $proc.StandardOutput.ReadToEndAsync()
+        $stderr = $proc.StandardError.ReadToEndAsync()
+        $proc.StandardInput.WriteLine("uci")
+        $proc.StandardInput.WriteLine("quit")
+        $proc.StandardInput.Close()
+        if (-not $proc.WaitForExit($TimeoutMs)) {
+            throw "Engine '$Path' did not answer 'uci' within ${TimeoutMs} ms."
+        }
+        $text = $stdout.Result
+        $errorText = $stderr.Result
+        if ($proc.ExitCode -ne 0) {
+            throw "Engine '$Path' exited $($proc.ExitCode) during UCI discovery: $errorText"
+        }
+    } finally {
+        if (-not $proc.HasExited) { $proc.Kill($true) }
+        $proc.Dispose()
+    }
+
+    if ($text -notmatch '(?m)^\s*uciok\s*$') {
+        throw "Engine '$Path' did not emit 'uciok'; it is not a working UCI engine."
+    }
+
+    $options = [System.Collections.Generic.List[object]]::new()
+    foreach ($line in ($text -split "`r?`n")) {
+        $match = [regex]::Match($line, '^\s*option\s+name\s+(?<name>.+?)\s+type\s+(?<type>\S+)(?<tail>.*)$')
+        if (-not $match.Success) { continue }
+        $tail = $match.Groups['tail'].Value
+        $defaultMatch = [regex]::Match($tail, '(?:^|\s)default\s+(?<value>\S+)')
+        $minMatch = [regex]::Match($tail, '(?:^|\s)min\s+(?<value>-?\d+)')
+        $maxMatch = [regex]::Match($tail, '(?:^|\s)max\s+(?<value>-?\d+)')
+        $options.Add([pscustomobject]@{
+            Name    = $match.Groups['name'].Value.Trim()
+            Type    = $match.Groups['type'].Value
+            Default = if ($defaultMatch.Success) { $defaultMatch.Groups['value'].Value } else { $null }
+            Min     = if ($minMatch.Success) { [int64]$minMatch.Groups['value'].Value } else { $null }
+            Max     = if ($maxMatch.Success) { [int64]$maxMatch.Groups['value'].Value } else { $null }
+            Raw     = $line.Trim()
+        })
+    }
+    if ($Detailed) { $options.ToArray(); return }
+    $options.Name
+}
+
+function Test-EngineSupportsOption {
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$Name
+    )
+
+    $normalize = { param($value) ($value -replace '\s+', ' ').Trim().ToLowerInvariant() }
+    $target = & $normalize $Name
+    foreach ($advertised in (Get-EngineUciOptions -Path $Path)) {
+        if ((& $normalize $advertised) -eq $target) { return $true }
+    }
+    $false
+}
+
+function Write-JsonAtomic {
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][object]$Value,
+        [int]$Depth = 8
+    )
+
+    $temporary = "$Path.tmp"
+    try {
+        $Value | ConvertTo-Json -Depth $Depth |
+            Set-Content -LiteralPath $temporary -Encoding utf8
+        Move-Item -LiteralPath $temporary -Destination $Path -Force
+    } finally {
+        if (Test-Path -LiteralPath $temporary) {
+            Remove-Item -LiteralPath $temporary -Force
+        }
+    }
+}
+
+function Assert-NoMatchAnomaly {
+    param([Parameter(Mandatory)][string]$LogPath)
+
+    $anomaly = Select-String -LiteralPath $LogPath `
+        -Pattern '(?i)(loses on time|timeouts:\s*[1-9]|crashed:\s*[1-9]|disconnect|illegal move|forfeit|protocol error)' `
+        -ErrorAction SilentlyContinue
+    if ($anomaly) {
+        throw "Match contained a timeout/crash/protocol anomaly and is invalid. See '$LogPath'."
+    }
+}
+
 function Assert-NoAffinityFailure {
     param([Parameter(Mandatory)][string]$LogPath)
 

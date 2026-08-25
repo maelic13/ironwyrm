@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    One-shot setup: download fastchess and clone weather-factory into tools/.
+    Stage fastchess, the UHO book and the patched weather-factory toolchain.
 
 .DESCRIPTION
     Makes the Rarog tuning toolchain self-contained inside the repo. Run this
@@ -9,23 +9,27 @@
 
     After this script:
       - tools/bin/fastchess.exe
+      - tools/books/UHO_Lichess_4852_v1.epd (when present in -BookSource)
       - tools/weather-factory/
       - matplotlib installed for Python
 
-    The opening books belong in tools/books/ (git-ignored; source:
-    D:\chess\books\): UHO_Lichess_4852_v1.epd (SPRT/SPSA/gauntlet default)
-    and IM_4mvs.pgn (balanced fallback / CCRL-comparable gauntlets). Copy
-    them there before running SPRT or SPSA.
+    Opening books are git-ignored. The UHO strength-test book is copied from
+    -BookSource when it is not already staged; IM_4mvs.pgn remains an optional
+    balanced fallback.
 
 .PARAMETER FastchessTag
     GitHub release tag to download. Default v1.8.0-alpha, a pinned release
     containing the Windows process-affinity fix introduced before v1.7.0.
 
+.PARAMETER BookSource
+    Directory containing UHO_Lichess_4852_v1.epd. Default D:\chess\books.
+
 .EXAMPLE
     ./tools/setup_tools.ps1
 #>
 param(
-    [string]$FastchessTag = "v1.8.0-alpha"
+    [string]$FastchessTag = "v1.8.0-alpha",
+    [string]$BookSource = "D:\chess\books"
 )
 
 $ErrorActionPreference = "Stop"
@@ -36,9 +40,11 @@ $ErrorActionPreference = "Stop"
 # which is unacceptable for a runner that will consume 160,000 games.
 $weatherFactoryRevision = "19b4805c9a2372955c29666118070269f34aa2eb"
 
-$binDir = Join-Path $PSScriptRoot "bin"
-$wfDir  = Join-Path $PSScriptRoot "weather-factory"
+$binDir   = Join-Path $PSScriptRoot "bin"
+$booksDir = Join-Path $PSScriptRoot "books"
+$wfDir    = Join-Path $PSScriptRoot "weather-factory"
 New-Item -ItemType Directory -Force -Path $binDir | Out-Null
+New-Item -ItemType Directory -Force -Path $booksDir | Out-Null
 
 $fastchessExe = Join-Path $binDir "fastchess.exe"
 $downloadFastchess = -not (Test-Path $fastchessExe)
@@ -105,6 +111,19 @@ if ($downloadFastchess) {
     Assert-AffinityFastchess -Path $fastchessExe | Out-Null
 }
 
+$bookName = "UHO_Lichess_4852_v1.epd"
+$bookDest = Join-Path $booksDir $bookName
+if (-not (Test-Path -LiteralPath $bookDest -PathType Leaf)) {
+    $bookSourcePath = Join-Path $BookSource $bookName
+    if (Test-Path -LiteralPath $bookSourcePath -PathType Leaf) {
+        Write-Host "Copying $bookName -> tools/books/ ..."
+        Copy-Item -LiteralPath $bookSourcePath -Destination $bookDest -Force
+        Write-Host "  SHA-256: $(Get-HarnessSha256 $bookDest)"
+    } else {
+        Write-Warning "$bookName was not found in '$BookSource'; stage it before SPRT or SPSA."
+    }
+}
+
 if (Test-Path (Join-Path $wfDir "main.py")) {
     Write-Host "weather-factory already present at tools/weather-factory/; skipping clone."
 } else {
@@ -122,6 +141,16 @@ if ($actualWeatherFactoryRevision -ne $weatherFactoryRevision) {
         "$weatherFactoryRevision. Preserve any tuner state, recreate tools/weather-factory, and rerun setup.")
 }
 Write-Host "weather-factory revision verified: $weatherFactoryRevision"
+
+# Literal multi-line patch anchors must not depend on core.autocrlf. Normalize
+# the pinned Python sources once so setup is reproducible across worktrees.
+foreach ($pyFile in @("cutechess.py", "spsa.py", "main.py")) {
+    $pyPath = Join-Path $wfDir $pyFile
+    if (-not (Test-Path -LiteralPath $pyPath)) { continue }
+    $text = (Get-Content $pyPath -Raw) -replace "`r`n", "`n"
+    Set-Content -LiteralPath $pyPath -Value ($text.TrimEnd() + "`n") -Encoding utf8 -NoNewline
+}
+Write-Host "  Normalized weather-factory sources to LF for deterministic patching."
 
 # weather-factory has no native affinity setting. Patch its generated
 # fastchess command with the OS-derived physical-core list. Rebuild this line

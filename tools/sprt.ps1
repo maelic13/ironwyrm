@@ -219,6 +219,18 @@ param(
 $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "harness_common.ps1")
 
+# PowerShell's native-argument binding can deliver a comma-separated option
+# list as one string. Normalize it before equality checks, manifests or UCI
+# validation so all three describe what fastchess will actually receive.
+$splitOpts = {
+    param($items)
+    @($items | ForEach-Object { $_ -split ',' } |
+        ForEach-Object { $_.Trim().Trim('"') } |
+        Where-Object { $_ })
+}
+$OptionsA = & $splitOpts $OptionsA
+$OptionsB = & $splitOpts $OptionsB
+
 $strengthProfile = Get-StrengthTestProfile
 $resignArgs = @(Get-StrengthTestResignArgs)
 
@@ -305,6 +317,24 @@ $EngineA = (Resolve-Path $EngineA).Path
 $EngineB = (Resolve-Path $EngineB).Path
 $Book    = (Resolve-Path $Book).Path
 
+$optionDetailsA = @(Get-EngineUciOptions -Path $EngineA -Detailed)
+$optionDetailsB = @(Get-EngineUciOptions -Path $EngineB -Detailed)
+$optionsAdvertisedA = @($optionDetailsA.Name)
+$optionsAdvertisedB = @($optionDetailsB.Name)
+$normalizeOption = { param($value) ($value -replace '\s+', ' ').Trim().ToLowerInvariant() }
+function Assert-RequestedOptions {
+    param([object[]]$Advertised, [string[]]$Wanted, [string]$Label)
+    $have = @($Advertised.Name | ForEach-Object { & $normalizeOption $_ })
+    $missing = @($Wanted | ForEach-Object { ($_ -split '=', 2)[0] } |
+        Where-Object { $have -notcontains (& $normalizeOption $_) })
+    if ($missing.Count -gt 0) {
+        throw ("$Label does not advertise: $($missing -join ', '). Rebuild it before measuring; " +
+               "fastchess would otherwise play the match at default values.")
+    }
+}
+Assert-RequestedOptions -Advertised $optionDetailsA -Wanted $OptionsA -Label $NameA
+Assert-RequestedOptions -Advertised $optionDetailsB -Wanted $OptionsB -Label $NameB
+
 $shaA = Get-HarnessSha256 $EngineA
 $shaB = Get-HarnessSha256 $EngineB
 if ($Mode -eq "calibrate" -and $shaA -ne $shaB) {
@@ -342,9 +372,34 @@ $manifestPath = [System.IO.Path]::ChangeExtension($pgnOut, ".manifest.txt")
 # self-describing: which SHA vs which SHA, both bench fingerprints, dirty
 # flags. Warn-not-fail on absence — pre-9.7 binaries have no manifest.
 # Local-only: tools/results/ is gitignored; nothing here reaches a release.
+$engineManifests = @{}
 foreach ($pair in @(@($EngineA, $NameA), @($EngineB, $NameB))) {
     $manifest = [System.IO.Path]::ChangeExtension($pair[0], ".json")
     if (Test-Path $manifest) {
+        $manifestData = Get-Content $manifest -Raw | ConvertFrom-Json
+        $engineManifests[$pair[1]] = $manifestData
+        if ($manifestData.engine -and $manifestData.engine -ne (Split-Path $pair[0] -Leaf)) {
+            throw "Manifest for $($pair[1]) names '$($manifestData.engine)', not the selected binary."
+        }
+        if ($manifestData.binary_sha256) {
+            $actualHash = Get-HarnessSha256 $pair[0]
+            if ($actualHash -ne $manifestData.binary_sha256) {
+                throw ("PROVENANCE MISMATCH - sidecar does not describe the selected binary.`n" +
+                       "  Engine:  $($pair[1])`n  Actual:  $actualHash`n" +
+                       "  Sidecar: $($manifestData.binary_sha256)`nRebuild with tools/build_test.ps1.")
+            }
+        } else {
+            Write-Warning "Legacy manifest for $($pair[1]) is not bound to its binary SHA-256."
+        }
+        if ($manifestData.verification -and $manifestData.verification -ne "bench") {
+            throw "Manifest for $($pair[1]) records '$($manifestData.verification)', not bench verification."
+        }
+        if ($manifestData.flavor -like "*-tune") {
+            throw "Manifest for $($pair[1]) is a tune build; rebuild a PGO gate binary."
+        }
+        if ($manifestData.git_dirty) {
+            Write-Warning "Manifest for $($pair[1]) records a dirty source tree."
+        }
         Copy-Item $manifest (Join-Path $resultsDir "sprt_${NameA}_vs_${NameB}_${timestamp}.$($pair[1]).manifest.json") -Force
     } else {
         Write-Host "NOTE: no manifest next to $(Split-Path $pair[0] -Leaf) (pre-9.7 build) — result will lack provenance for $($pair[1])." -ForegroundColor Yellow
@@ -364,13 +419,22 @@ foreach ($pair in @(@($EngineA, $NameA), @($EngineB, $NameB))) {
 # independently bad ideas. HARD-FAIL so it can never recur silently.
 $compilers = @{}
 foreach ($pair in @(@($EngineA, $NameA), @($EngineB, $NameB))) {
-    $manifest = [System.IO.Path]::ChangeExtension($pair[0], ".json")
-    if (Test-Path $manifest) {
-        $compilers[$pair[1]] = (Get-Content $manifest -Raw | ConvertFrom-Json).rustc
+    if ($engineManifests.ContainsKey($pair[1])) {
+        $compilers[$pair[1]] = $engineManifests[$pair[1]].rustc
     } else {
         Write-Warning ("No manifest for $($pair[1]) - compiler equality NOT checkable. " +
             "Rebuild it with tools/build_test.ps1 before trusting a small verdict.")
     }
+}
+
+if ($engineManifests.Count -eq 2) {
+    $flavorA = $engineManifests[$NameA].flavor
+    $flavorB = $engineManifests[$NameB].flavor
+    if ($flavorA -and $flavorB -and $flavorA -ne $flavorB) {
+        throw ("BUILD FLAVOR MISMATCH - both sides must use the same target/PGO contract.`n" +
+               "  $NameA : $flavorA`n  $NameB : $flavorB")
+    }
+    if ($flavorA -and $flavorB) { Write-Host "  Build flavor equality OK: $flavorA" }
 }
 if ($compilers.Count -eq 2) {
     $cA = $compilers[$NameA]; $cB = $compilers[$NameB]
@@ -392,7 +456,7 @@ if (-not $repoSha) { $repoSha = "n/a" } else { $repoSha = $repoSha.Trim() }
     "engineB:         $NameB = $EngineB"
     "engineB_sha256:  $shaB"
     "repo_revision:   $repoSha"
-    "test_design:     $(if ($Mode -eq 'calibrate') { "fixed ${Games}-game null; tolerance +/-${CalibrationTolerance} nElo" } else { "SPRT elo0=$Elo0 elo1=$Elo1 alpha=$Alpha beta=$Beta model=normalized" })"
+    "test_design:     $(if ($Mode -eq 'calibrate') { "fixed ${Games}-game null; tolerance +/-${CalibrationTolerance} nElo" } elseif ($Mode -eq 'fixed') { "fixed ${Games}-game match; no stop rule" } else { "SPRT elo0=$Elo0 elo1=$Elo1 alpha=$Alpha beta=$Beta model=normalized" })"
     "game_budget:     $(if ($Mode -eq 'calibrate' -or $Mode -eq 'fixed') { $Games } else { $MaxGames })"
     "time_control:    $tcLabel; timemargin=${TimeMargin}ms"
     "adjudication:    $($strengthProfile.Name); resign=$($strengthProfile.ResignScore)/$($strengthProfile.ResignMoveCount)$(if ($strengthProfile.ResignTwoSided) { ' two-sided' } else { ' one-sided' }); draw=$($strengthProfile.DrawScore)/$($strengthProfile.DrawMoveCount) from move $($strengthProfile.DrawMoveNumber)"
@@ -407,6 +471,8 @@ if (-not $repoSha) { $repoSha = "n/a" } else { $repoSha = $repoSha.Trim() }
     "opening_seed:    $Seed"
     "optionsA:        $(if ($OptionsA) { $OptionsA -join ' ' } else { '(none)' })"
     "optionsB:        $(if ($OptionsB) { $OptionsB -join ' ' } else { '(none)' })"
+    "advertised_A:    $($optionsAdvertisedA -join ', ')"
+    "advertised_B:    $($optionsAdvertisedB -join ', ')"
     "fastchess:       $($fcInfo.Text)"
     "fastchess_sha256: $(Get-HarnessSha256 $fastchess)"
     "started_utc:     $((Get-Date).ToUniversalTime().ToString('u'))"
@@ -442,59 +508,6 @@ Write-Host ""
 # so ONE binary can be A/B-tested on a knob without a rebuild. Empty by
 # default, so the emitted fastchess command is byte-identical to before -
 # no null-pair re-calibration is required for the default path.
-# Each element may itself be a comma-separated list. `pwsh -File script.ps1`
-# passes every argument as a LITERAL STRING, so PowerShell array syntax
-# (-OptionsA a=1,b=2) does not survive that invocation form: the whole list
-# arrives as one element and fastchess is handed `option.a=1,b=2` as a single
-# option name. Splitting here makes both forms work -- native array elements
-# and a single quoted list -- instead of silently measuring defaults.
-$splitOpts = {
-    param($items)
-    @($items | ForEach-Object { $_ -split ',' } |
-        ForEach-Object { $_.Trim().Trim('"') } |
-        Where-Object { $_ })
-}
-$OptionsA = & $splitOpts $OptionsA
-$OptionsB = & $splitOpts $OptionsB
-# Refuse to start when an engine does not expose an option we are setting.
-# fastchess only WARNS and then plays the whole match with that option at its
-# default, which is a completed run that measures nothing -- it has happened
-# twice in this project, once from a malformed name and once from a binary that
-# predated the switch. Asking the engine costs about a second.
-function Assert-EngineOptions {
-    param([string]$Exe, [string[]]$Wanted, [string]$Label)
-    if (-not $Wanted -or $Wanted.Count -eq 0) { return }
-    $full = (Resolve-Path $Exe).Path
-    $psi = [System.Diagnostics.ProcessStartInfo]::new()
-    $psi.FileName = $full
-    $psi.WorkingDirectory = Split-Path $full -Parent
-    $psi.RedirectStandardInput = $true
-    $psi.RedirectStandardOutput = $true
-    $psi.UseShellExecute = $false
-    $proc = [System.Diagnostics.Process]::Start($psi)
-    $proc.StandardInput.WriteLine("uci")
-    $proc.StandardInput.Flush()
-    $have = @{}
-    while (-not $proc.StandardOutput.EndOfStream) {
-        $line = $proc.StandardOutput.ReadLine()
-        if ($line -match '^option name (.+?) type ') { $have[$Matches[1]] = $true }
-        if ($line -match '^uciok') { break }
-    }
-    $proc.StandardInput.WriteLine("quit")
-    $proc.StandardInput.Flush()
-    if (-not $proc.WaitForExit(5000)) { $proc.Kill() }
-    $missing = @($Wanted | ForEach-Object { ($_ -split '=')[0].Trim() } |
-        Where-Object { -not $have.ContainsKey($_) })
-    if ($missing.Count -gt 0) {
-        throw ("$Label does not expose: " + ($missing -join ', ') +
-               ". The binary predates the option, or was built without the feature " +
-               "that registers it. Rebuild it before measuring -- fastchess would " +
-               "only warn and then play the whole match at the DEFAULT value.")
-    }
-}
-Assert-EngineOptions -Exe $EngineA -Wanted $OptionsA -Label $NameA
-Assert-EngineOptions -Exe $EngineB -Wanted $OptionsB -Label $NameB
-
 $optArgsA = @($OptionsA | ForEach-Object { "option.$_" })
 $optArgsB = @($OptionsB | ForEach-Object { "option.$_" })
 
@@ -556,6 +569,12 @@ if ($LASTEXITCODE -ne 0) {
     Write-Error "fastchess exited with code $LASTEXITCODE — no games were played."
 } else {
     Assert-NoAffinityFailure -LogPath $logOut
+    Assert-NoMatchAnomaly -LogPath $logOut
+    Add-Content -LiteralPath $manifestPath -Encoding utf8 -Value @(
+        "completed_utc:   $((Get-Date).ToUniversalTime().ToString('u'))"
+        "pgn_sha256:      $(Get-HarnessSha256 $pgnOut)"
+        "log_sha256:      $(Get-HarnessSha256 $logOut)"
+    )
     Write-Host ""
     Write-Host "Match finished. PGN: $pgnOut"
     Write-Host "Full console log (all per-game lines): $logOut"
@@ -565,13 +584,6 @@ if ($LASTEXITCODE -ne 0) {
     }
 
     if ($Mode -eq "calibrate") {
-        $calibrationAnomaly = Select-String -LiteralPath $logOut `
-            -Pattern '(?i)(loses on time|timeouts:\s*[1-9]|crashed:\s*[1-9]|disconnect|illegal move)' `
-            -ErrorAction SilentlyContinue
-        if ($calibrationAnomaly) {
-            throw "Calibration contained a timeout/crash/protocol anomaly and is invalid. See '$logOut'."
-        }
-
         $eloLine = Select-String -LiteralPath $logOut `
             -Pattern '\bnElo:\s*(?<estimate>[+-]?\d+(?:\.\d+)?)\s*\+/-\s*(?<error>\d+(?:\.\d+)?)' |
             Select-Object -Last 1
