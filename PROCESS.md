@@ -47,15 +47,15 @@ games until the end destroys attribution and lets losing structures hide.
    rejected or explicitly closed.
 
 A separable categorical alternative may have a preliminary SPRT, but that
-never replaces the locally fitted integrated cluster SPRT. After accepted
-clusters, **4.8/4.9** own search consolidation and **4.13** owns HCE
-consolidation, with separate confirmation SPRTs; they may not rescue an
-earlier losing cluster.
+never replaces the locally fitted integrated cluster SPRT. **4.8** owns search
+consolidation, **4.11** owns whole-HCE consolidation and **4.14** owns the
+final combined checkpoint, with separate confirmation SPRTs; none may rescue
+an earlier losing cluster.
 
-Two failed coherent search clusters trigger a return to 4.2–4.3. Two failed
-HCE clusters trigger a **4.11** decomposition re-audit, not silent closure. Track H may
-close early only by explicitly conceding the Phase-4 HCE maturity target; no
-UNKNOWN or first-draft contract may be presented as mature.
+Two failed coherent search clusters trigger a return to evidence. Two failed
+HCE clusters trigger a **4.9** evidence/maturity re-audit, not silent closure.
+The HCE track may close early only by explicitly conceding the Phase-4 HCE
+maturity target; no unknown or first-draft contract may be presented as mature.
 
 ### The independence boundary
 
@@ -96,6 +96,13 @@ arms. Use fixed movetime or nodes only for the deterministic diagnostic suite,
 never as the strength verdict.
 
 ### Toolchain and harness notes
+
+`build_test.ps1` manifests bind every test asset to its executable hash, source
+tree, compiler, build flavor and benchmark qualification. `sprt.ps1`,
+`spsa.ps1` and `datagen.ps1` validate those sidecars before launch. Do not
+recreate or hand-edit a sidecar to bypass a mismatch; rebuild the asset.
+Successful matches additionally reject crashes, time forfeits and protocol
+failures, and archive hashes of their logs/PGNs.
 
 If a PGO build dies with "target must match host", the rustup default host has
 drifted to windows-gnu, so the pinned toolchain resolves to its gnu variant
@@ -162,28 +169,31 @@ Texel is cheap enough to run locally after structural HCE work, but its static
 loss is not a strength verdict:
 
 1. Trace every changed term exactly and verify full evaluation reconstruction.
-2. Report activation, covariance and identifiability before selecting weights.
-3. Keep fixed by-game train/validation/untouched splits. Never tune on the
-   untouched test set.
-4. Run a local family fit after each structural HCE cluster. Bake the fit into
+2. Record the initial vector, free/fixed coordinates, activation, covariance,
+   identifiability and semantic sign/bounds before selecting weights.
+3. Keep stable whole-start hash train/validation/frozen-test splits. Retain the
+   rule-50 clock in position identity, reject replay leakage, publish only
+   exact per-phase quotas and hash every input/output. Never tune on the frozen
+   test set.
+4. Retain the complete train/validation trajectory. The validation-selected
+   vector must be settled, not a transient fly-through or a semantic sign
+   violation. Report the frozen test once after selection.
+5. Run a local family fit after each structural HCE cluster. Apply registered
+   static semantic/loss/NPS filters as refutation only. Bake the fit into
    clean PGO and SPRT the cluster; a lower loss alone accepts nothing.
-5. At 4.13, run an anchored whole-HCE consolidation over only activated,
-   identifiable weights. Repeat a cycle only if validation and the baked SPRT
-   both improve. Stop at the first no-gain/failed cycle; never choose a lucky
-   intermediate checkpoint retrospectively.
-6. Keep search parameters frozen during HCE Texel cycles.
+6. At 4.11, run an anchored whole-HCE consolidation over only activated,
+   identifiable weights. Repeat a cycle only for a prospectively registered
+   changed-data hypothesis supported by validation and the baked game verdict.
+   Stop at the first no-gain/failed cycle or convergence to the same attractor.
+7. Keep search parameters frozen during HCE Texel cycles.
 
 ### SPSA go/no-go procedure
 
-The generic harness is retained. **Phase 4 budgets exactly one search SPSA:
-the seeded selectivity fit at 4.8**, entered only after 4.5 and 4.6 have landed
-their contracts and both `G(128)` and `G(32)` have measurably shrunk. Seed its
-constants from the reference rather than from Rarog's current values — those
-are the values that produced the measured 188 and 200 Elo, so it becomes a
-local refit rather than a search. On the HCE side, 4.12's king-danger bucket
-selectors and 4.13's HCE-induced search-margin compatibility are the only other
-admissible surfaces, each separate and narrow. An undirected broad tune stays
-forbidden, and HCE and search coordinates are never mixed in one run.
+The generic harness is retained, but no SPSA is owed. The admissible Phase-4
+surfaces are a continuous 4.7 authority cluster if its evidence warrants fit,
+4.12 activated nonlinear/global HCE residue, and 4.13 HCE-displaced search
+margins. Each is separate and narrow. An undirected broad tune stays forbidden,
+and HCE and search coordinates are never mixed in one run.
 Before any SPSA:
 
 1. Name the strength-bearing mechanism and show local evidence that its
@@ -194,12 +204,21 @@ Before any SPSA:
    Never pin a binary knob as an SPSA constant — a pinned A/B knob is an
    unmeasured assumption.
 4. Select continuous coordinates from activation and interaction evidence. Do
-   not target 24 merely because an old plan said 24.
-5. Choose the horizon from gradient quality, integer resolution and compute
-   budget. 5,000 is a prior calibration, not a universal answer.
-6. Run `./tools/audit_spsa_coverage.ps1` and register surface, fixed values,
+   not target a historical coordinate count merely because it exists.
+5. For a nontrivial surface, register a bounded sensitivity pilot (default
+   128 iterations x 32 games unless signal/budget justifies another size).
+   Pilot theta diagnoses sensitivity only: never promote it or use it as the
+   full tune's seed.
+6. After the pilot, re-audit the entire active interacting surface. A pilot
+   coordinate returning to its seed may be inactive; an omitted high-activity
+   coordinate can invalidate the proposed full tune. The full tune starts from
+   accepted engine defaults.
+7. Choose and register the immutable horizon from gradient quality, integer
+   resolution and compute budget. `StopAfter` may stage a review without
+   changing that horizon or games per iteration.
+8. Run `./tools/audit_spsa_coverage.ps1` and register surface, fixed values,
    iterations, games, gain and estimator before launch.
-7. Complete the final theta without post-hoc checkpoint selection; bake it
+9. Complete the final theta without post-hoc checkpoint selection; bake it
    into a fresh clean PGO binary and run a paired SPRT, then LTC/4T where
    appropriate.
 

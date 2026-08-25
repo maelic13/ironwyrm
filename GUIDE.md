@@ -9,7 +9,7 @@
 |---|---|
 | Released baseline | **2.3.2** at `f931722` on `master` |
 | Accepted search head | RAR-S70, **6,977,070 nodes / EBF 2.466** |
-| Integration branch | `dev`, with failed SearchCore rewrite reverted by `c5e451d` |
+| Integration branch | `dev`; failed SearchCore rewrite reverted by `c5e451d`, measurement tooling upgraded by `d2c7788` |
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes**; **250.77 +/- 13.12** at equal time; speed contribution **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut filter **+15.56 +/- 10.02 Elo**; root LMR relief **+2.33 +/- 1.85 Elo** |
@@ -39,14 +39,14 @@
 **Search closeout**
 
 - [ ] **4.7** Qsearch, TT and evaluation authority
-    - [ ] **4.7.1 NEXT** Rebuild/reproduce RAR-S70; fixed-node/time baseline; same-unit producer/consumer counters; live-wire proof; write `analysis/phase4_qsearch_tt_authority.md`
+    - [ ] **4.7.1 NEXT** Rebuild/reproduce RAR-S70; fixed-hash branching shape; fixed-node/time baseline; same-unit producer/consumer counters; live-wire proof; write `analysis/phase4_qsearch_tt_authority.md`
     - [ ] **4.7.2** Build one dependency-complete authority candidate only if 4.7.1 isolates a unique signal
     - [ ] **4.7.3** Fit only a justified live search surface; register `[0,3]` gate, accept or revert
 - [ ] **4.8** Clean retained alternatives, remeasure search, freeze one HCE baseline
 
 **HCE maturity and fitting**
 
-- [ ] **4.9** Freeze residual corpus and finish current-source Stockfish maturity map
+- [ ] **4.9** Qualify the three-way corpus and fit audit, then finish the current-source Stockfish maturity map
 - [ ] **4.10** At most two evidence-selected structural HCE clusters, each locally Texel-fitted and gated
 - [ ] **4.11** Required anchored whole-HCE Texel consolidation and PGO SPRT
 - [ ] **4.12** Optional nonlinear/global HCE SPSA; skip unless activation, interaction and curvature justify it
@@ -74,7 +74,7 @@ cargo test --workspace --all-targets --release
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 
 cargo build --release
-@("bench 13", "quit") | .\target\release\rarog.exe
+'bench 13' | .\target\release\rarog.exe
 ```
 
 Expected benchmark: **6,977,070 nodes / EBF 2.466**. Stop if it differs.
@@ -84,8 +84,15 @@ Use the repository aggregators for counters and complete-pair results:
 ```powershell
 python tools/diag/bench_counters.py --exe target/release/rarog.exe --depth 13 --stride 1 --filter q_
 python tools/diag/bench_counters.py --exe target/release/rarog.exe --depth 13 --stride 1 --filter tt_
+pwsh -File tools/branching_profile.ps1 -Engine target/release/rarog.exe `
+    -MinDepth 4 -MaxDepth 9 -Hash 64 -Threads 1 `
+    -OutFile tools/results/branching-rar-s70.json
 pwsh -File tools/pgn_result.ps1 -Pgn <match.pgn> -Engine <candidate-name>
 ```
+
+Treat the branching report as descriptive/refutation evidence. Inspect the
+per-position ratios; an endpoint average dominated by one position is not a
+search diagnosis, and a smaller tree is not an Elo verdict.
 
 The 4.7.1 differential run requires revision-matched diagnostic Rarog and
 oracle assets. Record their hashes before running:
@@ -106,6 +113,7 @@ unique producer/consumer defect.
 | `PLAN.md` | Rationale, gates and full roadmap |
 | `EXPERIMENTS.md` | Durable evidence, failures, retry triggers and recipes |
 | `analysis/hce_maturity_2026-08-25.md` | Current HCE/Stockfish maturity comparison and fitting policy |
+| `analysis/manta_tooling_audit_2026-08-25.md` | Manta tool dispositions, imported measurements and limits |
 | `analysis/ablation_results.md` | Search-deficit measurements and corrected interpretation |
 | `PROCESS.md` | Recurring build, Texel, SPSA and release procedures |
 | `TRACKER.md` | History only; never a source of the next step |

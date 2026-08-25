@@ -9,7 +9,7 @@ in `EXPERIMENTS.md`; current status and commands belong in `GUIDE.md`.
 |---|---|
 | Released baseline | **2.3.2** at `f931722` on `master` |
 | Accepted search head | RAR-S70 on `dev`; `bench 13` = **6,977,070 nodes / EBF 2.466**, 1T |
-| Integration state | The failed SearchCore rewrite is reverted by `c5e451d`; accepted behavior is RAR-S70 plus diagnostics |
+| Integration state | The failed SearchCore rewrite is reverted by `c5e451d`; `d2c7788` upgrades measurement/fitting tools without changing accepted behavior |
 | Frozen search/HCE oracle | `hybrid` at `75d0d43`, Stockfish `9587eeeb` driving the exact Rarog 2.3.2 HCE |
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut move filtering **+15.56 +/- 10.02 Elo**; root LMR relief **+2.33 +/- 1.85 Elo** |
@@ -60,8 +60,8 @@ gating. The following rules determine this roadmap's order.
 | Correctness | Independent invariant/regression test; strength gate if playing behavior changes materially |
 | Behavior-neutral hot path | Exact fingerprint, debug/release tests, pooled NPS |
 | Search/HCE strength | Revision-matched clean PGO A/B, paired UHO, registered SPRT and stop rule |
-| Texel fit | Fixed train/validation/untouched splits, trace reconstruction, activation/covariance, baked PGO and SPRT |
-| SPSA | Registered live surface and schedule, completed theta, fresh PGO bake and SPRT |
+| Texel fit | Hash-complete whole-start train/validation/frozen-test splits, trace reconstruction, activation/covariance/identifiability, semantic bounds, settled validation-selected trajectory, baked PGO and SPRT |
+| SPSA | Registered live surface and immutable horizon, bounded sensitivity pilot when needed, completed full-surface theta, fresh PGO bake and SPRT |
 | Release | Prior-release STC/LTC, 4T direction, NPS, platform/ISA matrix and user-facing docs |
 
 ### Independence boundary
@@ -167,16 +167,21 @@ explicit producer/consumer authority.
 2. Re-run the versioned differential suite at
    `RAROG_DIAG_SAMPLE_STRIDE=1`, plus fixed-node and fixed-time `G(0)`, using
    the repository parsers only.
-3. Extend counters only where the current contract cannot answer:
+3. Produce a fixed-corpus, fixed-Hash/Threads depth-over-depth branching
+   profile. Report the per-position distribution and robust aggregate across
+   depths; never infer from one endpoint or compare absolute node counts
+   between engines with different node definitions. This can refute a tree
+   hypothesis, not accept a candidate.
+4. Extend counters only where the current contract cannot answer:
     - main versus qsearch TT probe, hit, usable cutoff and store;
     - entry writer/provenance, depth/bound/window rejection reason and consumer;
     - qsearch entry reason, stand-pat outcome, moves generated/searched/pruned,
       checks/evasions/promotions and SEE/delta exemptions;
     - raw HCE, corrected/pruning value, stand-pat and searched score authority;
     - all denominators stated as per main node, per qnode or per move.
-4. Prove every new wire live with an absurd-value or forced-position probe,
+5. Prove every new wire live with an absurd-value or forced-position probe,
    then prove diagnostics-off identity.
-5. Write `analysis/phase4_qsearch_tt_authority.md` with the same-unit baseline,
+6. Write `analysis/phase4_qsearch_tt_authority.md` with the same-unit baseline,
    dependency map and explicit candidate/no-candidate decision.
 
 #### 4.7.2 Candidate, only if 4.7.1 isolates one
@@ -196,7 +201,12 @@ switch-off identity and populate focused tests. If no unique signal exists,
 
 Categorical authority is frozen before tuning. Search SPSA is used only if at
 least two live continuous coordinates interact and a zero-game local sweep
-shows curvature; otherwise reasoned local seeds go directly to the gate.
+shows curvature. If SPSA is justified, first register a bounded sensitivity
+pilot (default 128 iterations x 32 games), then audit the entire active
+interacting surface before registering a full tune. Pilot theta is diagnostic,
+never a candidate or seed; the full tune starts from accepted defaults. A
+staged `StopAfter` may pause review but never changes the registered horizon or
+games per iteration. Otherwise reasoned local seeds go directly to the gate.
 Register the PGO candidate against exact RAR-S70, normally `[0,3]` nElo with a
 RAR-M10-sized overnight cap. Accept or revert before 4.8.
 
@@ -235,28 +245,44 @@ change.
 | Activity/space/threats | Pin-aware legal activity, usable space, safe pawn pushes and exact relations |
 | King safety | Shelter/storm dimensionality, castling destination, pinned defenders, weak/flank inputs |
 | Scaling/endgames | Exact material conversion, OCB scope, Syzygy-backed won/drawn/cursed separation |
-| Calibration/data | Current frozen train/validation/untouched corpus, activation/covariance and full/lazy/search residuals |
+| Calibration/data | Current frozen train/validation/frozen-test corpus, activation/covariance and full/lazy/search residuals |
 
 Stockfish comparison may enumerate and test these contracts. Reciprocal family
 ablation is optional coarse sensitivity evidence only; it cannot rank build
 order by itself or assign recoverable Elo.
 
+Manta strengthens the process, not the expected-value estimate. MAN-E19's
+coherent coverage-plus-constrained-fit bundle won +35.91 +/- 11.19 Elo while
+costing 36.2% evaluator throughput; MAN-E18/E20 show that a lower static loss
+cannot rescue a semantically wrong or weak feature, and MAN-E21 shows that a
+plausible faster mechanism can still lose games. Therefore structure and
+semantic constraints precede fitting, static/NPS filters may reject but never
+promote, and the whole fitted cluster pays its own game and search-NPS gate.
+
 ### 4.9 HCE evidence base and current-source maturity map
 
-1. Pull Phase 5.0's measurement corpus forward: by-game
-   train/validation/untouched-test splits, exact material/phase/king/passer
-   cohorts, paired counterfactuals, Syzygy WDL/DTZ and external deep labels.
-   Record source, teacher, settings, split IDs and hashes.
-2. For current Rarog emit raw, lazy, corrected, qsearch and depth-N values;
+1. Qualify the native extraction path before fitting: stable whole-start hash
+   assignment to train/validation/frozen-test, no replay leakage, rule-50 clock
+   retained in static-eval identity, exact per-phase quotas, sequential/parallel
+   equivalence, atomic publication and hashes of inputs, outputs and settings.
+2. Pull Phase 5.0's measurement corpus forward: exact material/phase/king/
+   passer cohorts, paired counterfactuals, Syzygy WDL/DTZ and external deep
+   labels. Record source, teacher, settings, split IDs and hashes.
+3. Qualify fit evidence before trusting an optimum: record the exact initial
+   vector, free/fixed coordinates, support, covariance/identifiability,
+   semantic sign/bounds, regularization, seed and the full train/validation
+   trajectory. A validation-selected checkpoint must be settled rather than a
+   lucky fly-through; the frozen test remains unopened until selection ends.
+4. For current Rarog emit raw, lazy, corrected, qsearch and depth-N values;
    full residuals by cohort; activation and covariance; and exact `EvalTrace`
    reconstruction.
-3. Classify every maturity family as equivalent, intentionally different with
+5. Classify every maturity family as equivalent, intentionally different with
    evidence, candidate, or rejected. There may be no stale/fixed defect or
    unclassified first draft in the map.
-4. If reciprocal Stockfish family ablation is retained, prove every bit live,
+6. If reciprocal Stockfish family ablation is retained, prove every bit live,
    keep arms in a readable band and use it only as one prior alongside local
    residual, activation, covariance and NPS.
-5. Register no structural candidate until the evidence selects a local signal.
+7. Register no structural candidate until the evidence selects a local signal.
 
 ### 4.10 Structural HCE upgrades
 
@@ -271,7 +297,9 @@ For each cluster:
 1. freeze categorical semantics and add directional/counterfactual tests;
 2. make every changed feature reconstruct exactly through `EvalTrace`;
 3. run a local anchored Texel fit over moved and materially covariant weights;
-4. check frozen validation/cohorts, pooled evaluator and search NPS;
+4. apply prospectively registered static refutation filters: semantic sign and
+   bounds, minimum validation/cohort improvement, identifiability and pooled
+   evaluator/search NPS. Failure stops before games; passing cannot promote;
 5. bake final PGO and run the registered no-adjudication SPRT;
 6. accept or revert before selecting the next cluster.
 
@@ -282,8 +310,12 @@ Two fully fitted cluster failures stop 4.10 and force a 4.9 re-audit.
 After all accepted representations freeze, run one anchored whole-HCE fit over
 the active identifiable vector. Pin exact free/fixed groups, data/split hashes,
 regularization, initialization, seed and checkpoint rule before training.
-Validation chooses the completed vector; the untouched test is reported once
-and never used to select weights.
+Validation chooses a settled completed vector, with the whole optimization
+trajectory retained; a transient best epoch is not maturity. The frozen test
+is reported once and never used to select weights. Manta's unconstrained
+fit improved every split while crossing required feature signs; its constrained
+fit preserved semantics and later won only as part of MAN-E19. Semantic rails
+are therefore part of the model contract, not post-fit cleanup.
 
 Bake the completed vector into clean PGO and run one no-adjudication SPRT
 against the pre-consolidation accepted HCE. Lower loss cannot accept it:
@@ -291,6 +323,8 @@ RAR-E03 lost 17.11 Elo despite lower holdout loss and RAR-E04 was flat despite
 better on-policy validation. A second data/fit cycle is allowed only if
 registered prospectively and both the first held-out report and game verdict
 support a concrete changed-data hypothesis. Stop on the first failed cycle.
+Also stop when a later run returns to the same fitted attractor without a
+meaningful held-out gain; more data or epochs are not progress by themselves.
 
 ### 4.12 Optional HCE nonlinear SPSA — CONDITIONAL
 
@@ -298,8 +332,11 @@ This step may close as skipped. Open it only when the frozen HCE contains
 important activated nonlinear/global parameters that `EvalTrace` cannot fit,
 their local response is not flat or monotone, and a small joint surface has a
 credible game-objective interaction. Freeze all linear Texel weights, register
-coordinates/schedule/rails/cap and require a completed theta, fresh PGO bake
-and SPRT. No full-surface HCE SPSA and no checkpoint selection after the fact.
+coordinates/schedule/rails/cap and run a bounded sensitivity pilot before any
+full tune. Audit every active interacting coordinate after the pilot; do not
+promote or seed from its theta. Require a completed full-tune theta, fresh PGO
+bake and SPRT. No full-surface HCE SPSA and no checkpoint selection after the
+fact.
 
 ### 4.13 Post-HCE search compatibility
 
@@ -308,7 +345,8 @@ Re-measure activation and local response for cp-valued RFP, null, futility,
 ProbCut, qsearch, correction and LMR consumers. Keep categorical search policy
 frozen. Run one targeted search-margin SPSA only if several live coordinates
 show a displaced interacting optimum; otherwise make only a registered narrow
-repair or close the step. Never tune HCE and search coordinates together.
+repair or close the step. Any SPSA follows the 4.7.3 pilot/full-surface
+discipline. Never tune HCE and search coordinates together.
 
 ### 4.14 Final HCE/search checkpoint
 
@@ -454,8 +492,11 @@ accretion.
 | `tools/sprt.ps1` | Paired pentanomial GSPRT; default 1T `3+0.03`, Hash 64, UHO |
 | `tools/diag/phase4_differential.py` | Same-unit Phase-4 suite aggregation |
 | `tools/diag/bench_counters.py` | Sum all per-position bench counter dumps |
+| `tools/branching_profile.ps1` | Hash-bound per-position depth/branching shape; refutation evidence only |
 | `tools/pgn_result.ps1` | Reconstruct complete-pair PGN results |
-| `tools/spsa.ps1` | Registered targeted SPSA only |
+| `tools/build_test.ps1` | Hash-bound build manifests and exact benchmark qualification |
+| `tools/spsa.ps1` | Registered targeted SPSA with immutable horizon and staged stop |
+| `tools/texel/extract.py`, `extract_parallel.py` | Leak-resistant three-way phase-balanced extraction |
 | `cargo xtask build --arch <arch> --pgo` | Production PGO asset |
 | `cargo xtask verify-isa --arch <arch>` | Executable ISA contract |
 | `hybrid/build.ps1` | Frozen diagnostic oracle package, hybrid branch only |
@@ -467,5 +508,5 @@ cargo test --workspace --all-targets
 cargo test --workspace --all-targets --release
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo build --release
-@("bench 13", "quit") | .\target\release\rarog.exe
+'bench 13' | .\target\release\rarog.exe
 ```

@@ -59,6 +59,18 @@ not another correctness sweep over those four items.
 | RAR-E05 anchored refresh: +11.56 +/- 5.19 Elo, moving 57/1,204 weights mostly 1 cp | Small constrained refits can still pay; preserve anchoring and attribution |
 | Manta MAN-E19: 25 audited concepts plus constrained fit, +35.91 +/- 11.19 Elo at -36.2% evaluator throughput | Coverage audit -> coherent structure -> constrained fit -> one gate is a sound process; broad structure still owes an NPS price |
 | Manta MAN-E05/MAN-E07: reference-family scaling and imbalance lost 16.32 and 7.00 Elo | Reference fidelity is a hypothesis, never a promotion rule |
+| Manta MAN-E18: a fitted imbalance block improved static loss slightly but lost about 7 Elo | Fitting cannot rescue a semantically weak block; materially covariant terms must actually be free and move |
+| Manta MAN-E20: a context-space fit crossed its required sign, missed its registered validation floor and cost 3.693% evaluator speed | Semantic direction, static-loss floor and NPS are valid prospective refutation filters, never promotion criteria |
+| Manta MAN-E21: shelter-moderated danger was plausible and faster but lost 6.44 Elo | Mechanistic plausibility and throughput do not predict playing strength |
+
+Manta's successful constrained HCE run used 3,000,000 balanced training rows
+plus 166,667 validation and 166,667 frozen-test rows from 1,162,814 unique
+starts. It moved 142 weights by at most 7 cp and reduced frozen-test loss from
+0.104461517 to 0.102574754 before the integrated MAN-E19 game gate. The useful
+lesson is not that those corpus sizes or deltas are universal: adequate data,
+semantic rails and whole-cluster gating worked together. Later sweeps returning
+to the same attractor supplied a stop rule against reflexively adding data or
+epochs.
 
 ## Current maturity matrix
 
@@ -76,7 +88,7 @@ dependency-complete test.
 | Threats | Attacker/victim tables, hanging, weak and restricted relations exist | Safe pawn pushes, overload/pin context and exact attacker-defender relations are less conditional | Tactical counterfactuals, qsearch/depth-N disagreement and SEE-safe activation reports |
 | King safety | Nonlinear danger table, attacker units, safe checks, shelter/storm and flank inputs exist | Shelter/storm is low-dimensional; castling destination, pinned defenders and several flank/weak-ring inputs are absent, broad or fitted to zero | Queen/phase/shelter cohorts, legal safe-check tests, activation/covariance and a pooled-PGO cost gate |
 | Scaling and endgames | KPK/KBNK, fortress/partial scalers, OCB and rule-50 handling exist | Dispatcher and material-specific conversion are narrower; OCB scope and generic winnability remain coarse | Exact material signatures, Syzygy WDL/DTZ, non-amplification and won/drawn/cursed separation |
-| Calibration and data | EvalTrace, Texel reconstruction, staged/self-play history and anchored fit exist | No current frozen residual corpus spans the post-2.3.2 representation with train/validation/untouched-test discipline | Versioned corpus and manifests, by-game splits, activation/covariance, external cohorts and one-time untouched-test reporting |
+| Calibration and data | EvalTrace, Texel reconstruction, staged/self-play history and anchored fit exist | No current frozen residual corpus spans the post-2.3.2 representation with train/validation/frozen-test discipline | Versioned corpus and manifests, whole-start splits, activation/covariance, external cohorts and one-time frozen-test reporting |
 
 ## How the Stockfish comparison may be used
 
@@ -97,10 +109,11 @@ The reciprocal HCE instrument is still useful as a coarse sensitivity map if:
 
 ## Improvement and fitting programme
 
-1. **Freeze the evidence base.** Build the Phase-4.9 corpus with by-game
-   train/validation/untouched-test separation, exact material and feature
-   cohorts, Syzygy labels, paired counterfactuals and raw/lazy/corrected/
-   qsearch/depth-N outputs. Record hashes and label recipes.
+1. **Freeze the evidence base.** Build the Phase-4.9 corpus with stable
+   whole-start train/validation/frozen-test separation, exact material and
+   feature cohorts, Syzygy labels, paired counterfactuals and raw/lazy/
+   corrected/qsearch/depth-N outputs. Retain the rule-50 clock in static-eval
+   identity and record all input/output hashes and label recipes.
 2. **Finish the family map on current source.** Classify every matrix row and
    explicitly close historical defects already fixed. Reciprocal Stockfish
    ablation is optional coarse evidence, not the ordering algorithm.
@@ -111,12 +124,15 @@ The reciprocal HCE instrument is still useful as a coarse sensitivity map if:
    conditionality, but the corpus chooses.
 4. **Fit each changed cluster locally.** Freeze categorical semantics, fit all
    moved and materially covariant linear weights with anchoring, validate on
-   frozen cohorts, bake clean PGO and run the registered SPRT. Untuned draft
-   weights are not a fair test.
+   frozen cohorts, and retain initial vector plus full optimization trajectory.
+   Apply registered semantic/loss/NPS filters as refutation only, bake clean
+   PGO and run the registered SPRT. Untuned draft weights are not a fair test.
 5. **Run one whole-HCE Texel consolidation.** After representations freeze,
    fit the identifiable active vector with fixed splits, anchoring and explicit
-   free/fixed groups. A second cycle is allowed only if registered beforehand
-   and both held-out loss and the first game gate justify fresh on-policy data.
+   free/fixed groups. Require a settled validation-selected vector rather than
+   a transient best epoch. A second cycle is allowed only if registered
+   beforehand and both held-out loss and the first game gate justify fresh
+   on-policy data; stop if it returns to the same attractor.
 6. **Use SPSA only for the residue it can identify.** HCE SPSA is optional and
    limited to activated nonlinear/global parameters that the linear trace
    cannot fit. Search-margin SPSA is separate and occurs only after the HCE is
