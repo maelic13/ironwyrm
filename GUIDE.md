@@ -1,136 +1,114 @@
 # Rarog development guide
 
-**Current state and the ordered steps. Nothing else.** Detail belongs
-elsewhere and is linked below — if you are adding more than a few lines here,
-it probably belongs in `PLAN.md`, `TRACKER.md` or `PROCESS.md` instead.
+**Current state and ordered steps only.** Design and rationale live in
+`PLAN.md`; durable results live in `EXPERIMENTS.md`.
 
 ## Current checkpoint
 
 | Item | Value |
 |---|---|
 | Released baseline | **2.3.2** at `f931722` on `master` |
-| Accepted fingerprint | **6,977,070 nodes / EBF 2.466** (RAR-S70) |
-| Integration branch | `dev` |
+| Accepted search head | RAR-S70, **6,977,070 nodes / EBF 2.466** |
+| Integration branch | `dev`, with failed SearchCore rewrite reverted by `c5e451d` |
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
-| Ablation instrument | `hybrid-ablate` (oracle) + `--features ablate` (Rarog); one shared bitmask |
-| Measured deficit | **355.26 ± 27.03 Elo at equal NODES**; 250.77 ± 13.12 at equal time, the difference being Rarog's speed at a measured **104.5 Elo** |
+| Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes**; **250.77 +/- 13.12** at equal time; speed contribution **104.5 Elo** |
+| Accepted Phase-4 gains | ProbCut filter **+15.56 +/- 10.02 Elo**; root LMR relief **+2.33 +/- 1.85 Elo** |
 | Active experiment | None |
-| Current step | **PLAN 4.6.4 — quiet SEE prune.** The one Step-13 gap the counters cannot explain as a population effect |
-| Evaluation | Frozen through 4.9; the HCE decomposition starts at 4.10 |
-| Next releases | Conditional 2.4.0 at 4.15; then NNUE 2.5.0 |
+| Current step | **4.7.1 — qsearch/TT authority observation and baseline** |
+| HCE | Frozen through 4.8; maturity evidence/structure 4.9–4.10, required Texel consolidation 4.11, conditional SPSA 4.12–4.13 |
+| Next release | Conditional 2.4.0 at 4.15; then NNUE |
 
-## Phase 4 — status
+## Phase 4 status
 
-Renumbered 2026-08-21 on the ablation decomposition
-(`analysis/ablation_results.md`). `PLAN.md` holds what each step involves.
-**Tick a box only when the step is finished AND verified**, and update this
-file and `PLAN.md` in the same commit.
-
-**Observation and instruments — closed**
+**Evidence foundation — closed**
 
 - [x] **4.0** Evidence, baseline and oracle freeze — RAR-M12
 - [x] **4.1** Instrumented oracle — `hybrid-diag` `de568b3`
 - [x] **4.2** Differential observation harness — RAR-S55
 - [x] **4.3** Mechanism map and order freeze
-- [x] **4.4** Search-consumed board state — nothing required
-- [x] **4.4a** Matched-ablation instrument — `hybrid-ablate` + `--features ablate`, every bit proved live
-- [x] **4.4b** Deficit decomposed — `G(0)` = 250.77 ± 13.12; LMR 116.0, shallow pruning 124.6, extensions null
+- [x] **4.4** Matched ablation plus fixed-node correction
+- [x] **4.5** LMR contract study — no accepted interior gain; RAR-S70 root gain retained
 
-**Search track — selectivity holds 240 of the 250.8 Elo**
+**Failed continuation — closed**
 
-- [x] **4.5 LMR rework — CLOSED, NO GAIN.** Four candidates, all flat. Rarog's LMR is
-      contract-equivalent to the reference's and orders BETTER, so it has 30% fewer late
-      moves to reduce: the 116 was marginal value, not headroom
-    - [x] 4.5.1 reduction is a contract (`ReductionInputs`) + 4 missing terms — **+4.19 ± 18.56**
-    - [x] 4.5.2 `LmrMinReducedDepth` built, default-off — alone **−12.7 ± 26.5**
-    - [x] 4.5.3 root term accepted earlier — RAR-S70 **+2.33 ± 1.85**, the phase's only LMR gain
-    - [x] 4.5.5 `SelectivityCountConsidered` — starved move index, real, worth **−0.56 ± 18.5**
-- [ ] **4.6 Shallow-depth pruning.** ⚠ 124.6 is marginal value, NOT a target — 4.5 spent
-      four runs learning that distinction. Measure each gap before building it
-    - [x] 4.6.4 quiet SEE prune built, default-off. `see_prune` runs at **0.20x** and
-      `see_ge` could not evaluate a quiet move at all ← **MEASURING**
-    - [ ] 4.6.1 countermove-history and parent-futility gaps, if measurement supports them
-    - [ ] 4.6.2 settle `SelectivityProspectiveDepth` here
-    - [ ] 4.6.3 make `prune_shadow_*` track the live block, or delete it
-- [ ] **4.7** History and ordering, as inputs to 4.5/4.6
-- [ ] **4.8** ONE seeded selectivity SPSA, after the contracts land
-- [ ] **4.9** Integrate, re-measure `G(0)`, freeze the search head
+- [x] **4.6** Shallow-selectivity/rewrite continuation — no accepted gain
+    - [x] **4.6.1** Quiet SEE screen: gap closure **+3.38 +/- 27.08 Elo**, stopped null
+    - [x] **4.6.2** SearchCore: **-9.76 +/- 17.70 Elo** over 712 complete games, stopped before boundary and reverted
+    - [x] **4.6.3** Broad selectivity SPSA and another rewrite declined; entry evidence absent
 
-**HCE track — the larger prize, +328.6 Elo, not yet decomposed**
+**Search closeout**
 
-- [ ] **4.10** Reciprocal HCE oracle + eval ablation instrument
-- [ ] **4.11** Decompose the +328.6 Elo by term family — BEFORE building anything
-- [ ] **4.12** Rework the families 4.11 ranks, in that order
-- [ ] **4.13** Texel consolidation, after the representations freeze
-- [ ] **4.14** HCE checkpoint and ablation
+- [ ] **4.7** Qsearch, TT and evaluation authority
+    - [ ] **4.7.1 NEXT** Rebuild/reproduce RAR-S70; fixed-node/time baseline; same-unit producer/consumer counters; live-wire proof; write `analysis/phase4_qsearch_tt_authority.md`
+    - [ ] **4.7.2** Build one dependency-complete authority candidate only if 4.7.1 isolates a unique signal
+    - [ ] **4.7.3** Fit only a justified live search surface; register `[0,3]` gate, accept or revert
+- [ ] **4.8** Clean retained alternatives, remeasure search, freeze one HCE baseline
+
+**HCE maturity and fitting**
+
+- [ ] **4.9** Freeze residual corpus and finish current-source Stockfish maturity map
+- [ ] **4.10** At most two evidence-selected structural HCE clusters, each locally Texel-fitted and gated
+- [ ] **4.11** Required anchored whole-HCE Texel consolidation and PGO SPRT
+- [ ] **4.12** Optional nonlinear/global HCE SPSA; skip unless activation, interaction and curvature justify it
+- [ ] **4.13** Post-HCE search-margin audit; optional targeted search SPSA only if the fitted HCE displaced a live optimum
+- [ ] **4.14** Final HCE/search checkpoint, attribution and maturity closure
 
 **Release**
 
-- [ ] **4.15** Transfer, portability, SMP, release gate → **2.4.0**
+- [ ] **4.15** STC/LTC/4T, NPS, portability, ISA and release gate
 
-**Accepted in Phase 4 so far:** 4.7c ProbCut move filter **+15.56 ± 10.02**
-(RAR-S57/S58) and RAR-S70 root relief **+2.33 ± 1.85**. Programme target is
-≥ +100 Elo cumulative over 2.3.2.
+Current HCE maturity analysis:
+`analysis/hce_maturity_2026-08-25.md`. The older
+`analysis/hce_analysis.md` is historical; its four concrete activation defects
+are already fixed and are not current work.
 
-**Parked by measurement, not by judgement:** extensions (11.8 ± 18.8, a 1.2
-sigma null), TT and quiescence, root and clock, and the whole answer-harness
-line. Matched ablation bounds all of them together at ~30 Elo. PLAN's "Parked
-by measurement" table keeps each with the evidence that parked it; any revives
-the moment a measurement puts Elo behind it.
+## What you run next
 
-**After Phase 4:** Phase 5 NNUE runway → Phase 6 baseline NNUE (2.5.0) →
-Phases 7–9. See `PLAN.md`.
+Step 4.7.1 starts with a clean exact-feature rebuild. Do not measure the
+all-feature/`texel` binary.
 
-## What you run now
+```powershell
+cargo fmt --check
+cargo test --workspace --all-targets
+cargo test --workspace --all-targets --release
+cargo clippy --workspace --all-targets --all-features -- -D warnings
 
-Rebuild before measuring, with the exact feature set. Never measure a binary
-you did not just build — see `AGENTS.md`.
-
-```bash
-cargo xtask build --arch pext --pgo
+cargo build --release
+@("bench 13", "quit") | .\target\release\rarog.exe
 ```
 
-Ablation, either engine, one shared bitmask (0 razoring, 1 futility-child,
-2 nullmove, 3 probcut, 4 iir, 5 shallow-pruning, 6 extensions, 7 lmr):
+Expected benchmark: **6,977,070 nodes / EBF 2.466**. Stop if it differs.
 
-```bash
-pwsh -File tools/sprt.ps1 -EngineA tools/test_engines/ablate/rarog-ablate-pext-pgo.exe -EngineB tools/test_engines/ablate/rarog-stockfish-hce-hybrid.exe -NameA Rarog -NameB Oracle -OptionsA AblationMask=0 -OptionsB AblationMask=0 -Mode fixed -Games 2000
+Use the repository aggregators for counters and complete-pair results:
+
+```powershell
+python tools/diag/bench_counters.py --exe target/release/rarog.exe --depth 13 --stride 1 --filter q_
+python tools/diag/bench_counters.py --exe target/release/rarog.exe --depth 13 --stride 1 --filter tt_
+pwsh -File tools/pgn_result.ps1 -Pgn <match.pgn> -Engine <candidate-name>
 ```
 
-A registered strength gate, `[0,3]` nElo, sized from RAR-M10 before
-registering:
+The 4.7.1 differential run requires revision-matched diagnostic Rarog and
+oracle assets. Record their hashes before running:
 
-```bash
-pwsh -File tools/sprt.ps1 -EngineA <candidate> -EngineB <base> -NameA New -NameB Head -Elo0 0 -Elo1 3 -MaxGames 80000
+```powershell
+python tools/diag/phase4_differential.py --rarog <rarog-diag.exe> --oracle <hybrid-diag.exe> --depth 8
 ```
 
-Bench counters, summed over all 40 per-position dumps:
-
-```bash
-python tools/diag/bench_counters.py --exe target/release/rarog.exe --depth 13 --filter lmr
-```
-
-The hosted release workflow remains the final production check: one machine
-cannot create all Linux/macOS/Windows and x86/ARM assets.
+No strength game is authorized by this documentation change. Register a 4.7
+candidate in `EXPERIMENTS.md` only after the observation artifact names a
+unique producer/consumer defect.
 
 ## Documentation ownership
 
-| File | Audience / purpose |
+| File | Purpose |
 |---|---|
-| `GUIDE.md` | **This file. Current state and ordered steps only** |
-| `PLAN.md` | Maintainers: what each step involves, ownership, the full roadmap |
-| `TRACKER.md` | The detailed per-step checklist, past and forward. Retired numbering |
-| `PROCESS.md` | Recurring procedures: step lifecycle, Texel, SPSA go/no-go, toolchain, book |
-| `AGENTS.md` | The rules that stop wrong results. Imported by `CLAUDE.md` |
-| `EXPERIMENTS.md` | Durable evidence, failures and retry triggers |
-| `README.md` | Users: install, CPU choice, UCI and build basics |
-| `CHANGELOG.md` | Users: visible release deltas and measured claims |
-| `analysis/ablation_results.md` | The deficit decomposition that ordered Phase 4 |
-| `analysis/phase4_counter_spec.md` | Shared 4.1/4.2 counter contract |
-| `tools/spsa_configs/README.md` | Tuning-specific mechanics and lessons |
+| `GUIDE.md` | Current status, ordered steps and commands |
+| `PLAN.md` | Rationale, gates and full roadmap |
+| `EXPERIMENTS.md` | Durable evidence, failures, retry triggers and recipes |
+| `analysis/hce_maturity_2026-08-25.md` | Current HCE/Stockfish maturity comparison and fitting policy |
+| `analysis/ablation_results.md` | Search-deficit measurements and corrected interpretation |
+| `PROCESS.md` | Recurring build, Texel, SPSA and release procedures |
+| `TRACKER.md` | History only; never a source of the next step |
 
-**`GUIDE.md` and `PLAN.md` are updated in the SAME commit.** GUIDE is the
-overview of PLAN; a GUIDE that disagrees with PLAN is worse than no GUIDE.
-
-When facts disagree, source, defaults and reproducible artifacts outrank prose;
-fix the prose in the same change.
+`GUIDE.md` and `PLAN.md` must change in the same commit. Source, defaults and
+reproducible artifacts outrank prose whenever documents disagree.
