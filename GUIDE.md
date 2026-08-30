@@ -9,13 +9,13 @@
 |---|---|
 | Released baseline | **2.3.2** at `f931722` on `master` |
 | Accepted search head | RAR-S70, **6,977,070 nodes / EBF 2.466** |
-| Integration branch | `dev`; failed SearchCore rewrite reverted by `c5e451d`, measurement tooling upgraded by `d2c7788` |
+| Integration branch | `dev`; failed SearchCore rewrite reverted by `c5e451d`, measurement tooling upgraded by `d2c7788`/`e4f10ca` |
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes**; **250.77 +/- 13.12** at equal time; speed contribution **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut filter **+15.56 +/- 10.02 Elo**; root LMR relief **+2.33 +/- 1.85 Elo** |
 | Active experiment | None |
-| Current step | **4.7.1 — qsearch/TT authority observation and baseline** |
-| HCE | Frozen through 4.8; maturity evidence/structure 4.9–4.10, required Texel consolidation 4.11, conditional SPSA 4.12–4.13 |
+| Current step | **4.7.1 — audit the existing HCE self-play archives and three-way corpus contract** |
+| HCE | Open now; no historical family is frozen. Refit every identifiable linear and nonlinear surface before adding features |
 | Next release | Conditional 2.4.0 at 4.15; then NNUE |
 
 ## Phase 4 status
@@ -36,21 +36,21 @@
     - [x] **4.6.2** SearchCore: **-9.76 +/- 17.70 Elo** over 712 complete games, stopped before boundary and reverted
     - [x] **4.6.3** Broad selectivity SPSA and another rewrite declined; entry evidence absent
 
-**Search closeout**
-
-- [ ] **4.7** Qsearch, TT and evaluation authority
-    - [ ] **4.7.1 NEXT** Rebuild/reproduce RAR-S70; fixed-hash branching shape; fixed-node/time baseline; same-unit producer/consumer counters; live-wire proof; write `analysis/phase4_qsearch_tt_authority.md`
-    - [ ] **4.7.2** Build one dependency-complete authority candidate only if 4.7.1 isolates a unique signal
-    - [ ] **4.7.3** Fit only a justified live search surface; register `[0,3]` gate, accept or revert
-- [ ] **4.8** Clean retained alternatives, remeasure search, freeze one HCE baseline
-
 **HCE maturity and fitting**
 
-- [ ] **4.9** Qualify the three-way corpus and fit audit, then finish the current-source Stockfish maturity map
-- [ ] **4.10** At most two evidence-selected structural HCE clusters, each locally Texel-fitted and gated
-- [ ] **4.11** Required anchored whole-HCE Texel consolidation and PGO SPRT
-- [ ] **4.12** Optional nonlinear/global HCE SPSA; skip unless activation, interaction and curvature justify it
-- [ ] **4.13** Post-HCE search-margin audit; optional targeted search SPSA only if the fitted HCE displaced a live optimum
+- [ ] **4.7** Qualify HCE data, labels, fitting instruments and current-source maturity
+    - [ ] **4.7.1 NEXT** Audit the existing self-play archives; freeze leak-free train/validation/test hashes and label/coverage report
+    - [ ] **4.7.2** Add exact all-slot instrument coverage plus end-to-end fit/bake/rebuild smoke; no group remains frozen because it was fitted before
+    - [ ] **4.7.3** Finish residual/covariance and Stockfish contract map on current source
+- [ ] **4.8** Refit and gate the complete existing HCE surface: all identifiable linear weights plus every activated nonlinear/capped surface
+- [ ] **4.9** At most two residual-selected structural HCE clusters; skip if the complete refit leaves no supported gap
+- [ ] **4.10** Post-structure whole-HCE consolidation; satisfied by 4.8 if no structure changes
+
+**Post-HCE search closeout**
+
+- [ ] **4.11** Re-measure qsearch/TT/eval authority and playing-depth branching on the accepted HCE; build one candidate only if a unique defect remains
+- [ ] **4.12** Optional targeted post-HCE search SPSA; skip without a displaced interacting optimum
+- [ ] **4.13** Remove unowned alternatives and record the clean search checkpoint
 - [ ] **4.14** Final HCE/search checkpoint, attribution and maturity closure
 
 **Release**
@@ -64,46 +64,38 @@ are already fixed and are not current work.
 
 ## What you run next
 
-Step 4.7.1 starts with a clean exact-feature rebuild. Do not measure the
-all-feature/`texel` binary.
+Step 4.7 starts with the data and instrument contracts, not a new fit. The two
+existing self-play archives are inputs only; do not overwrite the old
+`train.csv`/`holdout.csv` or open a new frozen test during tool development.
 
 ```powershell
-cargo fmt --check
-cargo test --workspace --all-targets
-cargo test --workspace --all-targets --release
-cargo clippy --workspace --all-targets --all-features -- -D warnings
-
-cargo build --release
-'bench 13' | .\target\release\rarog.exe
+python tools\texel\extract_parallel.py `
+    tools\texel\data\selfplay-p1025a-zero-n8000-s1-g20000.pgn `
+    tools\texel\data\selfplay-p1025a-zero-n8000-s20001-g580000.pgn `
+    --out-dir tools\texel\data\hce-v2 --jobs 14 --audit-only
 ```
 
-Expected benchmark: **6,977,070 nodes / EBF 2.466**. Stop if it differs.
+The audit must report zero parse errors/replays and meet every three-way phase
+quota before publication. Then implement the 4.7.2 coverage command: every
+`EvalParams` slot must be claimed by a linear fitter, nonlinear/finite-difference
+fitter, algebraic gauge, invariant or measured unidentifiable disposition.
+Its end-to-end smoke must prove that vectors are baked rather than discarded.
 
-Use the repository aggregators for counters and complete-pair results:
+After that tooling exists, publish the new dataset once and qualify it:
 
 ```powershell
-python tools/diag/bench_counters.py --exe target/release/rarog.exe --depth 13 --stride 1 --filter q_
-python tools/diag/bench_counters.py --exe target/release/rarog.exe --depth 13 --stride 1 --filter tt_
-pwsh -File tools/branching_profile.ps1 -Engine target/release/rarog.exe `
-    -MinDepth 4 -MaxDepth 9 -Hash 64 -Threads 1 `
-    -OutFile tools/results/branching-rar-s70.json
-pwsh -File tools/pgn_result.ps1 -Pgn <match.pgn> -Engine <candidate-name>
+python tools\texel\extract_parallel.py `
+    tools\texel\data\selfplay-p1025a-zero-n8000-s1-g20000.pgn `
+    tools\texel\data\selfplay-p1025a-zero-n8000-s20001-g580000.pgn `
+    --out-dir tools\texel\data\hce-v2 --jobs 14
+
+cargo run --release -p texel-tuner -- --verify tools\texel\data\hce-v2\validation.csv
+cargo run --release -p texel-tuner -- --feature-support tools\texel\data\hce-v2\train.csv
 ```
 
-Treat the branching report as descriptive/refutation evidence. Inspect the
-per-position ratios; an endpoint average dominated by one position is not a
-search diagnosis, and a smaller tree is not an Elo verdict.
-
-The 4.7.1 differential run requires revision-matched diagnostic Rarog and
-oracle assets. Record their hashes before running:
-
-```powershell
-python tools/diag/phase4_differential.py --rarog <rarog-diag.exe> --oracle <hybrid-diag.exe> --depth 8
-```
-
-No strength game is authorized by this documentation change. Register a 4.7
-candidate in `EXPERIMENTS.md` only after the observation artifact names a
-unique producer/consumer defect.
+No fit or strength game is authorized until 4.7.1–4.7.3 are complete. Search
+authority measurement moves to 4.11 because the HCE refit can change qsearch,
+score-scale and pruning populations.
 
 ## Documentation ownership
 
@@ -114,6 +106,7 @@ unique producer/consumer defect.
 | `EXPERIMENTS.md` | Durable evidence, failures, retry triggers and recipes |
 | `analysis/hce_maturity_2026-08-25.md` | Current HCE/Stockfish maturity comparison and fitting policy |
 | `analysis/manta_tooling_audit_2026-08-25.md` | Manta tool dispositions, imported measurements and limits |
+| `analysis/basilisk_audit_2026-08-30.md` | Basilisk method/results audit and Rarog-specific consequences |
 | `analysis/ablation_results.md` | Search-deficit measurements and corrected interpretation |
 | `PROCESS.md` | Recurring build, Texel, SPSA and release procedures |
 | `TRACKER.md` | History only; never a source of the next step |

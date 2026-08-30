@@ -7,8 +7,9 @@ Stockfish-distillation experiment lost 17.11 Elo (RAR-E03).
 
 > **Roadmap note.** Historical comments inside the tuner may still use the
 > phase numbers from the cycle in which it was built. Current scheduling is
-> authoritative in `PLAN.md`: corpus/tool qualification is 4.9, local fitted
-> structural clusters are 4.10, and whole-HCE consolidation is 4.11.
+> authoritative in `PLAN.md`: corpus/instrument qualification is 4.7, the
+> complete existing-surface refit is 4.8, structural clusters are 4.9, and
+> post-structure consolidation is 4.10. No historical tune group is frozen.
 
 > **Three outputs feed the tuner, all in `FEN;target` text format** (one position
 > per line; `target` is White-perspective expected score: `1` / `0.5` / `0`, or
@@ -169,8 +170,9 @@ parts (copied as *structure*, not C++):
   (material / scalars / kingsafety / pst / all …) define local or whole fits.
 - **`--verify`** (`cmd_verify`): the reconstruction acceptance test — reconstructed
   `E(default)` must equal `evaluate()` integer-for-integer.
-- **`linear_delta_scale`**: captures Rarog's frozen non-linear factors (OCB
-  scaling, two-knights draw, 50-move damping) as the per-position `scale`. Mirror
+- **`linear_delta_scale`**: captures Rarog's non-linear factors held fixed for
+  one linear fit (OCB scaling, two-knights draw, 50-move damping) as the
+  per-position `scale`. Mirror
   Rarog's `scale_drawish_endgames` + rule-50 damping here.
 - **Output format** (`name index value` per line): matches the `RAROG_EVAL_FILE`
   loader.

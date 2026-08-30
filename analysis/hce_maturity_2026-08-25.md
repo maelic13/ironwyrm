@@ -2,7 +2,7 @@
 
 Status: current Phase-4 decision record
 
-Analysis date: 2026-08-25
+Analysis date: 2026-08-25; method/order updated 2026-08-30 after Basilisk audit
 
 Rarog baseline: accepted RAR-S70 search, `bench 13` 6,977,070 / EBF 2.466
 
@@ -27,11 +27,12 @@ RAR-O02 sample. The result says that evaluation matters greatly. It does not
 say which family owns that Elo, that family losses add, or that copying a
 Stockfish formulation will transfer.
 
-The pre-NNUE objective is therefore narrower and testable: finish the current
-semantic/coverage classification, improve only residual-supported families,
-fit the frozen representation properly, gate it in games, and leave a mature
-classical fallback and teacher. Matching Stockfish's classical strength is not
-an acceptance criterion.
+The pre-NNUE objective is therefore narrower and testable: qualify every
+parameter and fitting instrument, refit the complete existing representation,
+improve only residual-supported families, gate each completed model in games,
+and leave a mature classical fallback and teacher. No parameter family is
+frozen by historical acceptance. Matching Stockfish's classical strength is
+not an acceptance criterion.
 
 ## Corrections to the 2026-07-13 audit
 
@@ -62,6 +63,10 @@ not another correctness sweep over those four items.
 | Manta MAN-E18: a fitted imbalance block improved static loss slightly but lost about 7 Elo | Fitting cannot rescue a semantically weak block; materially covariant terms must actually be free and move |
 | Manta MAN-E20: a context-space fit crossed its required sign, missed its registered validation floor and cost 3.693% evaluator speed | Semantic direction, static-loss floor and NPS are valid prospective refutation filters, never promotion criteria |
 | Manta MAN-E21: shelter-moderated danger was plausible and faster but lost 6.44 Elo | Mechanistic plausibility and throughput do not predict playing strength |
+| Basilisk BAS-E21: nonlinear king-safety refit accepted +2.64 +/- 2.05 Elo | Existing capped/bucket-selecting surfaces need a native re-evaluation fitter; a linear trace cannot price them safely |
+| Basilisk BAS-E23: full-surface refit accepted +9.52 +/- 4.66 Elo after 768 PSTs were unfrozen | Historical stage boundaries can conceal the largest remaining gain; enumerate actual parameter coverage before adding features |
+| Basilisk 5.9 additions: sixteen terms plus distilled fit lost 77.92 Elo; the terms were later neutral when removed | Feature-list completion is lower priority than correct labels, instruments and whole-surface calibration |
+| Basilisk BAS-E18: self-play labels recovered about 75 Elo of distillation harm, but all three label-source arms failed to improve | Correct labels prevent damage but do not create headroom on a saturated surface; stronger-engine outcomes are not automatically better targets |
 
 Manta's successful constrained HCE run used 3,000,000 balanced training rows
 plus 166,667 validation and 166,667 frozen-test rows from 1,162,814 unique
@@ -71,6 +76,11 @@ lesson is not that those corpus sizes or deltas are universal: adequate data,
 semantic rails and whole-cluster gating worked together. Later sweeps returning
 to the same attractor supplied a stop rule against reflexively adding data or
 epochs.
+
+Basilisk's validation deltas inverted as strength predictors: a 6.2% holdout
+improvement lost 77.92 Elo, while a 0.43% improvement won 9.52 Elo. The
+portable lesson is methodological only. Rarog must neither rank fits by loss
+magnitude nor assume Basilisk's successful families will transfer.
 
 ## Current maturity matrix
 
@@ -82,13 +92,13 @@ dependency-complete test.
 | Family | Current Rarog state | Difference from `9587eeeb` worth resolving | Required evidence |
 |---|---|---|---|
 | Score foundation | Tapered MG/EG, tempo, rule-50 damping, lazy/full paths and traced linear deltas exist | One global phase interpolation, coarse initiative that increases score magnitude, and possible train/serve drift from lazy evaluation | Full-versus-lazy cohort residuals; material/phase calibration; sign-preserving winnability tests |
-| Material, PST and imbalance | Broad and fitted, including quadratic imbalance | Fewer material-conditioned interactions; fitted compensation may alias activity and pawn terms | Exact-material residuals, activation/covariance, constrained joint refit rather than copied imbalance coefficients |
+| Material, PST and imbalance | Broad and historically fitted, including quadratic imbalance; current all-surface coverage has not been proved | Fewer material-conditioned interactions; exact material/PST null direction and compensation may alias activity and pawn terms | Exact-material residuals, all-slot instrument audit, explicit algebraic gauge, activation/covariance and constrained joint refit |
 | Pawns and passers | Extensive pawn cache, support/phalanx, candidate/passed terms, paths, blockers, rook relations and king proximity | Conditionality remains shallower for blocker ownership/type, file effects, exchange safety and conversion/race context | Passer-rank/file/material cohorts, paired counterfactuals and Syzygy-labelled conversion sets |
 | Mobility, activity and space | Per-count mobility, outposts, x-rays, closedness and space terms exist | Pin-aware mobility and usable/reachable space are incomplete; several space coefficients are zero | Legal-versus-geometric mobility traces, activation/covariance and NPS before any hot-path expansion |
 | Threats | Attacker/victim tables, hanging, weak and restricted relations exist | Safe pawn pushes, overload/pin context and exact attacker-defender relations are less conditional | Tactical counterfactuals, qsearch/depth-N disagreement and SEE-safe activation reports |
 | King safety | Nonlinear danger table, attacker units, safe checks, shelter/storm and flank inputs exist | Shelter/storm is low-dimensional; castling destination, pinned defenders and several flank/weak-ring inputs are absent, broad or fitted to zero | Queen/phase/shelter cohorts, legal safe-check tests, activation/covariance and a pooled-PGO cost gate |
 | Scaling and endgames | KPK/KBNK, fortress/partial scalers, OCB and rule-50 handling exist | Dispatcher and material-specific conversion are narrower; OCB scope and generic winnability remain coarse | Exact material signatures, Syzygy WDL/DTZ, non-amplification and won/drawn/cursed separation |
-| Calibration and data | EvalTrace, Texel reconstruction, staged/self-play history and anchored fit exist | No current frozen residual corpus spans the post-2.3.2 representation with train/validation/frozen-test discipline | Versioned corpus and manifests, whole-start splits, activation/covariance, external cohorts and one-time frozen-test reporting |
+| Calibration and data | EvalTrace, Texel reconstruction, staged/self-play history and anchored fit exist | No current residual corpus spans the post-2.3.2 representation with train/validation/frozen-test discipline; no proof every real parameter has the correct fitting instrument | Versioned corpus/manifests, verified label domain, whole-start splits, complete parameter-to-instrument coverage, activation/covariance and one-time frozen-test reporting |
 
 ## How the Stockfish comparison may be used
 
@@ -109,36 +119,48 @@ The reciprocal HCE instrument is still useful as a coarse sensitivity map if:
 
 ## Improvement and fitting programme
 
-1. **Freeze the evidence base.** Build the Phase-4.9 corpus with stable
+1. **Qualify and freeze the evidence base.** Build the Phase-4.7 corpus with stable
    whole-start train/validation/frozen-test separation, exact material and
    feature cohorts, Syzygy labels, paired counterfactuals and raw/lazy/
    corrected/qsearch/depth-N outputs. Retain the rule-50 clock in static-eval
-   identity and record all input/output hashes and label recipes.
-2. **Finish the family map on current source.** Classify every matrix row and
+   identity; prove self-play labels are exactly WDL; audit duplicates, natural
+   mates and phase/material coverage; record all hashes and recipes.
+2. **Audit every parameter and instrument.** Enumerate all real `EvalParams`
+   slots. Assign each to linear gradient, nonlinear re-evaluation/finite
+   difference, algebraic gauge, invariant or measured unidentifiable. Recheck
+   old sparse groups on the new corpus. Smoke vector/bake/source/rebuild with
+   deliberate movement before a real fit.
+3. **Finish the family map on current source.** Classify every matrix row and
    explicitly close historical defects already fixed. Reciprocal Stockfish
    ablation is optional coarse evidence, not the ordering algorithm.
-3. **Select at most two structural clusters.** Selection requires a missing or
+4. **Refit the complete existing surface first.** Jointly fit every identifiable
+   linear degree of freedom, including PSTs and historically staged families;
+   use the correct re-evaluation/coordinate or finite-difference instrument for
+   king danger and other capped nonlinear parameters. Alternate only under a
+   registered schedule, bake the whole vector and gate it in games.
+5. **Select at most two structural clusters.** Selection requires a missing or
    misspecified local signal, meaningful activation, manageable covariance and
    an acceptable projected NPS cost. Likely areas are king-safety
    conditionality, material-specific winnability/endgames, and passer/threat
    conditionality, but the corpus chooses.
-4. **Fit each changed cluster locally.** Freeze categorical semantics, fit all
-   moved and materially covariant linear weights with anchoring, validate on
+6. **Fit each changed cluster locally.** Hold categorical semantics fixed, fit
+   all moved and materially covariant existing weights with anchoring, validate on
    frozen cohorts, and retain initial vector plus full optimization trajectory.
    Apply registered semantic/loss/NPS filters as refutation only, bake clean
    PGO and run the registered SPRT. Untuned draft weights are not a fair test.
-5. **Run one whole-HCE Texel consolidation.** After representations freeze,
-   fit the identifiable active vector with fixed splits, anchoring and explicit
-   free/fixed groups. Require a settled validation-selected vector rather than
-   a transient best epoch. A second cycle is allowed only if registered
-   beforehand and both held-out loss and the first game gate justify fresh
-   on-policy data; stop if it returns to the same attractor.
-6. **Use SPSA only for the residue it can identify.** HCE SPSA is optional and
+7. **Consolidate after structural changes.** If any representation changes,
+   rerun the complete linear/nonlinear schedule. Require a settled
+   validation-selected vector rather than a transient best epoch. A second data
+   cycle is allowed only if registered beforehand and supported by the first
+   held-out report and game gate; stop at a failed/same-attractor cycle.
+8. **Use SPSA only for the residue it can identify.** HCE SPSA is optional and
    limited to activated nonlinear/global parameters that the linear trace
    cannot fit. Search-margin SPSA is separate and occurs only after the HCE is
-   frozen, over cp-valued consumers whose populations demonstrably moved.
-7. **Final checkpoint.** Compare the accepted fitted HCE with the frozen
-   search baseline using revision-matched final-PGO binaries, no adjudication,
+   accepted and held fixed for that search experiment, over cp-valued consumers
+   whose populations demonstrably moved.
+9. **Re-measure search, then checkpoint.** Rebuild qsearch/TT/branching and
+   cp-margin evidence on the accepted HCE; compare the final fitted HCE/search
+   with the RAR-S70 search baseline using revision-matched final-PGO binaries, no adjudication,
    NPS, STC and an LTC direction check. Ablate surprising contributors.
 
 ## Stop rules and maturity bar
@@ -151,6 +173,7 @@ The reciprocal HCE instrument is still useful as a coarse sensitivity map if:
 - A material NPS loss must be priced in the same game gate; evaluator
   throughput alone is not search NPS.
 - Phase 4 may call the HCE mature only when the family matrix has no unknown or
-  first-draft row, accepted representations reconstruct through `EvalTrace`,
-  the frozen whole-HCE fit has a game verdict, and any SPSA is either completed
-  and gated or explicitly skipped for lack of identifiability.
+  first-draft row, every real parameter has a verified fitting/disposition
+  owner, accepted representations reconstruct through `EvalTrace`, the complete
+  existing-surface fit and any post-structure consolidation have game verdicts,
+  and any SPSA is either completed and gated or explicitly skipped.

@@ -76,13 +76,13 @@ without adjudication unless separately calibrated.
 | `.github` Zig setup, `tools/ci/install-zig.*`, `tools/zlint/` | Language-specific CI/lint infrastructure |
 | `spsa_configs/*.json` | Manta parameter names/ranges are not portable; only the staged schedule and coverage discipline transfer |
 
-### Concepts scheduled for native Rarog qualification at 4.9
+### Concepts scheduled for native Rarog qualification at 4.7
 
 Manta's `texel/audit_vector.py`, `fit.py`, `fit_sweep.ps1`, `score.py` and
 `sweep_report.py` are tightly coupled to its coefficient schema, so copying
 them would be a false integration. Rarog's tuner already has exact
 reconstruction, feature support, cohort loss, validation selection, frozen
-test reporting and L2. Step 4.9 now requires native evidence for the missing
+test reporting and L2. Step 4.7 now requires native evidence for the missing
 contract: initial/free/fixed vector audit, covariance/identifiability, semantic
 sign/bounds, full convergence trajectory and a hash-complete fit report.
 
@@ -90,7 +90,7 @@ sign/bounds, full convergence trajectory and a hash-complete fit report.
 
 | Evidence | Result | Rarog consequence |
 |---|---:|---|
-| MAN-S19 raw/pruning/searched eval authority | **+13.02 +/- 7.21 nElo** | Process prior for 4.7: distinguish exact raw HCE, pruning refinement, qsearch baseline and TT searched evidence. Not a formula or expected gain |
+| MAN-S19 raw/pruning/searched eval authority | **+13.02 +/- 7.21 nElo** | Process prior for 4.11: distinguish exact raw HCE, pruning refinement, qsearch baseline and TT searched evidence after the HCE refit. Not a formula or expected gain |
 | Search overview | Tree about **1.50x wider per ply** than pinned reference while first-move cutoffs were **86.45%** | Ordering alone explained only part of Manta's gap; continuous selectivity fit was plausible there. Rarog must first measure its own per-position depth shape |
 | MAN-S23 LMR desaturation | Failed its registered branching filter; one of 40 positions caused a **+41.5%** depth-12 reversal; earlier baseline mixed Hash 16/64 | Hash is part of the workload; use robust per-position shape and prospective zero-game refutation, never an endpoint average or tree size as acceptance |
 | MAN-S25 correction residual | Static residual **-1.95%**, game gate **-1.40 +/- 6.03 Elo** | A live improving statistic explains mechanism, not Elo |
@@ -108,18 +108,18 @@ sign/bounds, full convergence trajectory and a hash-complete fit report.
 
 The conclusions are now explicit in:
 
-- `PLAN.md` 4.7.1: fixed-hash per-position branching shape supplements the
+- `PLAN.md` 4.11.1: fixed-hash per-position branching shape supplements the
   qsearch/TT authority baseline, as refutation evidence only.
-- `PLAN.md` 4.7.3, 4.12 and 4.13 plus `PROCESS.md`: bounded sensitivity pilot,
+- `PLAN.md` 4.8 and 4.12 plus `PROCESS.md`: bounded sensitivity pilot,
   complete surface audit, accepted-default full start, immutable horizon and
   no pilot/checkpoint promotion.
-- `PLAN.md` 4.9: three-way leak-resistant corpus qualification and native
+- `PLAN.md` 4.7: three-way leak-resistant corpus qualification and native
   vector/support/covariance/semantic/convergence evidence before HCE selection.
-- `PLAN.md` 4.10: static semantic/loss/NPS filters may reject only; each
+- `PLAN.md` 4.8–4.9: static semantic/loss/NPS filters may reject only; each
   dependency-complete locally fitted cluster pays a PGO game gate.
-- `PLAN.md` 4.11: one constrained whole-HCE fit, settled trajectory, frozen
+- `PLAN.md` 4.10: one constrained post-structure whole-HCE fit, settled trajectory, frozen
   test opened once, and stop on a failed or same-attractor follow-up.
 
-The next step remains **4.7.1**, not SPSA or HCE implementation: reproduce
-RAR-S70, make the fixed-hash branching and same-unit qsearch/TT authority
-report, and decide whether one dependency-complete search candidate exists.
+The 2026-08-30 Basilisk audit subsequently moved the next step to **4.7 HCE
+data/instrument qualification**. Search branching and qsearch/TT authority now
+run at 4.11 on the accepted fitted HCE so their populations are not stale.

@@ -521,13 +521,12 @@ Frozen local Stage-1 package SHA-256 hashes: executable
 
 ## 5. Evaluation and data experiments
 
-HCE strength work is frozen through Phase-4 step 4.10. After 4.10 freezes the
-search head, the bounded HCE track (4.11–4.18) may reopen **structural,
-reference-led evaluator contracts** under its own gates. These rows remain
-relevant to that analysis and to NNUE data, teacher and measurement design, but
-they do not authorize another broad weight refit, do not reopen rejected
-experiments unchanged, and do not authorize Phase-9 fallback work unless NNUE
-is explicitly abandoned.
+The historical HCE freeze ended with the 2026-08-30 plan reconciliation.
+Current Phase-4 steps 4.7–4.10 qualify the data and every fitting instrument,
+refit the complete existing surface, then add structure only where residuals
+support it. These rows remain relevant to that analysis and to NNUE data,
+teacher and measurement design, but they do not authorize retries unchanged or
+make any historical parameter group exempt from the current audit and gate.
 
 | ID | Experiment and conditions | Result / disposition | Conditional lesson and retry trigger | Source |
 |---|---|---|---|---|
@@ -535,7 +534,7 @@ is explicitly abandoned.
 | RAR-E02 | Lazy HCE shortcut after the evaluator expansion. | **Accepted, about +4.4 Elo.** | The shortcut paid under that HCE distribution, but the safety margin is representation/scale dependent and is not a NNUE constant. | legacy plan at `757e9a3^` |
 | RAR-E03 | Stockfish-at-60k off-policy distillation with material scale pinned. | **Rejected, −17.11 Elo,** despite 4.9% lower holdout loss and 9/10 improved buckets. | For this well-fitted HCE/corpus, lower teacher-fit loss did not predict play. Basilisk's +6.75 opposite result reinforces that transfer is engine-state dependent. | legacy plan; `analysis/hce_analysis.md` |
 | RAR-E04 | 500k-game on-policy refresh yielding 2.18M unique positions; pure WDL beat blended labels on the shared holdout. | **Rejected, −1.28 ± 2.79 over 26.8k games;** pipeline and inert parameters retained. | Even on-policy lower validation loss did not improve this unchanged representation. Retry only after representation/policy changes and with a frozen external holdout. | legacy plan at `757e9a3^` |
-| RAR-E05 | Narrow L2-anchored refresh from a stronger label generator, moving 57/1,204 parameters mostly by 1 cp. | **Accepted, +11.56 ± 5.19 Elo;** frozen in 2.3.2 and throughout the Phase-4 search track. | A narrow anchored refresh differed materially from wholesale re-derivation. The Phase-4 HCE track may supersede it only through an accepted structural cluster; it is not evidence for another general refit. | `PLAN.md` §3, §4; legacy plan |
+| RAR-E05 | Narrow L2-anchored refresh from a stronger label generator, moving 57/1,204 parameters mostly by 1 cp. | **Accepted, +11.56 ± 5.19 Elo;** frozen in 2.3.2 and throughout the completed Phase-4 search track. | A narrow anchored refresh differed materially from wholesale re-derivation. The current complete-surface programme may supersede it only through its qualified, baked and game-gated fit; the result is neither a frozen-group exemption nor evidence that an undisciplined general refit will work. | `PLAN.md` §3, §4; legacy plan |
 
 ## 6. Throughput, build and platforms
 

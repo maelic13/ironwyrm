@@ -34,9 +34,11 @@ games until the end destroys attribution and lets losing structures hide.
    qnodes, move source, cutoff index, TT use, reductions and re-searches,
    pruning, extensions and aspiration against the oracle. Counters explain a
    candidate; they cannot accept it.
-6. **Fit** — after structural and categorical choices freeze, fit the moved
-   cluster surface: local Texel for HCE; targeted SPSA for search only when
-   justified. Complete theta; do not select a checkpoint retrospectively.
+6. **Fit** — hold the candidate's categorical semantics fixed while fitting;
+   do not freeze unrelated HCE coordinates merely because an older stage tuned
+   them. Fit the complete identifiable/covariant surface with the correct
+   linear or nonlinear instrument. Targeted SPSA is residue only. Complete
+   theta; do not select a checkpoint retrospectively.
 7. **Gate** — bake the fitted candidate and revision-matched baseline through
    clean final PGO, then run the registered paired UHO SPRT. Do not change the
    candidate, bounds, cap, book or adjudication after observing games.
@@ -47,13 +49,13 @@ games until the end destroys attribution and lets losing structures hide.
    rejected or explicitly closed.
 
 A separable categorical alternative may have a preliminary SPRT, but that
-never replaces the locally fitted integrated cluster SPRT. **4.8** owns search
-consolidation, **4.11** owns whole-HCE consolidation and **4.14** owns the
-final combined checkpoint, with separate confirmation SPRTs; none may rescue
-an earlier losing cluster.
+never replaces the locally fitted integrated cluster SPRT. **4.8** owns the
+complete existing-HCE refit, **4.10** owns post-structure consolidation and
+**4.14** owns the final combined checkpoint, with separate confirmation SPRTs;
+none may rescue an earlier losing cluster.
 
 Two failed coherent search clusters trigger a return to evidence. Two failed
-HCE clusters trigger a **4.9** evidence/maturity re-audit, not silent closure.
+HCE clusters trigger a **4.7** data/instrument/maturity re-audit, not silent closure.
 The HCE track may close early only by explicitly conceding the Phase-4 HCE
 maturity target; no unknown or first-draft contract may be presented as mature.
 
@@ -165,35 +167,52 @@ Rarog: `--features ablate`, which compiles every guard away in a shipped build.
 
 ### Texel convergence procedure
 
-Texel is cheap enough to run locally after structural HCE work, but its static
-loss is not a strength verdict:
+Texel is cheap enough to run locally, but its static loss is not a strength
+verdict:
 
-1. Trace every changed term exactly and verify full evaluation reconstruction.
-2. Record the initial vector, free/fixed coordinates, activation, covariance,
-   identifiability and semantic sign/bounds before selecting weights.
-3. Keep stable whole-start hash train/validation/frozen-test splits. Retain the
+1. Mechanically verify label domain and source before fitting. Self-play-WDL
+   means exactly `0`, `0.5`, `1`; a filename, float in `[0,1]` or prose summary
+   is not proof. Audit independent starts, duplicate games, phase/material and
+   mate/decisive coverage.
+2. Keep stable whole-start hash train/validation/frozen-test splits. Retain the
    rule-50 clock in position identity, reject replay leakage, publish only
    exact per-phase quotas and hash every input/output. Never tune on the frozen
    test set.
-4. Retain the complete train/validation trajectory. The validation-selected
+3. Enumerate every real `EvalParams` slot and name its fitting instrument,
+   algebraic gauge, invariant or measured unidentifiable disposition. Historical
+   groups, PSTs and old sparse findings are not frozen. The inventory must sum
+   exactly to the registry size.
+4. Trace every linear term exactly and verify full evaluation reconstruction.
+   Capped/bucket-selecting nonlinear terms require re-evaluation, coordinate or
+   finite-difference evidence; trace activation alone does not validate their
+   gradient.
+5. Record the initial vector, gauge/invariant/free coordinates, activation,
+   covariance, identifiability and semantic sign/bounds before selecting weights.
+6. Smoke the complete vector→bake→source→rebuild chain with absurd changes in
+   every instrument class. Check native exit codes and require source plus
+   fingerprint movement; unchanged behavior after a broad fit is a failed wire.
+7. Retain the complete train/validation trajectory. The validation-selected
    vector must be settled, not a transient fly-through or a semantic sign
    violation. Report the frozen test once after selection.
-5. Run a local family fit after each structural HCE cluster. Apply registered
+8. At 4.8 fit and gate the complete existing linear/nonlinear HCE before adding
+   features. Run a local covariant fit after each later structural cluster.
+   Apply registered
    static semantic/loss/NPS filters as refutation only. Bake the fit into
    clean PGO and SPRT the cluster; a lower loss alone accepts nothing.
-6. At 4.11, run an anchored whole-HCE consolidation over only activated,
-   identifiable weights. Repeat a cycle only for a prospectively registered
+9. At 4.10, if structure changed, rerun the complete instrument schedule.
+   Repeat a data cycle only for a prospectively registered
    changed-data hypothesis supported by validation and the baked game verdict.
    Stop at the first no-gain/failed cycle or convergence to the same attractor.
-7. Keep search parameters frozen during HCE Texel cycles.
+10. Keep search parameters fixed during HCE fitting; remeasure their populations
+    at 4.11 rather than co-tuning evaluator and search.
 
 ### SPSA go/no-go procedure
 
 The generic harness is retained, but no SPSA is owed. The admissible Phase-4
-surfaces are a continuous 4.7 authority cluster if its evidence warrants fit,
-4.12 activated nonlinear/global HCE residue, and 4.13 HCE-displaced search
-margins. Each is separate and narrow. An undirected broad tune stays forbidden,
-and HCE and search coordinates are never mixed in one run.
+surfaces are a small 4.8 nonlinear HCE residue that deterministic re-evaluation
+cannot resolve, and 4.12 post-HCE search margins. They are separate and narrow.
+An undirected broad tune stays forbidden, and HCE and search coordinates are
+never mixed in one run.
 Before any SPSA:
 
 1. Name the strength-bearing mechanism and show local evidence that its
