@@ -4,12 +4,14 @@ Status: directional evidence incorporated into Rarog Phase 4
 
 Audit date: 2026-08-30
 
-Basilisk committed snapshot: `66638ae04bbce4d1ffdecfcf19fd7d65ce88e5f7`
+Basilisk initial snapshot: `66638ae04bbce4d1ffdecfcf19fd7d65ce88e5f7`
 
-Worktree caveat: `src/search.cpp`, `src/search.h` and `src/search_params.h` also
-contained uncommitted 5.7.3 extension-stacking instrumentation. It was inspected
-only to understand the direction of ongoing work; none of its populations,
-settings or behavior is treated as a result.
+Follow-up snapshot: `7551803d287e404cbc746b2e3ba743c463a8b80c`
+
+The earlier uncommitted 5.7.3 extension-stacking work is resolved in the
+follow-up snapshot: the candidate knob was removed, its diagnostic counters
+were retained, and the worktree was clean when rechecked. Only the committed
+measurements below are treated as results.
 
 Scope: recent work from 2026-08-21 through 2026-08-30, with older evidence read
 only where the recent experiments depend on it. Sources were head code, recent
@@ -99,14 +101,29 @@ not make Stockfish-shaped selectivity changes transferable.
 | After the accepted HCE refit, qsearch share moved **30.8% -> 35.1%**, while ordering/LMR statistics mostly held | Search diagnostics can become selectively stale after evaluation changes; rerun, do not assume which ones moved |
 | `bench` ignored UCI parameter overrides, while real `go nodes` honored them | Prove the exact measurement path consumes the option with an absurd value before sweeping |
 | Latest `singularQuietLMR` sweep favored 401 while the reference's 1024 was much worse | Understand actual consumer semantics and fit locally; the exact value and pending candidate are not Rarog evidence |
+| Check/singular exclusivity gained 0.065 average ply but failed Basilisk's registered fixed-depth WAC floor, 137 -> 124 | The metrics disagree. Rarog must add equal-node WAC before interpreting this method because extension changes alter work per nominal depth |
+| The three-ply stack was only 0.123% of interior nodes; tightening the surprisingly common double extension gained no depth | Measure the suspected population before repairing it; odd-looking frequency is not proof of cost or headroom |
+| `double_ext_max` never bound even when reduced from 200 to 16 | A dead safeguard is not a candidate; remove or redesign it only under its owning cleanup step |
 
-Basilisk's current 5.7.2 `singularQuietLMR` candidate has **no game verdict** at
-the audited snapshot. Its useful output is the method: inventory the full
-extension/reduction contract, discover that the flag affects later siblings
-rather than the singular move, prove zero-value identity, sweep through a live
-UCI search path, and treat the reference constant as a deliberately tested bad
-prior. Rarog should revisit extension coherence only if its post-HCE 4.11
-evidence selects that population.
+Basilisk's 5.7.2 `singularQuietLMR` candidate still has **no accepted game
+verdict**. BAS-D12 was stopped by decision at 24,956 games at +1.49 +/- 2.77
+Elo, LLR +0.51; it is only carried provisionally into Basilisk's integrated
+gate. Its useful output is the method: inventory the full extension/reduction
+contract, discover that the flag affects later siblings rather than the
+singular move, prove zero-value identity, sweep through a live UCI search path,
+and treat the reference constant as a deliberately tested bad prior.
+
+The exact 5.7.3 defect does not transfer. Current Rarog has no unconditional
+node-level in-check extension—it gained +30.75 Elo by removing it—and therefore
+cannot form Basilisk's check plus singular-double three-ply stack. Rarog has no
+equivalent `double_ext_max` cap either. Basilisk's zero-game rejection itself is
+also not a Rarog verdict: Rarog's winning removal initially lowered fixed-depth
+WAC from 147 to 133 because it searched about 40% fewer nodes at nominal depth
+6, but improved equal-node WAC from 185 to 203. The portable finding is the
+two-axis screen: if post-HCE 4.11 ever reopens extension authority, measure
+average depth and forcing-line retention at equal cost rather than allowing
+either fixed-depth aggregate to stand alone. Only a genuine correctness canary
+is an unconditional zero-game veto.
 
 ## Rarog avenues and plan incorporation
 
@@ -116,7 +133,7 @@ evidence selects that population.
 | **4.8** | Refit every identifiable existing degree of freedom, including PSTs and old sparse/staged families; fit nonlinear king danger and scaling with native instruments; one PGO game gate |
 | **4.9** | Add structure only for residual signals the complete existing surface cannot express; refit all covariant old parameters with it |
 | **4.10** | Rerun the complete instrument schedule after any accepted structure |
-| **4.11** | Rebuild qsearch/TT/score-scale and branching evidence after HCE; use per-position and per-iteration playing-depth profiles and live UCI sweeps |
+| **4.11** | Rebuild qsearch/TT/score-scale and branching evidence after HCE; use per-position/per-iteration profiles and live UCI sweeps; extension work additionally requires fixed-depth and equal-node tactical screens |
 | **4.12** | Search SPSA remains conditional on a displaced interacting surface; no reference constants or pilot theta |
 
 ## Non-portable details

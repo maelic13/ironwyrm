@@ -60,6 +60,7 @@ gating. The following rules determine this roadmap's order.
 | Correctness | Independent invariant/regression test; strength gate if playing behavior changes materially |
 | Behavior-neutral hot path | Exact fingerprint, debug/release tests, pooled NPS |
 | Search/HCE strength | Revision-matched clean PGO A/B, paired UHO, registered SPRT and stop rule |
+| Extension/depth authority | Fixed-node tree/depth profile plus tactical suite at both fixed depth and equal node cost; true correctness canaries veto, while aggregate disagreement is diagnosed rather than cherry-picked |
 | Texel fit | Verified label domain; hash-complete whole-start train/validation/frozen-test splits; exact all-slot instrument coverage and bake smoke; reconstruction, covariance/identifiability and semantic bounds; settled trajectory, baked PGO and SPRT |
 | SPSA | Registered live surface and immutable horizon, bounded sensitivity pilot when needed, completed full-surface theta, fresh PGO bake and SPRT |
 | Release | Prior-release STC/LTC, 4T direction, NPS, platform/ISA matrix and user-facing docs |
@@ -347,7 +348,13 @@ the old RAR-S70 counters are priors, not a candidate basis.
 4. Prove each wire and UCI option live with an absurd value. Parameter sweeps
    use a real `go nodes`/`go depth` path; `bench` is valid only after proving it
    consumes that option.
-5. Write `analysis/phase4_qsearch_tt_authority.md` with the dependency map and
+5. If the evidence reopens extension/depth authority, pair average depth at
+   fixed nodes with WAC at fixed depth **and equal node cost**. Register the
+   screens and how disagreement is handled before the sweep. A true mate,
+   legality or termination canary can veto; conflicting aggregate WAC/depth
+   results are inconclusive until per-position/equal-cost analysis resolves the
+   work-per-nominal-depth confound.
+6. Write `analysis/phase4_qsearch_tt_authority.md` with the dependency map and
    an explicit candidate/no-candidate decision.
 
 #### 4.11.2 Candidate and gate, only if 4.11.1 isolates one
@@ -362,6 +369,15 @@ consumer semantics outrank feature parity or reference constants.
 Implement the smallest dependency-complete change, prove switch-off identity,
 fit only a justified continuous residue and run the registered `[0,3]` PGO
 SPRT. If no unique signal exists, close without code.
+
+The Basilisk 5.7.3 defect is **not present in current Rarog**. Rarog removed its
+unconditional node-level in-check extension for +30.75 Elo, so it cannot compose
+with a singular double extension into Basilisk's three-ply stack; Rarog also has
+no equivalent `double_ext_max` path cap. RAR-S37 already found that tightening
+the singular-double margin saved nodes while eliminating doubles cost nodes,
+without a strength verdict. That old alternative remains a measured null for
+4.13 removal unless fresh post-HCE evidence selects it under the extension gate
+above.
 
 ### 4.12 Optional post-HCE search SPSA
 

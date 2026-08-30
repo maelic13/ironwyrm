@@ -33,7 +33,12 @@ games until the end destroys attribution and lets losing structures hide.
 5. **Explain** — use the frozen suite at fixed depth/nodes to compare nodes,
    qnodes, move source, cutoff index, TT use, reductions and re-searches,
    pruning, extensions and aspiration against the oracle. Counters explain a
-   candidate; they cannot accept it.
+   candidate; they cannot accept it. For extension/depth-authority changes,
+   pair average depth at fixed nodes with the tactical suite at both fixed
+   depth and equal node cost. Register floors and the treatment of disagreement
+   before measuring. A true correctness canary may veto; disagreement between
+   aggregate depth and tactical counts is otherwise inconclusive until the
+   per-position and equal-cost results explain it.
 6. **Fit** — hold the candidate's categorical semantics fixed while fitting;
    do not freeze unrelated HCE coordinates merely because an older stage tuned
    them. Fit the complete identifiable/covariant surface with the correct

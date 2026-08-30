@@ -53,6 +53,10 @@
 - [ ] **4.13** Remove unowned alternatives and record the clean search checkpoint
 - [ ] **4.14** Final HCE/search checkpoint, attribution and maturity closure
 
+Basilisk 5.7.3's check/singular three-ply stack is absent in current Rarog;
+PLAN 4.11 nevertheless requires both depth and tactical screens for any future
+extension change.
+
 **Release**
 
 - [ ] **4.15** STC/LTC/4T, NPS, portability, ISA and release gate
