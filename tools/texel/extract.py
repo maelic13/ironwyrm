@@ -216,6 +216,7 @@ def process_game(
     max_per_game: int,
     quiet_filter: bool,
     rng: random.Random,
+    audit: dict[str, int | bool] | None = None,
 ) -> tuple[list[tuple[str, int, float | None]], int]:
     """Return phase-stratified candidates and the quiet-filter reject count."""
     if game.headers.get("Result", "*") not in RESULT_MAP:
@@ -238,6 +239,10 @@ def process_game(
             cp = comment_cp_white(node.comment or "", board.turn == chess.WHITE)
             by_phase[bucket].append((board.fen(), bucket, cp))
         board.push(move)
+
+    if audit is not None:
+        audit["plies"] = len(nodes)
+        audit["natural_mate"] = board.is_checkmate()
 
     # Bound expensive quiet checks per phase, rather than sampling uniformly
     # over the whole game and silently starving opening/deep-endgame rows.

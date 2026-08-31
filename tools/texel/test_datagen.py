@@ -71,6 +71,25 @@ class ExtractTests(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0][1], 0)  # full-material opening
 
+    def test_process_game_audit_reuses_walked_final_position(self):
+        game = chess.pgn.Game()
+        game.headers["Result"] = "1-0"
+        node = game
+        for move_uci in ("f2f3", "e7e5", "g2g4", "d8h4"):
+            node = node.add_variation(chess.Move.from_uci(move_uci))
+        audit = {}
+        extract.process_game(game, 0, 0, 1, 0, False, random.Random(1), audit)
+        self.assertEqual(audit, {"plies": 4, "natural_mate": True})
+
+    def test_material_audit_has_exact_signature_and_classes(self):
+        signature = extract_parallel.material_signature(chess.STARTING_FEN)
+        self.assertEqual(signature, (8, 2, 2, 2, 1, 8, 2, 2, 2, 1))
+        self.assertEqual(extract_parallel.material_class(signature), "both_queens")
+        self.assertEqual(
+            extract_parallel.material_class((1, 0, 0, 0, 0, 2, 0, 0, 0, 0)),
+            "pawn_only",
+        )
+
     def test_process_game_classifies_all_five_phases(self):
         cases = (
             (chess.STARTING_FEN, "e2e4", 0),
