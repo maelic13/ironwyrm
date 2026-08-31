@@ -109,6 +109,42 @@ function Resolve-RepoPath {
     return $full
 }
 
+function Get-WdlCsvAudit {
+    param([Parameter(Mandatory)][string]$Path)
+    $counts = @{ "0" = 0L; "0.5" = 0L; "1" = 0L }
+    $rows = 0L
+    $reader = [IO.File]::OpenText($Path)
+    try {
+        while ($null -ne ($line = $reader.ReadLine())) {
+            $sep = $line.LastIndexOf(';')
+            if ($sep -lt 0) { throw "$Path row $($rows + 1) has no target separator" }
+            $target = $line.Substring($sep + 1).Trim()
+            if (-not $counts.ContainsKey($target)) {
+                throw "$Path row $($rows + 1) has non-WDL target '$target'"
+            }
+            $counts[$target]++
+            $rows++
+        }
+    } finally {
+        $reader.Dispose()
+    }
+    return [pscustomobject]@{ Rows = $rows; Counts = $counts }
+}
+
+function Get-EpdOpeningAudit {
+    param([Parameter(Mandatory)][string]$Path)
+    $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    $rows = 0L
+    foreach ($line in [IO.File]::ReadLines($Path)) {
+        $parts = $line.Split(' ', [StringSplitOptions]::RemoveEmptyEntries)
+        if ($parts.Count -lt 4) { throw "$Path opening $($rows + 1) is not a four-field FEN" }
+        $fen4 = $parts[0..3] -join ' '
+        if (-not $seen.Add($fen4)) { throw "$Path repeats opening '$fen4'" }
+        $rows++
+    }
+    return $rows
+}
+
 $sourcePath = Join-Path $repo "src/eval.rs"
 $sourceBackup = Join-Path $runDir "eval.rs.baseline"
 Copy-Item -LiteralPath $sourcePath -Destination $sourceBackup
@@ -134,37 +170,7 @@ try {
     } else {
         $dataset = Resolve-RepoPath $DatasetDir
         $manifestPath = Join-Path $dataset "manifest.json"
-        if (Test-Path -LiteralPath $manifestPath) {
-            $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
-            $expectedHeldout = [Math]::Round($TargetTrain / 18.0)
-            if ($manifest.schema -ne "rarog-hce-wdl-v2" -or
-                $manifest.label -ne "white-perspective self-play WDL" -or
-                [double]$manifest.train_blend -ne 1.0) {
-                throw "existing dataset does not have the required pure self-play-WDL contract"
-            }
-            if ([int]$manifest.rows.train -ne $TargetTrain) {
-                throw "existing dataset train rows are $($manifest.rows.train), expected $TargetTrain"
-            }
-            if ([int]$manifest.rows.validation -ne $expectedHeldout -or
-                [int]$manifest.rows.test -ne $expectedHeldout) {
-                throw "existing dataset validation/test sizes do not match the frozen 5%/5% contract"
-            }
-            if ([int]$manifest.parse_errors -ne 0 -or
-                [int]$manifest.paired_replays_discarded -ne 0) {
-                throw "existing dataset records parse errors or replayed starts"
-            }
-            if ($manifest.label_contract.adjudication.Name -ne "datagen-v1") {
-                throw "existing dataset lacks the audited datagen-v1 label provenance"
-            }
-            foreach ($split in @("train", "validation", "test")) {
-                $file = Join-Path $dataset "$split.csv"
-                if (-not (Test-Path -LiteralPath $file)) { throw "missing frozen dataset file $file" }
-                $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $file).Hash
-                $expected = $manifest.output_sha256.$split
-                if ($actual -ne $expected) { throw "$split.csv hash mismatch" }
-            }
-            Write-Host "Reusing hash-verified frozen dataset $dataset"
-        } else {
+        if (-not (Test-Path -LiteralPath $manifestPath)) {
             if (Test-Path -LiteralPath $dataset) {
                 throw "$dataset exists without manifest.json; refusing ambiguous publication target"
             }
@@ -183,6 +189,95 @@ try {
             [void](Invoke-Logged "dataset-audit" "python" ($extractArgs + "--audit-only"))
             [void](Invoke-Logged "dataset-publish" "python" $extractArgs)
         }
+        # Validate both reused and freshly published corpora through the same
+        # path. Publication success is not a substitute for checking what was
+        # actually written.
+        $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+        $expectedHeldout = [Math]::Round($TargetTrain / 18.0)
+        if ($manifest.schema -ne "rarog-hce-wdl-v2" -or
+            $manifest.label -ne "white-perspective self-play WDL" -or
+            [double]$manifest.train_blend -ne 1.0) {
+            throw "dataset does not have the required pure self-play-WDL contract"
+        }
+        if ([int]$manifest.rows.train -ne $TargetTrain) {
+            throw "dataset train rows are $($manifest.rows.train), expected $TargetTrain"
+        }
+        if ([int]$manifest.rows.validation -ne $expectedHeldout -or
+            [int]$manifest.rows.test -ne $expectedHeldout) {
+            throw "dataset validation/test sizes do not match the frozen 5%/5% contract"
+        }
+        if ([int]$manifest.parse_errors -ne 0 -or
+            [int]$manifest.paired_replays_discarded -ne 0) {
+            throw "dataset records parse errors or replayed starts"
+        }
+        if ([int]$manifest.independent_starts -ne 600000 -or
+            [int]$manifest.recorded_games -ne 600000) {
+            throw "qualified fit requires exactly 600,000 independent, non-replayed starts"
+        }
+        if ($manifest.label_contract.adjudication.Name -ne "datagen-v1") {
+            throw "dataset lacks the audited datagen-v1 label provenance"
+        }
+        $bookOpenings = $null
+        $bookAudited = $false
+        $usedOpenings = 0
+        foreach ($input in $manifest.inputs) {
+            $provenancePath = [string]$input.provenance_manifest
+            if (-not (Test-Path -LiteralPath $provenancePath -PathType Leaf)) {
+                throw "missing datagen provenance $provenancePath"
+            }
+            $actualProvenanceHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $provenancePath).Hash
+            if ($actualProvenanceHash -ne [string]$input.provenance_manifest_sha256) {
+                throw "datagen provenance hash mismatch for $provenancePath"
+            }
+            $provenance = Get-Content -LiteralPath $provenancePath -Raw | ConvertFrom-Json
+            if ($null -eq $bookOpenings) { $bookOpenings = [int]$provenance.book.openings }
+            if ([int]$provenance.book.openings -ne $bookOpenings -or
+                [string]$provenance.book.sha256 -ne [string]$manifest.label_contract.book_sha256 -or
+                [int]$provenance.book.seed -ne [int]$manifest.label_contract.book_seed) {
+                throw "datagen inputs do not share one opening-book contract"
+            }
+            if (-not $bookAudited) {
+                if ([string]$provenance.book.format -ne "epd") {
+                    throw "qualified HCE datagen requires an auditable EPD opening book"
+                }
+                $bookPath = [string]$provenance.book.path
+                if (-not (Test-Path -LiteralPath $bookPath -PathType Leaf)) {
+                    throw "missing opening book $bookPath"
+                }
+                if ((Get-FileHash -Algorithm SHA256 -LiteralPath $bookPath).Hash -ne
+                    [string]$provenance.book.sha256) {
+                    throw "opening-book hash mismatch for $bookPath"
+                }
+                $uniqueBookRows = Get-EpdOpeningAudit $bookPath
+                if ($uniqueBookRows -ne $bookOpenings) {
+                    throw "opening book contains $uniqueBookRows unique starts, manifest records $bookOpenings"
+                }
+                $bookAudited = $true
+            }
+            if ([int]$provenance.book.end -gt $bookOpenings) {
+                throw "datagen range wraps the $bookOpenings-opening book"
+            }
+            $usedOpenings += [int]$provenance.games
+        }
+        if ($bookOpenings -lt [int]$manifest.independent_starts -or
+            $usedOpenings -ne [int]$manifest.independent_starts) {
+            throw "opening book is too small or its recorded ranges do not cover every independent start once"
+        }
+        foreach ($split in @("train", "validation", "test")) {
+            $file = Join-Path $dataset "$split.csv"
+            if (-not (Test-Path -LiteralPath $file)) { throw "missing frozen dataset file $file" }
+            $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $file).Hash
+            $expected = $manifest.output_sha256.$split
+            if ($actual -ne $expected) { throw "$split.csv hash mismatch" }
+            $wdl = Get-WdlCsvAudit $file
+            if ($wdl.Rows -ne [int]$manifest.rows.$split) {
+                throw "$split.csv contains $($wdl.Rows) rows, expected $($manifest.rows.$split)"
+            }
+            Write-Host ("  {0}: {1:N0} pure-WDL rows (0={2:N0}, 0.5={3:N0}, 1={4:N0})" -f `
+                $split, $wdl.Rows, $wdl.Counts["0"], $wdl.Counts["0.5"], $wdl.Counts["1"])
+        }
+        Write-Host "Hash/row/WDL-verified frozen dataset $dataset"
+        Write-Host "Opening provenance: $usedOpenings independent starts from a $bookOpenings-opening book"
         $train = Join-Path $dataset "train.csv"
         $validation = Join-Path $dataset "validation.csv"
         $test = Join-Path $dataset "test.csv"
@@ -195,7 +290,7 @@ try {
     }
 
     $settings = [ordered]@{
-        schema = "rarog-complete-hce-fit-v1"
+        schema = "rarog-complete-hce-fit-v2"
         commit = $commit
         source_sha256 = $sourceHash
         smoke = [bool]$Smoke
@@ -209,12 +304,16 @@ try {
         train = $train
         validation = $validation
         frozen_test = $test
+        frozen_test_baseline = (Join-Path $runDir "00-source-defaults.txt")
+        label_contract = "pure white-perspective self-play WDL"
         schedule = @("nonlinear", "complete-linear", "nonlinear", "complete-linear-polish")
     }
     $settings | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $runDir "settings.json") -Encoding utf8
 
     [void](Invoke-Logged "build-tuner" "cargo" @("build", "--release", "-p", "texel-tuner"))
     $tuner = Join-Path $repo "target/release/rarog-texel.exe"
+    $baselineVector = Join-Path $runDir "00-source-defaults.txt"
+    [void](Invoke-Logged "write-source-defaults" $tuner @("--write-defaults", $baselineVector))
     [void](Invoke-Logged "instrument-coverage" $tuner @("--audit-coverage"))
     [void](Invoke-Logged "trace-verify-baseline" $tuner @("--verify", $validation))
     $supportArgs = @("--feature-support", $train)
@@ -268,6 +367,7 @@ try {
         "--tune", "complete", $train, $validation, $final,
         "--initial", $ks2,
         "--test", $test,
+        "--test-baseline", $baselineVector,
         "--epochs", [string]$PolishEpochs,
         "--lr", (Format-Double $LinearLearningRate),
         "--l2", (Format-Double $LinearL2),
@@ -291,13 +391,20 @@ try {
     [void](Invoke-Logged "build-candidate" "cargo" @("build", "--release", "-p", "rarog", "--bin", "rarog"))
     $candidateBench = Invoke-Bench "bench-candidate" $engine
     Copy-Item -LiteralPath $engine -Destination (Join-Path $runDir "rarog-candidate.exe")
-    & git diff -- src/eval.rs *> (Join-Path $runDir "candidate-eval.patch")
+    $candidatePatch = Join-Path $runDir "candidate-eval.patch"
+    $candidatePatchStderr = Join-Path $runDir "candidate-eval.patch.stderr.log"
+    & git diff "--output=$candidatePatch" -- src/eval.rs 2> $candidatePatchStderr
     if ($LASTEXITCODE -ne 0) { throw "git diff failed" }
+    if (-not (Test-Path -LiteralPath $candidatePatch) -or
+        (Get-Item -LiteralPath $candidatePatch).Length -eq 0) {
+        throw "candidate patch is empty"
+    }
 
     Copy-Item -LiteralPath $sourceBackup -Destination $sourcePath -Force
     [void](Invoke-Logged "format-restored" "cargo" @("fmt"))
     $restoredHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $sourcePath).Hash
     if ($restoredHash -ne $sourceHash) { throw "src/eval.rs did not restore byte-for-byte" }
+    [void](Invoke-Logged "check-candidate-patch" "git" @("apply", "--check", $candidatePatch))
     # The restored file can have an older timestamp than the freshly built
     # candidate. A plain cargo build then legally reuses the candidate binary.
     # Advance only its mtime (the content hash above remains the proof) so Cargo
@@ -314,16 +421,21 @@ try {
         $finalFitText,
         "Best validation epoch ([0-9]+) \(validation=([0-9.]+)\)"
     )
+    $persistedValidationMatch = [regex]::Match(
+        $finalFitText,
+        "Persisted rounded validation loss = ([0-9.]+)"
+    )
     $testMatch = [regex]::Match(
         $finalFitText,
-        "Frozen test loss = ([0-9.]+) \(base ([0-9.]+), delta ([+-][0-9.]+)\)"
+        "Frozen test loss = ([0-9.]+) \(source baseline ([0-9.]+), delta ([+-][0-9.]+)\)"
     )
-    if (-not $validationMatch.Success -or -not $testMatch.Success) {
+    if (-not $validationMatch.Success -or -not $persistedValidationMatch.Success -or
+        -not $testMatch.Success) {
         throw "could not parse final validation/test results from $finalFitLog"
     }
 
     $summary = [ordered]@{
-        schema = "rarog-complete-hce-fit-result-v1"
+        schema = "rarog-complete-hce-fit-result-v2"
         status = "complete"
         run_dir = $runDir
         final_vector = $final
@@ -333,11 +445,12 @@ try {
         restored_baseline = @{ nodes = $restoredBench.Nodes; ebf = $restoredBench.Ebf }
         final_validation = @{
             best_epoch = [int]$validationMatch.Groups[1].Value
-            loss = Parse-Double $validationMatch.Groups[2].Value
+            selection_loss = Parse-Double $validationMatch.Groups[2].Value
+            persisted_rounded_loss = Parse-Double $persistedValidationMatch.Groups[1].Value
         }
         frozen_test = @{
             loss = Parse-Double $testMatch.Groups[1].Value
-            base_loss = Parse-Double $testMatch.Groups[2].Value
+            source_baseline_loss = Parse-Double $testMatch.Groups[2].Value
             delta = Parse-Double $testMatch.Groups[3].Value
         }
         dataset_manifest_sha256 = if ($datasetManifest) {
@@ -348,9 +461,11 @@ try {
             (Get-FileHash -Algorithm SHA256 -LiteralPath $testMarker).Hash
         } else { $null }
         final_vector_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $final).Hash
+        source_vector_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $baselineVector).Hash
+        candidate_patch_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $candidatePatch).Hash
         candidate_exe_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $runDir "rarog-candidate.exe")).Hash
         source_restored = $true
-        frozen_test_opened_once = $true
+        frozen_test_opened_once = [bool]$testMarker
         strength_verdict = "not run; register SPRT only after reviewing this offline fit"
     }
     $summary | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $runDir "summary.json") -Encoding utf8

@@ -100,15 +100,19 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 . "$PSScriptRoot\harness_common.ps1"
 
-function Get-TextLineCount([string]$Path) {
-    $reader = [System.IO.File]::OpenText($Path)
-    try {
-        $count = 0
-        while ($null -ne $reader.ReadLine()) { $count++ }
-        return $count
-    } finally {
-        $reader.Dispose()
+function Get-UniqueEpdOpeningCount([string]$Path) {
+    $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    $count = 0
+    foreach ($line in [IO.File]::ReadLines($Path)) {
+        $parts = $line.Split(' ', [StringSplitOptions]::RemoveEmptyEntries)
+        if ($parts.Count -lt 4) { throw "$Path opening $($count + 1) is not a four-field FEN." }
+        $fen4 = $parts[0..3] -join ' '
+        if (-not $seen.Add($fen4)) {
+            throw "$Path repeats opening '$fen4'; refusing duplicate-seeded datagen."
+        }
+        $count++
     }
+    return $count
 }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -155,7 +159,7 @@ try {
     # small book replays near-identical games — Basilisk got 31,880 unique
     # positions from 200k games off SuperGM_4mvs vs 1.73M off a diverse seed.
     if ($BookFormat -eq "epd") {
-        $openings = Get-TextLineCount $Book
+        $openings = Get-UniqueEpdOpeningCount $Book
     } else {
         $openings = (Select-String -Path $Book -Pattern '^\[Event ' -SimpleMatch:$false).Count
     }
@@ -197,8 +201,9 @@ try {
     if ($engineManifest.git_dirty) {
         throw "Datagen engine was built from a dirty tree; rebuild a reproducible binary before generating labels."
     }
-    if ($engineManifest.verification -and $engineManifest.verification -ne "bench") {
-        throw "Datagen engine manifest records '$($engineManifest.verification)', not bench verification."
+    $verificationProperty = $engineManifest.PSObject.Properties["verification"]
+    if ($verificationProperty -and $verificationProperty.Value -ne "bench") {
+        throw "Datagen engine manifest records '$($verificationProperty.Value)', not bench verification."
     }
     if ($engineManifest.flavor -like "*-tune") {
         throw "Datagen requires a production PGO build, not a tune binary."
@@ -209,10 +214,11 @@ try {
     # Hash before launch so the manifest identifies the inputs fastchess
     # actually opened, even if a file is changed after the run begins.
     $engineHash = Get-HarnessSha256 -Path $enginePath
-    if (-not $engineManifest.binary_sha256) {
+    $binaryHashProperty = $engineManifest.PSObject.Properties["binary_sha256"]
+    if (-not $binaryHashProperty -or -not $binaryHashProperty.Value) {
         throw "Datagen requires a hash-bound engine manifest; rebuild with tools\build_test.ps1."
     }
-    if ($engineManifest.binary_sha256 -ne $engineHash) {
+    if ($binaryHashProperty.Value -ne $engineHash) {
         throw "Engine binary SHA-256 does not match its sidecar; rebuild before generating labels."
     }
     foreach ($requiredOption in @("Hash", "Threads")) {

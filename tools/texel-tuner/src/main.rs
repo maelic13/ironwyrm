@@ -1315,6 +1315,11 @@ struct TuneOpts {
     /// optimistically biased by construction: it is the best of N epochs on
     /// the very data that picked them.
     test: Option<String>,
+    /// Complete source vector used as the frozen-test comparator. This is
+    /// deliberately separate from `initial`: the final polish starts from the
+    /// preceding nonlinear stage, while the production question is whether the
+    /// complete rounded candidate beats the source HCE that began the run.
+    test_baseline: Option<String>,
     /// Persistent exclusive marker created at the exact moment the frozen test
     /// is first opened. Production fits use it to enforce one-shot use across
     /// separate invocations, not merely within one process.
@@ -1453,30 +1458,18 @@ fn cmd_tune(opts: &TuneOpts) {
     println!("optimistic estimate. Pass --test <frozen.csv> for an unbiased one.");
     report_bucket_table(&holdout, &active, &base_w, &w, k);
 
-    // 9.6(a): the frozen test set is loaded only now — after every selection
-    // decision (K, best epoch) has been made — and evaluated exactly once.
-    if let Some(test_path) = &opts.test {
-        if let Some(marker) = &opts.test_marker {
-            claim_frozen_test(marker, test_path);
-        }
-        println!(
-            "
-Loading FROZEN TEST set from {test_path} ..."
-        );
-        let test = load_tune_dataset(test_path, &active, opts.max_positions, &base_params);
-        println!("  {} test positions", test.len());
-        let base_test = traced_loss(&test, &active, &base_w, &base_w, k);
-        let test_loss = traced_loss(&test, &active, &base_w, &w, k);
-        println!(
-            "Frozen test loss = {test_loss:.8} (base {base_test:.8}, delta {:+.8})",
-            test_loss - base_test
-        );
-        println!("(one-shot residual report; this set selected nothing)");
-        report_bucket_table(&test, &active, &base_w, &w, k);
-    }
+    // Persist and reload before any final evidence. `EvalParams` is integer;
+    // the optimizer is floating-point. Measuring `w` here would report a model
+    // that can never be baked into the engine.
+    write_eval_file(&opts.out, &w);
+    let persisted = load_eval_file(&opts.out);
+    let persisted_w = persisted.to_flat();
+    let persisted_holdout = traced_loss(&holdout, &active, &base_w, &persisted_w, k);
+    println!("Persisted rounded validation loss = {persisted_holdout:.8}");
+
+    report_frozen_test(opts, &persisted, k);
 
     print_active_deltas(&active, &base_w, &w);
-    write_eval_file(&opts.out, &w);
     println!("Tuned weights written to {}", opts.out);
 }
 
@@ -1692,6 +1685,47 @@ fn ks_report_buckets(base: &[(f64, u64)], fin: &[(f64, u64)]) {
     }
 }
 
+/// Compare the exact persisted integer candidate with the explicit source
+/// vector. The raw evaluator is required: the source and candidate can differ
+/// in nonlinear danger-index coordinates, which a linear trace based on the
+/// preceding stage cannot reconstruct.
+fn report_frozen_test(opts: &TuneOpts, candidate: &EvalParams, k: f64) {
+    let Some(test_path) = &opts.test else {
+        return;
+    };
+    let baseline_path = opts
+        .test_baseline
+        .as_deref()
+        .expect("validated --test-baseline must accompany --test");
+    // Validate the comparator before consuming the one-shot marker. A corrupt
+    // baseline artifact must fail without burning the test set.
+    let baseline = load_eval_file(baseline_path);
+    if let Some(marker) = &opts.test_marker {
+        claim_frozen_test(marker, test_path);
+    }
+    println!(
+        "\nLoading FROZEN TEST set from {test_path} ...\n\
+         Exact comparison: source vector {baseline_path}\n\
+         Candidate: persisted rounded vector {}",
+        opts.out
+    );
+    // The baseline defines cohort membership, so parameter movement cannot
+    // silently move positions between the base and final columns.
+    let test = load_raw_dataset(test_path, opts.max_positions, &baseline);
+    println!("  {} test positions", test.len());
+    let mut evs: Vec<Evaluator> = (0..n_threads()).map(|_| Evaluator::default()).collect();
+    let base_test = ks_mse(&test, &mut evs, &baseline, k);
+    let test_loss = ks_mse(&test, &mut evs, candidate, k);
+    println!(
+        "Frozen test loss = {test_loss:.8} (source baseline {base_test:.8}, delta {:+.8})",
+        test_loss - base_test
+    );
+    println!("(one-shot exact rounded report; this set selected nothing)");
+    let base_buckets = ks_bucket_losses(&test, &mut evs, &baseline, k);
+    let final_buckets = ks_bucket_losses(&test, &mut evs, candidate, k);
+    ks_report_buckets(&base_buckets, &final_buckets);
+}
+
 /// Fit K once from base-parameter scores (ternary search), so the K-fit does
 /// not re-evaluate the dataset per iteration.
 fn ks_fit_k(boards: &[RawPos], evs: &mut [Evaluator], base: &EvalParams) -> f64 {
@@ -1850,38 +1884,14 @@ fn cmd_tune_kingsafety(opts: &TuneOpts) {
     let fin_buckets = ks_bucket_losses(&holdout, &mut evs, &params, k);
     ks_report_buckets(&base_buckets, &fin_buckets);
 
-    // 9.6(a): one-shot frozen-test residual, evaluated only after the fit and
-    // its epoch selection are complete. See TuneOpts::test.
-    if let Some(test_path) = &opts.test {
-        if let Some(marker) = &opts.test_marker {
-            claim_frozen_test(marker, test_path);
-        }
-        println!(
-            "
-Loading FROZEN TEST set from {test_path} ..."
-        );
-        let test = load_raw_dataset(test_path, opts.max_positions, &base_params);
-        println!("  {} test positions", test.len());
-        params.set_from_flat(&base_w);
-        let base_test = ks_mse(&test, &mut evs, &params, k);
-        params.set_from_flat(&w);
-        let test_loss = ks_mse(&test, &mut evs, &params, k);
-        println!(
-            "Frozen test loss = {test_loss:.8} (base {base_test:.8}, delta {:+.8})",
-            test_loss - base_test
-        );
-        println!("(one-shot residual report; this set selected nothing)");
-        let base_b = {
-            params.set_from_flat(&base_w);
-            ks_bucket_losses(&test, &mut evs, &params, k)
-        };
-        params.set_from_flat(&w);
-        let fin_b = ks_bucket_losses(&test, &mut evs, &params, k);
-        ks_report_buckets(&base_b, &fin_b);
-    }
+    write_eval_file(&opts.out, &w);
+    let persisted = load_eval_file(&opts.out);
+    let persisted_holdout = ks_mse(&holdout, &mut evs, &persisted, k);
+    println!("Persisted rounded validation loss = {persisted_holdout:.8}");
+
+    report_frozen_test(opts, &persisted, k);
 
     print_active_deltas(&active, &base_w, &w);
-    write_eval_file(&opts.out, &w);
     println!("Tuned weights written to {}", opts.out);
 }
 
@@ -2147,10 +2157,10 @@ fn usage(exe: &str) {
     eprintln!("  {exe} --feature-support <dataset.csv> [--max-positions N]");
     eprintln!("  {exe} --buckets <dataset.csv> [--max-positions N] [--from-cp] [--fix-k K]");
     eprintln!(
-        "  {exe} --tune <group> <train.csv> <validation.csv> [out.txt] [--initial complete-vector.txt] [--test frozen.csv] [--test-marker FILE] [--epochs N] [--lr X] [--l2 X] [--max-positions N] [--from-cp] [--fix-k K]"
+        "  {exe} --tune <group> <train.csv> <validation.csv> [out.txt] [--initial complete-vector.txt] [--test frozen.csv --test-baseline source-vector.txt] [--test-marker FILE] [--epochs N] [--lr X] [--l2 X] [--max-positions N] [--from-cp] [--fix-k K]"
     );
     eprintln!(
-        "  {exe} --tune-kingsafety <train.csv> <validation.csv> [out.txt] [--initial complete-vector.txt] [--test frozen.csv] [--test-marker FILE] [--epochs N] [--max-positions N] [--from-cp] [--fix-k K]"
+        "  {exe} --tune-kingsafety <train.csv> <validation.csv> [out.txt] [--initial complete-vector.txt] [--test frozen.csv --test-baseline source-vector.txt] [--test-marker FILE] [--epochs N] [--max-positions N] [--from-cp] [--fix-k K]"
     );
     eprintln!();
     eprintln!("  --test      FROZEN test set: loaded after the fit, read once,");
@@ -2162,7 +2172,22 @@ fn usage(exe: &str) {
     eprintln!("  --fix-k K   pin sigmoid K instead of fitting it (e.g. --fix-k 1)");
     eprintln!("  --initial   start from a complete prior-stage vector; partial files fail");
     eprintln!("  --test-marker atomically enforce one-shot frozen-test use across runs");
+    eprintln!(
+        "  --test-baseline complete source vector for exact source-to-rounded-candidate test"
+    );
+    eprintln!("  {exe} --write-defaults <complete-vector.txt>");
     print_groups();
+}
+
+fn validate_test_contract(opts: &TuneOpts) {
+    if opts.test_marker.is_some() && opts.test.is_none() {
+        eprintln!("--test-marker requires --test.");
+        exit(1);
+    }
+    if opts.test.is_some() != opts.test_baseline.is_some() {
+        eprintln!("--test and --test-baseline must be supplied together.");
+        exit(1);
+    }
 }
 
 /// Parse the global `--from-cp` / `--fix-k` flags shared by several
@@ -2213,6 +2238,14 @@ fn main() {
             };
             cmd_verify(&args[2], weights);
         }
+        "--write-defaults" => {
+            if args.len() != 3 {
+                usage(&args[0]);
+                exit(1);
+            }
+            write_eval_file(&args[2], &EvalParams::default().to_flat());
+            println!("Complete source-default vector written to {}", args[2]);
+        }
         "--audit-coverage" => cmd_audit_coverage(),
         "--tune" => {
             if args.len() < 5 {
@@ -2224,6 +2257,7 @@ fn main() {
                 train: args[3].clone(),
                 holdout: args[4].clone(),
                 test: None,
+                test_baseline: None,
                 test_marker: None,
                 initial: None,
                 out: "tools/texel/out/eval_params.txt".to_string(),
@@ -2253,6 +2287,10 @@ fn main() {
                     }
                     "--test" => {
                         opts.test = Some(val().clone());
+                        i += 1;
+                    }
+                    "--test-baseline" => {
+                        opts.test_baseline = Some(val().clone());
                         i += 1;
                     }
                     "--test-marker" => {
@@ -2300,10 +2338,7 @@ fn main() {
                 eprintln!("--epochs must be positive.");
                 exit(1);
             }
-            if opts.test_marker.is_some() && opts.test.is_none() {
-                eprintln!("--test-marker requires --test.");
-                exit(1);
-            }
+            validate_test_contract(&opts);
             cmd_tune(&opts);
         }
         "--tune-kingsafety" => {
@@ -2316,6 +2351,7 @@ fn main() {
                 train: args[2].clone(),
                 holdout: args[3].clone(),
                 test: None,
+                test_baseline: None,
                 test_marker: None,
                 initial: None,
                 out: "tools/texel/out/king_safety.txt".to_string(),
@@ -2345,6 +2381,10 @@ fn main() {
                     }
                     "--test" => {
                         opts.test = Some(val().clone());
+                        i += 1;
+                    }
+                    "--test-baseline" => {
+                        opts.test_baseline = Some(val().clone());
                         i += 1;
                     }
                     "--test-marker" => {
@@ -2378,10 +2418,7 @@ fn main() {
                 eprintln!("--epochs must be positive.");
                 exit(1);
             }
-            if opts.test_marker.is_some() && opts.test.is_none() {
-                eprintln!("--test-marker requires --test.");
-                exit(1);
-            }
+            validate_test_contract(&opts);
             cmd_tune_kingsafety(&opts);
         }
         "--feature-support" => {
