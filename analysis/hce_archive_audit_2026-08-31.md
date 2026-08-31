@@ -37,6 +37,13 @@ Both manifests bind the same engine (`74d4426ff3c4`, binary SHA-256
 `datagen-v1` adjudication profile. Their book ranges are disjoint: 1–20,000
 and 20,001–600,000.
 
+The bound `beast_seed.epd` contains exactly **750,000 lines, 750,000 unique
+four-field FENs and zero malformed or duplicate entries**. Its SHA-256 is
+`B91C756ADCC7A4B96CEA502A7775B128DDE6C425F6A2B4FC6381E603610B2C7F`.
+Thus the 600,000 games are independent opening starts rather than repeated
+games hidden behind a large nominal file. `datagen.ps1` and the fit runner now
+enforce this mechanically.
+
 ## Measured content
 
 | Check | Result |

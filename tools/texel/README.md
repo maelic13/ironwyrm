@@ -59,7 +59,7 @@ copied**. Treat it as an immutable position pool.
 | Script | What it does |
 |---|---|
 | `sample_fens.py` | Streams the Beast pool into five equal phase reservoirs and writes a validated, deduped EPD seed book. Default 750k starts; 7 GB-safe. |
-| `datagen.ps1` (in `tools/`) | Runs one deterministic self-play game per independent book entry. A fixed shuffle seed plus non-overlapping `Start`/`Rounds` segments makes pilot and continuation reproducible; each completed archive gets a provenance manifest. |
+| `datagen.ps1` (in `tools/`) | Runs one deterministic self-play game per independent book entry. EPD books are rejected if any four-field FEN repeats; a fixed shuffle seed plus non-overlapping `Start`/`Rounds` segments makes pilot and continuation reproducible; each completed archive gets a provenance manifest. |
 | `extract.py` | Reads PGN archives into exact phase quotas for train/validation/frozen-test. Whole supplied starts are assigned by stable hash, replay leakage is rejected, rule-50 identity is retained, and outputs plus a hash-complete manifest publish atomically. `--preflight-games` sizes the run first. |
 | `extract_parallel.py` | Parallel front end with the same deterministic dataset contract; validates datagen sidecars/ranges and reports result, termination, mate, label and material coverage. |
 | `fit_complete.ps1` | One-command qualified corpus publication plus complete alternating nonlinear/linear fit, verification, bake/test/bench artifact capture and safe source/binary restoration. |
@@ -79,10 +79,11 @@ run is:
 pwsh -NoProfile -File tools\texel\fit_complete.ps1
 ```
 
-The runner audits before publishing, refuses ambiguous or hash-mismatched
-datasets, fits K once and pins it, then executes nonlinear king safety ->
+The runner audits before publishing, refuses ambiguous/hash-mismatched data,
+non-WDL targets, replayed starts and duplicate/undersized opening books, fits K once and pins it, then executes nonlinear king safety ->
 complete linear -> nonlinear king safety -> complete linear polish. Only the
-last selected vector opens `test.csv`. It captures all logs, vectors, settings,
+last selected vector opens `test.csv`; the report uses exact full evaluation of
+the saved source vector versus the serialized/reloaded integer candidate. It captures all logs, vectors, settings,
 hashes, a source patch and candidate binary in
 `tools/results/hce-fit-<timestamp>/`, then restores and rebuilds the accepted
 source/binary. `summary.json` is the entry point for review. It does not run an

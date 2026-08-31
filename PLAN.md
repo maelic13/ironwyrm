@@ -231,14 +231,14 @@ The previous 3,000,000-row target is impossible: train openings stop at
 **2,300,000 train + 127,778 validation + 127,778 frozen test**, equally
 phase-balanced. More datagen is not owed before this corpus receives a verdict.
 
-#### 4.7.2 Atomic corpus publication and hash freeze — NEXT
+#### 4.7.2 Atomic corpus publication and hash freeze — COMPLETE
 
-Publish `tools/texel/data/hce-v2` once from those immutable inputs. The command
-must repeat the audit, validate both sidecars and the exact quotas, retain the
-rule-50 clock in position identity, then atomically record every PGN, sidecar,
-split and setting hash. Validation selects; the frozen test is opened only by
-the final selected vector. Existing old `train.csv`/`holdout.csv` are never
-overwritten.
+`hce-v2` contains 2,300,000 / 127,778 / 127,778 rows with every input/output
+hash frozen. All targets are literal white-perspective self-play results
+(`0`, `0.5`, `1`; blend 1.0). Its 600,000 games use disjoint entries 1–600,000
+of `beast_seed.epd`; the book has 750,000 unique four-field FENs and no
+duplicates. The runner now rechecks the CSV label domain and row counts, book
+hash/cardinality/uniqueness, sidecars, non-wrapping ranges and replay count.
 
 #### 4.7.3 Complete parameter-to-instrument audit — COMPLETE
 
@@ -291,7 +291,7 @@ The immutable schedule executed by `tools/texel/fit_complete.ps1` is:
 | Linear optimizer | Complete 1,194-slot sparse Adam, 200 epochs, learning rate 0.3, L2-to-stage-prior `1e-7` |
 | Nonlinear optimizer | 12 danger selectors + 40 safety-table entries; 200,000 train positions; integer coordinate descent, at most 40 epochs |
 | Alternation | nonlinear -> complete linear -> nonlinear -> 60-epoch complete linear polish |
-| Selection | Best validation checkpoint within each fixed stage; frozen test opened once after final selection |
+| Selection | Best validation checkpoint within each fixed stage; serialize/reload the integer vector, then compare it by full re-evaluation with an explicit saved source vector; frozen test opened once after final selection |
 | Stop | Exactly two nonlinear/linear cycles; no post-hoc epoch, schedule, data or K change |
 
 Before fitting, the runner re-audits/publishes the corpus, verifies exact
@@ -301,6 +301,17 @@ emits every trajectory, parameter delta, validation/cohort table, one-shot test
 loss, final complete vector, source patch, candidate binary/benchmark and
 hashes. It tests the baked candidate in debug/release and clippy, then restores
 source and the normal release binary. Offline loss is evidence, not Elo.
+
+The first production invocation (`hce-fit-20260831_095443`) completed every
+optimizer stage, but its frozen report compared stage 3 with the floating-point
+polish vector rather than source with the persisted integer candidate. Its
+captured patch was also text-corrupted. Those are harness failures, so the
+reported delta is retired and no game gate is licensed. The repaired runner
+saves source defaults explicitly, reloads the rounded final vector, evaluates
+both with the full nonlinear evaluator, fixes cohort membership to the source,
+and verifies that the raw UTF-8 patch applies after restoration. Because
+`hce-v2/test.csv` was consumed, 4.8.1 remains open pending an untouched
+confirmation set from unused opening starts; do not reopen or rename that test.
 
 SPSA is skipped here: deterministic traced and re-evaluation instruments own
 every existing coordinate, so there is no unexplained live nonlinear residue

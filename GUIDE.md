@@ -14,7 +14,7 @@
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes**; **250.77 +/- 13.12** at equal time; speed contribution **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut filter **+15.56 +/- 10.02 Elo**; root LMR relief **+2.33 +/- 1.85 Elo** |
 | Active experiment | None |
-| Current step | **4.7.2 / 4.8.1 — publish the qualified corpus and run the registered offline complete-HCE fit** |
+| Current step | **4.8.1 — obtain an untouched confirmation set and rerun the repaired exact source-to-rounded HCE report** |
 | HCE | Open now; no historical family is frozen. Refit every identifiable linear and nonlinear surface before adding features |
 | Next release | Conditional 2.4.0 at 4.15; then NNUE |
 
@@ -38,13 +38,13 @@
 
 **HCE maturity and fitting**
 
-- [ ] **4.7** Qualify HCE data, labels, fitting instruments and current-source maturity
+- [x] **4.7** Qualify HCE data, labels, fitting instruments and current-source maturity
     - [x] **4.7.1** Archive provenance/content audit: 600k independent starts; qualified capacity is 2.30M/127,778/127,778, not 3M
-    - [ ] **4.7.2 NEXT** Atomically publish `hce-v2` and freeze every input/output hash; the overnight runner performs this first
+    - [x] **4.7.2** Published/hash-frozen `hce-v2`: pure self-play WDL, 600k independent starts from 750k unique openings
     - [x] **4.7.3** Exact 1,218-slot instrument partition and vector/bake/rebuild smoke
     - [x] **4.7.4** Current-source Stockfish maturity map; structural gaps remain post-fit hypotheses
 - [ ] **4.8** Refit and gate the complete existing HCE surface
-    - [ ] **4.8.1 NEXT** Run the registered offline nonlinear/linear/nonlinear/polish fit and inspect its one-shot frozen-test report
+    - [ ] **4.8.1 NEXT** First fit's comparator/rounding report was invalid; use fresh unused openings and the repaired exact source-to-persisted-candidate report
     - [ ] **4.8.2** Apply a valid fit on a clean branch, bake final PGO, measure NPS and register the game gate
     - [ ] **4.8.3** Run the registered SPRT; accept or restore the complete vector
 - [ ] **4.9** At most two residual-selected structural HCE clusters; skip if the complete refit leaves no supported gap

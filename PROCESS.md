@@ -200,7 +200,10 @@ verdict:
    fingerprint movement; unchanged behavior after a broad fit is a failed wire.
 7. Retain the complete train/validation trajectory. The validation-selected
    vector must be settled, not a transient fly-through or a semantic sign
-   violation. Report the frozen test once after selection.
+   violation. Serialize and reload the integer candidate, then report the
+   frozen test once after selection using exact full evaluation against an
+   explicit saved source vector. A floating optimizer vector or prior-stage
+   comparator is not the deployable model.
 8. At 4.8 fit and gate the complete existing linear/nonlinear HCE before adding
    features. Run a local covariant fit after each later structural cluster.
    Apply registered
