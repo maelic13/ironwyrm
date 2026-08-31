@@ -18,6 +18,8 @@
 //!       tools/texel/data/train.csv tools/texel/data/holdout.csv out.txt
 
 use std::fs;
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::process::exit;
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -804,6 +806,29 @@ fn read_lines(path: &str) -> Vec<String> {
     text.lines().map(str::to_string).collect()
 }
 
+/// Atomically consume a frozen test set immediately before its first read.
+/// `create_new` makes a second run fail across processes and restarts rather
+/// than quietly converting the test set into another validation set.
+fn claim_frozen_test(marker: &str, test_path: &str) {
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(marker)
+        .unwrap_or_else(|e| {
+            eprintln!("Cannot claim frozen test via {marker}: {e}");
+            exit(1)
+        });
+    writeln!(file, "rarog-frozen-test-v1\ntest={test_path}").unwrap_or_else(|e| {
+        eprintln!("Cannot record frozen-test claim in {marker}: {e}");
+        exit(1)
+    });
+    file.sync_all().unwrap_or_else(|e| {
+        eprintln!("Cannot persist frozen-test claim in {marker}: {e}");
+        exit(1)
+    });
+    println!("Frozen test claimed atomically via {marker}");
+}
+
 /// Load a complete `name index value` vector. Production stage chaining must
 /// never accept a partial file: an omitted field would silently fall back to
 /// source defaults and discard an earlier fit.
@@ -1290,6 +1315,10 @@ struct TuneOpts {
     /// optimistically biased by construction: it is the best of N epochs on
     /// the very data that picked them.
     test: Option<String>,
+    /// Persistent exclusive marker created at the exact moment the frozen test
+    /// is first opened. Production fits use it to enforce one-shot use across
+    /// separate invocations, not merely within one process.
+    test_marker: Option<String>,
     /// Complete vector produced by the preceding stage. Omission means source
     /// defaults. Partial vectors are rejected so stage chaining cannot reset a
     /// family silently.
@@ -1427,6 +1456,9 @@ fn cmd_tune(opts: &TuneOpts) {
     // 9.6(a): the frozen test set is loaded only now — after every selection
     // decision (K, best epoch) has been made — and evaluated exactly once.
     if let Some(test_path) = &opts.test {
+        if let Some(marker) = &opts.test_marker {
+            claim_frozen_test(marker, test_path);
+        }
         println!(
             "
 Loading FROZEN TEST set from {test_path} ..."
@@ -1821,6 +1853,9 @@ fn cmd_tune_kingsafety(opts: &TuneOpts) {
     // 9.6(a): one-shot frozen-test residual, evaluated only after the fit and
     // its epoch selection are complete. See TuneOpts::test.
     if let Some(test_path) = &opts.test {
+        if let Some(marker) = &opts.test_marker {
+            claim_frozen_test(marker, test_path);
+        }
         println!(
             "
 Loading FROZEN TEST set from {test_path} ..."
@@ -2112,10 +2147,10 @@ fn usage(exe: &str) {
     eprintln!("  {exe} --feature-support <dataset.csv> [--max-positions N]");
     eprintln!("  {exe} --buckets <dataset.csv> [--max-positions N] [--from-cp] [--fix-k K]");
     eprintln!(
-        "  {exe} --tune <group> <train.csv> <validation.csv> [out.txt] [--initial complete-vector.txt] [--test frozen.csv] [--epochs N] [--lr X] [--l2 X] [--max-positions N] [--from-cp] [--fix-k K]"
+        "  {exe} --tune <group> <train.csv> <validation.csv> [out.txt] [--initial complete-vector.txt] [--test frozen.csv] [--test-marker FILE] [--epochs N] [--lr X] [--l2 X] [--max-positions N] [--from-cp] [--fix-k K]"
     );
     eprintln!(
-        "  {exe} --tune-kingsafety <train.csv> <validation.csv> [out.txt] [--initial complete-vector.txt] [--test frozen.csv] [--epochs N] [--max-positions N] [--from-cp] [--fix-k K]"
+        "  {exe} --tune-kingsafety <train.csv> <validation.csv> [out.txt] [--initial complete-vector.txt] [--test frozen.csv] [--test-marker FILE] [--epochs N] [--max-positions N] [--from-cp] [--fix-k K]"
     );
     eprintln!();
     eprintln!("  --test      FROZEN test set: loaded after the fit, read once,");
@@ -2126,6 +2161,7 @@ fn usage(exe: &str) {
     eprintln!("              squashed 1/(1+10^(-cp/400)) at load (Phase 6.1 SF-distill)");
     eprintln!("  --fix-k K   pin sigmoid K instead of fitting it (e.g. --fix-k 1)");
     eprintln!("  --initial   start from a complete prior-stage vector; partial files fail");
+    eprintln!("  --test-marker atomically enforce one-shot frozen-test use across runs");
     print_groups();
 }
 
@@ -2188,6 +2224,7 @@ fn main() {
                 train: args[3].clone(),
                 holdout: args[4].clone(),
                 test: None,
+                test_marker: None,
                 initial: None,
                 out: "tools/texel/out/eval_params.txt".to_string(),
                 epochs: 200,
@@ -2216,6 +2253,10 @@ fn main() {
                     }
                     "--test" => {
                         opts.test = Some(val().clone());
+                        i += 1;
+                    }
+                    "--test-marker" => {
+                        opts.test_marker = Some(val().clone());
                         i += 1;
                     }
                     "--epochs" => {
@@ -2259,6 +2300,10 @@ fn main() {
                 eprintln!("--epochs must be positive.");
                 exit(1);
             }
+            if opts.test_marker.is_some() && opts.test.is_none() {
+                eprintln!("--test-marker requires --test.");
+                exit(1);
+            }
             cmd_tune(&opts);
         }
         "--tune-kingsafety" => {
@@ -2271,6 +2316,7 @@ fn main() {
                 train: args[2].clone(),
                 holdout: args[3].clone(),
                 test: None,
+                test_marker: None,
                 initial: None,
                 out: "tools/texel/out/king_safety.txt".to_string(),
                 epochs: 40,
@@ -2301,6 +2347,10 @@ fn main() {
                         opts.test = Some(val().clone());
                         i += 1;
                     }
+                    "--test-marker" => {
+                        opts.test_marker = Some(val().clone());
+                        i += 1;
+                    }
                     "--epochs" => {
                         opts.epochs = val().parse().unwrap_or_else(|_| {
                             eprintln!("Bad --epochs");
@@ -2326,6 +2376,10 @@ fn main() {
             }
             if opts.epochs == 0 {
                 eprintln!("--epochs must be positive.");
+                exit(1);
+            }
+            if opts.test_marker.is_some() && opts.test.is_none() {
+                eprintln!("--test-marker requires --test.");
                 exit(1);
             }
             cmd_tune_kingsafety(&opts);

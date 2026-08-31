@@ -129,6 +129,7 @@ try {
         $PolishEpochs = 1
         $linearMax = 1000
         $datasetManifest = $null
+        $testMarker = $null
         Write-Host "SMOKE mode: legacy data, tiny bounded fits, no dataset publication"
     } else {
         $dataset = Resolve-RepoPath $DatasetDir
@@ -186,6 +187,10 @@ try {
         $validation = Join-Path $dataset "validation.csv"
         $test = Join-Path $dataset "test.csv"
         $datasetManifest = Join-Path $dataset "manifest.json"
+        $testMarker = Join-Path $dataset "frozen-test.opened"
+        if (Test-Path -LiteralPath $testMarker) {
+            throw "frozen test was already consumed; see $testMarker"
+        }
         $linearMax = 0
     }
 
@@ -269,6 +274,7 @@ try {
         "--fix-k", $fixedK
     )
     if ($linearMax -gt 0) { $polishArgs += @("--max-positions", [string]$linearMax) }
+    if ($testMarker) { $polishArgs += @("--test-marker", $testMarker) }
     $finalFitLog = Invoke-Logged "fit-04-final-polish" $tuner $polishArgs
     [void](Invoke-Logged "trace-verify-final-vector" $tuner @("--verify", $validation, "--weights", $final))
 
@@ -336,6 +342,10 @@ try {
         }
         dataset_manifest_sha256 = if ($datasetManifest) {
             (Get-FileHash -Algorithm SHA256 -LiteralPath $datasetManifest).Hash
+        } else { $null }
+        frozen_test_marker = if ($testMarker) { $testMarker } else { $null }
+        frozen_test_marker_sha256 = if ($testMarker) {
+            (Get-FileHash -Algorithm SHA256 -LiteralPath $testMarker).Hash
         } else { $null }
         final_vector_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $final).Hash
         candidate_exe_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $runDir "rarog-candidate.exe")).Hash
