@@ -14,7 +14,7 @@ in `EXPERIMENTS.md`; current status and commands belong in `GUIDE.md`.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut move filtering **+15.56 +/- 10.02 Elo**; root LMR relief **+2.33 +/- 1.85 Elo** |
 | Active game job | None |
-| Current step | **4.7.2 / 4.8.1 — publish the qualified HCE corpus and run the registered offline complete-surface fit** |
+| Current step | **4.8.1 — confirm the fixed complete-surface fit on untouched self-play WDL** |
 | HCE state | Open now. No historical family or parameter group is presumed fitted; all real coordinates must be re-audited and refitted where identifiable with the correct linear/nonlinear instrument |
 | Next release | Conditional **2.4.0** after 4.15; baseline NNUE then targets **2.5.0** |
 
@@ -312,6 +312,13 @@ both with the full nonlinear evaluator, fixes cohort membership to the source,
 and verifies that the raw UTF-8 patch applies after restoration. Because
 `hce-v2/test.csv` was consumed, 4.8.1 remains open pending an untouched
 confirmation set from unused opening starts; do not reopen or rename that test.
+`tools/texel/confirm_hce_fit.ps1` freezes the completed candidate and K, builds
+a clean source engine, generates one game from each unused book entry
+600,001--750,000, and hash-splits those 150,000 independent starts 50/50. It
+extracts 127,778 equal-phase test positions from the held-out half (the other
+127,778 positions are published but select nothing), mechanically verifies
+literal WDL targets and provenance, then runs only the repaired one-shot exact
+source-to-rounded-candidate comparison. Stockfish evaluations are never read.
 
 SPSA is skipped here: deterministic traced and re-evaluation instruments own
 every existing coordinate, so there is no unexplained live nonlinear residue

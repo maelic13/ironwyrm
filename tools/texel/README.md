@@ -63,6 +63,7 @@ copied**. Treat it as an immutable position pool.
 | `extract.py` | Reads PGN archives into exact phase quotas for train/validation/frozen-test. Whole supplied starts are assigned by stable hash, replay leakage is rejected, rule-50 identity is retained, and outputs plus a hash-complete manifest publish atomically. `--preflight-games` sizes the run first. |
 | `extract_parallel.py` | Parallel front end with the same deterministic dataset contract; validates datagen sidecars/ranges and reports result, termination, mate, label and material coverage. |
 | `fit_complete.ps1` | One-command qualified corpus publication plus complete alternating nonlinear/linear fit, verification, bake/test/bench artifact capture and safe source/binary restoration. |
+| `confirm_hce_fit.ps1` | One-command untouched confirmation of the fixed production fit: 150k unused independent openings, pure self-play WDL, exact source-to-rounded-candidate report. |
 | `import_beast.py` | For Path B: converts pre-evaluated `FEN<TAB>target` files to `FEN;target` train/holdout, converting side-to-move targets to White perspective. |
 | `reference/basilisk_tuner.cpp` | Historical source for the completed Rust port's Adam, K-fit, group masks and reconstruction gate; do not build because it links Basilisk's eval. |
 
@@ -72,22 +73,21 @@ copied**. Treat it as an immutable position pool.
 
 The 2026-08-31 archive audit proved that the existing 600,000 games support
 2,300,000 train rows and 127,778 rows in each held-out split. The old 3M target
-cannot meet its opening quota. From a clean worktree, the complete registered
-run is:
+cannot meet its opening quota. The complete fit has already run; its original
+test report was invalid and that test is now consumed. From a clean worktree,
+confirm the fixed candidate on untouched starts with:
 
 ```powershell
-pwsh -NoProfile -File tools\texel\fit_complete.ps1
+pwsh -NoProfile -File tools\texel\confirm_hce_fit.ps1
 ```
 
-The runner audits before publishing, refuses ambiguous/hash-mismatched data,
-non-WDL targets, replayed starts and duplicate/undersized opening books, fits K once and pins it, then executes nonlinear king safety ->
-complete linear -> nonlinear king safety -> complete linear polish. Only the
-last selected vector opens `test.csv`; the report uses exact full evaluation of
-the saved source vector versus the serialized/reloaded integer candidate. It captures all logs, vectors, settings,
-hashes, a source patch and candidate binary in
-`tools/results/hce-fit-<timestamp>/`, then restores and rebuilds the accepted
-source/binary. `summary.json` is the entry point for review. It does not run an
-SPRT or claim Elo.
+The confirmation runner refuses changed engine source or candidate weights,
+uses book entries 600,001--750,000 exactly once, validates the richer datagen
+sidecar and literal WDL targets, and extracts 127,778 equal-phase test
+positions from starts assigned to a 50% held-out split. It does no optimization
+and does not read Stockfish evaluations. `summary.json` in the new
+`tools/results/hce-confirm-<timestamp>/` is the entry point for review. It does
+not run an SPRT or claim Elo.
 
 Use `-Smoke` only to validate the pipeline on bounded legacy data. Production
 mode refuses tracked worktree changes.

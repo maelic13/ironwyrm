@@ -73,21 +73,20 @@ are already fixed and are not current work.
 
 ## What you run next
 
-Run this from a clean `dev` worktree. It repeats the completed archive audit,
-publishes the qualified corpus only if `hce-v2` does not exist, runs the fixed
-complete fit, verifies the baked candidate, and restores both source and the
-accepted normal-feature binary afterward.
+Run this from a clean `dev` worktree. It keeps the completed fit fixed, creates
+150,000 fresh pure-WDL games from the unused book entries 600,001--750,000,
+extracts an independent phase-balanced 127,778-position test, and compares the
+exact source vector with the persisted rounded candidate once.
 
 ```powershell
-pwsh -NoProfile -File tools\texel\fit_complete.ps1
+pwsh -NoProfile -File tools\texel\confirm_hce_fit.ps1
 ```
 
-All artifacts land in a new ignored `tools/results/hce-fit-<timestamp>/`:
-`summary.json`, settings, audit/support/trajectory/test logs, four complete
-vectors, candidate patch/binary and hashes. This run gives an **offline fitting
-result only**. Do not start games or apply the patch until 4.8.2 review and
-prospective registration. Search-authority measurement remains at 4.11 because
-an accepted HCE can change qsearch, score scale and pruning populations.
+All artifacts land in a new ignored `tools/results/hce-confirm-<timestamp>/`.
+This is still an **offline result only**. Do not start games or apply the fit
+until 4.8.2 review and prospective registration. Search-authority measurement
+remains at 4.11 because an accepted HCE can change qsearch, score scale and
+pruning populations.
 
 ## Documentation ownership
 
