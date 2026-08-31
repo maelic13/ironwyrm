@@ -61,9 +61,35 @@ copied**. Treat it as an immutable position pool.
 | `sample_fens.py` | Streams the Beast pool into five equal phase reservoirs and writes a validated, deduped EPD seed book. Default 750k starts; 7 GB-safe. |
 | `datagen.ps1` (in `tools/`) | Runs one deterministic self-play game per independent book entry. A fixed shuffle seed plus non-overlapping `Start`/`Rounds` segments makes pilot and continuation reproducible; each completed archive gets a provenance manifest. |
 | `extract.py` | Reads PGN archives into exact phase quotas for train/validation/frozen-test. Whole supplied starts are assigned by stable hash, replay leakage is rejected, rule-50 identity is retained, and outputs plus a hash-complete manifest publish atomically. `--preflight-games` sizes the run first. |
-| `extract_parallel.py` | Parallel front end with the same deterministic dataset contract; qualify it against sequential extraction before a production corpus. |
+| `extract_parallel.py` | Parallel front end with the same deterministic dataset contract; validates datagen sidecars/ranges and reports result, termination, mate, label and material coverage. |
+| `fit_complete.ps1` | One-command qualified corpus publication plus complete alternating nonlinear/linear fit, verification, bake/test/bench artifact capture and safe source/binary restoration. |
 | `import_beast.py` | For Path B: converts pre-evaluated `FEN<TAB>target` files to `FEN;target` train/holdout, converting side-to-move targets to White perspective. |
 | `reference/basilisk_tuner.cpp` | Historical source for the completed Rust port's Adam, K-fit, group masks and reconstruction gate; do not build because it links Basilisk's eval. |
+
+---
+
+## Current audited production fit
+
+The 2026-08-31 archive audit proved that the existing 600,000 games support
+2,300,000 train rows and 127,778 rows in each held-out split. The old 3M target
+cannot meet its opening quota. From a clean worktree, the complete registered
+run is:
+
+```powershell
+pwsh -NoProfile -File tools\texel\fit_complete.ps1
+```
+
+The runner audits before publishing, refuses ambiguous or hash-mismatched
+datasets, fits K once and pins it, then executes nonlinear king safety ->
+complete linear -> nonlinear king safety -> complete linear polish. Only the
+last selected vector opens `test.csv`. It captures all logs, vectors, settings,
+hashes, a source patch and candidate binary in
+`tools/results/hce-fit-<timestamp>/`, then restores and rebuilds the accepted
+source/binary. `summary.json` is the entry point for review. It does not run an
+SPRT or claim Elo.
+
+Use `-Smoke` only to validate the pipeline on bounded legacy data. Production
+mode refuses tracked worktree changes.
 
 ---
 
@@ -106,16 +132,15 @@ $recommendedTotal = <N_FROM_PREFLIGHT>
 .\tools\datagen.ps1 -Suffix p1025a-zero -Nodes 8000 `
     -Rounds ($recommendedTotal - 20000) -Start 20001 -Seed 10403
 
-# 5. One extraction across pilot + continuation. Defaults: exactly 3M train
-#    rows (600k/phase), plus separate 5% validation and 5% frozen-test splits.
+# 5. One extraction across pilot + continuation. Set the target from the full
+#    audit; for the current two archives it is exactly 2.30M train rows.
 python tools\texel\extract_parallel.py `
     tools\texel\data\selfplay-p1025a-zero-n8000-s1-g20000.pgn `
     tools\texel\data\selfplay-p1025a-zero-n8000-s20001-g*.pgn `
-    --out-dir tools\texel\data\hce-v1 --jobs 14
+    --out-dir tools\texel\data\hce-v2 --target-train 2300000 --jobs 14
 
-# 6. Verify reconstruction, then tune a stage:
-#    rarog-texel --verify tools\texel\data\hce-v1\validation.csv
-#    rarog-texel --tune kingsafety tools\texel\data\hce-v1\train.csv tools\texel\data\hce-v1\validation.csv tools\texel\out\eval_params.txt --test tools\texel\data\hce-v1\test.csv
+# 6. Prefer fit_complete.ps1 for the registered complete schedule. Manual
+#    commands below are diagnostic and must preserve complete-vector chaining.
 
 # 7. Bake, THEN FORMAT, then verify the fingerprint. cargo fmt is not optional:
 #    bake_params.py writes one long line per PST, so `cargo fmt --check` fails
@@ -127,14 +152,13 @@ cargo fmt
 cargo fmt --check          # must pass before building anything gated
 ```
 
-The completion contract is **3,000,000 train positions with an equal five-phase
-mix plus exact phase-balanced validation and frozen-test splits**, not a rough
-global estimate. Short input exits 2 without touching an existing dataset and
-reports the exact missing quota. The 20k pilot
-sizes from measured limiting-phase unique quiet yield before the costly tail is
-generated. Keep the same book hash and seed for every segment; `datagen.ps1`
-records both plus engine SHA-256/source commit, fastchess version, range, node
-limit, and the named `datagen-v1` adjudication profile in `*.manifest.json`.
+The completion contract is the **largest prospectively audited exact
+equal-five-phase target**, not a copied corpus size or rough global estimate.
+For the current inputs that is 2,300,000 / 127,778 / 127,778. Short input exits
+2 without touching an existing dataset and reports the exact missing quota.
+Keep the same book hash and seed for every segment; `datagen.ps1` records both
+plus engine SHA-256/source commit, fastchess version, range, node limit and the
+named `datagen-v1` adjudication profile in `*.manifest.json`.
 
 ---
 
@@ -146,14 +170,16 @@ repo root:
 
 ```powershell
 # Reconstruction acceptance gate (run before any tuning):
-cargo run --release -p texel-tuner -- --verify tools\texel\data\hce-v1\validation.csv
-# Stage a group (material first, PSTs/all last). out file is RAROG_EVAL_FILE format:
-cargo run --release -p texel-tuner -- --tune material `
-    tools\texel\data\hce-v1\train.csv tools\texel\data\hce-v1\validation.csv `
-    tools\texel\out\material.txt --test tools\texel\data\hce-v1\test.csv
-# Options include --epochs N, --lr X, --l2 X, --max-positions N and --test FILE.
+cargo run --release -p texel-tuner -- --verify tools\texel\data\hce-v2\validation.csv
+cargo run --release -p texel-tuner -- --audit-coverage
+# Complete vectors can be chained without resetting a previous stage:
+cargo run --release -p texel-tuner -- --tune complete `
+    tools\texel\data\hce-v2\train.csv tools\texel\data\hce-v2\validation.csv `
+    tools\texel\out\complete.txt --initial tools\texel\out\prior.txt
+# Options include --initial FILE, --epochs N, --lr X, --l2 X,
+# --max-positions N, --test FILE and --fix-k K.
 # Groups: material pawnstruct passers rooks minors mobility threats hanging
-#         misc kingsafety scalars pst all
+#         misc kingsafety scalars pst all complete
 ```
 
 The output file loads straight into a `--features tune` engine via
@@ -168,8 +194,9 @@ parts (copied as *structure*, not C++):
   pure math, transcribe directly.
 - **Group masks** (`active_indices_for_group`): the staged-tuning groups
   (material / scalars / kingsafety / pst / all …) define local or whole fits.
-- **`--verify`** (`cmd_verify`): the reconstruction acceptance test — reconstructed
-  `E(default)` must equal `evaluate()` integer-for-integer.
+- **`--verify`** (`cmd_verify`): the reconstruction acceptance test — traced
+  reconstruction must equal the independently accumulated linear raw score
+  integer-for-integer; `--weights` verifies a complete fitted vector.
 - **`linear_delta_scale`**: captures Rarog's non-linear factors held fixed for
   one linear fit (OCB scaling, two-knights draw, 50-move damping) as the
   per-position `scale`. Mirror

@@ -178,7 +178,8 @@ verdict:
 1. Mechanically verify label domain and source before fitting. Self-play-WDL
    means exactly `0`, `0.5`, `1`; a filename, float in `[0,1]` or prose summary
    is not proof. Audit independent starts, duplicate games, phase/material and
-   mate/decisive coverage.
+   mate/decisive coverage, plus the exact named adjudication profile and its
+   result cross-tab.
 2. Keep stable whole-start hash train/validation/frozen-test splits. Retain the
    rule-50 clock in position identity, reject replay leakage, publish only
    exact per-phase quotas and hash every input/output. Never tune on the frozen
@@ -192,7 +193,8 @@ verdict:
    finite-difference evidence; trace activation alone does not validate their
    gradient.
 5. Record the initial vector, gauge/invariant/free coordinates, activation,
-   covariance, identifiability and semantic sign/bounds before selecting weights.
+   identifiability and semantic sign/bounds before selecting weights. Inspect
+   post-fit covariance/compensation for materially moved families before games.
 6. Smoke the complete vector→bake→source→rebuild chain with absurd changes in
    every instrument class. Check native exit codes and require source plus
    fingerprint movement; unchanged behavior after a broad fit is a failed wire.
@@ -210,6 +212,22 @@ verdict:
    Stop at the first no-gain/failed cycle or convergence to the same attractor.
 10. Keep search parameters fixed during HCE fitting; remeasure their populations
     at 4.11 rather than co-tuning evaluator and search.
+
+The registered 4.8 offline run is one command from a clean worktree:
+
+```powershell
+pwsh -NoProfile -File tools\texel\fit_complete.ps1
+```
+
+It first publishes or hash-verifies the qualified 2,300,000 / 127,778 /
+127,778 corpus. It then fixes validation-calibrated K and runs 40-epoch
+nonlinear king safety on 200k positions, 200-epoch complete sparse linear Adam
+(`lr=0.3`, L2-to-stage-prior `1e-7`), a second nonlinear pass and a 60-epoch
+linear polish. The schedule opens the frozen test only at the end. All logs,
+vectors, settings, hashes, support/cohort reports, source patch and candidate
+binary are retained under `tools/results/hce-fit-<timestamp>/`; source and the
+normal release binary are restored. Review those artifacts before applying a
+patch or registering games. The command itself supplies no strength verdict.
 
 ### SPSA go/no-go procedure
 

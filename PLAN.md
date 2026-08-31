@@ -1,6 +1,6 @@
 # Rarog development plan
 
-Updated 2026-08-30. This is the current roadmap. Historical evidence belongs
+Updated 2026-08-31. This is the current roadmap. Historical evidence belongs
 in `EXPERIMENTS.md`; current status and commands belong in `GUIDE.md`.
 
 ## 1. Current state
@@ -9,12 +9,12 @@ in `EXPERIMENTS.md`; current status and commands belong in `GUIDE.md`.
 |---|---|
 | Released baseline | **2.3.2** at `f931722` on `master` |
 | Accepted search head | RAR-S70 on `dev`; `bench 13` = **6,977,070 nodes / EBF 2.466**, 1T |
-| Integration state | The failed SearchCore rewrite is reverted by `c5e451d`; `d2c7788` upgrades measurement/fitting tools and `e4f10ca` adds robust per-position/per-iteration branching evidence without changing accepted behavior |
+| Integration state | The failed SearchCore rewrite is reverted by `c5e451d`; `d2c7788`/`e4f10ca` upgrade search evidence and `8d8f507` supplies the audited complete HCE fitting pipeline without changing accepted behavior |
 | Frozen search/HCE oracle | `hybrid` at `75d0d43`, Stockfish `9587eeeb` driving the exact Rarog 2.3.2 HCE |
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut move filtering **+15.56 +/- 10.02 Elo**; root LMR relief **+2.33 +/- 1.85 Elo** |
 | Active game job | None |
-| Current step | **4.7.1 — audit existing HCE self-play archives and the three-way corpus contract** |
+| Current step | **4.7.2 / 4.8.1 — publish the qualified HCE corpus and run the registered offline complete-surface fit** |
 | HCE state | Open now. No historical family or parameter group is presumed fitted; all real coordinates must be re-audited and refitted where identifiable with the correct linear/nonlinear instrument |
 | Next release | Conditional **2.4.0** after 4.15; baseline NNUE then targets **2.5.0** |
 
@@ -48,7 +48,9 @@ gating. The following rules determine this roadmap's order.
    only activated nonlinear/global residue that the linear trace cannot fit.
 7. Search and HCE coordinates never share a tune. After an HCE changes,
    cp-valued search consumers are audited and, if justified, fitted separately.
-8. Cross-evaluator cohorts and HCE-changing A/Bs default to no adjudication.
+8. Cross-evaluator cohorts and HCE-changing strength A/Bs default to no
+   adjudication. Label generation uses only its prospectively named, immutable
+   profile; the audited corpus uses conservative `datagen-v1`.
 9. Two fully implemented clusters in the same track without an accepted gain
    stop implementation and force a new evidence audit.
 10. Engine, tooling and documentation changes remain separate commits.
@@ -61,7 +63,7 @@ gating. The following rules determine this roadmap's order.
 | Behavior-neutral hot path | Exact fingerprint, debug/release tests, pooled NPS |
 | Search/HCE strength | Revision-matched clean PGO A/B, paired UHO, registered SPRT and stop rule |
 | Extension/depth authority | Fixed-node tree/depth profile plus tactical suite at both fixed depth and equal node cost; true correctness canaries veto, while aggregate disagreement is diagnosed rather than cherry-picked |
-| Texel fit | Verified label domain; hash-complete whole-start train/validation/frozen-test splits; exact all-slot instrument coverage and bake smoke; reconstruction, covariance/identifiability and semantic bounds; settled trajectory, baked PGO and SPRT |
+| Texel fit | Verified label domain; hash-complete whole-start train/validation/frozen-test splits; exact all-slot instrument coverage and bake smoke; reconstruction, activation/identifiability and semantic bounds; settled trajectory, post-fit cohort/covariance review, baked PGO and SPRT |
 | SPSA | Registered live surface and immutable horizon, bounded sensitivity pilot when needed, completed full-surface theta, fresh PGO bake and SPRT |
 | Release | Prior-release STC/LTC, 4T direction, NPS, platform/ISA matrix and user-facing docs |
 
@@ -174,13 +176,11 @@ and no whole-HCE fit has been run after the representations this programme may
 change.
 
 No HCE parameter family is frozen by historical acceptance. Material, PSTs,
-mobility, threats, imbalance, sparse terms, king-danger inputs, scaling and all
-other existing surfaces re-enter the audit. A coordinate may be fixed only for
-an algebraic null direction, an invariant/padding slot or measured lack of
-identifiability on the new corpus, with the reason recorded. “Already tuned” is
-not a reason. Algebraic gauge fixing (for example material versus a constant
-shift of every PST square) removes duplicate coordinates without removing the
-represented chess degree of freedom.
+mobility, threats, imbalance, sparse terms, king-danger inputs and every other
+current `EvalParams` surface are covered by the exact 4.7.3 audit. The ten
+material/PST gauge anchors and two invariant king values are the only fixed
+slots. Non-parameterized scaling/endgame contracts remain structural questions,
+not silently frozen coordinates.
 
 | Family | Current maturity question |
 |---|---|
@@ -190,7 +190,7 @@ represented chess degree of freedom.
 | Activity/space/threats | Pin-aware legal activity, usable space, safe pawn pushes and exact relations |
 | King safety | Shelter/storm dimensionality, castling destination, pinned defenders, weak/flank inputs |
 | Scaling/endgames | Exact material conversion, OCB scope, Syzygy-backed won/drawn/cursed separation |
-| Calibration/data | Need a current frozen train/validation/frozen-test corpus, activation/covariance and full/lazy/search residuals |
+| Calibration/data | Archive/content and all-slot audits complete; publish/freeze the qualified split, fit the full surface, review movement/cohort covariance, then measure full/lazy/search residuals on the accepted HCE |
 
 Stockfish comparison may enumerate and test these contracts. Reciprocal family
 ablation is optional coarse sensitivity evidence only; it cannot rank build
@@ -215,84 +215,114 @@ improvement lost while the 14-times-smaller one won. Therefore Rarog audits and
 fits the complete existing representational surface before adding features,
 and never ranks candidates by validation delta.
 
-### 4.7 HCE data and instrument qualification — NEXT
+### 4.7 HCE data and instrument qualification
 
-#### 4.7.1 Dataset and label contract
+#### 4.7.1 Archive provenance, labels and capacity — COMPLETE
 
-1. Qualify the extraction path: stable whole-start hash assignment to
-   train/validation/frozen-test, no replay leakage, retained rule-50 clock,
-   exact phase quotas, sequential/parallel equivalence, atomic publication and
-   hashes of every input, output and setting.
-2. Verify the labels mechanically. A self-play-WDL corpus contains exactly
-   `0`, `0.5` and `1`; blended/search/teacher targets require a distinct
-   registered experiment and manifest. Do not trust a filename or summary.
-3. Audit unique starts, phase and exact-material coverage, natural mate and
-   decisive-result coverage, draw rate and per-phase usable yield before a fit.
-   Rounds may not exceed independent starts. Use diverse Beast starts with
-   Rarog's own current search and no adjudication; external-engine outcomes are
-   not a default label source.
-4. Freeze split hashes once. Validation selects; the frozen test opens once
-   after the completed vector is selected.
+`analysis/hce_archive_audit_2026-08-31.md` is the durable record. The two
+archives contain 600,000 independent starts, zero replays/parse errors,
+6,501,318 unique eligible positions, exact WDL labels, 6,428 natural mates and
+26,935 material signatures. Their manifests bind one clean predecessor engine,
+one book/seed, disjoint ranges, 8,000 nodes/move and conservative
+`datagen-v1` adjudication.
 
-#### 4.7.2 Complete parameter-to-instrument audit
+The previous 3,000,000-row target is impossible: train openings stop at
+460,752 instead of the required 600,000. The measured exact contract is
+**2,300,000 train + 127,778 validation + 127,778 frozen test**, equally
+phase-balanced. More datagen is not owed before this corpus receives a verdict.
 
-Enumerate every `EvalParams` slot and assign exactly one disposition:
+#### 4.7.2 Atomic corpus publication and hash freeze — NEXT
 
-- linear gradient fit;
-- nonlinear re-evaluation/coordinate or finite-difference fit;
-- algebraic gauge representative;
-- invariant/padding slot; or
-- corpus-unidentifiable, with activation/covariance evidence and retry trigger.
+Publish `tools/texel/data/hce-v2` once from those immutable inputs. The command
+must repeat the audit, validate both sidecars and the exact quotas, retain the
+rule-50 clock in position identity, then atomically record every PGN, sidecar,
+split and setting hash. Validation selects; the frozen test is opened only by
+the final selected vector. Existing old `train.csv`/`holdout.csv` are never
+overwritten.
 
-The audit must total exactly to `EvalParams::FLAT_SIZE`. Old sparse findings and
-old fitted groups are re-measured on the new corpus. PSTs, material and every
-historically staged family are included; a group label such as `all` is not
-proof of coverage. For capped/bucket-selecting terms—including king-danger
-inputs and any winnability/scaling contract—the linear trace is not presumed to
-provide a valid gradient merely because it records an activation.
+#### 4.7.3 Complete parameter-to-instrument audit — COMPLETE
 
-Run an end-to-end smoke before a production fit: deliberately move one value in
-every instrument class, require the vector, bake, source and benchmark to move,
-check every native exit code, rebuild the tuner from the baked source and
-restore the tree. A success banner over an unchanged fingerprint is a failure.
+`8d8f507` enumerates all 1,218 `EvalParams` scalars with an exact partition:
 
-#### 4.7.3 Current-source maturity and residual map
+| Primary disposition | Slots | Instrument |
+|---|---:|---|
+| Identifiable linear surface | 1,194 | Sparse traced Adam fit |
+| Nonlinear king-danger selectors | 12 | Integer coordinate re-evaluation |
+| Material/PST algebraic gauge | 10 | Pin square 0 for pawn–queen in each phase |
+| Invariant king material | 2 | Fixed at zero |
 
-For current Rarog emit raw, lazy, corrected, qsearch and depth-N values; full
-residuals by phase/material/king/passer cohorts; feature support, covariance and
-identifiability; and exact `EvalTrace` reconstruction. Classify every maturity
-family as equivalent, intentionally different with evidence, fit candidate,
-structural candidate or rejected. Reciprocal Stockfish ablation remains an
-optional coarse prior only. Register no HCE candidate until this record and the
-parameter-to-instrument audit are complete.
+The nonlinear instrument also co-tunes the 40-entry king-safety table. The
+`complete` group includes PSTs and every historically staged/sparse family;
+“already tuned” freezes nothing. Strict complete vectors carry each stage into
+the next. Reconstruction now compares directly with independently accumulated
+`EvalTrace::raw`, rather than the former tautological residual check.
 
-### 4.8 Refit the complete existing HCE surface
+The end-to-end smoke moved nonlinear values through both linear stages, baked a
+changed source and 7,170,826 / 2.468 candidate fingerprint, restored the source
+byte-for-byte, forced a recompilation and recovered exact RAR-S70 at
+6,977,070 / 2.466. CSR storage measured about 76 nonzero coefficients per
+position, making the whole-surface run practical.
+
+#### 4.7.4 Current-source Stockfish maturity map — COMPLETE
+
+`analysis/hce_maturity_2026-08-25.md`, updated by the Manta/Basilisk and native
+audits, classifies every existing family. It licenses the complete current
+surface fit, not a Stockfish feature port. Missing richer king, conversion,
+passer/threat and winnability conditionality remains post-fit structural
+residue. Raw/lazy/corrected/qsearch/depth-N search interaction is intentionally
+measured at 4.11 on the accepted HCE, because this fit can move those
+populations.
+
+### 4.8 Refit the complete existing HCE surface — OFFLINE RUN NEXT
 
 This step tests whether Rarog is mis-calibrated before assuming it is
 under-featured.
 
-1. Register initialization, data/split hashes, free/gauge/invariant slots,
-   semantic rails, regularization, seed, alternating schedule and checkpoint
-   rule. Preserve every representational degree of freedom despite any gauge.
-2. Fit the complete identifiable linear surface jointly, including PSTs and
-   every previously staged/sparse family now supported. Record the initial
-   vector and full train/validation trajectory.
-3. Fit every activated nonlinear/capped surface with its correct instrument:
-   at minimum king-danger table plus selectors and all scaling/winnability
-   parameters the audit marks reachable. Prefer deterministic coordinate or
-   finite-difference fitting; use SPSA only for a small interacting residue
-   those instruments cannot resolve.
-4. Alternate linear and nonlinear passes only under the registered schedule.
-   The selected vector must be settled, semantically valid and baked in full.
-   Stop on the first failed/no-gain cycle or return to the same attractor.
-5. Static loss, signs, cohorts and pooled evaluator/search NPS may refute only.
-   Bake clean PGO and run one registered no-adjudication SPRT against the
-   pre-refit HCE. Accept or restore before 4.9.
+#### 4.8.1 Registered offline fit
 
-RAR-E03/RAR-E04 and Basilisk establish why the gate is mandatory: label/loss
-improvements can be neutral or catastrophically wrong. Conversely, Basilisk's
-accepted +9.52 Elo came from only -0.43% holdout loss; small offline movement
-is not a reason to skip a properly formed candidate.
+The immutable schedule executed by `tools/texel/fit_complete.ps1` is:
+
+| Setting | Registered value |
+|---|---|
+| Initialization | Current clean source vector at the invoking commit |
+| Corpus | 2,300,000 train; 127,778 validation; 127,778 frozen test; equal five-phase reservoirs; seed 42 |
+| Calibration | Fit K once on baseline validation, then pin it for every stage |
+| Gauge/invariants | 10 PST anchors and 2 king-material zeros from 4.7.3 |
+| Linear optimizer | Complete 1,194-slot sparse Adam, 200 epochs, learning rate 0.3, L2-to-stage-prior `1e-7` |
+| Nonlinear optimizer | 12 danger selectors + 40 safety-table entries; 200,000 train positions; integer coordinate descent, at most 40 epochs |
+| Alternation | nonlinear -> complete linear -> nonlinear -> 60-epoch complete linear polish |
+| Selection | Best validation checkpoint within each fixed stage; frozen test opened once after final selection |
+| Stop | Exactly two nonlinear/linear cycles; no post-hoc epoch, schedule, data or K change |
+
+Before fitting, the runner re-audits/publishes the corpus, verifies exact
+1,218-slot coverage and trace reconstruction, emits full feature support plus
+baseline cohort losses, and checks the accepted benchmark. After fitting it
+emits every trajectory, parameter delta, validation/cohort table, one-shot test
+loss, final complete vector, source patch, candidate binary/benchmark and
+hashes. It tests the baked candidate in debug/release and clippy, then restores
+source and the normal release binary. Offline loss is evidence, not Elo.
+
+SPSA is skipped here: deterministic traced and re-evaluation instruments own
+every existing coordinate, so there is no unexplained live nonlinear residue
+to justify it. A later small residue may enter SPSA only with activation,
+interaction and curvature evidence.
+
+#### 4.8.2 Review, bake and register the game gate
+
+Review `summary.json`, every stage log, feature support, parameter movement,
+semantic bounds, cohort regressions and the one-shot test result. A malformed,
+unsettled or semantically invalid fit is rejected without games. If it passes,
+apply the recorded eval patch on a clean branch, build final PGO, measure pooled
+NPS and register one no-adjudication SPRT against the pre-refit HCE. Bounds and
+budget are chosen prospectively from the observed prior using RAR-M10; offline
+loss magnitude does not choose them.
+
+#### 4.8.3 Strength verdict
+
+Run the registered gate and accept or restore the entire fitted vector before
+4.9. RAR-E03/RAR-E04 and Basilisk establish why this is mandatory: large loss
+improvements can be neutral or catastrophically wrong, while Basilisk's
+accepted +9.52 Elo came from only -0.43% holdout loss.
 
 ### 4.9 Structural HCE upgrades — CONDITIONAL
 

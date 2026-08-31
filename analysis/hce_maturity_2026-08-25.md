@@ -2,7 +2,8 @@
 
 Status: current Phase-4 decision record
 
-Analysis date: 2026-08-25; method/order updated 2026-08-30 after Basilisk audit
+Analysis date: 2026-08-25; method/order updated 2026-08-31 after Basilisk and
+Rarog corpus/instrument audits
 
 Rarog baseline: accepted RAR-S70 search, `bench 13` 6,977,070 / EBF 2.466
 
@@ -82,6 +83,30 @@ improvement lost 77.92 Elo, while a 0.43% improvement won 9.52 Elo. The
 portable lesson is methodological only. Rarog must neither rank fits by loss
 magnitude nor assume Basilisk's successful families will transfer.
 
+## Rarog corpus and instrument closure
+
+The 2026-08-31 native audit turns two previously qualitative obligations into
+exact contracts:
+
+| Item | Measured disposition |
+|---|---|
+| Corpus | Existing 600,000 independent games support 2,300,000 equal-phase train rows plus 127,778 validation and 127,778 test rows; 3,000,000 is impossible because train openings stop at 460,752 |
+| Provenance | Zero replayed starts and parse errors; both sidecars bind one clean engine, book hash/seed, disjoint book ranges, 8,000 nodes/move and conservative `datagen-v1` adjudication |
+| Content | 6,501,318 unique eligible rows, all WDL labels, 6,428 natural mates, 26,935 exact material signatures and material coverage from both-queen to pawn-only positions |
+| Parameter registry | All 1,218 `EvalParams` scalars have exactly one primary disposition: 1,194 linear, 12 nonlinear king-danger selectors, 10 material/PST gauge anchors and 2 invariant king material slots |
+| Nonlinear overlap | The coordinate fitter additionally co-tunes the 40-entry king-safety table; alternating stages now load a strict complete prior vector instead of restarting from source defaults |
+| Reconstruction | `--verify` compares the independently accumulated `EvalTrace::raw` directly with reconstruction; the former check was tautological because it derived its residual from the value being checked |
+| Feasibility | Complete rows are CSR sparse (about 76 nonzero coefficients per position on the existing corpus), removing the former roughly 11-GiB dense matrix and zero multiplication |
+| Pipeline | Smoke moved nonlinear weights through both linear stages, baked a changed source/fingerprint, then restored and forcibly rebuilt exact RAR-S70 at 6,977,070 / 2.466 |
+
+The full recipe and measurements are in
+`analysis/hce_archive_audit_2026-08-31.md`. These results close the question of
+whether every *existing* `EvalParams` degree of freedom can be fitted. They do
+not declare Stockfish-only structure necessary, mature or valuable. Exact
+material scalers, broader winnability and richer conditional features remain
+structural hypotheses for the post-fit residual, not omissions to insert before
+the existing surface has a verdict.
+
 ## Current maturity matrix
 
 This table compares contracts, not source shape or constants. A family is
@@ -92,13 +117,13 @@ dependency-complete test.
 | Family | Current Rarog state | Difference from `9587eeeb` worth resolving | Required evidence |
 |---|---|---|---|
 | Score foundation | Tapered MG/EG, tempo, rule-50 damping, lazy/full paths and traced linear deltas exist | One global phase interpolation, coarse initiative that increases score magnitude, and possible train/serve drift from lazy evaluation | Full-versus-lazy cohort residuals; material/phase calibration; sign-preserving winnability tests |
-| Material, PST and imbalance | Broad and historically fitted, including quadratic imbalance; current all-surface coverage has not been proved | Fewer material-conditioned interactions; exact material/PST null direction and compensation may alias activity and pawn terms | Exact-material residuals, all-slot instrument audit, explicit algebraic gauge, activation/covariance and constrained joint refit |
+| Material, PST and imbalance | Broad, historically fitted and now covered by the exact complete instrument; ten PST anchors remove the material/PST null direction without losing a represented score | Fewer material-conditioned interactions; compensation may still alias activity and pawn terms | Complete constrained joint refit, exact-material residuals and post-fit activation/covariance review |
 | Pawns and passers | Extensive pawn cache, support/phalanx, candidate/passed terms, paths, blockers, rook relations and king proximity | Conditionality remains shallower for blocker ownership/type, file effects, exchange safety and conversion/race context | Passer-rank/file/material cohorts, paired counterfactuals and Syzygy-labelled conversion sets |
 | Mobility, activity and space | Per-count mobility, outposts, x-rays, closedness and space terms exist | Pin-aware mobility and usable/reachable space are incomplete; several space coefficients are zero | Legal-versus-geometric mobility traces, activation/covariance and NPS before any hot-path expansion |
 | Threats | Attacker/victim tables, hanging, weak and restricted relations exist | Safe pawn pushes, overload/pin context and exact attacker-defender relations are less conditional | Tactical counterfactuals, qsearch/depth-N disagreement and SEE-safe activation reports |
 | King safety | Nonlinear danger table, attacker units, safe checks, shelter/storm and flank inputs exist | Shelter/storm is low-dimensional; castling destination, pinned defenders and several flank/weak-ring inputs are absent, broad or fitted to zero | Queen/phase/shelter cohorts, legal safe-check tests, activation/covariance and a pooled-PGO cost gate |
 | Scaling and endgames | KPK/KBNK, fortress/partial scalers, OCB and rule-50 handling exist | Dispatcher and material-specific conversion are narrower; OCB scope and generic winnability remain coarse | Exact material signatures, Syzygy WDL/DTZ, non-amplification and won/drawn/cursed separation |
-| Calibration and data | EvalTrace, Texel reconstruction, staged/self-play history and anchored fit exist | No current residual corpus spans the post-2.3.2 representation with train/validation/frozen-test discipline; no proof every real parameter has the correct fitting instrument | Versioned corpus/manifests, verified label domain, whole-start splits, complete parameter-to-instrument coverage, activation/covariance and one-time frozen-test reporting |
+| Calibration and data | Exact all-slot instrument coverage and a provenance/content-qualified 2.30M/127,778/127,778 publication contract now exist; corpus publication and the complete current-source fit remain | The archive was generated by the immediate Rarog lineage rather than the final RAR-S70 search; transfer and residual calibration remain empirical | Atomic output hashes, complete trajectory, one-time frozen test, semantic/cohort review and a clean PGO game gate |
 
 ## How the Stockfish comparison may be used
 
@@ -119,49 +144,43 @@ The reciprocal HCE instrument is still useful as a coarse sensitivity map if:
 
 ## Improvement and fitting programme
 
-1. **Qualify and freeze the evidence base.** Build the Phase-4.7 corpus with stable
-   whole-start train/validation/frozen-test separation, exact material and
-   feature cohorts, Syzygy labels, paired counterfactuals and raw/lazy/
-   corrected/qsearch/depth-N outputs. Retain the rule-50 clock in static-eval
-   identity; prove self-play labels are exactly WDL; audit duplicates, natural
-   mates and phase/material coverage; record all hashes and recipes.
-2. **Audit every parameter and instrument.** Enumerate all real `EvalParams`
-   slots. Assign each to linear gradient, nonlinear re-evaluation/finite
-   difference, algebraic gauge, invariant or measured unidentifiable. Recheck
-   old sparse groups on the new corpus. Smoke vector/bake/source/rebuild with
-   deliberate movement before a real fit.
-3. **Finish the family map on current source.** Classify every matrix row and
-   explicitly close historical defects already fixed. Reciprocal Stockfish
-   ablation is optional coarse evidence, not the ordering algorithm.
-4. **Refit the complete existing surface first.** Jointly fit every identifiable
+1. **Publish the qualified evidence base.** The archive, label and capacity
+   audits are complete. Publish the deterministic 2.30M/127,778/127,778 split
+   once, retain the rule-50 clock and freeze every input/output/setting hash.
+2. **Retain the exact instrument partition.** The 1,218-slot partition and
+   end-to-end smoke are complete. Re-run coverage, reconstruction, support and
+   pipeline assertions in the production command; any changed total or dead
+   wire aborts the fit.
+3. **Refit the complete existing surface first.** Jointly fit every identifiable
    linear degree of freedom, including PSTs and historically staged families;
    use the correct re-evaluation/coordinate or finite-difference instrument for
    king danger and other capped nonlinear parameters. Alternate only under a
    registered schedule, bake the whole vector and gate it in games.
-5. **Select at most two structural clusters.** Selection requires a missing or
+4. **Select at most two structural clusters.** Selection requires a missing or
    misspecified local signal, meaningful activation, manageable covariance and
    an acceptable projected NPS cost. Likely areas are king-safety
    conditionality, material-specific winnability/endgames, and passer/threat
    conditionality, but the corpus chooses.
-6. **Fit each changed cluster locally.** Hold categorical semantics fixed, fit
+5. **Fit each changed cluster locally.** Hold categorical semantics fixed, fit
    all moved and materially covariant existing weights with anchoring, validate on
    frozen cohorts, and retain initial vector plus full optimization trajectory.
    Apply registered semantic/loss/NPS filters as refutation only, bake clean
    PGO and run the registered SPRT. Untuned draft weights are not a fair test.
-7. **Consolidate after structural changes.** If any representation changes,
+6. **Consolidate after structural changes.** If any representation changes,
    rerun the complete linear/nonlinear schedule. Require a settled
    validation-selected vector rather than a transient best epoch. A second data
    cycle is allowed only if registered beforehand and supported by the first
    held-out report and game gate; stop at a failed/same-attractor cycle.
-8. **Use SPSA only for the residue it can identify.** HCE SPSA is optional and
+7. **Use SPSA only for the residue it can identify.** HCE SPSA is optional and
    limited to activated nonlinear/global parameters that the linear trace
    cannot fit. Search-margin SPSA is separate and occurs only after the HCE is
    accepted and held fixed for that search experiment, over cp-valued consumers
    whose populations demonstrably moved.
-9. **Re-measure search, then checkpoint.** Rebuild qsearch/TT/branching and
-   cp-margin evidence on the accepted HCE; compare the final fitted HCE/search
-   with the RAR-S70 search baseline using revision-matched final-PGO binaries, no adjudication,
-   NPS, STC and an LTC direction check. Ablate surprising contributors.
+8. **Re-measure search, then checkpoint.** Rebuild raw/lazy/corrected/qsearch/
+   depth-N residuals plus qsearch/TT/branching and cp-margin evidence on the
+   accepted HCE; compare the final fitted HCE/search with the RAR-S70 search
+   baseline using revision-matched final-PGO binaries, no adjudication, NPS,
+   STC and an LTC direction check. Ablate surprising contributors.
 
 ## Stop rules and maturity bar
 
