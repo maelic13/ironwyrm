@@ -81,6 +81,8 @@ if ($Tune -and $Native) {
 if ($BenchDepth -lt 1) { throw "-BenchDepth must be positive." }
 
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+. "$PSScriptRoot\harness_common.ps1"
 
 # --- 9.7 provenance manifest -------------------------------------------------
 # Every test binary gets a sidecar JSON next to it: git SHA + dirty flag,
@@ -115,7 +117,22 @@ function Write-EngineManifest {
     $benchLine = $null
     if (-not $SkipBench) {
         Write-Host "Verifying bench fingerprint of $($binary.Name) (depth $Depth) ..."
-        $benchOut  = "bench $Depth" | & $BinaryPath 2>&1 | Out-String
+        $inputPath = [IO.Path]::GetTempFileName()
+        $stdoutPath = [IO.Path]::GetTempFileName()
+        $stderrPath = [IO.Path]::GetTempFileName()
+        try {
+            Set-Content -LiteralPath $inputPath -Value "bench $Depth" -Encoding ascii
+            $process = Start-Process -FilePath $BinaryPath -WindowStyle Hidden -Wait -PassThru `
+                -RedirectStandardInput $inputPath -RedirectStandardOutput $stdoutPath `
+                -RedirectStandardError $stderrPath
+            if ($process.ExitCode -ne 0) {
+                throw "Bench exited with code $($process.ExitCode); refusing an unverified manifest."
+            }
+            $benchOut = (Get-Content -LiteralPath $stdoutPath -Raw) +
+                (Get-Content -LiteralPath $stderrPath -Raw)
+        } finally {
+            Remove-Item -LiteralPath $inputPath, $stdoutPath, $stderrPath -Force -ErrorAction SilentlyContinue
+        }
         $benchLine = (($benchOut -split "`n" | Where-Object { $_ -match "Nodes searched" }) | Select-Object -Last 1).Trim()
         if ($benchLine -notmatch "([0-9][0-9,]*)\s*$") {
             throw "Could not parse a bench node count from the built binary - refusing an unverified manifest."
