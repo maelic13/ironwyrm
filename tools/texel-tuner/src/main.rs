@@ -1467,7 +1467,7 @@ fn cmd_tune(opts: &TuneOpts) {
     let persisted_holdout = traced_loss(&holdout, &active, &base_w, &persisted_w, k);
     println!("Persisted rounded validation loss = {persisted_holdout:.8}");
 
-    report_frozen_test(opts, &persisted, k);
+    report_frozen_test(opts, k);
 
     print_active_deltas(&active, &base_w, &w);
     println!("Tuned weights written to {}", opts.out);
@@ -1689,7 +1689,7 @@ fn ks_report_buckets(base: &[(f64, u64)], fin: &[(f64, u64)]) {
 /// vector. The raw evaluator is required: the source and candidate can differ
 /// in nonlinear danger-index coordinates, which a linear trace based on the
 /// preceding stage cannot reconstruct.
-fn report_frozen_test(opts: &TuneOpts, candidate: &EvalParams, k: f64) {
+fn report_frozen_test(opts: &TuneOpts, k: f64) {
     let Some(test_path) = &opts.test else {
         return;
     };
@@ -1697,9 +1697,10 @@ fn report_frozen_test(opts: &TuneOpts, candidate: &EvalParams, k: f64) {
         .test_baseline
         .as_deref()
         .expect("validated --test-baseline must accompany --test");
-    // Validate the comparator before consuming the one-shot marker. A corrupt
-    // baseline artifact must fail without burning the test set.
+    // Validate both vectors before consuming the one-shot marker. A corrupt
+    // artifact must fail without burning the test set.
     let baseline = load_eval_file(baseline_path);
+    let candidate = load_eval_file(&opts.out);
     if let Some(marker) = &opts.test_marker {
         claim_frozen_test(marker, test_path);
     }
@@ -1715,15 +1716,39 @@ fn report_frozen_test(opts: &TuneOpts, candidate: &EvalParams, k: f64) {
     println!("  {} test positions", test.len());
     let mut evs: Vec<Evaluator> = (0..n_threads()).map(|_| Evaluator::default()).collect();
     let base_test = ks_mse(&test, &mut evs, &baseline, k);
-    let test_loss = ks_mse(&test, &mut evs, candidate, k);
+    let test_loss = ks_mse(&test, &mut evs, &candidate, k);
     println!(
         "Frozen test loss = {test_loss:.8} (source baseline {base_test:.8}, delta {:+.8})",
         test_loss - base_test
     );
     println!("(one-shot exact rounded report; this set selected nothing)");
     let base_buckets = ks_bucket_losses(&test, &mut evs, &baseline, k);
-    let final_buckets = ks_bucket_losses(&test, &mut evs, candidate, k);
+    let final_buckets = ks_bucket_losses(&test, &mut evs, &candidate, k);
     ks_report_buckets(&base_buckets, &final_buckets);
+}
+
+fn cmd_compare_frozen(test_path: &str, baseline_path: &str, candidate_path: &str, marker: &str) {
+    let k = fixed_k().unwrap_or_else(|| {
+        eprintln!("--compare-frozen requires --fix-k K.");
+        exit(1)
+    });
+    // Reuse the same exact path as production tuning without constructing a
+    // fake optimization stage or reading the confirmation set as train data.
+    let opts = TuneOpts {
+        group: "confirmation-only".to_string(),
+        train: String::new(),
+        holdout: String::new(),
+        test: Some(test_path.to_string()),
+        test_baseline: Some(baseline_path.to_string()),
+        test_marker: Some(marker.to_string()),
+        initial: None,
+        out: candidate_path.to_string(),
+        epochs: 1,
+        lr: 0.0,
+        max_positions: 0,
+        l2: 0.0,
+    };
+    report_frozen_test(&opts, k);
 }
 
 /// Fit K once from base-parameter scores (ternary search), so the K-fit does
@@ -1889,7 +1914,7 @@ fn cmd_tune_kingsafety(opts: &TuneOpts) {
     let persisted_holdout = ks_mse(&holdout, &mut evs, &persisted, k);
     println!("Persisted rounded validation loss = {persisted_holdout:.8}");
 
-    report_frozen_test(opts, &persisted, k);
+    report_frozen_test(opts, k);
 
     print_active_deltas(&active, &base_w, &w);
     println!("Tuned weights written to {}", opts.out);
@@ -2176,6 +2201,9 @@ fn usage(exe: &str) {
         "  --test-baseline complete source vector for exact source-to-rounded-candidate test"
     );
     eprintln!("  {exe} --write-defaults <complete-vector.txt>");
+    eprintln!(
+        "  {exe} --compare-frozen <test.csv> <source-vector.txt> <candidate-vector.txt> <marker> --fix-k K"
+    );
     print_groups();
 }
 
@@ -2245,6 +2273,23 @@ fn main() {
             }
             write_eval_file(&args[2], &EvalParams::default().to_flat());
             println!("Complete source-default vector written to {}", args[2]);
+        }
+        "--compare-frozen" => {
+            if args.len() < 7 {
+                usage(&args[0]);
+                exit(1);
+            }
+            let mut i = 6;
+            while i < args.len() {
+                let flag = args[i].clone();
+                i += 1;
+                if !parse_global_flag(&flag, &args, &mut i) {
+                    eprintln!("Unknown option {flag}");
+                    usage(&args[0]);
+                    exit(1);
+                }
+            }
+            cmd_compare_frozen(&args[2], &args[3], &args[4], &args[5]);
         }
         "--audit-coverage" => cmd_audit_coverage(),
         "--tune" => {

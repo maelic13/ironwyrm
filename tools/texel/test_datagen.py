@@ -1,7 +1,9 @@
 """Fast unit tests for the Texel datagen sampling contracts."""
 
+import json
 import random
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -15,6 +17,30 @@ import sample_fens
 
 
 class ExtractTests(unittest.TestCase):
+    def test_parallel_provenance_accepts_and_verifies_v2(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "games.pgn"
+            path.write_text("test pgn\n", encoding="utf-8")
+            manifest = {
+                "schema": "rarog-fastchess-datagen-v2",
+                "output": {
+                    "path": str(path.resolve()),
+                    "bytes": path.stat().st_size,
+                    "sha256": extract.sha256_file(path),
+                },
+                "engine": {"sha256": "engine", "git_sha": "commit", "git_dirty": False},
+                "book": {"sha256": "book", "seed": 42, "start": 1, "end": 1},
+                "games": 1,
+                "nodes_per_move": 8000,
+                "adjudication": {"Name": "datagen-v1"},
+            }
+            path.with_suffix(".manifest.json").write_text(
+                json.dumps(manifest), encoding="utf-8"
+            )
+            records, contract = extract_parallel.load_datagen_provenance([path])
+            self.assertEqual(records[0]["games"], 1)
+            self.assertEqual(contract["engine_sha256"], "engine")
+
     def test_allocate_is_exact(self):
         self.assertEqual(extract.allocate(3_000_003, [1, 1, 1, 1, 1]),
                          [600_001, 600_001, 600_001, 600_000, 600_000])

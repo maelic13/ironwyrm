@@ -47,9 +47,19 @@ def load_datagen_provenance(paths: list[Path]) -> tuple[list[dict], dict]:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as error:
             raise SystemExit(f"invalid datagen manifest {manifest_path}: {error}") from error
-        if manifest.get("schema") != "rarog-datagen-v1":
+        schema = manifest.get("schema")
+        if schema not in {"rarog-datagen-v1", "rarog-fastchess-datagen-v2"}:
             raise SystemExit(f"unexpected datagen schema in {manifest_path}")
-        if Path(manifest.get("output_pgn", "")).resolve() != path.resolve():
+        if schema == "rarog-datagen-v1":
+            output_path = manifest.get("output_pgn", "")
+        else:
+            output = manifest.get("output", {})
+            output_path = output.get("path", "")
+            if output.get("bytes") != path.stat().st_size:
+                raise SystemExit(f"output size mismatch in {manifest_path}")
+            if output.get("sha256") != seq.sha256_file(path):
+                raise SystemExit(f"output hash mismatch in {manifest_path}")
+        if Path(output_path).resolve() != path.resolve():
             raise SystemExit(f"output_pgn mismatch in {manifest_path}")
         if manifest.get("engine", {}).get("git_dirty") is not False:
             raise SystemExit(f"dirty or unrecorded datagen engine in {manifest_path}")
