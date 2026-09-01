@@ -486,11 +486,14 @@ the term is worthless as currently defined, which is not the same as a residual
 it cannot express. The entry evidence this step requires is a post-fit
 residual and cohort analysis, and nobody has run one.
 
-1. **4.9.1 Entry evidence.** Analyse the accepted fit's residuals by phase,
-   material class, king safety and the drawn subsets from
-   `analysis/endgame_conversion_audit_2026-09-01.md`. Zero games. Identify
-   where the fitted surface is systematically wrong in a way no coefficient
-   value could fix.
+1. **4.9.1 Entry evidence -- DONE, RAR-E09.** See
+   `analysis/hce_residuals_2026-09-01.md`. It found **no residual the existing
+   surface cannot represent**, and found a label defect instead: KR-K, a 100%
+   theoretical win, is labelled a draw on 75% of its corpus positions, because
+   Rarog scores a won rook ending at 426-487 cp while `datagen-v1`'s resign
+   rule needs 600. The evaluator predicts 0.849 there against a label mean of
+   0.625, so it is closer to the truth than its own training data and the fit
+   has been pulling it down.
 2. **4.9.2 Decision.** Open at most two clusters, or close 4.9 with the reason
    recorded. Closing is a legitimate outcome and must be written down; leaving
    it open with no decision is what produced the ordering confusion of

@@ -72,8 +72,8 @@ esults\<run>\endgame-truth.json
     - [x] **4.8a.1** Inventory: 5 slots zeroed, 90 of 132 sparse slots structurally unreachable
     - [x] **4.8a.2** No removal cluster exists; 3 inert 1-slot terms handed to 4.13.2
 - [ ] **4.9** At most two residual-selected structural HCE clusters
-    - [ ] **4.9.1** Produce the entry evidence: post-fit residual/cohort analysis
-    - [ ] **4.9.2** Open at most two clusters, or close 4.9 with the reason recorded
+    - [x] **4.9.1** Residual audit — RAR-E09: no structural residual; a label defect instead
+    - [ ] **4.9.2** NEXT — close 4.9 on RAR-E09, or justify a cluster it did not find
 - [ ] **4.9a** Endgame conversion and reference-function closure — worked in order
     - [x] **4.9a.1** Syzygy truth corpus and per-move grading — `endgame_truth.py`
     - [ ] **4.9a.2** No-adjudication endgame-start cohort games
