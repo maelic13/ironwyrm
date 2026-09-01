@@ -25,6 +25,41 @@ python tools/diag/endgame_conversion.py `
   --output tools/results/hce-confirm-20260831_230548/endgame-conversion-source.json
 ```
 
+## Re-baselined on the accepted HCE (RAR-E06), 2026-09-01
+
+The table above measured the **pre-refit source**. Re-run on the accepted
+candidate with the same seed (6200600), the same 100 positions per family and
+the same 60,000-node / 100-ply policy, so the two runs are paired at the
+position level:
+
+| Family | Pre-refit | Accepted HCE | Delta | Basilisk latest |
+|---|---:|---:|---:|---:|
+| KQ-K | 94% | **94%** | +0 pp | 100% |
+| KR-K | 86% | **91%** | +5 pp | 100% |
+| KBB-K | 76% | **86%** | +10 pp | 87% |
+| KBN-K | 15% | **19%** | +4 pp | 54% |
+
+Accepted-HCE failure modes: KQ-K 5 rule-50 + 1 stalemate; KR-K 9 rule-50;
+KBB-K 13 rule-50 + 1 stalemate; **KBN-K 73 rule-50, 5 stalemate, 3 material
+lost**.
+
+**Read this cautiously.** At n=100 per family the binomial standard error is
+about 3.5 pp, so only the KBB-K movement is comfortably outside noise; the
+KR-K and KBN-K deltas are suggestive at best. The runs share positions, which
+makes the comparison stronger than two independent samples, but the aggregate
+JSON does not retain per-position outcomes, so no paired test is possible from
+these artifacts. If 4.9a.1 needs a resolved answer it must record per-position
+results and use a paired test, not more aggregate runs.
+
+What is not ambiguous is the shape. **KBN-K is still catastrophic at 19%**, and
+73 of its 100 games still die on the fifty-move rule. This is the prediction
+below holding up: a complete recalibration of every coefficient moved KBN-K by
+about one standard error, because the defect is gradient magnitude against the
+pruning margins that consume it, not coefficient calibration. Fitting cannot
+repair a term whose actionable signal is smaller than the margins it must
+survive. Raw artifact:
+`tools/results/hce-accepted/endgame-conversion-accepted.json`.
+
 ## Same defect as Basilisk, directly visible in source
 
 Rarog's KBNK drive uses Chebyshev corner distance and gradients of only **8 cp

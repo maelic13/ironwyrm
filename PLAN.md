@@ -504,15 +504,22 @@ Rarog-specific facts put it here:
 Phase-4 step numbers 4.10-4.15 are cited in `EXPERIMENTS.md` and in commit
 messages, so this enters as `4.9a` rather than renumbering them.
 
-`analysis/endgame_conversion_audit_2026-09-01.md` is the baseline, **and its
-numbers are stale**: they were measured on the pre-refit source engine, and
-4.8 has since changed the evaluator. Re-baseline on the accepted HCE before
-any endgame work starts; 4.9a.1 owns that. At 60,000 nodes/move over 100
-fixed-seed random positions per family, the **pre-refit** engine converted
-KQK/KRK/KBBK/KBNK at **94%/86%/76%/15%**, below Basilisk's latest
-**100%/100%/87%/54%**. KBNK has Basilisk's same Chebyshev plateaus,
-sub-pruning gradients and missing piece-coordination guidance. The complete
-HCE fit does not remove the material-specific drawn-subset bias. This is a
+`analysis/endgame_conversion_audit_2026-09-01.md` is the baseline. Its
+original table measured the pre-refit source; it has been re-run on the
+accepted HCE with the same seed and positions. At 60,000 nodes/move over 100
+fixed-seed random positions per family, KQK/KRK/KBBK/KBNK converted at
+**94%/86%/76%/15%** before the refit and **94%/91%/86%/19%** after, against
+Basilisk's latest **100%/100%/87%/54%**. At n=100 the binomial standard error
+is ~3.5 pp, so only the KBBK movement is comfortably outside noise, and the
+aggregate artifacts do not retain per-position outcomes for a paired test. **KBNK remains catastrophic at 19%**, with 73 of 100 games still dying on the
+fifty-move rule. That is the audit's prediction holding: a complete
+recalibration of every coefficient moved KBNK by about one standard error,
+because the defect is gradient magnitude against the pruning margins that
+consume it, not coefficient calibration. Fitting cannot repair a term whose
+actionable signal is smaller than the margins it must survive. KBNK has
+Basilisk's same Chebyshev plateaus, sub-pruning gradients and missing
+piece-coordination guidance, and the complete HCE fit did not remove the
+material-specific drawn-subset bias either. This is a
 mandatory engineering program, not a feature-shopping license. The 4.9 cap of
 two structural clusters does not apply: that cap bounds speculative feature
 addition against residual signals, while this is defect repair against a

@@ -23,9 +23,10 @@ and `python tools/diag/check_guide.py` must pass.
 ## What you run next
 
 4.8a closed without a gate (RAR-E07): there is no redundancy cluster to
-remove. Next is 4.9a.1 — and note the conversion audit's 94/86/76/15% was
-measured on the **pre-refit source**, so it must be re-baselined on the
-accepted HCE before any endgame work starts.
+remove. Conversion is re-baselined on the accepted HCE at
+**94/91/86/19%** (was 94/86/76/15% pre-refit; Basilisk 100/100/87/54%).
+Next is the rest of 4.9a.1 — Syzygy WDL/DTZ truth and no-adjudication
+endgame-start games. Re-run the baseline with:
 
 ```powershell
 python tools/diag/endgame_conversion.py --engine tools/test_engines/rarog-hce-refit-candidate-pext-pgo.exe --positions 100 --nodes 60000 --max-plies 100 --output tools/results/hce-accepted/endgame-conversion-accepted.json
@@ -78,8 +79,8 @@ cargo build --release
     - [ ] **4.9a.3** Search-visible gradient audit vs pruning margins — KBNK/KXK first
     - [ ] **4.9a.4** KNNK value/draw classification — present, unaudited
     - [ ] **4.9a.5** KNNKP value and conversion boundary — absent
-    - [ ] **4.9a.6** KXK value, with KQK/KRK/KBBK conversion floors — present, 94/86/76%
-    - [ ] **4.9a.7** KBNK value, corner/king/minor gradients — present, converts **15%**
+    - [ ] **4.9a.6** KXK value, with KQK/KRK/KBBK floors — present, converts 94/91/86%
+    - [ ] **4.9a.7** KBNK value, corner/king/minor gradients — present, converts **19%**
     - [ ] **4.9a.8** KPK exact bitbase, value and rule-50 handling — present, unaudited
     - [ ] **4.9a.9** KRKP value — partial, conservative scale only
     - [ ] **4.9a.10** KRKB value — absent
