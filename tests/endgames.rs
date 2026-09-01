@@ -17,7 +17,7 @@
 //! `src/eval.rs` (`endgame_311c_tests`) rather than here.
 
 use rarog::board::{Board, Color, Move, Piece};
-use rarog::eval::Evaluator;
+use rarog::eval::{Evaluator, MATE_SCORE};
 use rarog::search::{SearchEvent, Searcher};
 use rarog::search_options::SearchOptions;
 
@@ -63,6 +63,21 @@ fn static_eval(fen: &str) -> i32 {
     let board = Board::from_fen(fen).unwrap_or_else(|e| panic!("bad FEN {fen}: {e}"));
     let mut evaluator = Evaluator::default();
     evaluator.evaluate(&board)
+}
+
+/// Scores that mean "forced mate found". `MATE_SCORE` minus the ply horizon is
+/// the standard band; anything at or above it is a mate claim.
+const MATE_THRESHOLD: i32 = MATE_SCORE - 256;
+
+fn search_score(board: Board, depth: u32) -> i32 {
+    let mut searcher = Searcher::default();
+    let mut options = SearchOptions::default();
+    options.position.board = board.clone();
+    options.limits.depth = Some(depth);
+    options.engine.threads = 1;
+    searcher
+        .search(board, &options, false, || SearchEvent::None)
+        .score
 }
 
 fn search_bestmove(board: Board, depth: u32) -> Move {
@@ -142,6 +157,58 @@ fn won_positions_are_clearly_winning() {
         checked += 1;
     }
     assert!(checked > 0, "no `win` cases found");
+}
+
+/// Search depth for the `tb-draw` mate veto. Deep enough to find a real forced
+/// mate in these tiny trees, shallow enough to stay fast in debug.
+const TB_DRAW_SEARCH_DEPTH: u32 = 12;
+
+#[test]
+fn syzygy_won_positions_are_not_scored_as_drawn_or_lost() {
+    // HARD VETO, not a tuning target. Syzygy says the side to move wins; the
+    // static score must at least have the right sign. This is deliberately
+    // loose: RAR-E09 measured a won KR-K scoring +426 cornered and +487
+    // centralised, and pinning a floor near those would turn a correctness test
+    // into a calibration test that any refit could trip.
+    let mut checked = 0;
+    for case in parse_cases().iter().filter(|c| c.verdict == "tb-win") {
+        let eval = static_eval(&case.fen);
+        assert!(
+            eval > 0,
+            "[{}] Syzygy says this is won but static eval is {eval}: {}",
+            case.comment,
+            case.fen
+        );
+        checked += 1;
+    }
+    assert!(
+        checked >= 30,
+        "expected the frozen tb-win set, found {checked}"
+    );
+}
+
+#[test]
+fn syzygy_drawn_positions_are_never_claimed_as_forced_mate() {
+    // HARD VETO. A theoretically drawn position may legitimately carry a large
+    // material score -- a drawn KR-KP really is a rook up -- so the veto is on
+    // the one thing that is unambiguously wrong: claiming a forced mate.
+    let mut checked = 0;
+    for case in parse_cases().iter().filter(|c| c.verdict == "tb-draw") {
+        let board = Board::from_fen(&case.fen)
+            .unwrap_or_else(|_| panic!("bad FEN in endgames.epd: {}", case.fen));
+        let score = search_score(board, TB_DRAW_SEARCH_DEPTH);
+        assert!(
+            score.abs() < MATE_THRESHOLD,
+            "[{}] Syzygy says this is drawn but search reports a mate score              ({score}): {}",
+            case.comment,
+            case.fen
+        );
+        checked += 1;
+    }
+    assert!(
+        checked >= 25,
+        "expected the frozen tb-draw set, found {checked}"
+    );
 }
 
 #[test]
