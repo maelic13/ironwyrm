@@ -35,8 +35,9 @@ python tools/diag/endgame_truth.py --engine <candidate.exe> --syzygy D:\chess	ab
 esults\<run>\endgame-truth.json
 ```
 
-Open decision: whether to drop draw/resign adjudication as the harness default
-(RAR-M16 prices it at ~10% wall time against 52.7% of endgames).
+Adjudication is now **off by default** in `sprt.ps1` and `gauntlet.ps1`
+(RAR-M17); pass `-Adjudicate` to opt back in and justify it in the
+registration. Pre-2026-09-01 results used the other instrument.
 
 ## Phase 4 — bounded pre-NNUE search and HCE
 

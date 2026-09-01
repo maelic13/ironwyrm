@@ -48,9 +48,15 @@ gating. The following rules determine this roadmap's order.
    only activated nonlinear/global residue that the linear trace cannot fit.
 7. Search and HCE coordinates never share a tune. After an HCE changes,
    cp-valued search consumers are audited and, if justified, fitted separately.
-8. Cross-evaluator cohorts and HCE-changing strength A/Bs default to no
-   adjudication. Label generation uses only its prospectively named, immutable
-   profile; the audited corpus uses conservative `datagen-v1`.
+8. **Every strength A/B and cohort runs with adjudication off** (maintainer
+   decision, 2026-09-01, on RAR-M16). Playing games out costs about 10% wall
+   time; adjudication destroys 52.7% of all endgames before they are reached
+   and priced at ~74 Elo as a cross-evaluator confounder. `-Adjudicate` opts
+   back in and must be justified in the registration: wall time genuinely
+   binding, and a change that provably cannot touch conversion or defensive
+   holding. Label generation uses only its prospectively named, immutable
+   profile; the audited corpus uses conservative `datagen-v1`. SPSA keeps its
+   own patched adjudication for now -- see PROCESS.
 9. Two fully implemented clusters in the same track without an accepted gain
    stop implementation and force a new evidence audit.
 10. Engine, tooling and documentation changes remain separate commits.

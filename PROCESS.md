@@ -93,12 +93,34 @@ table; the working rules are:
 - Rarog solving a problem differently, or deciding it does not apply here, is
   a first-class result — record it with its reason and move on.
 
-Search-only candidates keep the `strength-v2` adjudication (600/3 two-sided,
-unified with datagen on 2026-08-18) because
-both arms share Rarog's score scale. **HCE-changing candidates and every
-cross-engine cohort run with adjudication off**, because evaluator scales
-differ; RAR-O01 versus RAR-O02 priced that confounder at about 75 Elo. Enable
-it for an HCE A/B only after a registered calibration proves it safe for both
+**Adjudication is off by default as of 2026-09-01** (RAR-M16), in `sprt.ps1`
+and `gauntlet.ps1`. It used to be kept for search-only candidates on the
+grounds that both arms share Rarog's score scale, which is true but was never
+the whole cost: RAR-M15 measured adjudication destroying **52.7% of all
+endgames before they are reached**, and RAR-M16 priced playing games out at
+only about **10% wall time** (97.5 games/min against 88.4). RAR-O01 versus
+RAR-O02 priced the cross-evaluator confounder at about 74 Elo separately.
+
+Adjudication is not unfair -- it is symmetric between arms -- it is **lossy**,
+and the loss scales with how badly the engine converts. An engine that
+converts KRP-KR at 52% disagrees with its own adjudicated verdict far more
+often than one converting at 99%, which is the argument for revisiting this
+default once 4.9a closes rather than treating it as permanent.
+
+Pass `-Adjudicate` to opt back in, and justify it in the registration: wall
+time genuinely binding, and a change that provably cannot touch conversion or
+defensive holding. A result produced with the flag is not comparable with one
+produced without it.
+
+**SPSA is a deliberate exception, not an oversight.** `setup_tools.ps1` still
+patches weather-factory's `cutechess.py` to the `strength-v2` resign profile.
+SPSA runs orders of magnitude more games than a gate, so its throughput
+economics differ, and changing it would silently move the SPSA instrument
+mid-programme. Revisit it if HCE or endgame SPSA is ever opened -- PLAN rule 6
+currently keeps both closed.
+
+Historical note, superseded: an HCE A/B used to require a registered
+calibration proving adjudication safe for both
 arms. Use fixed movetime or nodes only for the deterministic diagnostic suite,
 never as the strength verdict.
 

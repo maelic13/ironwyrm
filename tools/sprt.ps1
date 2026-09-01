@@ -166,11 +166,21 @@
     Windows scheduler / process IO jitter from being counted as a time
     forfeit. It does not change the engine's own time budget.
 
+.PARAMETER Adjudicate
+    Opt IN to fastchess draw and resign adjudication under the named
+    strength-v2 profile. Off by default since 2026-09-01: RAR-M16 priced
+    playing games out at about 10% wall time, against RAR-M15's finding that
+    adjudication destroys 52.7% of all endgames before they are reached.
+
+    Use it only when wall time genuinely binds AND the change provably cannot
+    touch conversion or defensive holding. A result produced with this flag is
+    not comparable with one produced without it.
+
 .PARAMETER NoAdjudication
-    Omit fastchess draw and resign adjudication. Use this for HCE-changing and
-    cross-evaluator strength comparisons so an evaluator-scale change cannot
-    change which games the harness terminates. Normal same-evaluator search
-    gates retain the named strength-v2 profile.
+    Omit fastchess draw and resign adjudication. This is now the DEFAULT; the
+    switch is retained because it still describes exactly what happens, so
+    every recipe recorded in EXPERIMENTS.md reproduces verbatim. Passing both
+    -Adjudicate and -NoAdjudication is refused.
 
 .PARAMETER Book
     Opening book, PGN or EPD (format auto-detected from the extension).
@@ -218,6 +228,7 @@ param(
     [double]$MoveTime = 0,
     [int]$Nodes = 0,
     [int]$TimeMargin = 20,
+    [switch]$Adjudicate,
     [switch]$NoAdjudication,
     [string]$Book = "$PSScriptRoot\books\UHO_Lichess_4852_v1.epd",
     [string]$FastchessPath = "$PSScriptRoot\bin\fastchess.exe"
@@ -245,7 +256,21 @@ $OptionsB = & $splitOpts $OptionsB
 
 $strengthProfile = Get-StrengthTestProfile
 $resignArgs = @(Get-StrengthTestResignArgs)
-if ($NoAdjudication) {
+# ADJUDICATION IS OFF BY DEFAULT since 2026-09-01 (RAR-M16, maintainer
+# decision). Playing games out costs about 10% wall time -- 97.5 games/min
+# adjudicated against RAR-E06's 88.4 -- and adjudication destroys 52.7% of all
+# endgames before they are reached (RAR-M15). It is not unfair, being symmetric
+# between arms, but it is lossy, and the loss scales with how badly the engine
+# converts: for an engine that converts KRP-KR at 52%, the adjudicated verdict
+# and the played-out verdict disagree far more often than for one that converts
+# it at 99%. Revisit the default if conversion ever gets that good.
+#
+# `-NoAdjudication` is kept and still means exactly what it says, so every
+# recipe recorded in EXPERIMENTS.md (RAR-E06's included) reproduces verbatim.
+if ($Adjudicate -and $NoAdjudication) {
+    throw "-Adjudicate and -NoAdjudication are contradictory; pass at most one."
+}
+if (-not $Adjudicate) {
     $adjudicationArgs = @()
     $adjudicationLabel = "none (games play to a rules result)"
 } else {
