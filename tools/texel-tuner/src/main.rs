@@ -17,6 +17,7 @@
 //!   cargo run --release -p texel-tuner -- --tune material \
 //!       tools/texel/data/train.csv tools/texel/data/holdout.csv out.txt
 
+use std::collections::HashMap;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -1751,6 +1752,122 @@ fn cmd_compare_frozen(test_path: &str, baseline_path: &str, candidate_path: &str
     report_frozen_test(&opts, k);
 }
 
+#[derive(Default)]
+struct EndgameClassStats {
+    positions: u64,
+    loss: f64,
+    predicted: f64,
+    result: f64,
+    draw_positions: u64,
+    draw_predicted: f64,
+}
+
+fn material_side(board: &Board, color: Color) -> (String, [u32; 6]) {
+    let counts = [
+        board.pieces(color, Piece::Queen).count(),
+        board.pieces(color, Piece::Rook).count(),
+        board.pieces(color, Piece::Bishop).count(),
+        board.pieces(color, Piece::Knight).count(),
+        board.pieces(color, Piece::Pawn).count(),
+    ];
+    let mut name = String::from("K");
+    for (count, symbol) in counts.iter().zip(['Q', 'R', 'B', 'N', 'P']) {
+        for _ in 0..*count {
+            name.push(symbol);
+        }
+    }
+    let key = [
+        counts[0] * 9 + counts[1] * 5 + (counts[2] + counts[3]) * 3 + counts[4],
+        counts[0],
+        counts[1],
+        counts[2],
+        counts[3],
+        counts[4],
+    ];
+    (name, key)
+}
+
+fn endgame_class(board: &Board) -> Option<(String, Color)> {
+    let (white, white_key) = material_side(board, Color::White);
+    let (black, black_key) = material_side(board, Color::Black);
+    let pieces = white_key[1..].iter().sum::<u32>() + black_key[1..].iter().sum::<u32>() + 2;
+    if pieces > 7 {
+        return None;
+    }
+    let white_strong = white_key >= black_key;
+    let (strong, weak, color) = if white_strong {
+        (white, black, Color::White)
+    } else {
+        (black, white, Color::Black)
+    };
+    Some((format!("{strong}-{weak}"), color))
+}
+
+fn cmd_report_endgames(path: &str, weights_path: &str) {
+    let k = fixed_k().unwrap_or_else(|| {
+        eprintln!("--report-endgames requires --fix-k K.");
+        exit(1)
+    });
+    let params = load_eval_file(weights_path);
+    let boards = load_raw_dataset(path, 0, &params);
+    let mut evaluator = Evaluator::default();
+    evaluator.set_params(params);
+    let mut classes: HashMap<String, EndgameClassStats> = HashMap::new();
+    let mut global_loss = 0.0;
+    for (board, result_white, _) in &boards {
+        let score_white = eval_white(&mut evaluator, board);
+        let predicted_white = sigmoid(score_white, k);
+        let error = *result_white as f64 - predicted_white;
+        global_loss += error * error;
+        let Some((name, strong)) = endgame_class(board) else {
+            continue;
+        };
+        let (predicted, result) = if strong == Color::White {
+            (predicted_white, *result_white as f64)
+        } else {
+            (1.0 - predicted_white, 1.0 - *result_white as f64)
+        };
+        let stats = classes.entry(name).or_default();
+        stats.positions += 1;
+        stats.loss += error * error;
+        stats.predicted += predicted;
+        stats.result += result;
+        if (*result_white - 0.5).abs() < f32::EPSILON {
+            stats.draw_positions += 1;
+            stats.draw_predicted += predicted;
+        }
+    }
+    let global = global_loss / boards.len() as f64;
+    let mut rows: Vec<_> = classes.into_iter().collect();
+    rows.sort_by_key(|row| std::cmp::Reverse(row.1.positions));
+    println!(
+        "# endgame material report: {} positions, K={k:.8}, global loss={global:.8}",
+        boards.len()
+    );
+    println!(
+        "class,n,loss,loss_vs_global,mean_predicted,mean_result,draw_n,draw_predicted,draw_bias"
+    );
+    for (name, stats) in rows {
+        let n = stats.positions as f64;
+        let draw_predicted = if stats.draw_positions == 0 {
+            f64::NAN
+        } else {
+            stats.draw_predicted / stats.draw_positions as f64
+        };
+        println!(
+            "{name},{},{:.8},{:.4},{:.6},{:.6},{},{:.6},{:+.6}",
+            stats.positions,
+            stats.loss / n,
+            (stats.loss / n) / global,
+            stats.predicted / n,
+            stats.result / n,
+            stats.draw_positions,
+            draw_predicted,
+            draw_predicted - 0.5,
+        );
+    }
+}
+
 /// Fit K once from base-parameter scores (ternary search), so the K-fit does
 /// not re-evaluate the dataset per iteration.
 fn ks_fit_k(boards: &[RawPos], evs: &mut [Evaluator], base: &EvalParams) -> f64 {
@@ -2204,6 +2321,7 @@ fn usage(exe: &str) {
     eprintln!(
         "  {exe} --compare-frozen <test.csv> <source-vector.txt> <candidate-vector.txt> <marker> --fix-k K"
     );
+    eprintln!("  {exe} --report-endgames <dataset.csv> <complete-vector.txt> --fix-k K");
     print_groups();
 }
 
@@ -2290,6 +2408,23 @@ fn main() {
                 }
             }
             cmd_compare_frozen(&args[2], &args[3], &args[4], &args[5]);
+        }
+        "--report-endgames" => {
+            if args.len() < 5 {
+                usage(&args[0]);
+                exit(1);
+            }
+            let mut i = 4;
+            while i < args.len() {
+                let flag = args[i].clone();
+                i += 1;
+                if !parse_global_flag(&flag, &args, &mut i) {
+                    eprintln!("Unknown option {flag}");
+                    usage(&args[0]);
+                    exit(1);
+                }
+            }
+            cmd_report_endgames(&args[2], &args[3]);
         }
         "--audit-coverage" => cmd_audit_coverage(),
         "--tune" => {
