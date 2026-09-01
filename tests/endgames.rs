@@ -163,6 +163,35 @@ fn won_positions_are_clearly_winning() {
 /// mate in these tiny trees, shallow enough to stay fast in debug.
 const TB_DRAW_SEARCH_DEPTH: u32 = 12;
 
+// WHY THERE IS NO MATE-DRIVE GRADIENT TEST HERE (4.9a.4).
+//
+// The 4.9a.4 defect was that the drive used pure Chebyshev distance, which is
+// flat: 94% of won KBNK positions had a TIED best move, so the engine shuffled
+// until the fifty-move rule and converted 19.4% of them. Every test in this
+// file stayed green throughout -- the mate-in-one passed, the direction was
+// correct, the recognizer was present and wired. That is a gap worth closing if
+// it can be closed cheaply, and two attempts show it cannot:
+//
+//   1. Tie rate over `static_eval` across legal moves. PASSED on the broken
+//      drive: static_eval is the WHOLE evaluation, and its other terms break
+//      ties that the mop-up alone cannot. It measured something real, just not
+//      the thing named.
+//   2. Corner progress over 24 plies at depth 6, aggregated over the frozen
+//      KBNK cases. Also PASSED on the broken drive: at short range the SEARCH
+//      finds progress without needing an eval gradient, so the bar cannot be
+//      set anywhere that separates 19.4% conversion from 57.1%.
+//
+// What actually separates them is conversion rate over ~100 positions per
+// family at 60,000 nodes -- about two minutes of compute, and a statistic with
+// real sampling noise rather than an absolute property. That belongs in
+// `tools/diag/endgame_floors.json`, compared with a noise allowance and
+// ratcheted after accepted improvements, which is exactly where it lives.
+//
+// The lesson generalises: a term can be present, correctly signed, and
+// individually tested, and still fail to steer a search. Direction is testable
+// here; ORDERING is not, and asserting the wrong one produces a green suite
+// over a broken engine.
+
 #[test]
 fn syzygy_won_positions_are_not_scored_as_drawn_or_lost() {
     // HARD VETO, not a tuning target. Syzygy says the side to move wins; the
