@@ -380,6 +380,7 @@ def main() -> int:
                 "dtz_checked_moves": dtz_checked,
                 "dtz_progress_moves": dtz_progress,
                 "dtz_progress_rate": (dtz_progress / dtz_checked) if dtz_checked else None,
+                "dtz_progress_is_technique": (not weak) and chess.PAWN not in strong,
                 "median_mate_plies": statistics.median(mate_plies) if mate_plies else None,
                 "median_optimal_dtz": statistics.median(optimal_dtz) if optimal_dtz else None,
             }
@@ -399,6 +400,14 @@ def main() -> int:
             # the ratio only when the weak side is bare and the strong side is
             # pawnless, where no zeroing move exists before mate and DTZ is
             # therefore DTM.
+            # Same gate as the efficiency ratio, and for the same reason: DTZ
+            # counts to the next ZEROING move, so in any family with a pawn or
+            # a capturable enemy piece "progress" is measured toward a pawn
+            # push or a capture rather than toward mate. KPP-K reads 0.078 not
+            # because the engine is lost but because every pawn move resets
+            # the count. Report the rate everywhere -- it is still a valid
+            # within-family comparison between two engine versions -- but mark
+            # where it may be read as technique against optimal play.
             dtm_comparable = not weak and chess.PAWN not in strong
             if dtm_comparable and efficiency_pairs:
                 entry["mate_efficiency"] = round(
