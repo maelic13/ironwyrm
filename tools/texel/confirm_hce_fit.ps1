@@ -7,6 +7,14 @@ param(
     [int]$Seed = 10403,
     [int]$Jobs = 14,
     [int]$Concurrency = 0,
+    # The label contract this run must prove it used. The check below exists to
+    # prove the corpus carries the DECLARED contract, not to freeze one profile
+    # for all time -- pinning the literal string meant the assertion would fail
+    # the moment the datagen default moved, which is the wrong failure: it would
+    # report a provenance defect when provenance was fine. Declare it here and
+    # the check still catches a corpus generated under anything else.
+    [ValidateSet("datagen-v1", "datagen-v2")]
+    [string]$ExpectedAdjudication = "datagen-v2",
     [switch]$ValidateOnly
 )
 
@@ -166,10 +174,12 @@ try {
         [int]$manifest.rows.test -ne 127778) {
         throw "confirmation dataset row counts differ from the frozen 127778/0/127778 contract"
     }
-    if ($manifest.label_contract.adjudication.Name -ne "datagen-v1" -or
+    if ($manifest.label_contract.adjudication.Name -ne $ExpectedAdjudication -or
         [int]$manifest.inputs[0].book_start -ne $Start -or
         [int]$manifest.inputs[0].book_end -ne ($Start + $Games - 1)) {
-        throw "confirmation provenance does not identify the frozen unused-opening segment"
+        throw ("confirmation provenance does not identify the frozen unused-opening " +
+               "segment under label contract '$ExpectedAdjudication' (manifest says " +
+               "'$($manifest.label_contract.adjudication.Name)')")
     }
     $testPath = Join-Path $datasetDir "test.csv"
     $testAudit = Get-WdlCsvAudit $testPath
