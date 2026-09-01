@@ -535,6 +535,61 @@ make any historical parameter group exempt from the current audit and gate.
 | RAR-E03 | Stockfish-at-60k off-policy distillation with material scale pinned. | **Rejected, −17.11 Elo,** despite 4.9% lower holdout loss and 9/10 improved buckets. | For this well-fitted HCE/corpus, lower teacher-fit loss did not predict play. Basilisk's +6.75 opposite result reinforces that transfer is engine-state dependent. | legacy plan; `analysis/hce_analysis.md` |
 | RAR-E04 | 500k-game on-policy refresh yielding 2.18M unique positions; pure WDL beat blended labels on the shared holdout. | **Rejected, −1.28 ± 2.79 over 26.8k games;** pipeline and inert parameters retained. | Even on-policy lower validation loss did not improve this unchanged representation. Retry only after representation/policy changes and with a frozen external holdout. | legacy plan at `757e9a3^` |
 | RAR-E05 | Narrow L2-anchored refresh from a stronger label generator, moving 57/1,204 parameters mostly by 1 cp. | **Accepted, +11.56 ± 5.19 Elo;** frozen in 2.3.2 and throughout the completed Phase-4 search track. | A narrow anchored refresh differed materially from wholesale re-derivation. The current complete-surface programme may supersede it only through its qualified, baked and game-gated fit; the result is neither a frozen-group exemption nor evidence that an undisciplined general refit will work. | `PLAN.md` §3, §4; legacy plan |
+| RAR-E06 | Complete 1,218-slot current-HCE WDL refit, including traced linear coefficients and nonlinear king danger, confirmed on a fresh untouched self-play set. | **Registered; games not started.** Exact candidate improves fresh loss by 0.00078088 and costs 1.19% pooled PGO NPS. A no-adjudication identical-binary calibration must pass before the `[0,3]` nElo gate starts. | Offline WDL loss and broad cohort agreement license a game test but predict neither sign nor Elo. Only the registered H1 boundary promotes the full vector. | registration below; `analysis/endgame_conversion_audit_2026-09-01.md` |
+
+### RAR-E06 — complete HCE refit gate (registered 2026-09-01)
+
+- **Hypothesis.** Recalibrating the complete existing HCE surface against
+  phase-balanced, pure self-play WDL improves playing strength despite the
+  measured speed cost. The candidate is one indivisible vector: 439/1,218
+  slots differ from source and all current linear/nonlinear families may
+  interact through score scale, qsearch and pruning consumers.
+- **Offline qualification.** Fit vector SHA-256
+  `BAD51F3E0AB56B3283C56EC4E06317AC6F4C21109DFDAEA0B833673E773F657E`.
+  Fresh confirmation `hce-confirm-20260831_230548` used 150,000 independent
+  pure-WDL games from unique book entries 600,001--750,000 and an untouched
+  127,778-position phase-balanced test: source **0.12330291**, exact rounded
+  candidate **0.12252203**, delta **-0.00078088**; every registered broad
+  cohort improved. Candidate bounds/tests are valid. Candidate fingerprint is
+  **7,226,051 / 2.460** versus source **6,977,070 / 2.466**.
+- **Baseline / candidate.** Baseline `6357856e21219d040d5bac7cba13e95c3107e4a4`;
+  candidate `5188eca576755932b31ad634af7821cae5291cf3`. Only `src/eval.rs`
+  differs in engine behavior. Baseline binary
+  `rarog-hce-refit-base-pext-pgo.exe`, SHA-256
+  `04572BA2AC87C9A8E334D838D98A2E074C87232180DA8DEFAF1BFAFC4E5AC481`;
+  candidate `rarog-hce-refit-candidate-pext-pgo.exe`, SHA-256
+  `4F0465C53143C5E675E42B631AD21175E2E89E605F639FE6A94D6F678C293664`.
+  Both manifests record clean `pext-pgo` builds with rustc 1.97.1
+  `(8bab26f4f 2026-07-14)` and exact bench verification.
+- **Pooled speed diagnostic.** Three independently profiled binaries per arm,
+  10 interleaved cycles, `bench 13 3`: pooled median source **3,000,899**,
+  candidate **2,965,141**, delta **-1.19%**, bootstrap 95% CI
+  **[-2.29%, -0.48%]**; best-of delta -2.25%. Recipe:
+  `tools/nps_multibuild.ps1 -Cycles 10 -Repeats 3` with the three
+  `hce-confirm`/`hce-refit-base` binaries and three `hce-refit-candidate`
+  binaries. This is diagnostic; the clock gate prices the cost.
+- **Mandatory calibration.** The new `-NoAdjudication` path changes game
+  duration and pentanomial variance, so first run a 30,000-game
+  identical-candidate fixed calibration, tolerance ±5 nElo, seed
+  **174839201**. The full 95% nElo interval must lie within `[-5,+5]` and the
+  anomaly checks must pass. Failure/inconclusive stops the chained command;
+  do not start or resize the candidate gate.
+- **Registered gate.** Candidate versus baseline, `[0,3]` nElo, alpha=beta
+  0.05, cap **80,000 games**, seed **918274631**, `3+0.03`, Threads 1,
+  Hash 64 MB, concurrency 14 on physical CPUs
+  `0,2,4,6,8,10,12,14,16,18,20,22,24,26`, paired UHO random order, and
+  **no draw or resign adjudication**. Book SHA-256
+  `7A7F6470615A69C6CF23D565417701D38732876F480AF90D67B42ABADE35644A`;
+  fastchess alpha 1.8.0 SHA-256
+  `8444E73965AE44E716CDE1BB546A7D7C8C9FC7A442A44194A0C71A3BFFA7DD0D`.
+  RAR-M10 predicts about 47,200 games at true +4 nElo and about 78,700
+  at true +3 or 0 under its strength-v2 calibration; applying it to no
+  adjudication is explicitly an extrapolation, so the preceding fixed null
+  calibration is mandatory and the cap is not extended after games begin.
+- **Stop/disposition.** Only fastchess H1 accepts the entire vector. H0, any
+  anomaly, or reaching 80,000 without H1 rejects and restores the baseline
+  HCE. No point estimate, LOS, offline loss or post-hoc interval substitutes
+  for the registered boundary.
 
 ## 6. Throughput, build and platforms
 
