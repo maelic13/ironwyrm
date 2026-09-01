@@ -287,6 +287,28 @@ if ($maxThreads -gt 1) {
     $affinityArgs = @('-use-affinity', $AffinityCpus)
 }
 
+# 4.2a.4: an option this script ACCEPTS but the chosen mode cannot HONOR is
+# the same defect class as a dead `--rset` -- the run completes, reports a
+# plausible number, and measured something other than what was asked for.
+# Basilisk hit exactly this: `-Games` was accepted in a mode that ignored it.
+# Here, `-Games` is read only by calibrate/fixed while gainer/simplify size
+# themselves from `-MaxGames`, so `-Mode gainer -Games 5000` silently ran to
+# the default 16,000 instead. Refuse rather than reinterpret.
+$modeIgnores = if ($Mode -eq "calibrate" -or $Mode -eq "fixed") {
+    @{ Elo0 = "-MaxGames/-Elo0/-Elo1/-Alpha/-Beta describe an SPRT; this mode runs a fixed-size match with no stop rule"
+       Elo1 = $null; Alpha = $null; Beta = $null; MaxGames = $null }
+} else {
+    @{ Games = "-Games sizes calibrate/fixed matches; an SPRT is sized by -MaxGames"
+       CalibrationTolerance = "-CalibrationTolerance is the calibrate-mode null bound; an SPRT is bounded by -Elo0/-Elo1" }
+}
+$ignored = @($modeIgnores.Keys | Where-Object { $PSBoundParameters.ContainsKey($_) })
+if ($ignored.Count -gt 0) {
+    $why = @($ignored | ForEach-Object { $modeIgnores[$_] } | Where-Object { $_ }) | Select-Object -First 1
+    throw ("-Mode $Mode ignores: $($ignored -join ', '). $why. " +
+           "Remove the option or change -Mode; this script will not accept a " +
+           "parameter it cannot honor.")
+}
+
 if ($Mode -eq "calibrate" -or $Mode -eq "fixed") {
     if ($Games -lt 2 -or ($Games % 2) -ne 0) { throw "-Games must be a positive even number." }
     if ($CalibrationTolerance -le 0) { throw "-CalibrationTolerance must be positive." }
