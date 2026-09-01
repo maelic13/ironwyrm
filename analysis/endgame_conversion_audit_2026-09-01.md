@@ -67,8 +67,8 @@ positions whose games actually ended drawn:
 The complete fitted candidate does not remove the pattern. Some rows improve
 slightly and others worsen; KBNK is unchanged. These are game-result labels,
 not theoretical verdicts, and datagen adjudication can end games before theory
-does. They select the next **measurement**, not a hardcoded rule. Phase 5 must
-re-measure candidate classes against Syzygy WDL/DTZ and no-adjudication
+does. They select the next **measurement**, not a hardcoded rule. Step 4.9a
+must re-measure candidate classes against Syzygy WDL/DTZ and no-adjudication
 endgame-start play before implementation.
 
 ## Reference inventory: 20, not 18
@@ -89,7 +89,7 @@ KRKP partial scaler, narrow KQKP fortress handling, and a narrow wrong-corner
 subset of KBPsK. OCB and generic insufficient-material handling are useful
 extras but do not replace the missing material functions.
 
-## Test policy carried into Phase 5
+## Test policy carried into step 4.9a
 
 1. Separate theoretical classification, static direction, conversion, and
    strength. No one instrument owns all four.
@@ -108,11 +108,11 @@ extras but do not replace the missing material functions.
    needs a larger actionable gradient; passed-pawn king approach is the first
    non-mate family to check.
 
-## Additional Basilisk Phase-5 disposition
+## Additional Basilisk endgame-programme disposition
 
 Basilisk's remaining useful method additions are already owned elsewhere in
 Rarog: post-HCE qsearch/TT/extension authority is Phase 4.11; STC/LTC/4T,
 portability and release transfer are 4.15; high-thread Elo scaling is 8.0.
-They should not be duplicated in Phase 5. The missing item was the explicit
+They should not be duplicated in 4.9a. The missing item was the explicit
 endgame conversion/recogniser program and its systematic gradient-magnitude
-audit; those now lead Phase 5 before the NNUE runway.
+audit; those are step 4.9a, inside Phase 4, before the 2.4.0 release gate.

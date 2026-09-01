@@ -160,6 +160,29 @@ parameter surface has not been requalified, HCE qualification/refit is now
   contract nor a shrinking matched gap exists. Re-entry requires new local
   evidence after the fitted HCE, not another Stockfish-shaped port.
 
+### 4.2a Harness and instrument integrity sweep
+
+Zero games. Basilisk's audit surfaced two harness failure classes that Rarog
+shares: a native command whose nonzero exit was swallowed by the calling
+PowerShell, and a user-facing option accepted in a mode that could not honor
+it. Both produce a completed run with a plausible number that measures
+something other than what was asked.
+
+1. **4.2a.1 — done, `cb5ed2a`.** `sprt.ps1` could not start any gate invoked
+   without `-OptionsA/-OptionsB`, including the registered RAR-E06 command:
+   `d2c7788` dropped the empty-list return from the option-advertisement
+   guard, and `$splitOpts` unrolls an empty pipeline to `$null`, which a
+   `[string[]]` parameter rebuilds as a one-element array holding `$null`. The
+   same `$null` also emitted a bare `option.` argument to fastchess. Fixed and
+   verified in three directions. The `-NoAdjudication` wire, which had never
+   played a game, was proved live over 20 games ending 20/20 by a rules
+   result.
+2. **4.2a.2.** Sweep `tools/*.ps1` for native invocations whose
+   `$LASTEXITCODE` is never read, and for exit status taken through a pipe.
+3. **4.2a.3.** Every parameter a script advertises must either be honored or
+   refuse to launch. An option silently ignored in one mode is the same defect
+   class as a dead `--rset`.
+
 ### HCE maturity conclusion
 
 The current-code comparison is
@@ -361,13 +384,28 @@ Run the registered gate and accept or restore the entire fitted vector before
 improvements can be neutral or catastrophically wrong, while Basilisk's
 accepted +9.52 Elo came from only -0.43% holdout loss.
 
+### 4.8a Post-refit redundancy removal — CONDITIONAL
+
+Open only if 4.8 accepts. Basilisk's BAS-E25 removed terms that a complete
+covariant fit had shown to be redundant and gained `+0.49 +/- 2.96` Elo as a
+simplification; the direction that transfers is the method, not the terms.
+
+1. From the accepted fit, list coefficients driven to zero, coefficients whose
+   feature support is too small to identify, and families whose removal does
+   not move validation loss.
+2. Remove them as one cluster, not one term at a time.
+3. Gate at a loss-permitting `[-1.75, 0.25]` bracket, never `[0,3]`: this is a
+   simplification, and the acceptable outcome is "no worse, and smaller".
+4. Do not use NPS as the rationale. Basilisk predicted an NPS recovery from
+   term removal that did not appear, and one PGO pair read `-6.70%`.
+
 ### 4.9 Structural HCE upgrades — CONDITIONAL
 
 Open at most two dependency-complete structural clusters, and only for residual
 signals the full existing-surface refit could not represent. King-safety and
 passer/threat conditionality remain hypotheses, not an order. Specialized
 endgame knowledge is not optional here: the direct conversion audit already
-established a defect, and Phase 5 owns its systematic repair.
+established a defect, and 4.9a owns its systematic repair.
 
 For each cluster:
 
@@ -382,6 +420,104 @@ For each cluster:
 
 Two fully fitted cluster failures close structural expansion and force a 4.7
 re-audit; they do not authorize more feature inventory.
+
+### 4.9a Endgame conversion and reference-function closure
+
+**Why this is in Phase 4, not Phase 5.** It was placed in Phase 5 on
+2026-09-01 by following Basilisk's phase layout, which is not a reason. Three
+Rarog-specific facts put it here:
+
+1. These are HCE value and scale functions. Phase 4 is the phase that owns the
+   HCE; Phase 5 is the NNUE runway and is required to be behavior-neutral.
+2. 4.15 releases 2.4.0. Shipping a release that converts KBNK at 15% and then
+   fixing it afterwards is the wrong order.
+3. 4.10 consolidates the whole HCE after the last structural change. If
+   endgame structure landed in Phase 5, 4.10 would be invalidated and a second
+   whole-surface consolidation would have to be paid for.
+
+Phase-4 step numbers 4.10-4.15 are cited in `EXPERIMENTS.md` and in commit
+messages, so this enters as `4.9a` rather than renumbering them.
+
+`analysis/endgame_conversion_audit_2026-09-01.md` is the baseline. At 60,000
+nodes/move over 100 fixed-seed random positions per family, Rarog converted
+KQK/KRK/KBBK/KBNK at **94%/86%/76%/15%**, below Basilisk's latest
+**100%/100%/87%/54%**. KBNK has Basilisk's same Chebyshev plateaus,
+sub-pruning gradients and missing piece-coordination guidance. The complete
+HCE fit does not remove the material-specific drawn-subset bias. This is a
+mandatory engineering program, not a feature-shopping license. The 4.9 cap of
+two structural clusters does not apply: that cap bounds speculative feature
+addition against residual signals, while this is defect repair against a
+measured conversion failure and an explicit reference inventory.
+
+- **4.9a.1 Truth corpus and baseline.** Extend the fixed-seed conversion
+  runner to all relevant winning families, add no-adjudication endgame-start
+  games, and use Syzygy WDL/DTZ as exact truth for every supported case.
+  Preserve position seeds, engine/hash/TT/node policy and outcome reasons.
+  Record theoretical verdict, static direction, conversion and game strength
+  separately; a played draw is statistical evidence, not theoretical truth.
+  The local set is complete 3-4-5-6-man Syzygy at
+  `D:\chess\tablebases\syzygy3456` (510 WDL + 510 DTZ), which the engine loads
+  and which covers every family in the reference inventory below.
+- **4.9a.2 Contextual regression contract.** Hard-veto legality, termination,
+  exact-theory and near-mate correctness regressions. Use reproducible random
+  family conversion rates, rule-50/stalemate/material-loss counts and
+  Syzygy-DTZ progress as aggregate floors. Long fixed-search trajectories are
+  diagnostic: investigate individual movement, but accept/reject changes in
+  context rather than requiring every position to retain the same PV or mate
+  length. Tighten floors after accepted improvements; never relax a
+  correctness test in the implementation commit.
+- **4.9a.3 Search-visible magnitude audit.** Measure every guidance gradient
+  against the pruning margins and resolution that consume it. Begin with
+  KBNK/KXK mate drive and passed-pawn king approach. Texel may correctly fit a
+  rare multi-ply guidance term toward zero for static WDL loss while search
+  requires an actionable magnitude; use systematic sweeps, conversion/DTZ
+  progress and games to resolve that conflict rather than freezing either the
+  old or fitted value.
+- **4.9a.4 through 4.9a.23 — reference-function closure.** Audit, implement
+  where absent, and test every specialized function in the final pre-NNUE
+  Stockfish HCE table. The reference set is **20, not 18**; Stockfish 11 had
+  two additional functions later removed, while current NNUE
+  Stockfish/Reckless no longer provide the comparable dispatcher. Reference
+  code supplies cases and failure modes, not portable constants or
+  implementation. Each item records whether current coverage is full, partial
+  or absent and adds theory/Syzygy tests plus its conversion or drawn-subset
+  cohort. Rarog's present meaningful coverage is **7/20**; generic
+  insufficient-material and OCB logic are retained useful extras, not
+  substitutes for this closure.
+
+  | Step | Function | Current coverage |
+  |---|---|---|
+  | 4.9a.4 | KNNK value/draw classification | present |
+  | 4.9a.5 | KNNKP value and conversion boundary | absent |
+  | 4.9a.6 | KXK value, KQK/KRK/KBBK conversion floors | present, 94/86/76% |
+  | 4.9a.7 | KBNK value, corner/king/minor gradients | present, converts 15% |
+  | 4.9a.8 | KPK exact bitbase, value, rule-50 | present |
+  | 4.9a.9 | KRKP value | partial, conservative scale |
+  | 4.9a.10 | KRKB value | absent |
+  | 4.9a.11 | KRKN value | absent |
+  | 4.9a.12 | KQKP fortress-aware value | partial, rook/bishop pawn |
+  | 4.9a.13 | KQKR value | absent |
+  | 4.9a.14 | KBPsK scale, wrong-bishop rook pawn | partial, wrong corner |
+  | 4.9a.15 | KQKRPs scale | absent |
+  | 4.9a.16 | KRPKR scale | absent |
+  | 4.9a.17 | KRPKB scale | absent |
+  | 4.9a.18 | KRPPKRP scale | absent |
+  | 4.9a.19 | KPsK scale | absent |
+  | 4.9a.20 | KBPKB scale | absent |
+  | 4.9a.21 | KBPPKB scale | absent |
+  | 4.9a.22 | KBPKN scale | absent |
+  | 4.9a.23 | KPKP scale | absent |
+
+- **4.9a.24 Dependency-complete family gates.** Group mutually dependent
+  value, scale, search-guidance and generic HCE terms; refit every materially
+  covariant current parameter. Do not freeze historical parameters and do not
+  SPRT each recognizer alone. Prospective semantic, support, loss, conversion
+  and NPS screens may reject; clean final-PGO no-adjudication SPRTs accept.
+- **4.9a.25 Closure.** All 20 reference functions are present or have a
+  recorded theory-backed reason for exclusion, their hard tests pass,
+  aggregate floors materially improve, and accepted families transfer through
+  STC/LTC plus an explicit endgame-start cohort. Archive the exact harness and
+  defects so the NNUE path does not erase classical fallback knowledge.
 
 ### 4.10 Post-structure whole-HCE consolidation
 
@@ -458,10 +594,18 @@ staged `StopAfter`. Never mix HCE and search coordinates.
 
 ### 4.13 Search cleanup and checkpoint
 
-Remove every unconsumed 4.6/retained alternative without a future owner.
-Re-run debug/release tests, all-feature/all-target clippy, exact benchmark,
-pooled-PGO NPS, fixed-time/fixed-node deficits and the accepted 4.11/4.12 game
-verdicts. Preserve only diagnostics with a named Phase-5/7 owner.
+- **4.13.1 Dead and unreachable mechanism inventory.** Basilisk-derived. It
+  found history pruning nearly unreachable, and `double_ext_max` never binding
+  even when cut from 200 to 16. A dead mechanism is an anomaly to explain, not
+  automatically headroom: measure the population first, then either remove the
+  safeguard or redesign it under this step. Report reachability for every
+  retained switch in the §3 table.
+- **4.13.2 Removal.** Remove every unconsumed 4.6 and retained default-off
+  alternative without a future owner. Preserve only diagnostics with a named
+  Phase-5/7 owner.
+- **4.13.3 Checkpoint.** Re-run debug/release tests, all-feature/all-target
+  clippy, exact benchmark, pooled-PGO NPS, fixed-time/fixed-node deficits and
+  the accepted 4.11/4.12 game verdicts.
 
 ### 4.14 Final HCE/search checkpoint
 
@@ -503,87 +647,13 @@ The HCE is mature for this release only when:
 - Below the bar, ship 2.3.x only by explicit decision or close Phase 4 without
   a release. NNUE follows either way.
 
-## 5. Phase 5 — endgame maturity, then NNUE runway
+## 5. Phase 5 — NNUE runway
 
-Phase 5 first closes the measured classical endgame defects, then creates the
-behavior-neutral runway for NNUE. The endgame work is strength-bearing and
-must be locally fitted and gated; the runway must preserve accepted behavior.
-Work that 4.7 already completed is reused and extended, not rebuilt.
-
-### 5.0 Endgame knowledge and conversion maturity
-
-`analysis/endgame_conversion_audit_2026-09-01.md` is the baseline. At 60,000
-nodes/move over 100 fixed-seed random positions per family, Rarog converted
-KQK/KRK/KBBK/KBNK at **94%/86%/76%/15%**, below Basilisk's latest
-**100%/100%/87%/54%**. KBNK has Basilisk's same Chebyshev plateaus,
-sub-pruning gradients and missing piece-coordination guidance. The complete
-HCE fit does not remove the material-specific drawn-subset bias. This is a
-mandatory engineering program, not a feature-shopping license.
-
-- **5.0.1 Truth corpus and baseline.** Extend the fixed-seed conversion runner
-  to all relevant winning families, add no-adjudication endgame-start games,
-  and use Syzygy WDL/DTZ as exact truth for every supported <=7-piece case.
-  Preserve position seeds, engine/hash/TT/node policy and outcome reasons.
-  Record theoretical verdict, static direction, conversion and game strength
-  separately; a played draw is statistical evidence, not theoretical truth.
-- **5.0.2 Contextual regression contract.** Hard-veto legality, termination,
-  exact-theory and near-mate correctness regressions. Use reproducible random
-  family conversion rates, rule-50/stalemate/material-loss counts and
-  Syzygy-DTZ progress as aggregate floors. Long fixed-search trajectories are
-  diagnostic: investigate individual movement, but accept/reject changes in
-  context rather than requiring every position to retain the same PV or mate
-  length. Tighten floors after accepted improvements; never relax a
-  correctness test in the implementation commit.
-- **5.0.3 Reference-function closure.** Audit, implement where absent, and
-  test every specialized function in the final pre-NNUE Stockfish HCE table.
-  The reference set is **20, not 18**; Stockfish 11 had two additional
-  functions later removed, while current NNUE Stockfish/Reckless no longer
-  provide the comparable dispatcher. Reference code supplies cases and
-  failure modes, not portable constants or implementation.
-    1. **KNNK** value/draw classification.
-    2. **KNNKP** value and conversion boundary.
-    3. **KXK**, including explicit KQK, KRK and KBBK conversion floors.
-    4. **KBNK**, including actionable corner, king and minor-piece gradients.
-    5. **KPK** exact bitbase/value integration and rule-50 handling.
-    6. **KRKP** value.
-    7. **KRKB** value.
-    8. **KRKN** value.
-    9. **KQKP** fortress-aware value.
-    10. **KQKR** value.
-    11. **KBPsK** scale, including wrong-bishop rook-pawn cases.
-    12. **KQKRPs** scale.
-    13. **KRPKR** scale.
-    14. **KRPKB** scale.
-    15. **KRPPKRP** scale.
-    16. **KPsK** scale.
-    17. **KBPKB** scale.
-    18. **KBPPKB** scale.
-    19. **KBPKN** scale.
-    20. **KPKP** scale.
-  For each item, record whether Rarog's current coverage is full, partial or
-  absent; add theory/Syzygy tests and the relevant conversion or drawn-subset
-  cohort. Rarog presently has meaningful coverage of only about **7/20**;
-  generic insufficient-material and OCB logic are retained useful extras, not
-  substitutes for this closure.
-- **5.0.4 Search-visible magnitude audit.** Measure every guidance gradient
-  against the pruning margins and resolution that consume it. Begin with
-  KBNK/KXK mate drive and passed-pawn king approach. Texel may correctly fit a
-  rare multi-ply guidance term toward zero for static WDL loss while search
-  requires an actionable magnitude; use systematic sweeps, conversion/DTZ
-  progress and games to resolve that conflict rather than freezing either the
-  old or fitted value.
-- **5.0.5 Dependency-complete family gates.** Group mutually dependent value,
-  scale, search-guidance and generic HCE terms; refit every materially
-  covariant current parameter. Do not freeze historical parameters and do not
-  SPRT each recognizer alone. Prospective semantic, support, loss, conversion
-  and NPS screens may reject; clean final-PGO no-adjudication SPRTs accept.
-- **5.0.6 Closure.** All 20 reference functions are present or have a recorded
-  theory-backed reason for exclusion, their hard tests pass, aggregate floors
-  materially improve, and accepted families transfer through STC/LTC plus an
-  explicit endgame-start cohort. Archive the exact harness and defects so the
-  NNUE path does not erase classical fallback knowledge.
-
-### 5.1 NNUE runway
+Phase 5 creates the behavior-neutral runway for NNUE. Nothing here may change
+playing behavior: the accepted Phase-4 fingerprint must survive every step.
+Work that 4.7 already completed is reused and extended, not rebuilt. Endgame
+knowledge moved to 4.9a on 2026-09-01, because it is HCE work that must ship
+in 2.4.0 and must precede the 4.10 whole-HCE consolidation.
 
 - **5.1 Measurement corpus handoff.** Freeze the accepted 4.7 corpus and
   manifests as the NNUE residual/stage-gate source. Add only NNUE-specific
@@ -654,13 +724,13 @@ evaluator internals.
 
 Enter only if a serious king-conditioned NNUE, inference optimization and
 data-scale retry fail and the maintainer explicitly abandons NNUE. Reuse the
-4.7 residual corpus. Any family accepted in 4.9 is closed here.
+4.7 residual corpus. Any family accepted in 4.9 or 4.9a is closed here.
 
-1. King-safety semantic rework.
-2. Material-specific winnability and scaling.
-3. Passer/pawn conditionality.
-4. Threat and usable-activity conditionality.
-5. Material/phase specialization only as a last classical step.
+- **9.1** King-safety semantic rework.
+- **9.2** Material-specific winnability and scaling.
+- **9.3** Passer/pawn conditionality.
+- **9.4** Threat and usable-activity conditionality.
+- **9.5** Material/phase specialization only as a last classical step.
 
 Every fallback item is structure plus fit plus one gate, not additive term
 accretion.
@@ -678,7 +748,33 @@ accretion.
 - [ ] Hosted platform/CI matrix passes on the release commit.
 - [ ] Commit locally; tag, push and publish only on maintainer instruction.
 
-## 11. Reference tools and commands
+## 11. Documentation ownership
+
+`GUIDE.md` is a status board and nothing else: every phase, step and sub-step
+with a checkbox, the current checkpoint, and the command to run next. Anything
+longer than a line belongs in one of the files below. GUIDE lost Phases 6-9
+during a shortening pass on 2026-08-30 and endgame work was filed under the
+NNUE runway; `tools/diag/check_guide.py` now fails when a phase heading is
+missing, so that class of drift is caught mechanically rather than by reading.
+
+| File | Purpose |
+|---|---|
+| `GUIDE.md` | Status board: all phases, steps, sub-steps, checkpoint, next command |
+| `PLAN.md` | Rationale, gates, roadmap and what each step involves |
+| `EXPERIMENTS.md` | Durable evidence, failures, retry triggers and reproducible recipes |
+| `PROCESS.md` | Recurring build, Texel, SPSA and release procedures |
+| `TRACKER.md` | History only; never a source of the next step |
+| `analysis/hce_maturity_2026-08-25.md` | HCE/Stockfish maturity comparison and fitting policy |
+| `analysis/hce_archive_audit_2026-08-31.md` | Archive provenance, content, capacity and quota |
+| `analysis/endgame_conversion_audit_2026-09-01.md` | Conversion rates, 20-function inventory, defects, test policy |
+| `analysis/basilisk_audit_2026-08-30.md` | Basilisk method/results audit and Rarog consequences |
+| `analysis/manta_tooling_audit_2026-08-25.md` | Manta tool dispositions and imported measurements |
+| `analysis/ablation_results.md` | Search-deficit measurements and corrected interpretation |
+
+`GUIDE.md` and `PLAN.md` change in the same commit. Source, defaults and
+reproducible artifacts outrank prose whenever documents disagree.
+
+## 12. Reference tools and commands
 
 | Tool / path | Purpose |
 |---|---|
