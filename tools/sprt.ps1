@@ -229,9 +229,14 @@ $ErrorActionPreference = "Stop"
 # PowerShell's native-argument binding can deliver a comma-separated option
 # list as one string. Normalize it before equality checks, manifests or UCI
 # validation so all three describe what fastchess will actually receive.
+# The leading comma is load-bearing: without it PowerShell unrolls an EMPTY
+# result to $null, and `[string[]]$null` then rebuilds a ONE-element array
+# holding $null. That fake element made the advertisement guard below throw on
+# every options-free gate, and made $optArgsA emit a bare `option.` to
+# fastchess. Return the array itself, always.
 $splitOpts = {
     param($items)
-    @($items | ForEach-Object { $_ -split ',' } |
+    ,@($items | ForEach-Object { $_ -split ',' } |
         ForEach-Object { $_.Trim().Trim('"') } |
         Where-Object { $_ })
 }
@@ -343,8 +348,10 @@ $optionsAdvertisedB = @($optionDetailsB.Name)
 $normalizeOption = { param($value) ($value -replace '\s+', ' ').Trim().ToLowerInvariant() }
 function Assert-RequestedOptions {
     param([object[]]$Advertised, [string[]]$Wanted, [string]$Label)
+    if (-not $Wanted -or @($Wanted).Count -eq 0) { return }
     $have = @($Advertised.Name | ForEach-Object { & $normalizeOption $_ })
-    $missing = @($Wanted | ForEach-Object { ($_ -split '=', 2)[0] } |
+    $missing = @($Wanted | Where-Object { $_ } |
+        ForEach-Object { ($_ -split '=', 2)[0] } |
         Where-Object { $have -notcontains (& $normalizeOption $_) })
     if ($missing.Count -gt 0) {
         throw ("$Label does not advertise: $($missing -join ', '). Rebuild it before measuring; " +

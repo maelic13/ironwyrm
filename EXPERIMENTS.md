@@ -576,6 +576,25 @@ make any historical parameter group exempt from the current audit and gate.
   accepted the shared-harness calibration on 2026-09-01 rather than spending
   another 30,000 identical-engine games. The real gate's anomaly checks remain
   mandatory.
+- **Harness repair before launch (2026-09-01).** The registered command could
+  not start. `d2c7788` rewrote `sprt.ps1`'s option-advertisement guard and
+  dropped its empty-list early return; because `$splitOpts` unrolls an empty
+  result to `$null` and `[string[]]$null` rebuilds a one-element array holding
+  `$null`, every gate invoked **without** `-OptionsA/-OptionsB` threw
+  `does not advertise:` with an empty name. The same `$null` also emitted a
+  bare `option.` argument to fastchess on that path from `ce4a334` onward. No
+  gate had run since `d2c7788`, so no recorded result is affected; the last
+  options-free run (`sprt_SearchCore_vs_Head_20260822_101254`) predates the
+  guard rewrite and logged no fastchess option warning. Fixed by returning the
+  array with `,@(...)` and restoring the empty-list return. Verified in three
+  directions: options-free now starts, a bogus option still aborts by name, and
+  a valid option list still reaches the manifest.
+- **No-adjudication wire proof.** `-NoAdjudication` had never played a game.
+  A 20-game `-Mode fixed` run of the exact gate pair
+  (`sprt_SmokeCand_vs_SmokeBase_20260901_070934`, seed 4242) ended **20/20 by a
+  rules result** — 12 mates, 6 threefold, 1 fifty-move, 1 insufficient material
+  — with zero adjudication terminations in either PGN or log, and the manifest
+  recorded `adjudication: none`. The flag is live.
 - **Registered gate.** Candidate versus baseline, `[0,3]` nElo, alpha=beta
   0.05, cap **80,000 games**, seed **918274631**, `3+0.03`, Threads 1,
   Hash 64 MB, concurrency 14 on physical CPUs
