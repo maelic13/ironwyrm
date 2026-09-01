@@ -22,17 +22,21 @@ and `python tools/diag/check_guide.py` must pass.
 
 ## What you run next
 
-4.9 is closed (RAR-E09: no residual the surface cannot represent). Phase 4 now
-runs top to bottom from **4.9a.2** — the no-adjudication endgame-start cohort,
-without which the families that never arise from UHO openings cannot be
-measured at all. Then 4.9a.5 (KRPKR) leads the families.
+**4.9a.3** — the regression contract: hard theory vetoes plus aggregate floors,
+using the tablebase as a test cohort and never as fit input.
 
-Rebuild the truth corpus for any candidate with the same seed and compare
-per-position, never by differencing aggregates:
+The cohort book exists (`tools/books/endgame_cohort_v1.epd`, 788 positions,
+seed `0x4E9A2`). Regenerate it with:
 
 ```powershell
-python tools/diag/endgame_truth.py --engine <candidate.exe> --syzygy D:\chess	ablebases\syzygy3456 --positions 100 --nodes 60000 --max-plies 100 --per-position --output toolsesults\<run>\endgame-truth.json
+python tools/diag/endgame_book.py --syzygy D:\chess	ablebases\syzygy3456 --per-family 40 --out toolsooks\endgame_cohort_v1.epd
 ```
+
+Order note: 4.9a runs label-independent work first (4.9a.2-4.9a.4), then fixes
+the label contract (4.9a.5), then regenerates data (4.9a.6), and only then fits
+families. Labels depend on the engine's own conversion ability, so improving
+conversion **before** regenerating means each iteration starts from a better
+generator.
 
 ## Phase 4 — bounded pre-NNUE search and HCE
 
@@ -70,39 +74,38 @@ python tools/diag/endgame_truth.py --engine <candidate.exe> --syzygy D:\chess	ab
     - [x] **4.9.2** Closed: no cohort residual licenses a cluster; retry trigger recorded
 - [ ] **4.9a** Endgame conversion and reference-function closure — worked in order
     - [x] **4.9a.1** Syzygy truth corpus and per-move grading — `endgame_truth.py`
-    - [ ] **4.9a.2** NEXT — no-adjudication endgame-start cohort games
-    - [ ] **4.9a.3** Regression contract: hard theory vetoes, aggregate floors
-    - [ ] **4.9a.4** Gradient magnitude vs pruning margins — KBNK/KXK, passer approach
-    - [ ] **4.9a.5** KRPKR scale [ref 13] — absent; conv **52%**, 10.04% of games
-    - [ ] **4.9a.6** KXK value [ref 3] — present; KQK/KRK/KBBK 94/91/86%, 37.34%
-    - [ ] **4.9a.7** KRPKB scale [ref 14] — absent; conv 56%, 1.23%
-    - [ ] **4.9a.8** KPsK scale [ref 16] — absent; 4.19%
-    - [ ] **4.9a.9** KPK value [ref 5] — present bitbase; conv 95%, 2.84%
-    - [ ] **4.9a.10** KRKP value [ref 6] — partial; conv 93%, 2.40%
-    - [ ] **4.9a.11** KBPsK scale [ref 11] — partial wrong-corner subset; 1.92%
-    - [ ] **4.9a.12** KPKP scale [ref 20] — absent; 1.23%
-    - [ ] **4.9a.13** KQKP value [ref 9] — partial fortress; conv 96%, 1.17%
-    - [ ] **4.9a.14** KBPKB scale [ref 17] — absent; conv 81%, 0.89%
-    - [ ] **4.9a.15** KBPPKB scale [ref 18] — absent; conv 79%, 0.66%
-    - [ ] **4.9a.16** KRKN value [ref 8] — absent; conv 83%, win-preserving 0.973
-    - [ ] **4.9a.17** KRKB value [ref 7] — absent; conv 94%, win-preserving 0.963
-    - [ ] **4.9a.18** KBNK value [ref 4] — present; conv **7%**, 0.28%; see 4.9a.4
+    - [x] **4.9a.2** Endgame-start cohort book — 788 verified positions, 21 families
+    - [ ] **4.9a.3** NEXT — regression contract: TB truth as test cohort, not in the fit
+    - [ ] **4.9a.4** Guidance-gradient cluster: KXK + KBNK drive, passer approach
+    - [ ] **4.9a.5** RAR-E08: self-play vs TB-corrected labels; fixes the contract
+    - [ ] **4.9a.6** Regenerate the corpus with the improved engine and that contract
+    - [ ] **4.9a.7** KRPKR scale [ref 13] — absent; conv **52%**, 10.04% of games
+    - [ ] **4.9a.8** KRPKB scale [ref 14] — absent; conv 56%, 1.23%
+    - [ ] **4.9a.9** KPsK scale [ref 16] — absent; 4.19%
+    - [ ] **4.9a.10** KPK value [ref 5] — present bitbase; conv 95%, 2.84%
+    - [ ] **4.9a.11** KRKP value [ref 6] — partial; conv 93%, 2.40%
+    - [ ] **4.9a.12** KBPsK scale [ref 11] — partial wrong-corner subset; 1.92%
+    - [ ] **4.9a.13** KPKP scale [ref 20] — absent; 1.23%
+    - [ ] **4.9a.14** KQKP value [ref 9] — partial fortress; conv 96%, 1.17%
+    - [ ] **4.9a.15** KBPKB scale [ref 17] — absent; conv 81%, 0.89%
+    - [ ] **4.9a.16** KBPPKB scale [ref 18] — absent; conv 79%, 0.66%
+    - [ ] **4.9a.17** KRKN value [ref 8] — absent; conv 83%, win-preserving 0.973
+    - [ ] **4.9a.18** KRKB value [ref 7] — absent; conv 94%, win-preserving 0.963
     - [ ] **4.9a.19** KBPKN scale [ref 19] — absent; conv 79%, 0.28%
     - [ ] **4.9a.20** KNNKP value [ref 2] — absent; discards the win on **19%** of moves
-    - [ ] **4.9a.21** KNNK value [ref 1] — present; drawn in 100/100, drawn-subset cohort
-    - [ ] **4.9a.22** KQKR value [ref 10] — absent; conv 83%; never occurred in games
-    - [ ] **4.9a.23** KQKRPs scale [ref 12] — absent; never occurred in games
-    - [ ] **4.9a.24** KRPPKRP scale [ref 15] — absent; never occurred in games
-    - [ ] **4.9a.25** Dependency-complete family refits and gates, tiered by occurrence
-    - [ ] **4.9a.26** Conversion, theory, STC/LTC and endgame-cohort closure
-- [ ] **4.10** Iterated no-adjudication refit cycles — at least one is owed
-    - [ ] **4.10.1** Opening supply: reuse is safe; fresh openings optional, not a blocker
-    - [ ] **4.10.2** Composition screen against the `datagen-v1` archive (sizing)
-    - [ ] **4.10.3** RAR-E08: self-play vs TB-corrected labels; decides the contract
-    - [ ] **4.10.4** Regenerate on the winning contract; never edit `hce-v2`
-    - [ ] **4.10.5** Cycle 1: full 4.8 schedule, own frozen test, registered gate
-    - [ ] **4.10.6** Repeat while a cycle accepts; stop at the first that does not
-    - [ ] **4.10.7** Record the cycle table and close
+    - [ ] **4.9a.21** KNNK value [ref 1] — present; drawn 100/100, drawn-subset cohort
+    - [ ] **4.9a.22** KQKR value [ref 10] — absent; conv 83%; never occurs naturally
+    - [ ] **4.9a.23** KQKRPs scale [ref 12] — absent; never occurs naturally
+    - [ ] **4.9a.24** KRPPKRP scale [ref 15] — absent; never occurs naturally
+    - [ ] **4.9a.25** KXK value [ref 3] — gradient owned by 4.9a.4; verify and close
+    - [ ] **4.9a.26** KBNK value [ref 4] — gradient owned by 4.9a.4; verify and close
+    - [ ] **4.9a.27** Dependency-complete family refits and gates, tiered by occurrence
+    - [ ] **4.9a.28** Conversion, theory, STC/LTC and endgame-cohort closure
+- [ ] **4.10** Iterated whole-surface refit cycles — at least one is owed
+    - [ ] **4.10.1** Composition screen against the `datagen-v1` archive (sizing)
+    - [ ] **4.10.2** Cycle 1: full 4.8 schedule, own frozen test, registered gate
+    - [ ] **4.10.3** Repeat while a cycle accepts; stop at the first that does not
+    - [ ] **4.10.4** Record the cycle table and close
 - [ ] **4.11** Re-measure qsearch/TT/eval authority and branching on the accepted HCE
     - [ ] **4.11.1** Observation, baseline and live-wire proof; write the analysis
     - [ ] **4.11.2** One candidate and gate, only if 4.11.1 isolates a unique defect

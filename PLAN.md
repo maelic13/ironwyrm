@@ -568,7 +568,25 @@ addition against residual signals, while this is defect repair against a
 measured conversion failure and an explicit reference inventory.
 
 The sub-steps are numbered in the order they are worked, so the GUIDE list can
-be run top to bottom. The bracketed `ref N` is the item's identity in the
+be run top to bottom.
+
+**The order is set by a feedback loop, not by convenience.** Self-play labels
+depend on the engine's own conversion ability, which depends on the evaluator,
+which depends on the fit, which depends on the labels. It closes. Two things
+act on it, and they decide the sequence:
+
+- **Below 7 men, Syzygy is an external anchor** -- truth that does not depend
+  on Rarog at all. That is what RAR-E08 decides how to use, and it is the only
+  non-circular input available.
+- **Above 7 men nothing anchors it**, so iteration is genuinely required. 4.10's
+  mandated refit loop is where that is paid for; it is not a design failure.
+
+The consequence is that **conversion improvements must precede data
+regeneration**, because they improve the engine that produces the next round of
+labels. So 4.9a runs label-independent work first (4.9a.2-4.9a.4), fixes the
+label contract (4.9a.5), regenerates (4.9a.6), and only then fits families.
+Each turn of the loop then starts from a better generator rather than
+re-deriving the same weakness. The bracketed `ref N` is the item's identity in the
 20-function reference inventory, which is a different ordering and is preserved
 so nothing is lost when the two are compared.
 
@@ -600,7 +618,7 @@ so nothing is lost when the two are compared.
   another refit. Texel may correctly fit a rare multi-ply guidance term toward
   zero for static WDL loss while search needs an actionable magnitude; resolve
   that with sweeps, conversion and DTZ progress, not by freezing either value.
-- **4.9a.5 through 4.9a.24 -- the 20 reference functions, in working order.**
+- **4.9a.7 through 4.9a.26 -- the 20 reference functions, in working order.**
   Audit, implement where absent, and test each one. The reference set is 20,
   not 18: Stockfish 11 carried 22 and `KNPK`/`KNPKB` were later removed, while
   current NNUE Stockfish and Reckless no longer provide a comparable
@@ -619,30 +637,43 @@ so nothing is lost when the two are compared.
 
   | Step | Function | ref | Coverage | Conversion | Occurrence |
   |---|---|---:|---|---:|---:|
-  | 4.9a.5 | KRPKR | 13 | absent | 52% | 10.04% |
-  | 4.9a.6 | KXK | 3 | present | 94/91/86% | 37.34% |
-  | 4.9a.7 | KRPKB | 14 | absent | 56% | 1.23% |
-  | 4.9a.8 | KPsK | 16 | absent | - | 4.19% |
-  | 4.9a.9 | KPK | 5 | present bitbase | 95% | 2.84% |
-  | 4.9a.10 | KRKP | 6 | partial | 93% | 2.40% |
-  | 4.9a.11 | KBPsK | 11 | partial | - | 1.92% |
-  | 4.9a.12 | KPKP | 20 | absent | 94% | 1.23% |
-  | 4.9a.13 | KQKP | 9 | partial fortress | 96% | 1.17% |
-  | 4.9a.14 | KBPKB | 17 | absent | 81% | 0.89% |
-  | 4.9a.15 | KBPPKB | 18 | absent | 79% | 0.66% |
-  | 4.9a.16 | KRKN | 8 | absent | 83% | 0.61% |
-  | 4.9a.17 | KRKB | 7 | absent | 94% | 0.51% |
-  | 4.9a.18 | KBNK | 4 | present | **7%** | 0.28% |
+  | 4.9a.7 | KRPKR | 13 | absent | 52% | 10.04% |
+  | 4.9a.8 | KRPKB | 14 | absent | 56% | 1.23% |
+  | 4.9a.9 | KPsK | 16 | absent | - | 4.19% |
+  | 4.9a.10 | KPK | 5 | present bitbase | 95% | 2.84% |
+  | 4.9a.11 | KRKP | 6 | partial | 93% | 2.40% |
+  | 4.9a.12 | KBPsK | 11 | partial | - | 1.92% |
+  | 4.9a.13 | KPKP | 20 | absent | 94% | 1.23% |
+  | 4.9a.14 | KQKP | 9 | partial fortress | 96% | 1.17% |
+  | 4.9a.15 | KBPKB | 17 | absent | 81% | 0.89% |
+  | 4.9a.16 | KBPPKB | 18 | absent | 79% | 0.66% |
+  | 4.9a.17 | KRKN | 8 | absent | 83% | 0.61% |
+  | 4.9a.18 | KRKB | 7 | absent | 94% | 0.51% |
   | 4.9a.19 | KBPKN | 19 | absent | 79% | 0.28% |
   | 4.9a.20 | KNNKP | 2 | absent | 15% | 0.05% |
   | 4.9a.21 | KNNK | 1 | present | drawn 100/100 | 0.03% |
   | 4.9a.22 | KQKR | 10 | absent | 83% | **0%** |
   | 4.9a.23 | KQKRPs | 12 | absent | - | **0%** |
   | 4.9a.24 | KRPPKRP | 15 | absent | - | **0%** |
+  | 4.9a.25 | KXK | 3 | present | 94/91/86% | 37.34% |
+  | 4.9a.26 | KBNK | 4 | present | **7%** | 0.28% |
+
+  **KXK and KBNK sit last because their mechanism is handled at 4.9a.4, not
+  because they are unimportant.** They share one defect -- a corner-drive
+  gradient of 8 cp per corner step and 4 cp per king-distance step, against the
+  100-500 cp pruning margins that must not swallow it -- so one change fixes
+  both, and KXK's 37.34% occurrence makes the bundle the most gateable item in
+  the whole endgame programme, which KBNK's 0.28% never could be. Their entries
+  here are verification and closure, not fresh work.
+
+  **KRPPKRP (4.9a.24) cannot be verified locally at all.** It is seven men and
+  the tables stop at six, and RAR-M15 found it occurring zero times in 3,915
+  real games -- so it is reachable neither by sampling play nor by verified
+  construction. Record it as a gap; do not close it on unverified positions.
 
   Rarog's present meaningful coverage is 7/20. Generic insufficient-material
   and OCB logic are retained useful extras, not substitutes for this closure.
-- **4.9a.25 Dependency-complete family gates, tiered by occurrence.** Group
+- **4.9a.27 Dependency-complete family gates, tiered by occurrence.** Group
   mutually dependent value, scale, search-guidance and generic HCE terms and
   refit every materially covariant current parameter. Do not freeze historical
   parameters and do not SPRT each recognizer alone. RAR-M15's tiers decide what
@@ -652,7 +683,7 @@ so nothing is lost when the two are compared.
   loss-permitting `[-1.75, 0.25]` no-regression check, because a change
   confined to 0.28% of games cannot produce a detectable whole-match Elo at any
   budget this project has.
-- **4.9a.26 Closure.** All 20 reference functions present or excluded with a
+- **4.9a.28 Closure.** All 20 reference functions present or excluded with a
   recorded theory-backed reason, their hard tests passing, aggregate floors
   materially improved, and accepted families transferring through STC/LTC plus
   an explicit endgame-start cohort. Archive the exact harness and defects so
