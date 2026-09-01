@@ -268,9 +268,9 @@ if (-not $LaunchOnly) {
     if ($wfCuteContent -notmatch 'RAROG_FIXED_OPTIONS_V1') {
         throw "weather-factory cannot apply fixed architecture options; run tools/setup_tools.ps1."
     }
-    if ($wfCuteContent -notmatch 'RAROG_ADJUDICATION_PATCH_V3') {
-        throw ("weather-factory is not carrying the strength-v2 adjudication alignment (resign 600/3 two-sided, " +
-            "matching sprt.ps1); run tools/setup_tools.ps1.")
+    if ($wfCuteContent -notmatch 'RAROG_ADJUDICATION_PATCH_V4') {
+        throw ("weather-factory is still passing adjudication; the tuner must run with none, like every other " +
+            "instrument here (RAR-M17). Run tools/setup_tools.ps1.")
     }
 
     Write-Host "Installing matplotlib (weather-factory dependency)..."
@@ -505,15 +505,17 @@ if ((Get-Content $launchSpsaPy -Raw) -notmatch 'RAROG_TRANSACTIONAL_STEP_V2') {
 if ($launchCuteContent -notmatch 'RAROG_FIXED_OPTIONS_V1') {
     throw "weather-factory cannot apply fixed architecture options; run tools/setup_tools.ps1."
 }
-# Adjudication alignment is required to START a tune, but NEVER blocks a RESUME.
-# A run that began under the old resign rule must finish under it: switching
+# The adjudication rule is required to START a tune, but NEVER blocks a RESUME.
+# A run that began under an older rule must finish under it: switching
 # game-termination rules mid-tune makes the early iterations incomparable with
 # the late ones, which is strictly worse than completing under the old rule.
-# So the check keys on whether this is a fresh run, not on -LaunchOnly.
+# So the check keys on whether this is a fresh run, not on -LaunchOnly. That
+# exemption is what makes the 2026-09-01 move to V4 (no adjudication) safe to
+# land while a tune could in principle be in flight.
 if (-not (Test-Path (Join-Path $wfRoot "tuner\state.json")) -and
-    $launchCuteContent -notmatch 'RAROG_ADJUDICATION_PATCH_V3') {
-    throw ("weather-factory is not carrying the strength-v2 adjudication alignment (resign 600/3 two-sided, " +
-        "matching sprt.ps1); run tools/setup_tools.ps1 before starting a new tune.")
+    $launchCuteContent -notmatch 'RAROG_ADJUDICATION_PATCH_V4') {
+    throw ("weather-factory is still passing adjudication; the tuner must run with none, like every other " +
+        "instrument here (RAR-M17). Run tools/setup_tools.ps1 before starting a new tune.")
 }
 
 $launchConfigPath = Join-Path $wfRoot "cutechess.json"

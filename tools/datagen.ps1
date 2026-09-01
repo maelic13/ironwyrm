@@ -11,7 +11,14 @@
     continuation cannot silently replay openings. The output filename records
     the engine suffix, node count, start, and game count.
 
-    Adjudication uses the named datagen-v1 profile: draw after move 40 with an
+    Adjudication is OFF by default (profile datagen-v2, 2026-09-01, RAR-M17):
+    games play to a rules result. The reason is sample depletion rather than
+    mislabeling -- RAR-M15 measured adjudication ending 52.7% of all endgames
+    before they are reached, which leaves an adjudicated corpus systematically
+    short of the positions the endgame families need to be fitted on.
+
+    Pass -Adjudicate for the legacy datagen-v1 profile, which `hce-v2` and
+    every manifest written before 2026-09-01 used: draw after move 40 with an
     8-move window at score < 10 cp; resign after 3 moves at score > 600 cp only
     when both engines agree. Identical to strength-v2 since 2026-08-18, but
     kept as a separate named profile: one wrong game result mislabels every
@@ -93,6 +100,8 @@ param(
     [string]$BookFormat  = "pgn",
     [string]$FastchessPath = "",
     [switch]$Append,
+    # Opt back into datagen-v1 adjudication. Off by default since 2026-09-01.
+    [switch]$Adjudicate,
     [switch]$SetupOnly
 )
 
@@ -210,7 +219,7 @@ try {
     }
 
     $fastchessInfo = Get-FastchessVersion -Path $FastchessPath
-    $profile = Get-DatagenProfile
+    $profile = if ($Adjudicate) { Get-DatagenProfile } else { Get-DatagenProfileV2 }
     # Hash before launch so the manifest identifies the inputs fastchess
     # actually opened, even if a file is changed after the run begins.
     $engineHash = Get-HarnessSha256 -Path $enginePath
@@ -228,7 +237,16 @@ try {
     }
     $bookHash = Get-HarnessSha256 -Path $Book
     $fastchessHash = Get-HarnessSha256 -Path $FastchessPath
-    $resignArgs = @(Get-DatagenResignArgs)
+    # Adjudication off by default since 2026-09-01 (RAR-M17). See
+    # Get-DatagenProfileV2 for why the label-quality case is stronger here than
+    # for a strength gate: the harm is sample depletion, not mislabeling.
+    $adjudicationArgs = if ($Adjudicate) {
+        @('-draw', "movenumber=$($profile.DrawMoveNumber)",
+          "movecount=$($profile.DrawMoveCount)", "score=$($profile.DrawScore)") +
+        @(Get-DatagenResignArgs)
+    } else {
+        @()
+    }
     $fastchessArgs = @(
         '-engine', "cmd=$enginePath", 'name=A', "option.Hash=$Hash", 'option.Threads=1',
         '-engine', "cmd=$enginePath", 'name=B', "option.Hash=$Hash", 'option.Threads=1',
@@ -236,9 +254,8 @@ try {
         '-openings', "file=$Book", "format=$BookFormat", 'order=random', "start=$Start",
         '-srand', "$Seed",
         '-rounds', "$Rounds", '-games', '1',
-        '-concurrency', "$Concurrency",
-        '-draw', "movenumber=$($profile.DrawMoveNumber)", "movecount=$($profile.DrawMoveCount)", "score=$($profile.DrawScore)"
-    ) + $resignArgs + @(
+        '-concurrency', "$Concurrency"
+    ) + $adjudicationArgs + @(
         '-maxmoves', '200',
         '-pgnout', "file=$OutputPgn", 'append=false',
         '-output', 'format=fastchess'
@@ -256,7 +273,12 @@ try {
     Write-Host "  Conc.   : $Concurrency"
     Write-Host "  Book    : $(Split-Path $Book -Leaf) ($BookFormat)"
     Write-Host "  Book SHA: $bookHash"
-    Write-Host "  Profile : $($profile.Name) (resign $($profile.ResignScore)/$($profile.ResignMoveCount), two-sided)"
+    $profileDetail = if ($Adjudicate) {
+        "resign $($profile.ResignScore)/$($profile.ResignMoveCount), two-sided"
+    } else {
+        "no adjudication; games play to a rules result"
+    }
+    Write-Host "  Profile : $($profile.Name) ($profileDetail)"
     Write-Host "  Runner  : $($fastchessInfo.Text)"
     Write-Host "  Output  : $OutputPgn"
     Write-Host "============================================================"

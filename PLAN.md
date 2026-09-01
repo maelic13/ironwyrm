@@ -54,9 +54,11 @@ gating. The following rules determine this roadmap's order.
    and priced at ~74 Elo as a cross-evaluator confounder. `-Adjudicate` opts
    back in and must be justified in the registration: wall time genuinely
    binding, and a change that provably cannot touch conversion or defensive
-   holding. Label generation uses only its prospectively named, immutable
-   profile; the audited corpus uses conservative `datagen-v1`. SPSA keeps its
-   own patched adjudication for now -- see PROCESS.
+   holding. **This now covers every instrument**: `sprt.ps1`, `gauntlet.ps1`,
+   `datagen.ps1` (profile `datagen-v2`) and the SPSA tuner. Label generation
+   still uses a prospectively named, immutable profile -- `datagen-v1` names
+   the adjudicated contract that `hce-v2` was built under and keeps meaning
+   that, so old manifests stay true.
 9. Two fully implemented clusters in the same track without an accepted gain
    stop implementation and force a new evidence audit.
 10. Engine, tooling and documentation changes remain separate commits.

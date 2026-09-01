@@ -63,6 +63,32 @@ function Get-DatagenProfile {
     }
 }
 
+# datagen-v2 (2026-09-01, RAR-M17): no adjudication at all. The label-quality
+# argument for dropping it in datagen is stronger than the verdict argument
+# that dropped it in sprt.ps1, and it is not about mislabeling -- resign at
+# 600/3 two-sided almost never calls a game wrong. It is SAMPLE DEPLETION.
+# RAR-M15 measured adjudication ending 52.7% of all endgames before they are
+# reached, so an adjudicated corpus is systematically short of exactly the
+# positions the endgame families need, and the phase-balanced extraction then
+# draws its endgame reservoir from a truncated distribution. Basilisk hit the
+# same shape from the other side: adjudicated data left its corpus without
+# mating material, which made king safety free to destroy mating behavior.
+#
+# datagen-v1 is retained by name, not edited, because `hce-v2` and every
+# manifest already written cite it and must keep meaning what they said.
+function Get-DatagenProfileV2 {
+    [pscustomobject]@{
+        Name               = "datagen-v2"
+        Adjudication       = $false
+        ResignMoveCount    = $null
+        ResignScore        = $null
+        ResignTwoSided     = $false
+        DrawMoveNumber     = $null
+        DrawMoveCount      = $null
+        DrawScore          = $null
+    }
+}
+
 function Get-DatagenResignArgs {
     $profile = Get-DatagenProfile
     $args = @(

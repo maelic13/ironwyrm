@@ -112,12 +112,23 @@ time genuinely binding, and a change that provably cannot touch conversion or
 defensive holding. A result produced with the flag is not comparable with one
 produced without it.
 
-**SPSA is a deliberate exception, not an oversight.** `setup_tools.ps1` still
-patches weather-factory's `cutechess.py` to the `strength-v2` resign profile.
-SPSA runs orders of magnitude more games than a gate, so its throughput
-economics differ, and changing it would silently move the SPSA instrument
-mid-programme. Revisit it if HCE or endgame SPSA is ever opened -- PLAN rule 6
-currently keeps both closed.
+**This covers every instrument, SPSA and datagen included.** `setup_tools.ps1`
+now strips both the resign and the draw line from weather-factory's
+`cutechess.py` (marker `RAROG_ADJUDICATION_PATCH_V4`) and `spsa.ps1` refuses
+to START a tune without it -- while still exempting a RESUME, because a run
+that began under an older rule must finish under it rather than becoming
+incomparable with itself halfway through.
+
+`datagen.ps1` defaults to the new `datagen-v2` profile: no adjudication at
+all. The case there is stronger than for a gate and is not about mislabeling
+-- resign at 600/3 two-sided almost never calls a game wrong. It is **sample
+depletion**: adjudication ends 52.7% of endgames before they are reached, so
+an adjudicated corpus is systematically short of exactly the positions the
+endgame families must be fitted on, and the phase-balanced extraction then
+draws its endgame reservoir from a truncated distribution. `datagen-v1` is
+retained by name and unedited, because `hce-v2` and every manifest already
+written cite it and must keep meaning what they said. Pass `-Adjudicate` to
+reproduce it.
 
 Historical note, superseded: an HCE A/B used to require a registered
 calibration proving adjudication safe for both
