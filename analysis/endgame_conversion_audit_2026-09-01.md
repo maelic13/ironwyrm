@@ -151,6 +151,47 @@ mate-in-one and a small set of near-corner routes. It tests direction and local
 mate recognition, not class-wide conversion. A recogniser being present,
 wired, and directionally correct therefore does not establish maturity.
 
+## Gradient audit (4.9a.4): the drive has no gradient, not a small one
+
+The claim above -- "gradients of only 8 cp per corner step and 4 cp per
+king-distance step ... below the 100-500 cp pruning margins" -- is true but
+frames the defect wrongly, and the wrong frame implies the wrong fix.
+
+Measured over **300 theoretically won positions per family**, replaying the
+exact source formula across every legal move:
+
+| Family | legal moves | distinct mop-up values | best-vs-second gap | **best move TIED** | term span |
+|---|---:|---:|---:|---:|---:|
+| KBN-K | 19 (median) | **3** | median **0 cp** | **94%** | 8 cp |
+| KR-K | — | 2 | median **0 cp** | **97%** | 4 cp |
+| KQ-K | — | 2 | median **0 cp** | **96%** | 4 cp |
+
+Depth-1 quiet futility margin, for scale: `fp_base + fp_coeff` = **346 cp**.
+
+Two things follow, and the second is the one that matters.
+
+**The whole term is smaller than the smallest pruning margin.** Its entire
+range across all legal moves is 4-8 cp against a 346 cp margin at depth 1.
+
+**But raising the magnitude would have fixed nothing.** In 94% of won KBNK
+positions the best move is *tied*, with a median best-vs-second gap of **0 cp**
+-- 19 legal moves collapse into 3 distinct scores, 7.6 moves per score. A term
+that cannot order its own moves cannot steer a search at any magnitude:
+40x zero is zero. The defect is Chebyshev distance, which is flat by
+construction -- every square in a ring around the target scores identically.
+
+The fix is therefore resolution first and magnitude second: combine Chebyshev
+with Manhattan so the rings break. On the same 300 positions that takes the
+tied-best rate from **94% to 11%** and distinct values from 3 to 6. The
+residual 11% is mostly bishop and knight moves that do not move either king,
+which a king-distance metric cannot order and arguably should not.
+
+Adding explicit minor-piece coordination terms was tried and **rejected on
+measurement**: with weights small enough not to dominate, different
+(king, knight, bishop) combinations alias to equal sums, and the tied-best rate
+went *up*, to 19-28%. Coordination may still be worth having for play quality,
+but it must be justified by conversion rate rather than by this proxy.
+
 ## Drawn-subset measurement
 
 The other Basilisk correction also reproduces. Frequency and whole-class mean
