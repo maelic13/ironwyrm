@@ -813,22 +813,26 @@ const LONG_DIAGONALS: Bitboard = Bitboard(
 /// supplies the resolution that breaks its rings; the pair is what takes the
 /// tied-best-move rate from 94% to 11% on won KBNK positions.
 ///
-/// Resolution and magnitude are BOTH needed, in that order, and the second was
-/// underestimated at first. Breaking ties is a precondition -- 40x a 0 cp gap
-/// is still 0 -- but once broken, size decides whether the difference survives
-/// the pruning thresholds. Swept on KBN-K conversion at 100 positions:
+/// Three things were needed and they were found in this order: RESOLUTION (a
+/// flat metric cannot order its own moves), MAGNITUDE (once ordered, the
+/// difference must survive the pruning thresholds), and RATIO (the corner pull
+/// must dominate the king pull, not merely exceed it). Swept on KBN-K
+/// conversion at 100 positions, 60k nodes:
 ///
-///   Chebyshev (old)  19.4%      KBB-K  78.0%
-///   these weights/2  32.7%      KBB-K  96.0%
-///   THESE            57.1%      KBB-K 100.0%
-///   these x1.5       54.1%      KBB-K 100.0%
+///   Chebyshev, 8/4 (accepted head)     19.4%    KBB-K  78.0%
+///   Chebyshev+Manhattan 16/8/10/5      32.7%    KBB-K  96.0%
+///   Chebyshev+Manhattan 32/16/20/10    57.1%    KBB-K 100.0%
+///   diagonal 60  (~1:1 vs king terms)  56.1%    KBB-K 100.0%
+///   diagonal 120 (~3:1)                83.7%    KBB-K 100.0%
+///   diagonal 240 (~6:1)                94.9%    KBB-K 100.0%
+///   diagonal 360 (THESE)               96.9%    KBB-K 100.0%
+///   diagonal 480                       96.9%    KBB-K 100.0%
+///   diagonal 720                       94.9%    KBB-K 100.0%
 ///
-/// The peak-then-decline matches Basilisk's own sweep shape (66.7% at their
-/// chosen weights, 63.3% above it), so this is a maximum rather than a floor.
-/// The term is gated on `|approximate| > 200` and on minor-piece mates, so its
-/// range only ever applies to an already-won bare-king ending.
-const MOPUP_CORNER_CHEB: i32 = 32;
-const MOPUP_CORNER_MAN: i32 = 16;
+/// 360 and 480 tie at the peak; the smaller is taken. The term is gated on
+/// `|approximate| > 200` and on minor-piece mates, so even at this size it only
+/// applies to an already-won bare-king ending and `bench 13` is unchanged.
+const MOPUP_DIAGONAL: i32 = 360;
 const MOPUP_KING_CHEB: i32 = 20;
 const MOPUP_KING_MAN: i32 = 10;
 const KBNK_LIGHT_CORNERS: [usize; 2] = [0, 63]; // a1, h8 — on LIGHT_SQUARES
@@ -2350,11 +2354,28 @@ impl Evaluator {
                 } else {
                     corners[1]
                 };
-                let corner_cheb = i32::from(KING_DISTANCE[lksq.index()][target]);
-                let corner_man = i32::from(MANHATTAN_DISTANCE[lksq.index()][target]);
                 let king_man = i32::from(MANHATTAN_DISTANCE[wksq.index()][lksq.index()]);
-                sign * (MOPUP_CORNER_CHEB * (7 - corner_cheb)
-                    + MOPUP_CORNER_MAN * (14 - corner_man)
+                // DIAGONAL pull. `|7 - rank - file|` is 0 on the a8-h1
+                // anti-diagonal and rises to 7 at the a1/h8 corners, so it is
+                // plateau-free by construction and describes the actual
+                // technique: walk the king DOWN A DIAGONAL rather than at a
+                // corner. Mirroring the file serves the dark corner pair with
+                // one formula. Structure and scale both come from the reference
+                // HCE, whose corner term outweighs its king term by roughly 24
+                // to 1 -- and that RATIO is the whole mechanism. An earlier
+                // sweep tried this shape at roughly 1:1 and measured it WORSE
+                // than the Chebyshev version it replaced (33-50% against
+                // 57.1%), which is why it was wrongly rejected once already.
+                let lfile = infra::to_i32(SQUARE_FILE[lksq.index()]);
+                let lrank = infra::to_i32(SQUARE_RANK[lksq.index()]);
+                let diag_file =
+                    if target == KBNK_LIGHT_CORNERS[0] || target == KBNK_LIGHT_CORNERS[1] {
+                        lfile
+                    } else {
+                        7 - lfile
+                    };
+                let diagonal = (7 - lrank - diag_file).abs();
+                sign * (MOPUP_DIAGONAL * diagonal
                     + MOPUP_KING_CHEB * (7 - king_distance)
                     + MOPUP_KING_MAN * (14 - king_man))
             };
