@@ -79,7 +79,7 @@ X is good/bad”. If conditions or artifacts are unknown, say so.
 |---|---|---|---|---|
 | RAR-M01 | Early fixed-`movetime` gates were compared with the deployed clock path at `3+0.03`. | Fixed movetime manufactured false negatives; SPRT/SPSA moved to a unified clock TC. | A test TC must exercise the same time-management semantics as deployment. Fixed movetime remains useful only for deterministic diagnostics. | legacy plan at `757e9a3^` |
 | RAR-M02 | Historical unpinned fastchess runs were audited under explicit physical-core placement on the Ryzen 9 5950X. | Real affinity/topology defects were found; the original +9.34 ± 8.20 null did not itself prove a fixed +9 Elo offset. | On this Windows host, small unpinned results may be biased. Re-audit a borderline old verdict only if it affects a current decision. | legacy plan at `757e9a3^` |
-| RAR-M03 | Identical-binary null testing after harness changes. | The old symmetric `[-3,+3]` setup had zero expected LLR drift at equality; current policy is fixed-N 30k at 1T, requiring the full 95% nElo CI inside ±5. | Equivalence needs a calibration design, not an ordinary gain SPRT. Repeat after runner, scheduler, topology or adjudication changes. | `PLAN.md` §2 |
+| RAR-M03 | Identical-binary null testing after harness changes. | The old symmetric `[-3,+3]` setup had zero expected LLR drift at equality; current policy is fixed-N 30k at 1T, requiring the full 95% nElo CI inside ±5. | Equivalence needs a calibration design, not an ordinary gain SPRT. Repeat after runner, scheduler or topology changes that can create arm asymmetry. Merely disabling both draw and resign adjudication symmetrically does not change placement or side assignment and does not consume another 30k null. | `PLAN.md` §2 |
 | RAR-M04 | Opening-book migration to paired UHO games. | Retained because it increased decisive-game signal and aligned SPRT, SPSA and gauntlet conditions. | Raw Elo from old and UHO protocols is not directly comparable without a bridge test. | legacy plan at `757e9a3^` |
 | RAR-M05 | SPSA schedule audit: iteration/game units, PowerShell `$A`/`$a` collision and integer perturbation resolution. | Several schedule defects were repaired; old runs annealed faster than intended. Accepted bakes remain accepted because independent SPRTs passed. | A plausible SPSA trajectory is not proof of a correct schedule. Assert every emitted derived constant and inspect coordinate observability over the full horizon. | legacy plan at `757e9a3^` |
 | RAR-M06 | Resignation threshold replay against 69,350 historical games. | `400/3` one-sided was too aggressive for Rarog's scale; `600/3` one-sided became `strength-v1`. | Adjudication scores are engine-scale dependent. Recalibrate after a material score-scale change such as NNUE integration. | legacy plan at `757e9a3^`; `PLAN.md` §2 |
@@ -535,7 +535,7 @@ make any historical parameter group exempt from the current audit and gate.
 | RAR-E03 | Stockfish-at-60k off-policy distillation with material scale pinned. | **Rejected, −17.11 Elo,** despite 4.9% lower holdout loss and 9/10 improved buckets. | For this well-fitted HCE/corpus, lower teacher-fit loss did not predict play. Basilisk's +6.75 opposite result reinforces that transfer is engine-state dependent. | legacy plan; `analysis/hce_analysis.md` |
 | RAR-E04 | 500k-game on-policy refresh yielding 2.18M unique positions; pure WDL beat blended labels on the shared holdout. | **Rejected, −1.28 ± 2.79 over 26.8k games;** pipeline and inert parameters retained. | Even on-policy lower validation loss did not improve this unchanged representation. Retry only after representation/policy changes and with a frozen external holdout. | legacy plan at `757e9a3^` |
 | RAR-E05 | Narrow L2-anchored refresh from a stronger label generator, moving 57/1,204 parameters mostly by 1 cp. | **Accepted, +11.56 ± 5.19 Elo;** frozen in 2.3.2 and throughout the completed Phase-4 search track. | A narrow anchored refresh differed materially from wholesale re-derivation. The current complete-surface programme may supersede it only through its qualified, baked and game-gated fit; the result is neither a frozen-group exemption nor evidence that an undisciplined general refit will work. | `PLAN.md` §3, §4; legacy plan |
-| RAR-E06 | Complete 1,218-slot current-HCE WDL refit, including traced linear coefficients and nonlinear king danger, confirmed on a fresh untouched self-play set. | **Registered; games not started.** Exact candidate improves fresh loss by 0.00078088 and costs 1.19% pooled PGO NPS. A no-adjudication identical-binary calibration must pass before the `[0,3]` nElo gate starts. | Offline WDL loss and broad cohort agreement license a game test but predict neither sign nor Elo. Only the registered H1 boundary promotes the full vector. | registration below; `analysis/endgame_conversion_audit_2026-09-01.md` |
+| RAR-E06 | Complete 1,218-slot current-HCE WDL refit, including traced linear coefficients and nonlinear king danger, confirmed on a fresh untouched self-play set. | **Registered; games not started.** Exact candidate improves fresh loss by 0.00078088 and costs 1.19% pooled PGO NPS. The `[0,3]` nElo no-adjudication gate is ready. | Offline WDL loss and broad cohort agreement license a game test but predict neither sign nor Elo. Only the registered H1 boundary promotes the full vector. | registration below; `analysis/endgame_conversion_audit_2026-09-01.md` |
 
 ### RAR-E06 — complete HCE refit gate (registered 2026-09-01)
 
@@ -568,12 +568,14 @@ make any historical parameter group exempt from the current audit and gate.
   `tools/nps_multibuild.ps1 -Cycles 10 -Repeats 3` with the three
   `hce-confirm`/`hce-refit-base` binaries and three `hce-refit-candidate`
   binaries. This is diagnostic; the clock gate prices the cost.
-- **Mandatory calibration.** The new `-NoAdjudication` path changes game
-  duration and pentanomial variance, so first run a 30,000-game
-  identical-candidate fixed calibration, tolerance ±5 nElo, seed
-  **174839201**. The full 95% nElo interval must lie within `[-5,+5]` and the
-  anomaly checks must pass. Failure/inconclusive stops the chained command;
-  do not start or resize the candidate gate.
+- **Calibration disposition.** No new null is required. Basilisk and Rarog use
+  the same fastchess binary, paired book, 1T `3+0.03`, concurrency 14 and exact
+  physical-core affinity instrument. `-NoAdjudication` only omits draw/resign
+  termination symmetrically; it changes game duration and outcome variance,
+  but neither engine placement nor colour pairing. The maintainer explicitly
+  accepted the shared-harness calibration on 2026-09-01 rather than spending
+  another 30,000 identical-engine games. The real gate's anomaly checks remain
+  mandatory.
 - **Registered gate.** Candidate versus baseline, `[0,3]` nElo, alpha=beta
   0.05, cap **80,000 games**, seed **918274631**, `3+0.03`, Threads 1,
   Hash 64 MB, concurrency 14 on physical CPUs
@@ -584,8 +586,8 @@ make any historical parameter group exempt from the current audit and gate.
   `8444E73965AE44E716CDE1BB546A7D7C8C9FC7A442A44194A0C71A3BFFA7DD0D`.
   RAR-M10 predicts about 47,200 games at true +4 nElo and about 78,700
   at true +3 or 0 under its strength-v2 calibration; applying it to no
-  adjudication is explicitly an extrapolation, so the preceding fixed null
-  calibration is mandatory and the cap is not extended after games begin.
+  adjudication is explicitly an extrapolation, so the cap is conservative and
+  is not extended after games begin.
 - **Stop/disposition.** Only fastchess H1 accepts the entire vector. H0, any
   anomaly, or reaching 80,000 without H1 rejects and restores the baseline
   HCE. No point estimate, LOS, offline loss or post-hoc interval substitutes

@@ -14,7 +14,7 @@
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes**; **250.77 +/- 13.12** at equal time; speed contribution **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut filter **+15.56 +/- 10.02 Elo**; root LMR relief **+2.33 +/- 1.85 Elo** |
 | Active experiment | **RAR-E06 registered; games not started** |
-| Current step | **4.8.3 — run the mandatory no-adjudication calibration, then the complete-HCE SPRT** |
+| Current step | **4.8.3 — run the registered complete-HCE SPRT** |
 | HCE | Open now; no historical family is frozen. Refit every identifiable linear and nonlinear surface before adding features |
 | Next release | Conditional 2.4.0 at 4.15; then NNUE |
 
@@ -46,7 +46,7 @@
 - [ ] **4.8** Refit and gate the complete existing HCE surface
     - [x] **4.8.1** Fresh 150k-game confirmation: 127,778 untouched test positions; exact candidate loss **0.12252203** vs source **0.12330291**, delta **-0.00078088**; all broad cohorts improved
     - [x] **4.8.2** Baked exact fit at **7,226,051 / 2.460**; pooled PGO NPS **-1.19%**; RAR-E06 registered at `[0,3]`, 80k, no adjudication
-    - [ ] **4.8.3 NEXT** Pass the registered identical-binary no-adjudication calibration, then run RAR-E06; accept only H1
+    - [ ] **4.8.3 NEXT** Run RAR-E06; accept only H1
 - [ ] **4.9** At most two residual-selected structural HCE clusters; skip if the complete refit leaves no supported gap
 - [ ] **4.10** Post-structure whole-HCE consolidation; satisfied by 4.8 if no structure changes
 
@@ -89,33 +89,20 @@ are already fixed and are not current work.
 
 ## What you run next
 
-Run this single PowerShell block from `D:\code\rarog`. It first performs the
-registered 30,000-game identical-binary no-adjudication calibration. Only a
-calibration whose full 95% nElo interval lies inside ±5 proceeds to the
-candidate's `[0,3]` nElo, 80,000-game gate. Only H1 accepts; H0 or the cap
+Run RAR-E06 from `D:\code\rarog`. It is a `[0,3]` nElo, 80,000-game
+no-adjudication gate. The shared Basilisk/Rarog harness calibration is
+sufficient; no duplicate null run is owed. Only H1 accepts; H0 or the cap
 rejects the vector.
 
 ```powershell
-& {
-    $ErrorActionPreference = "Stop"
-    & .\tools\sprt.ps1 `
-        -EngineA .\tools\test_engines\rarog-hce-refit-candidate-pext-pgo.exe `
-        -EngineB .\tools\test_engines\rarog-hce-refit-candidate-pext-pgo.exe `
-        -NameA HCERefitNullA -NameB HCERefitNullB `
-        -Mode calibrate -Games 30000 -CalibrationTolerance 5 `
-        -TC "3+0.03" -Threads 1 -Hash 64 -Concurrency 14 -TimeMargin 20 `
-        -Book .\tools\books\UHO_Lichess_4852_v1.epd `
-        -Seed 174839201 -NoAdjudication
-
-    & .\tools\sprt.ps1 `
-        -EngineA .\tools\test_engines\rarog-hce-refit-candidate-pext-pgo.exe `
-        -EngineB .\tools\test_engines\rarog-hce-refit-base-pext-pgo.exe `
-        -NameA HCERefit -NameB HCEBase `
-        -Elo0 0 -Elo1 3 -Alpha 0.05 -Beta 0.05 -MaxGames 80000 `
-        -TC "3+0.03" -Threads 1 -Hash 64 -Concurrency 14 -TimeMargin 20 `
-        -Book .\tools\books\UHO_Lichess_4852_v1.epd `
-        -Seed 918274631 -NoAdjudication
-}
+& .\tools\sprt.ps1 `
+    -EngineA .\tools\test_engines\rarog-hce-refit-candidate-pext-pgo.exe `
+    -EngineB .\tools\test_engines\rarog-hce-refit-base-pext-pgo.exe `
+    -NameA HCERefit -NameB HCEBase `
+    -Elo0 0 -Elo1 3 -Alpha 0.05 -Beta 0.05 -MaxGames 80000 `
+    -TC "3+0.03" -Threads 1 -Hash 64 -Concurrency 14 -TimeMargin 20 `
+    -Book .\tools\books\UHO_Lichess_4852_v1.epd `
+    -Seed 918274631 -NoAdjudication
 ```
 
 Search-authority measurement remains at 4.11 because an accepted HCE can

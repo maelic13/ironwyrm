@@ -13,8 +13,8 @@ in `EXPERIMENTS.md`; current status and commands belong in `GUIDE.md`.
 | Frozen search/HCE oracle | `hybrid` at `75d0d43`, Stockfish `9587eeeb` driving the exact Rarog 2.3.2 HCE |
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut move filtering **+15.56 +/- 10.02 Elo**; root LMR relief **+2.33 +/- 1.85 Elo** |
-| Active game job | **RAR-E06 registered; mandatory no-adjudication null calibration and HCE gate not started** |
-| Current step | **4.8.3 — run the registered RAR-E06 calibration and complete-HCE SPRT** |
+| Active game job | **RAR-E06 registered; HCE gate not started** |
+| Current step | **4.8.3 — run the registered RAR-E06 complete-HCE SPRT** |
 | HCE state | Open now. No historical family or parameter group is presumed fitted; all real coordinates must be re-audited and refitted where identifiable with the correct linear/nonlinear instrument |
 | Next release | Conditional **2.4.0** after 4.15; baseline NNUE then targets **2.5.0** |
 
@@ -348,10 +348,11 @@ declared bounds, passed debug/release/all-target verification, and reproduced
 **7,226,051 / 2.460** in clean PGO against **6,977,070 / 2.466**. Three-build
 pooled PGO measurement found a real **-1.19% NPS** cost (95% bootstrap CI
 **-2.29% to -0.48%**), which the clock gate must price. The prospective gate
-is `[0,3]` nElo, 80,000 games, no adjudication. Because that profile is new,
-an identical-binary 30,000-game ±5 nElo calibration must pass first; its
-failure prevents the gate from starting. Exact hashes, seeds and stop rules
-are frozen in `EXPERIMENTS.md` RAR-E06.
+is `[0,3]` nElo, 80,000 games, no adjudication. The common Basilisk/Rarog
+fastchess, book, TC, concurrency and affinity instrument already owns the null
+calibration; symmetrically omitting draw/resign termination changes duration
+and variance, not arm placement, so the maintainer waived a duplicate 30k
+null. Exact hashes, seed and stop rules are frozen in `EXPERIMENTS.md` RAR-E06.
 
 #### 4.8.3 Strength verdict
 
