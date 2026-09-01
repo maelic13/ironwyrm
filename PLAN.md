@@ -675,7 +675,26 @@ so nothing is lost when the two are compared.
   movement, accept or reject in context, and never require every position to
   keep the same PV or mate length.
 
-- **4.9a.4 Search-visible magnitude audit.** Measure every guidance gradient
+- **4.9a.4 Mate-drive cluster -- DONE, candidate unregistered.** RAR-E10.
+  KBN-K **19.4% -> 96.9%**, KBB-K **78.0% -> 100.0%**, `bench 13` unchanged at
+  7,226,051 / 2.460, floors ratcheted. Three axes were needed -- resolution,
+  magnitude and ratio -- and the ratio was nearly missed: the diagonal shape
+  was first tested at ~1:1 against the king terms, measured worse than the
+  Chebyshev version it replaced, and recorded as non-transferring. At ~6:1 it
+  is the entire gain. Sweeping a mechanism's shape while holding its
+  proportions fixed can refute it for the wrong reason.
+
+  KBN-K's residue is now 4 positions where the engine gives away the bishop or
+  knight and 1 stalemate, with zero fifty-move losses where there were 61. That
+  is a different defect and no drive weight addresses it.
+
+  **Gate deliberately not registered.** KBN-K occurs in 0.28% of real games and
+  KBB-K under 1.35%, so this is tier 3: a `[0,3]` gain gate cannot resolve it
+  at any budget, and the change is bench-identical so holding it costs nothing.
+  It belongs in a `[-1.75, 0.25]` no-regression bundle with the rest of the
+  guidance work, gated once when 4.9a's label-independent work closes.
+
+- **4.9a.4 (original scope) Search-visible magnitude audit.** Measure every guidance gradient
   against the pruning margins and resolution that consume it, starting with
   KBNK/KXK mate drive and passed-pawn king approach. This is where KBNK's
   actual defect lives -- the truth corpus shows its technique is within 60% of

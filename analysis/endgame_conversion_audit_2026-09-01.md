@@ -180,11 +180,36 @@ that cannot order its own moves cannot steer a search at any magnitude:
 40x zero is zero. The defect is Chebyshev distance, which is flat by
 construction -- every square in a ring around the target scores identically.
 
-The fix is therefore resolution first and magnitude second: combine Chebyshev
-with Manhattan so the rings break. On the same 300 positions that takes the
+The fix needed THREE things, found in that order, and the third was nearly
+missed. **Resolution**: combine Chebyshev with Manhattan so the rings break. On the same 300 positions that takes the
 tied-best rate from **94% to 11%** and distinct values from 3 to 6. The
 residual 11% is mostly bishop and knight moves that do not move either king,
 which a king-distance metric cannot order and arguably should not.
+
+**Magnitude**: once ordered, the difference must survive the pruning
+thresholds -- doubling the weights took KBN-K from 32.7% to 57.1%. **Ratio**:
+the corner pull must DOMINATE the king pull, not merely exceed it. Replacing
+the corner terms with a diagonal pull (`|7 - rank - file|`, 0 on the a8-h1
+anti-diagonal, 7 at the a1/h8 corners) at roughly 6:1 over the king terms gives
+**96.9%**, with zero fifty-move failures where there had been 61.
+
+| variant | KBN-K | KBB-K |
+|---|---:|---:|
+| Chebyshev 8/4 (accepted head) | 19.4% | 78.0% |
+| Chebyshev+Manhattan 16/8/10/5 | 32.7% | 96.0% |
+| Chebyshev+Manhattan 32/16/20/10 | 57.1% | 100.0% |
+| diagonal 60 (~1:1 vs king) | 56.1% | 100.0% |
+| diagonal 120 (~3:1) | 83.7% | 100.0% |
+| **diagonal 360 (shipped)** | **96.9%** | **100.0%** |
+| diagonal 720 | 94.9% | 100.0% |
+
+**The ratio was nearly missed, and the near-miss is the lesson.** The diagonal
+shape was tested first at roughly 1:1 against the king terms, measured *worse*
+than the Chebyshev version it would replace, and recorded as a mechanism that
+does not transfer. It transfers completely; the earlier sweep varied one axis
+of a two-axis question and drew a conclusion from it. Sweeping a mechanism's
+shape while holding its proportions fixed can refute the mechanism for the
+wrong reason.
 
 Adding explicit minor-piece coordination terms was tried and **rejected on
 measurement**: with weights small enough not to dominate, different

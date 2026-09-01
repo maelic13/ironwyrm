@@ -22,24 +22,15 @@ and `python tools/diag/check_guide.py` must pass.
 
 ## What you run next
 
-**4.9a.4** — the guidance-gradient cluster. KXK and KBNK share one defect: a
-corner-drive gradient of 8 cp per corner step and 4 cp per king-distance step,
-against the 100-500 cp pruning margins that swallow it. One change fixes both,
-and KXK's 37.34% occurrence makes the bundle gateable where KBNK's 0.28% never
-would be. Label-independent, so it does not wait on RAR-E08.
+**4.9a.5 — RAR-E08**, the label experiment: one game set, two label sets,
+rewriting only the <=6-man positions to Syzygy truth. It decides the contract
+every later fit uses, so it comes before regeneration and before the fitted
+families.
 
-Check a candidate against the endgame floors before proposing it:
-
-```powershell
-python tools/diag/endgame_truth.py --engine <candidate.exe> --syzygy D:\chess	ablebases\syzygy3456 --positions 100 --nodes 60000 --max-plies 100 --per-position --output toolsesults\<run>\endgame-truth.json
-python tools/diag/endgame_floors.py --report toolsesults\<run>\endgame-truth.json
-```
-
-Order note: 4.9a runs label-independent work first (4.9a.2-4.9a.4), then fixes
-the label contract (4.9a.5), then regenerates data (4.9a.6), and only then fits
-families. Labels depend on the engine's own conversion ability, so improving
-conversion **before** regenerating means each iteration starts from a better
-generator.
+4.9a.4's candidate is complete and unregistered. Per the tiering it is tier 3
+(KBN-K occurs in 0.28% of games), so it wants a `[-1.75, 0.25]` no-regression
+gate bundled with the rest of the guidance work, not a `[0,3]` gain gate. It
+is bench-identical, so nothing is lost by holding it.
 
 ## Phase 4 — bounded pre-NNUE search and HCE
 
@@ -79,8 +70,8 @@ generator.
     - [x] **4.9a.1** Syzygy truth corpus and per-move grading — `endgame_truth.py`
     - [x] **4.9a.2** Endgame-start cohort book — 788 verified positions, 21 families
     - [x] **4.9a.3** Regression contract: 64 frozen theory vetoes + ratcheting floors
-    - [ ] **4.9a.4** NEXT — guidance-gradient cluster: KXK + KBNK drive, passer approach
-    - [ ] **4.9a.5** RAR-E08: self-play vs TB-corrected labels; fixes the contract
+    - [x] **4.9a.4** Mate-drive cluster — KBN-K **19.4% -> 96.9%**, KBB-K 78% -> 100%
+    - [ ] **4.9a.5** NEXT — RAR-E08: self-play vs TB-corrected labels; fixes the contract
     - [ ] **4.9a.6** Regenerate the corpus with the improved engine and that contract
     - [ ] **4.9a.7** KRPKR scale [ref 13] — absent; conv **52%**, 10.04% of games
     - [ ] **4.9a.8** KRPKB scale [ref 14] — absent; conv 56%, 1.23%
@@ -100,7 +91,7 @@ generator.
     - [ ] **4.9a.22** KQKR value [ref 10] — absent; conv 83%; never occurs naturally
     - [ ] **4.9a.23** KQKRPs scale [ref 12] — absent; never occurs naturally
     - [ ] **4.9a.24** KRPPKRP scale [ref 15] — absent; never occurs naturally
-    - [ ] **4.9a.25** KXK value [ref 3] — gradient owned by 4.9a.4; verify and close
+    - [ ] **4.9a.25** KXK value [ref 3] — KQ-K 97%/KR-K 93%; reaching 100% is open here
     - [ ] **4.9a.26** KBNK value [ref 4] — gradient owned by 4.9a.4; verify and close
     - [ ] **4.9a.27** Dependency-complete family refits and gates, tiered by occurrence
     - [ ] **4.9a.28** Conversion, theory, STC/LTC and endgame-cohort closure

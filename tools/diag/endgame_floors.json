@@ -1,29 +1,29 @@
 {
   "families": {
     "KBB-K": {
-      "conversion_rate": 0.78,
-      "dtz_progress_rate": 0.4216110019646365,
-      "win_preserving_rate": 0.997257053291536
+      "conversion_rate": 1.0,
+      "dtz_progress_rate": 0.7451790633608816,
+      "win_preserving_rate": 1.0
     },
     "KBN-K": {
-      "conversion_rate": 0.19387755102040816,
-      "dtz_progress_rate": 0.29948557369715945,
-      "win_preserving_rate": 0.9962121212121212
+      "conversion_rate": 0.9693877551020408,
+      "dtz_progress_rate": 0.7210010145417654,
+      "win_preserving_rate": 0.9989864864864865
     },
     "KBP-K": {
-      "conversion_rate": 0.9574468085106383,
-      "dtz_progress_rate": 0.31959798994974875,
+      "conversion_rate": 0.9787234042553191,
+      "dtz_progress_rate": 0.43884892086330934,
       "win_preserving_rate": 1.0
     },
     "KBP-KB": {
       "conversion_rate": 0.6923076923076923,
-      "dtz_progress_rate": 0.3704918032786885,
+      "dtz_progress_rate": 0.42901234567901236,
       "win_preserving_rate": 0.9870550161812298
     },
     "KBP-KN": {
       "conversion_rate": 0.7894736842105263,
-      "dtz_progress_rate": 0.3547400611620795,
-      "win_preserving_rate": 0.990909090909091
+      "dtz_progress_rate": 0.3793103448275862,
+      "win_preserving_rate": 0.9914529914529915
     },
     "KNN-K": {
       "conversion_rate": 1.0,
