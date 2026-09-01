@@ -614,26 +614,36 @@ const BUCKET_NAMES: &[&str] = &[
 
 /// Flat-index ranges of the trace families used for the king-attack / passer /
 /// threat buckets, computed once from `EVAL_PARAM_NAMES`.
+///
+/// Each family is a LIST of ranges, not one min..max span. The span form was a
+/// silent instrument failure: `passed*` is 13 fields totalling 27 slots but
+/// they are **not contiguous**, so min..max covered [780,1211) = 431 slots, of
+/// which 404 belonged to 113 other fields -- every pawn-structure term, the
+/// threats, king safety, all of it. The bucket then fired whenever any of those
+/// foreign slots was nonzero, which is nearly always: it selected 127,777 of
+/// 127,778 positions and therefore measured nothing at all, while looking like
+/// a working cohort. `threat` (48 slots) and `king_safety_table` (40) happen to
+/// be contiguous, so those two buckets were correct -- which is exactly why the
+/// bug survived: two thirds of the instrument worked.
 struct FamilyRanges {
-    passer: (usize, usize),
-    threat: (usize, usize),
-    ksafe: (usize, usize),
+    passer: Vec<(usize, usize)>,
+    threat: Vec<(usize, usize)>,
+    ksafe: Vec<(usize, usize)>,
 }
 
 fn family_ranges() -> &'static FamilyRanges {
     static R: OnceLock<FamilyRanges> = OnceLock::new();
     R.get_or_init(|| {
-        let (mut passer, mut threat, mut ksafe) =
-            ((usize::MAX, 0), (usize::MAX, 0), (usize::MAX, 0));
+        let (mut passer, mut threat, mut ksafe) = (Vec::new(), Vec::new(), Vec::new());
         let mut off = 0usize;
         for &(name, len) in EVAL_PARAM_NAMES {
             let end = off + len;
             if name.starts_with("passed") {
-                passer = (passer.0.min(off), passer.1.max(end));
+                passer.push((off, end));
             } else if name.starts_with("threat") {
-                threat = (threat.0.min(off), threat.1.max(end));
+                threat.push((off, end));
             } else if name == "king_safety_table" {
-                ksafe = (ksafe.0.min(off), ksafe.1.max(end));
+                ksafe.push((off, end));
             }
             off = end;
         }
@@ -699,14 +709,18 @@ fn position_buckets(board: &Board, phase: i32, coeffs: &[f64]) -> u32 {
     }
 
     let fr = family_ranges();
-    let any_nz = |(s, e): (usize, usize)| s < e && coeffs[s..e].iter().any(|&c| c != 0.0);
-    if any_nz(fr.ksafe) {
+    let any_nz = |ranges: &[(usize, usize)]| {
+        ranges
+            .iter()
+            .any(|&(s, e)| s < e && coeffs[s..e].iter().any(|&c| c != 0.0))
+    };
+    if any_nz(&fr.ksafe) {
         m |= 1 << 7;
     }
-    if any_nz(fr.passer) {
+    if any_nz(&fr.passer) {
         m |= 1 << 8;
     }
-    if any_nz(fr.threat) {
+    if any_nz(&fr.threat) {
         m |= 1 << 9;
     }
     m
