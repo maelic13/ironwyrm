@@ -85,6 +85,13 @@
 .EXAMPLE
     # If preflight recommends 180k total, generate exactly the disjoint tail.
     .\tools\datagen.ps1 -Suffix p1025a-zero -Rounds 160000 -Start 20001 -Seed 10403
+    One truncation remains and is deliberate: `-maxmoves 200`, a runaway guard
+    that ends a game as a draw after 200 moves. It is not adjudication and it
+    does not deplete the corpus the way the draw rule did -- measured against
+    RAR-E06's 3,915 unadjudicated games, only 0.05% run past 400 plies, against
+    the 52.7% of endgames the draw rule was ending. Keep it: without a cap a
+    single pathological game can hold a concurrency slot indefinitely.
+
 #>
 param(
     [Parameter(Mandatory)][string]$Suffix,

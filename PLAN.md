@@ -630,16 +630,64 @@ measured conversion failure and an explicit reference inventory.
   STC/LTC plus an explicit endgame-start cohort. Archive the exact harness and
   defects so the NNUE path does not erase classical fallback knowledge.
 
-### 4.10 Post-structure whole-HCE consolidation
+### 4.10 Post-structure whole-HCE consolidation and corpus regeneration
 
-If 4.9 accepts any representation, rerun the complete 4.8 linear/nonlinear
-instrument schedule over the new model, retain the trajectory, open the frozen
-test once and gate the baked vector against the pre-consolidation accepted HCE.
-If 4.9 accepts no representation, close 4.10 as already satisfied by 4.8.
+If 4.9 or 4.9a accepts any representation, rerun the complete 4.8
+linear/nonlinear instrument schedule over the new model, retain the
+trajectory, open the frozen test once and gate the baked vector against the
+pre-consolidation accepted HCE.
 
-A second data cycle requires a prospective changed-data hypothesis supported by
-the first fit and game verdict. More games, labels or epochs are not a default
-response to a failed fit.
+**This step now also owns the question of whether to refit on new data**, and
+the answer is "after the endgame structure, and only on evidence". Two
+arguments were raised for refitting sooner and they are not equally good.
+
+**"The engine is stronger now, so its self-play labels are better" is not a
+licence.** That is the exact hypothesis Basilisk tested, and it failed: the
+same 348-parameter fit on its own 8k-node outcomes measured -2.85 +/- 3.11
+(H0), on its own 25k-node outcomes **+1.00 +/- 2.11** stopped unresolved with
+LTC +0.29 +/- 5.46, and on Stockfish outcomes **-7.30 +/- 4.76**, the worst
+arm of the set. Stronger labels revealed no hidden depth gain and a stronger
+external labeler was actively worse. Evaluation should model the value
+realizable by its own consuming search, so a better player is not
+automatically a better teacher. RAR-E06 changes the evaluator, not that
+conclusion.
+
+**The datagen change IS a prospective changed-data hypothesis**, and unlike
+the above it names a mechanism. `datagen-v2` removes adjudication, and RAR-M15
+measured adjudication ending **52.7% of all endgames before they are
+reached**. So `hce-v2` is not merely older, it is structurally short of the
+positions the endgame families need to be fitted on. That is a defect in the
+corpus, not a preference about freshness.
+
+It still gets screened before it gets compute. Regenerating 600,000 games and
+rerunning the full schedule is the most expensive thing in this phase, and
+"the data changed" is a hypothesis about *how much*, which is measurable for
+the price of a pilot.
+
+1. **4.10.1 Composition screen.** Generate a pilot under `datagen-v2` -- a
+   disjoint book segment, same node policy -- and compare its composition with
+   the matching `datagen-v1` archive segment: endgame-phase unique yield,
+   exact material-class coverage over the 20 reference classes, decisive/draw
+   ratio, natural mate count, and mean game length. Zero fitting. This is the
+   number that decides whether 4.10.3 happens.
+2. **4.10.2 Decision.** Refit if the screen shows a material composition shift
+   **or** 4.9/4.9a accepted structure that the current corpus cannot support.
+   Record the decision and its numbers either way; "no refit" is a result.
+3. **4.10.3 Regenerate and republish.** Only on a 4.10.2 go: generate the full
+   corpus under `datagen-v2`, re-audit provenance and content to the 4.7.1/
+   4.7.2 standard, and hash-freeze it as a new named corpus. Do not edit
+   `hce-v2` in place -- it is the corpus RAR-E06 was fitted on and must stay
+   reproducible.
+4. **4.10.4 Refit and gate.** Rerun the complete 4.8 schedule on the new
+   corpus and model, open the frozen test once, bake final PGO and run the
+   registered no-adjudication SPRT against the accepted head.
+
+If 4.9 and 4.9a accept no representation AND 4.10.1 finds no material
+composition shift, close 4.10 as satisfied by 4.8 and record both screens.
+
+A second data cycle requires a prospective changed-data hypothesis supported
+by the first fit and game verdict. More games, labels or epochs are not a
+default response to a failed fit.
 
 ### 4.11 Post-HCE qsearch, TT and evaluation authority
 

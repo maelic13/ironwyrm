@@ -97,7 +97,11 @@ registration. Pre-2026-09-01 results used the other instrument.
     - [ ] **4.9a.23** KPKP scale — absent
     - [ ] **4.9a.24** Family refits, gates stratified by occurrence — RAR-M15 tiers
     - [ ] **4.9a.25** Conversion, theory, STC/LTC and endgame-cohort closure
-- [ ] **4.10** Post-structure whole-HCE consolidation; satisfied by 4.8 if nothing changed
+- [ ] **4.10** Post-structure consolidation and corpus regeneration
+    - [ ] **4.10.1** Composition screen: `datagen-v2` pilot vs the `datagen-v1` archive
+    - [ ] **4.10.2** Decide; "the engine is stronger" is not a licence to refit
+    - [ ] **4.10.3** Regenerate and hash-freeze a new corpus; never edit `hce-v2`
+    - [ ] **4.10.4** Rerun the 4.8 schedule and gate against the accepted head
 - [ ] **4.11** Re-measure qsearch/TT/eval authority and branching on the accepted HCE
     - [ ] **4.11.1** Observation, baseline and live-wire proof; write the analysis
     - [ ] **4.11.2** One candidate and gate, only if 4.11.1 isolates a unique defect
