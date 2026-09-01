@@ -17,24 +17,28 @@ and `python tools/diag/check_guide.py` must pass.
 | Measured search deficit | **355.26 +/- 27.03 Elo** equal nodes; **250.77 +/- 13.12** equal time; speed worth **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51** |
 | Active experiment | none; RAR-E06 accepted 2026-09-01 |
-| Current step | **4.8a — post-refit redundancy removal** |
+| Current step | **4.9 / 4.9a — structural HCE residuals and endgame closure** |
 | Next release | Conditional 2.4.0 at 4.15; NNUE follows either way |
 
 ## What you run next
 
-RAR-E06 is accepted and `dev` carries it. Nothing is running. The next step is
-4.8a: list the coefficients the complete fit drove to zero or left without
-support, remove them as one cluster, and gate at `[-1.75, 0.25]`.
+4.8a closed without a gate (RAR-E07): there is no redundancy cluster to
+remove. Next is 4.9a.1 — and note the conversion audit's 94/86/76/15% was
+measured on the **pre-refit source**, so it must be re-baselined on the
+accepted HCE before any endgame work starts.
 
-Confirm the accepted head before building anything on it:
+```powershell
+python tools/diag/endgame_conversion.py --engine tools/test_engines/rarog-hce-refit-candidate-pext-pgo.exe --positions 100 --nodes 60000 --max-plies 100 --output tools/results/hce-accepted/endgame-conversion-accepted.json
+```
+
+Confirm the accepted head before building anything on it. It must print
+**7,226,051** nodes and **EBF 2.460**; a different number means different
+code, not a different machine.
 
 ```powershell
 cargo build --release
 'bench 13' | .\target\release\rarog.exe
 ```
-
-It must print **7,226,051** nodes and **EBF 2.460**. A different number means
-different code, not a different machine.
 
 ## Phase 4 — bounded pre-NNUE search and HCE
 
@@ -64,10 +68,10 @@ different code, not a different machine.
     - [x] **4.8.1** Fresh 150k-game confirmation: test loss **0.12252203** vs **0.12330291**
     - [x] **4.8.2** Baked at **7,226,051 / 2.460**, NPS **-1.19%**; RAR-E06 registered
     - [x] **4.8.3** RAR-E06 **ACCEPTED**: H1 at 3,914 games, **+22.04 +/- 7.51 Elo**, +32.05 nElo
-- [ ] **4.8a NEXT** Post-refit redundancy removal — Basilisk BAS-E25 method
-    - [ ] **4.8a.1** List coefficients the complete fit drove to zero or left unsupported
-    - [ ] **4.8a.2** Remove as one cluster and gate at loss-permitting `[-1.75, 0.25]`
-- [ ] **4.9** At most two residual-selected structural HCE clusters
+- [x] **4.8a** Post-refit redundancy removal — **closed, no gate owed**; RAR-E07
+    - [x] **4.8a.1** Inventory: 5 slots zeroed, 90 of 132 sparse slots structurally unreachable
+    - [x] **4.8a.2** No removal cluster exists; 3 inert 1-slot terms handed to 4.13.2
+- [ ] **4.9 NEXT** At most two residual-selected structural HCE clusters — RAR-E07 residuals
 - [ ] **4.9a** Endgame conversion and reference-function closure
     - [ ] **4.9a.1** Syzygy/no-adjudication truth corpus and reproducible baseline
     - [ ] **4.9a.2** Contextual regression contract: hard theory, aggregate floors
@@ -107,7 +111,7 @@ different code, not a different machine.
     - [ ] **4.12a.5** Registered gate; zero forfeits is a precondition, not the verdict
 - [ ] **4.13** Search cleanup and clean checkpoint
     - [ ] **4.13.1** Dead and unreachable mechanism inventory — Basilisk-derived
-    - [ ] **4.13.2** Remove unconsumed 4.6 and retained default-off alternatives
+    - [ ] **4.13.2** Remove unconsumed 4.6 alternatives, plus the 3 terms RAR-E07 left inert
     - [ ] **4.13.3** Re-verify tests, clippy, fingerprint, NPS and deficits
 - [ ] **4.14** Final HCE/search checkpoint, attribution and maturity closure
 - [ ] **4.15** STC/LTC/4T, NPS, portability, ISA and release gate

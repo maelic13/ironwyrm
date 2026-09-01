@@ -14,7 +14,7 @@ in `EXPERIMENTS.md`; current status and commands belong in `GUIDE.md`.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut move filtering **+15.56 +/- 10.02 Elo**; root LMR relief **+2.33 +/- 1.85 Elo**; complete HCE refit **+22.04 +/- 7.51 Elo** |
 | Active game job | none; RAR-E06 accepted 2026-09-01 at **+22.04 +/- 7.51 Elo**, +32.05 nElo |
-| Current step | **4.8a — post-refit redundancy removal on the accepted vector** |
+| Current step | **4.9 / 4.9a — structural residuals and endgame closure** |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) and endgame closure (4.9a) remain open |
 | Next release | Conditional **2.4.0** after 4.15; baseline NNUE then targets **2.5.0** |
 
@@ -422,20 +422,48 @@ resolves in a fraction of the budget, and the cap is not a schedule. And
 offline loss again predicted neither sign nor magnitude: -0.63% test loss
 preceded +32 nElo here, while Basilisk's -6.2% preceded -77.92 Elo.
 
-### 4.8a Post-refit redundancy removal — CONDITIONAL
+### 4.8a Post-refit redundancy removal — CLOSED, NO GATE OWED
 
-Open only if 4.8 accepts. Basilisk's BAS-E25 removed terms that a complete
-covariant fit had shown to be redundant and gained `+0.49 +/- 2.96` Elo as a
-simplification; the direction that transfers is the method, not the terms.
+Basilisk's BAS-E25 removed terms that a complete covariant fit had shown to be
+redundant and gained `+0.49 +/- 2.96` Elo as a simplification. The inventory
+ran on the accepted vector (RAR-E07) and **the analogue does not transfer**:
+BAS-E25 removed sixteen terms a previous Basilisk phase had *added*, and
+Rarog's existing surface has no equivalent accumulation.
 
-1. From the accepted fit, list coefficients driven to zero, coefficients whose
-   feature support is too small to identify, and families whose removal does
-   not move validation loss.
-2. Remove them as one cluster, not one term at a time.
-3. Gate at a loss-permitting `[-1.75, 0.25]` bracket, never `[0,3]`: this is a
-   simplification, and the acceptable outcome is "no worse, and smaller".
-4. Do not use NPS as the rationale. Basilisk predicted an NPS recovery from
-   term removal that did not appear, and one PGO pair read `-6.70%`.
+What the inventory found, from artifacts that already existed:
+
+- The fit drove only **5 of 1,218** slots to zero, and switched **17**
+  previously-zero slots back on. Three of the five are whole 1-slot terms:
+  `passed_candidate_mg`, `passed_freestop_eg_per_rank`,
+  `threat_safe_pawn_push_eg`.
+- Of the 132 slots under the sparse cut, **90 have zero activations and are
+  structurally unreachable** -- pawn PST ranks 1 and 8, passers and phalanxes
+  on those ranks, threats against a king, impossible imbalance combinations,
+  and the two king-material gauge zeros. **Unreachable is not redundant.** A
+  pawn PST carries 64 entries because the index space is 64; removing the 16
+  that cannot occur restructures an index space for no runtime gain.
+- 12 more are the nonlinear danger selectors and 12 are co-tuned safety-table
+  entries. The remaining 18 are rare but real, and **all 18 held** -- the
+  fitter froze every under-supported coefficient rather than fitting noise
+  into it.
+
+Two instrument confirmations came free. The 12 fields with zero linear
+activation are exactly `KS_DANGER_INPUTS`, independently reproducing 4.7.3's
+1,194 + 12 + 10 + 2 partition from a different artifact; and the freeze
+behaviour above is the sparse-cut contract working as specified.
+
+The three zeroed terms are now inert -- they multiply by zero -- so deleting
+their code is behavior-neutral and provable by the exact fingerprint, not a
+strength question. **4.13.2 owns that removal, not a gate.** One caveat for
+whoever does it: `eval.rs`'s `new_terms_activate_on_curated_positions` asserts
+that `passed_freestop_eg_per_rank` still *traces*, which it does even at a
+zero coefficient. Deleting the feature breaks that test, so the test's
+precondition changes in its own commit.
+
+Two residuals go to 4.9 as observations, not candidates: the fit priced
+candidate passers at zero in the middlegame and safe pawn pushes at zero in
+the endgame. Those are statements about the current representation, and 4.9
+decides whether a different representation expresses them better.
 
 ### 4.9 Structural HCE upgrades — CONDITIONAL
 
@@ -476,8 +504,11 @@ Rarog-specific facts put it here:
 Phase-4 step numbers 4.10-4.15 are cited in `EXPERIMENTS.md` and in commit
 messages, so this enters as `4.9a` rather than renumbering them.
 
-`analysis/endgame_conversion_audit_2026-09-01.md` is the baseline. At 60,000
-nodes/move over 100 fixed-seed random positions per family, Rarog converted
+`analysis/endgame_conversion_audit_2026-09-01.md` is the baseline, **and its
+numbers are stale**: they were measured on the pre-refit source engine, and
+4.8 has since changed the evaluator. Re-baseline on the accepted HCE before
+any endgame work starts; 4.9a.1 owns that. At 60,000 nodes/move over 100
+fixed-seed random positions per family, the **pre-refit** engine converted
 KQK/KRK/KBBK/KBNK at **94%/86%/76%/15%**, below Basilisk's latest
 **100%/100%/87%/54%**. KBNK has Basilisk's same Chebyshev plateaus,
 sub-pruning gradients and missing piece-coordination guidance. The complete

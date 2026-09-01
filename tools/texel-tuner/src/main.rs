@@ -1498,9 +1498,14 @@ const KS_DANGER_INPUTS: &[&str] = &[
     "ks_queen_relief",
 ];
 
-/// Active flat indices for the king-safety fit: the 11 danger-index inputs plus
+/// Active flat indices for the king-safety fit: the 12 danger-index inputs plus
 /// the 40-entry safety table they index into. The table is co-tuned because its
 /// shape only makes sense against the index distribution the inputs produce.
+///
+/// The count said 11 until 2026-09-01; `ks_shelter_storm` was folded into the
+/// danger index at Phase 6.2.1 and the comment was not updated. `KS_DANGER_INPUTS`
+/// is the authority and has 12 entries, which is what 4.7.3's 1,194 + 12 + 10 + 2
+/// partition of FLAT_SIZE counts.
 fn ks_active_indices() -> Vec<usize> {
     let mut a = Vec::new();
     for f in KS_DANGER_INPUTS {
