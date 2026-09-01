@@ -584,11 +584,38 @@ measured conversion failure and an explicit reference inventory.
   | 4.9a.22 | KBPKN scale | absent |
   | 4.9a.23 | KPKP scale | absent |
 
-- **4.9a.24 Dependency-complete family gates.** Group mutually dependent
-  value, scale, search-guidance and generic HCE terms; refit every materially
-  covariant current parameter. Do not freeze historical parameters and do not
-  SPRT each recognizer alone. Prospective semantic, support, loss, conversion
-  and NPS screens may reject; clean final-PGO no-adjudication SPRTs accept.
+- **4.9a.24 Dependency-complete family gates, stratified by occurrence.**
+  Group mutually dependent value, scale, search-guidance and generic HCE
+  terms; refit every materially covariant current parameter. Do not freeze
+  historical parameters and do not SPRT each recognizer alone.
+
+  RAR-M15 measured how often each reference family actually occurs, in the
+  3,915 games of RAR-E06 itself. **52.7% of games reach a <=6-piece position**,
+  so endgames are not rare in aggregate -- but the per-family spread is three
+  orders of magnitude, and **one gating policy cannot cover it**:
+
+  | Tier | Occurrence | Families | What can accept a change |
+  |---|---|---|---|
+  | 1 | >2% of games | KXK 37.34%, KRPKR 10.04%, KPsK 4.19%, KPK 2.84%, KRKP 2.40% | A normal no-adjudication STC SPRT can see these |
+  | 2 | 0.5-2% | KBPsK, KRPKB, KPKP, KQKP, KBPKB, KBPPKB, KRKN, KRKB | Endgame-start cohort SPRT; whole-match is impractical |
+  | 3 | <0.5% | KBNK 0.28%, KBPKN 0.28%, KNNKP 0.05%, KNNK 0.03% | Theory/Syzygy tests plus conversion and DTZ-progress floors; a whole-match SPRT is structurally incapable |
+  | 4 | never observed | KQKR, KQKRPs, KRPPKRP | As tier 3, and the cohort must be **constructed** -- these do not arise from UHO openings at all |
+
+  A tier-3 change confined to 0.28% of games cannot produce a detectable
+  whole-match Elo at any budget this project has; asking for one is asking for
+  a null result. Its acceptance evidence is correctness: exact theory against
+  Syzygy WDL, DTZ progress, and the conversion floors of 4.9a.2. The
+  whole-match SPRT's job for tiers 3 and 4 is only to show **no regression**,
+  so it takes a loss-permitting `[-1.75, 0.25]` bracket, never `[0,3]`.
+
+  **Adjudication is not merely discouraged here, it is disqualifying.** Under
+  simulated `strength-v2`, the same 3,915 games reach a <=6-piece position only
+  24.9% of the time instead of 52.7%: adjudication destroys **52.7% of all
+  endgames before they are reached**. It removes the measurement, not just
+  some games. Every endgame gate, cohort and datagen run is no-adjudication.
+
+  Prospective semantic, support, loss, conversion and NPS screens may reject a
+  candidate at any tier; clean final-PGO no-adjudication runs accept.
 - **4.9a.25 Closure.** All 20 reference functions are present or have a
   recorded theory-backed reason for exclusion, their hard tests pass,
   aggregate floors materially improve, and accepted families transfer through

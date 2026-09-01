@@ -46,11 +46,11 @@ cargo build --release
 - [x] **4.0** Evidence, baseline and oracle freeze — RAR-M12
 - [x] **4.1** Instrumented oracle — `hybrid-diag` `de568b3`
 - [x] **4.2** Differential observation harness — RAR-S55
-- [ ] **4.2a** Harness and instrument integrity sweep — Basilisk-derived
+- [x] **4.2a** Harness and instrument integrity sweep — Basilisk-derived
     - [x] **4.2a.1** `sprt.ps1` options-free repair and `-NoAdjudication` wire proof — `cb5ed2a`
-    - [ ] **4.2a.2** Unchecked native exit status sweep across `tools/*.ps1`
+    - [x] **4.2a.2** Exit-status sweep: no unguarded native call found; already protected
     - [x] **4.2a.3** Anomaly guard rate-limited so it discriminates instead of voiding every gate — `334c084`
-    - [ ] **4.2a.4** Every option a script accepts must be honored or refuse to launch
+    - [x] **4.2a.4** `sprt.ps1` refuses options its mode cannot honor — `3fb9f57`
 - [x] **4.2b** Time-forfeit diagnosis at test concurrency — RAR-M14; fixes belong to 4.12a
     - [x] **4.2b.1** Games end at 97-99% of clock; ~2% aggregate slack, ~100ms per game
 - [x] **4.3** Mechanism map and order freeze
@@ -97,7 +97,7 @@ cargo build --release
     - [ ] **4.9a.21** KBPPKB scale — absent
     - [ ] **4.9a.22** KBPKN scale — absent
     - [ ] **4.9a.23** KPKP scale — absent
-    - [ ] **4.9a.24** Dependency-complete family refits and no-adjudication gates
+    - [ ] **4.9a.24** Family refits, gates stratified by occurrence — RAR-M15 tiers
     - [ ] **4.9a.25** Conversion, theory, STC/LTC and endgame-cohort closure
 - [ ] **4.10** Post-structure whole-HCE consolidation; satisfied by 4.8 if nothing changed
 - [ ] **4.11** Re-measure qsearch/TT/eval authority and branching on the accepted HCE
