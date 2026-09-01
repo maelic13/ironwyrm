@@ -77,11 +77,32 @@ gating. The following rules determine this roadmap's order.
 
 ### Independence boundary
 
-Both engines are GPL, but Phase 4 deliberately builds an independent Rarog
-design. Problems, dependencies, populations and known failure modes may cross
-from a reference. Source, tuned constants, tables, identifiers and structural
-transcription may not. The frozen `hybrid` branches are diagnostic artifacts;
-they are never merged or shipped.
+Both engines are GPL, so copying was never a licence question -- Rarog is
+GPLv3 and so is Stockfish. The restriction was a design choice, and the
+maintainer relaxed it on 2026-09-01.
+
+**Constants may now be ported as SEED VALUES.** Problems, dependencies,
+populations, failure modes, mechanisms and their constants may all cross from a
+reference. What does not change is what makes a constant Rarog's: a ported
+value is a starting point, never a result.
+
+1. A ported constant is on the DONOR's score scale. RAR-E06 refit Rarog's
+   entire HCE, so its centipawn means something different; an imported eval
+   weight is in the wrong units by construction.
+2. So a ported constant rides the next fit. Port it, seed it, let 4.10's refit
+   cycle move it, and expect the optimum to sit somewhere else.
+3. Nothing about the gates changes. A ported mechanism still passes the same
+   conversion floors, theory vetoes and registered SPRT as one written here.
+   Provenance never substitutes for a verdict.
+
+Search margins are the exception worth naming: they are tuned against a
+specific eval scale and node distribution, and Rarog's were re-fitted after the
+HCE changed. Import search constants only as SPSA seeds, never as values.
+
+Structural transcription of whole subsystems is still avoided, for the ordinary
+engineering reason that a ported subsystem carries assumptions its new host may
+not satisfy -- not for licence. The frozen `hybrid` branches remain diagnostic
+artifacts; they are never merged or shipped.
 
 ## 3. Accepted foundation through 2.3.2 and RAR-S70
 
@@ -668,7 +689,8 @@ so nothing is lost when the two are compared.
   not 18: Stockfish 11 carried 22 and `KNPK`/`KNPKB` were later removed, while
   current NNUE Stockfish and Reckless no longer provide a comparable
   dispatcher, so the final pre-NNUE Stockfish table is the reference.
-  Reference code supplies cases and failure modes, never portable constants.
+  Reference code supplies cases, failure modes and seed constants (see the
+  independence boundary in section 2; a seed is not a result).
   Each item records whether coverage is full, partial or absent and adds its
   theory/Syzygy tests and conversion or drawn-subset cohort.
 
