@@ -22,22 +22,25 @@ and `python tools/diag/check_guide.py` must pass.
 
 ## What you run next
 
-4.9a.1's Syzygy truth corpus is built (`tools/results/hce-accepted/endgame-truth-accepted.json`).
-It reordered the endgame work: **KRP-KR converts 52% and occurs in 10.04% of
-games**, against KBN-K's 7% at 0.28%. KRP-KR is 36x more common, so a normal
-SPRT can see it and KBN-K's never will. 4.9a.16 leads.
+Work Phase 4 in the order the list is written. Two items sit before the
+endgame families and both are zero-game analysis:
 
-Rebuild the corpus for any candidate with the same seed, then compare
-per-position rather than differencing aggregates:
+- **4.9.1** post-fit residual/cohort analysis, which is 4.9's missing entry
+  evidence and may close 4.9 outright.
+- **4.9a.2** the no-adjudication endgame-start cohort, without which the
+  families that never arise from UHO openings cannot be measured at all.
+
+Then 4.9a.5 (KRPKR) leads the families: 52% conversion at 10.04% of games.
+
+Rebuild the truth corpus for any candidate with the same seed and compare
+per-position, never by differencing aggregates:
 
 ```powershell
-python tools/diag/endgame_truth.py --engine <candidate.exe> --syzygy D:\chess	ablebases\syzygy3456 --positions 100 --nodes 60000 --max-plies 100 --per-position --output tools
-esults\<run>\endgame-truth.json
+python tools/diag/endgame_truth.py --engine <candidate.exe> --syzygy D:\chess	ablebases\syzygy3456 --positions 100 --nodes 60000 --max-plies 100 --per-position --output toolsesults\<run>\endgame-truth.json
 ```
 
-Adjudication is now **off by default** in `sprt.ps1` and `gauntlet.ps1`
-(RAR-M17); pass `-Adjudicate` to opt back in and justify it in the
-registration. Pre-2026-09-01 results used the other instrument.
+Blocker to clear before 4.10: `beast_seed.epd`'s 750,000 openings are fully
+consumed, and an iterated refit loop needs a fresh untouched test per cycle.
 
 ## Phase 4 — bounded pre-NNUE search and HCE
 
@@ -70,38 +73,43 @@ registration. Pre-2026-09-01 results used the other instrument.
 - [x] **4.8a** Post-refit redundancy removal — **closed, no gate owed**; RAR-E07
     - [x] **4.8a.1** Inventory: 5 slots zeroed, 90 of 132 sparse slots structurally unreachable
     - [x] **4.8a.2** No removal cluster exists; 3 inert 1-slot terms handed to 4.13.2
-- [ ] **4.9** At most two residual-selected structural HCE clusters — RAR-E07 residuals
-- [ ] **4.9a** Endgame conversion and reference-function closure
-    - [ ] **4.9a.1** Syzygy truth corpus built; no-adjudication endgame-start games open
-    - [ ] **4.9a.2** Contextual regression contract: hard theory, aggregate floors
-    - [ ] **4.9a.3** Search-visible gradient audit vs pruning margins — KBNK/KXK first
-    - [ ] **4.9a.4** KNNK value/draw classification — present, unaudited
-    - [ ] **4.9a.5** KNNKP value — absent; discards the win on **19%** of moves
-    - [ ] **4.9a.6** KXK value, with KQK/KRK/KBBK floors — present, converts 94/91/86%
-    - [ ] **4.9a.7** KBNK value, corner/king/minor gradients — present, converts 7%; tier 3
-    - [ ] **4.9a.8** KPK exact bitbase, value and rule-50 handling — present, unaudited
-    - [ ] **4.9a.9** KRKP value — partial, conservative scale only
-    - [ ] **4.9a.10** KRKB value — absent
-    - [ ] **4.9a.11** KRKN value — absent
-    - [ ] **4.9a.12** KQKP fortress-aware value — partial, rook/bishop pawn only
-    - [ ] **4.9a.13** KQKR value — absent
-    - [ ] **4.9a.14** KBPsK scale, wrong-bishop rook pawn — partial, wrong-corner subset
-    - [ ] **4.9a.15** KQKRPs scale — absent
-    - [ ] **4.9a.16** NEXT — KRPKR scale — absent; converts **52%** at **10.04%** of games, tier 1
-    - [ ] **4.9a.17** KRPKB scale — absent; converts 56%
-    - [ ] **4.9a.18** KRPPKRP scale — absent
-    - [ ] **4.9a.19** KPsK scale — absent
-    - [ ] **4.9a.20** KBPKB scale — absent
-    - [ ] **4.9a.21** KBPPKB scale — absent
-    - [ ] **4.9a.22** KBPKN scale — absent
-    - [ ] **4.9a.23** KPKP scale — absent
-    - [ ] **4.9a.24** Family refits, gates stratified by occurrence — RAR-M15 tiers
-    - [ ] **4.9a.25** Conversion, theory, STC/LTC and endgame-cohort closure
-- [ ] **4.10** Post-structure consolidation and corpus regeneration
-    - [ ] **4.10.1** Composition screen: `datagen-v2` pilot vs the `datagen-v1` archive
-    - [ ] **4.10.2** Decide; "the engine is stronger" is not a licence to refit
-    - [ ] **4.10.3** Regenerate and hash-freeze a new corpus; never edit `hce-v2`
-    - [ ] **4.10.4** Rerun the 4.8 schedule and gate against the accepted head
+- [ ] **4.9** At most two residual-selected structural HCE clusters
+    - [ ] **4.9.1** Produce the entry evidence: post-fit residual/cohort analysis
+    - [ ] **4.9.2** Open at most two clusters, or close 4.9 with the reason recorded
+- [ ] **4.9a** Endgame conversion and reference-function closure — worked in order
+    - [x] **4.9a.1** Syzygy truth corpus and per-move grading — `endgame_truth.py`
+    - [ ] **4.9a.2** No-adjudication endgame-start cohort games
+    - [ ] **4.9a.3** Regression contract: hard theory vetoes, aggregate floors
+    - [ ] **4.9a.4** Gradient magnitude vs pruning margins — KBNK/KXK, passer approach
+    - [ ] **4.9a.5** KRPKR scale [ref 13] — absent; conv **52%**, 10.04% of games
+    - [ ] **4.9a.6** KXK value [ref 3] — present; KQK/KRK/KBBK 94/91/86%, 37.34%
+    - [ ] **4.9a.7** KRPKB scale [ref 14] — absent; conv 56%, 1.23%
+    - [ ] **4.9a.8** KPsK scale [ref 16] — absent; 4.19%
+    - [ ] **4.9a.9** KPK value [ref 5] — present bitbase; conv 95%, 2.84%
+    - [ ] **4.9a.10** KRKP value [ref 6] — partial; conv 93%, 2.40%
+    - [ ] **4.9a.11** KBPsK scale [ref 11] — partial wrong-corner subset; 1.92%
+    - [ ] **4.9a.12** KPKP scale [ref 20] — absent; 1.23%
+    - [ ] **4.9a.13** KQKP value [ref 9] — partial fortress; conv 96%, 1.17%
+    - [ ] **4.9a.14** KBPKB scale [ref 17] — absent; conv 81%, 0.89%
+    - [ ] **4.9a.15** KBPPKB scale [ref 18] — absent; conv 79%, 0.66%
+    - [ ] **4.9a.16** KRKN value [ref 8] — absent; conv 83%, win-preserving 0.973
+    - [ ] **4.9a.17** KRKB value [ref 7] — absent; conv 94%, win-preserving 0.963
+    - [ ] **4.9a.18** KBNK value [ref 4] — present; conv **7%**, 0.28%; see 4.9a.4
+    - [ ] **4.9a.19** KBPKN scale [ref 19] — absent; conv 79%, 0.28%
+    - [ ] **4.9a.20** KNNKP value [ref 2] — absent; discards the win on **19%** of moves
+    - [ ] **4.9a.21** KNNK value [ref 1] — present; drawn in 100/100, drawn-subset cohort
+    - [ ] **4.9a.22** KQKR value [ref 10] — absent; conv 83%; never occurred in games
+    - [ ] **4.9a.23** KQKRPs scale [ref 12] — absent; never occurred in games
+    - [ ] **4.9a.24** KRPPKRP scale [ref 15] — absent; never occurred in games
+    - [ ] **4.9a.25** Dependency-complete family refits and gates, tiered by occurrence
+    - [ ] **4.9a.26** Conversion, theory, STC/LTC and endgame-cohort closure
+- [ ] **4.10** Iterated no-adjudication refit cycles — at least one is owed
+    - [ ] **4.10.1** Opening supply: `beast_seed.epd`'s 750,000 are fully consumed
+    - [ ] **4.10.2** Composition screen against the `datagen-v1` archive (sizing)
+    - [ ] **4.10.3** Regenerate under `datagen-v2`; hash-freeze new, never edit `hce-v2`
+    - [ ] **4.10.4** Cycle 1: full 4.8 schedule, own frozen test, registered gate
+    - [ ] **4.10.5** Repeat while a cycle accepts; stop at the first that does not
+    - [ ] **4.10.6** Record the cycle table and close
 - [ ] **4.11** Re-measure qsearch/TT/eval authority and branching on the accepted HCE
     - [ ] **4.11.1** Observation, baseline and live-wire proof; write the analysis
     - [ ] **4.11.2** One candidate and gate, only if 4.11.1 isolates a unique defect

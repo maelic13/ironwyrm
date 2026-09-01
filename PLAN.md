@@ -476,7 +476,25 @@ decides whether a different representation expresses them better.
 ### 4.9 Structural HCE upgrades — CONDITIONAL
 
 Open at most two dependency-complete structural clusters, and only for residual
-signals the full existing-surface refit could not represent. King-safety and
+signals the full existing-surface refit could not represent.
+
+**4.9 has not been skipped; its entry evidence does not exist yet.** RAR-E07
+noted two observations -- the fit priced candidate passers at zero in the
+middlegame and safe pawn pushes at zero in the endgame -- but those are signals
+the surface DID represent, and represented as zero. That is the surface saying
+the term is worthless as currently defined, which is not the same as a residual
+it cannot express. The entry evidence this step requires is a post-fit
+residual and cohort analysis, and nobody has run one.
+
+1. **4.9.1 Entry evidence.** Analyse the accepted fit's residuals by phase,
+   material class, king safety and the drawn subsets from
+   `analysis/endgame_conversion_audit_2026-09-01.md`. Zero games. Identify
+   where the fitted surface is systematically wrong in a way no coefficient
+   value could fix.
+2. **4.9.2 Decision.** Open at most two clusters, or close 4.9 with the reason
+   recorded. Closing is a legitimate outcome and must be written down; leaving
+   it open with no decision is what produced the ordering confusion of
+   2026-09-01. King-safety and
 passer/threat conditionality remain hypotheses, not an order. Specialized
 endgame knowledge is not optional here: the direct conversion audit already
 established a defect, and 4.9a owns its systematic repair.
@@ -533,161 +551,160 @@ two structural clusters does not apply: that cap bounds speculative feature
 addition against residual signals, while this is defect repair against a
 measured conversion failure and an explicit reference inventory.
 
-- **4.9a.1 Truth corpus and baseline.** Extend the fixed-seed conversion
-  runner to all relevant winning families, add no-adjudication endgame-start
-  games, and use Syzygy WDL/DTZ as exact truth for every supported case.
-  Preserve position seeds, engine/hash/TT/node policy and outcome reasons.
-  Record theoretical verdict, static direction, conversion and game strength
-  separately; a played draw is statistical evidence, not theoretical truth.
-  The local set is complete 3-4-5-6-man Syzygy at
-  `D:\chess\tablebases\syzygy3456` (510 WDL + 510 DTZ), which the engine loads
-  and which covers every family in the reference inventory below.
-- **4.9a.2 Contextual regression contract.** Hard-veto legality, termination,
-  exact-theory and near-mate correctness regressions. Use reproducible random
-  family conversion rates, rule-50/stalemate/material-loss counts and
-  Syzygy-DTZ progress as aggregate floors. Long fixed-search trajectories are
-  diagnostic: investigate individual movement, but accept/reject changes in
-  context rather than requiring every position to retain the same PV or mate
-  length. Tighten floors after accepted improvements; never relax a
-  correctness test in the implementation commit.
-- **4.9a.3 Search-visible magnitude audit.** Measure every guidance gradient
-  against the pruning margins and resolution that consume it. Begin with
-  KBNK/KXK mate drive and passed-pawn king approach. Texel may correctly fit a
-  rare multi-ply guidance term toward zero for static WDL loss while search
-  requires an actionable magnitude; use systematic sweeps, conversion/DTZ
-  progress and games to resolve that conflict rather than freezing either the
-  old or fitted value.
-- **4.9a.4 through 4.9a.23 — reference-function closure.** Audit, implement
-  where absent, and test every specialized function in the final pre-NNUE
-  Stockfish HCE table. The reference set is **20, not 18**; Stockfish 11 had
-  two additional functions later removed, while current NNUE
-  Stockfish/Reckless no longer provide the comparable dispatcher. Reference
-  code supplies cases and failure modes, not portable constants or
-  implementation. Each item records whether current coverage is full, partial
-  or absent and adds theory/Syzygy tests plus its conversion or drawn-subset
-  cohort. Rarog's present meaningful coverage is **7/20**; generic
-  insufficient-material and OCB logic are retained useful extras, not
-  substitutes for this closure.
+The sub-steps are numbered in the order they are worked, so the GUIDE list can
+be run top to bottom. The bracketed `ref N` is the item's identity in the
+20-function reference inventory, which is a different ordering and is preserved
+so nothing is lost when the two are compared.
 
-  | Step | Function | Current coverage |
-  |---|---|---|
-  | 4.9a.4 | KNNK value/draw classification | present |
-  | 4.9a.5 | KNNKP value and conversion boundary | absent |
-  | 4.9a.6 | KXK value, KQK/KRK/KBBK conversion floors | present, 94/86/76% |
-  | 4.9a.7 | KBNK value, corner/king/minor gradients | present, converts 15% |
-  | 4.9a.8 | KPK exact bitbase, value, rule-50 | present |
-  | 4.9a.9 | KRKP value | partial, conservative scale |
-  | 4.9a.10 | KRKB value | absent |
-  | 4.9a.11 | KRKN value | absent |
-  | 4.9a.12 | KQKP fortress-aware value | partial, rook/bishop pawn |
-  | 4.9a.13 | KQKR value | absent |
-  | 4.9a.14 | KBPsK scale, wrong-bishop rook pawn | partial, wrong corner |
-  | 4.9a.15 | KQKRPs scale | absent |
-  | 4.9a.16 | KRPKR scale | absent |
-  | 4.9a.17 | KRPKB scale | absent |
-  | 4.9a.18 | KRPPKRP scale | absent |
-  | 4.9a.19 | KPsK scale | absent |
-  | 4.9a.20 | KBPKB scale | absent |
-  | 4.9a.21 | KBPPKB scale | absent |
-  | 4.9a.22 | KBPKN scale | absent |
-  | 4.9a.23 | KPKP scale | absent |
+- **4.9a.1 Truth corpus -- DONE.** `tools/diag/endgame_truth.py` grades every
+  strong-side move against Syzygy rather than every game against the clock,
+  which is what fixes the +/-3.5 pp resolution problem of a 100-game
+  conversion rate. Artifact
+  `tools/results/hce-accepted/endgame-truth-accepted.json`, per-position
+  records retained so a later run over the same seed is paired.
+- **4.9a.2 Endgame-start cohort.** No-adjudication games started from endgame
+  positions, so the families that never arise from UHO openings can be
+  measured at all, and the tier-2 families can be measured at a useful rate.
+  RAR-M15's tier 4 -- KQKR, KQKRPs, KRPPKRP -- occurred exactly zero times in
+  3,915 real games, so their cohort must be **constructed**, not sampled.
+- **4.9a.3 Regression contract.** Hard-veto legality, termination, exact-theory
+  and near-mate correctness regressions. Aggregate floors from reproducible
+  family conversion rates, rule-50/stalemate/material-loss counts, win-
+  preserving rate and Syzygy-DTZ progress. Long fixed-search trajectories are
+  diagnostic: investigate individual movement, accept or reject in context,
+  and never require every position to keep the same PV or mate length. Tighten
+  floors after an accepted improvement; never relax a correctness test in the
+  implementation commit.
+- **4.9a.4 Search-visible magnitude audit.** Measure every guidance gradient
+  against the pruning margins and resolution that consume it, starting with
+  KBNK/KXK mate drive and passed-pawn king approach. This is where KBNK's
+  actual defect lives -- the truth corpus shows its technique is within 60% of
+  optimal on what it converts (efficiency 1.58) while DTZ progress is 0.277,
+  the lowest of any pawnless family -- so the fix is gradient magnitude, not
+  another refit. Texel may correctly fit a rare multi-ply guidance term toward
+  zero for static WDL loss while search needs an actionable magnitude; resolve
+  that with sweeps, conversion and DTZ progress, not by freezing either value.
+- **4.9a.5 through 4.9a.24 -- the 20 reference functions, in working order.**
+  Audit, implement where absent, and test each one. The reference set is 20,
+  not 18: Stockfish 11 carried 22 and `KNPK`/`KNPKB` were later removed, while
+  current NNUE Stockfish and Reckless no longer provide a comparable
+  dispatcher, so the final pre-NNUE Stockfish table is the reference.
+  Reference code supplies cases and failure modes, never portable constants.
+  Each item records whether coverage is full, partial or absent and adds its
+  theory/Syzygy tests and conversion or drawn-subset cohort.
 
-- **4.9a.24 Dependency-complete family gates, stratified by occurrence.**
-  Group mutually dependent value, scale, search-guidance and generic HCE
-  terms; refit every materially covariant current parameter. Do not freeze
-  historical parameters and do not SPRT each recognizer alone.
+  **The order is by expected value -- occurrence times defect -- not by
+  drama.** RAR-M15 measured occurrence in real games and 4.9a.1 measured
+  conversion, and the product reorders the list sharply: KRPKR converts 52% at
+  10.04% of games while KBNK converts 7% at 0.28%, so KRPKR is worth about
+  36 times more attention despite being the less alarming number. KBNK
+  therefore sits at 4.9a.18, and its actual mechanism is addressed earlier and
+  separately at 4.9a.4.
 
-  RAR-M15 measured how often each reference family actually occurs, in the
-  3,915 games of RAR-E06 itself. **52.7% of games reach a <=6-piece position**,
-  so endgames are not rare in aggregate -- but the per-family spread is three
-  orders of magnitude, and **one gating policy cannot cover it**:
+  | Step | Function | ref | Coverage | Conversion | Occurrence |
+  |---|---|---:|---|---:|---:|
+  | 4.9a.5 | KRPKR | 13 | absent | 52% | 10.04% |
+  | 4.9a.6 | KXK | 3 | present | 94/91/86% | 37.34% |
+  | 4.9a.7 | KRPKB | 14 | absent | 56% | 1.23% |
+  | 4.9a.8 | KPsK | 16 | absent | - | 4.19% |
+  | 4.9a.9 | KPK | 5 | present bitbase | 95% | 2.84% |
+  | 4.9a.10 | KRKP | 6 | partial | 93% | 2.40% |
+  | 4.9a.11 | KBPsK | 11 | partial | - | 1.92% |
+  | 4.9a.12 | KPKP | 20 | absent | 94% | 1.23% |
+  | 4.9a.13 | KQKP | 9 | partial fortress | 96% | 1.17% |
+  | 4.9a.14 | KBPKB | 17 | absent | 81% | 0.89% |
+  | 4.9a.15 | KBPPKB | 18 | absent | 79% | 0.66% |
+  | 4.9a.16 | KRKN | 8 | absent | 83% | 0.61% |
+  | 4.9a.17 | KRKB | 7 | absent | 94% | 0.51% |
+  | 4.9a.18 | KBNK | 4 | present | **7%** | 0.28% |
+  | 4.9a.19 | KBPKN | 19 | absent | 79% | 0.28% |
+  | 4.9a.20 | KNNKP | 2 | absent | 15% | 0.05% |
+  | 4.9a.21 | KNNK | 1 | present | drawn 100/100 | 0.03% |
+  | 4.9a.22 | KQKR | 10 | absent | 83% | **0%** |
+  | 4.9a.23 | KQKRPs | 12 | absent | - | **0%** |
+  | 4.9a.24 | KRPPKRP | 15 | absent | - | **0%** |
 
-  | Tier | Occurrence | Families | What can accept a change |
-  |---|---|---|---|
-  | 1 | >2% of games | KXK 37.34%, KRPKR 10.04%, KPsK 4.19%, KPK 2.84%, KRKP 2.40% | A normal no-adjudication STC SPRT can see these |
-  | 2 | 0.5-2% | KBPsK, KRPKB, KPKP, KQKP, KBPKB, KBPPKB, KRKN, KRKB | Endgame-start cohort SPRT; whole-match is impractical |
-  | 3 | <0.5% | KBNK 0.28%, KBPKN 0.28%, KNNKP 0.05%, KNNK 0.03% | Theory/Syzygy tests plus conversion and DTZ-progress floors; a whole-match SPRT is structurally incapable |
-  | 4 | never observed | KQKR, KQKRPs, KRPPKRP | As tier 3, and the cohort must be **constructed** -- these do not arise from UHO openings at all |
+  Rarog's present meaningful coverage is 7/20. Generic insufficient-material
+  and OCB logic are retained useful extras, not substitutes for this closure.
+- **4.9a.25 Dependency-complete family gates, tiered by occurrence.** Group
+  mutually dependent value, scale, search-guidance and generic HCE terms and
+  refit every materially covariant current parameter. Do not freeze historical
+  parameters and do not SPRT each recognizer alone. RAR-M15's tiers decide what
+  can accept a change: tier 1 (>2% of games) takes a normal no-adjudication
+  STC SPRT; tier 2 (0.5-2%) an endgame-start cohort; tiers 3 and 4 accept on
+  theory, Syzygy WDL and DTZ progress with the whole-match run demoted to a
+  loss-permitting `[-1.75, 0.25]` no-regression check, because a change
+  confined to 0.28% of games cannot produce a detectable whole-match Elo at any
+  budget this project has.
+- **4.9a.26 Closure.** All 20 reference functions present or excluded with a
+  recorded theory-backed reason, their hard tests passing, aggregate floors
+  materially improved, and accepted families transferring through STC/LTC plus
+  an explicit endgame-start cohort. Archive the exact harness and defects so
+  the NNUE path does not erase classical fallback knowledge.
 
-  A tier-3 change confined to 0.28% of games cannot produce a detectable
-  whole-match Elo at any budget this project has; asking for one is asking for
-  a null result. Its acceptance evidence is correctness: exact theory against
-  Syzygy WDL, DTZ progress, and the conversion floors of 4.9a.2. The
-  whole-match SPRT's job for tiers 3 and 4 is only to show **no regression**,
-  so it takes a loss-permitting `[-1.75, 0.25]` bracket, never `[0,3]`.
+### 4.10 Iterated no-adjudication refit cycles
 
-  **Adjudication is not merely discouraged here, it is disqualifying.** Under
-  simulated `strength-v2`, the same 3,915 games reach a <=6-piece position only
-  24.9% of the time instead of 52.7%: adjudication destroys **52.7% of all
-  endgames before they are reached**. It removes the measurement, not just
-  some games. Every endgame gate, cohort and datagen run is no-adjudication.
+**At least one full refit cycle on no-adjudication data is owed
+unconditionally** (maintainer decision, 2026-09-01), and further cycles run
+while they keep paying. This is how the maintainer's previous Texel programme
+worked: fit, gate, refit, gate, each cycle returning less, stopping when the
+return fell away. The screen below still runs, because it sizes the corpus and
+because "no refit" was previously its possible output -- it no longer is.
 
-  Prospective semantic, support, loss, conversion and NPS screens may reject a
-  candidate at any tier; clean final-PGO no-adjudication runs accept.
-- **4.9a.25 Closure.** All 20 reference functions are present or have a
-  recorded theory-backed reason for exclusion, their hard tests pass,
-  aggregate floors materially improve, and accepted families transfer through
-  STC/LTC plus an explicit endgame-start cohort. Archive the exact harness and
-  defects so the NNUE path does not erase classical fallback knowledge.
+The evidence for doing it at all is much stronger than "the data is older".
+`hce-v2`'s own termination cross-check says **312,918 of 600,000 games (52.2%)
+ended by adjudication**, and of its 313,852 decisive games **307,424 (98.0%)
+were called by the resign rule while only 6,428 (2.0%) were played to mate.**
+The corpus taught the evaluator that winning means +600 cp held for three
+moves. It almost never showed it what converting looks like. That is the
+mechanism behind the drawn-subset overconfidence in the endgame audit, and it
+is not something a better optimizer on the same data can repair.
 
-### 4.10 Post-structure whole-HCE consolidation and corpus regeneration
+What it does **not** rest on is "the engine is stronger now, so its labels are
+better". Basilisk tested that three ways and it failed all three: the same fit
+on its own 8k-node outcomes measured -2.85 +/- 3.11, on its own 25k-node
+outcomes **+1.00 +/- 2.11** stopped unresolved with LTC +0.29 +/- 5.46, and on
+Stockfish outcomes **-7.30 +/- 4.76**, the worst arm. Evaluation models the
+value realizable by its own consuming search, so a stronger player is not
+automatically a better teacher. Expect the gain to come from *what the games
+show*, not from *who played them*.
 
-If 4.9 or 4.9a accepts any representation, rerun the complete 4.8
-linear/nonlinear instrument schedule over the new model, retain the
-trajectory, open the frozen test once and gate the baked vector against the
-pre-consolidation accepted HCE.
+1. **4.10.1 Opening supply -- do this first, it is a hard blocker.**
+   `beast_seed.epd` holds exactly 750,000 unique openings and **all of them are
+   consumed**: entries 1-600,000 built `hce-v2` and 600,001-750,000 built the
+   fresh confirmation set. There are none left. A loop needs more than one
+   corpus: every cycle needs its own untouched frozen test, because a test
+   opened twice is not a test. Size the requirement for the planned number of
+   cycles before generating anything, extend or replace the book, and re-audit
+   uniqueness to the 4.7.1 standard.
+2. **4.10.2 Composition screen.** Generate a pilot under `datagen-v2` on a
+   disjoint segment and compare composition with the matching `datagen-v1`
+   archive segment: endgame-phase unique yield, coverage over the 20 reference
+   classes, decisive/draw ratio, natural mate count, mean game length. Zero
+   fitting. This sizes the full run and predicts which families gain support;
+   it no longer decides whether the run happens.
+3. **4.10.3 Regenerate and republish.** Generate the full corpus under
+   `datagen-v2`, re-audit provenance and content to the 4.7.1/4.7.2 standard
+   and hash-freeze it under a new name. Never edit `hce-v2` in place: it is the
+   corpus RAR-E06 was fitted on and has to stay reproducible.
+4. **4.10.4 Cycle 1.** Rerun the complete 4.8 linear/nonlinear schedule on the
+   new corpus and the current model, open that cycle's own frozen test once,
+   bake final PGO and run the registered no-adjudication SPRT against the
+   accepted head.
+5. **4.10.5 Loop and stop rule, registered before cycle 1 begins.** Run another
+   cycle while the previous one **accepted its gate**; stop at the first cycle
+   that does not. The stop rule is the gate itself rather than an Elo
+   threshold, because an Elo threshold invented mid-loop is the same act as
+   moving bounds -- and because a `[0,3]` nElo gate already encodes "is this
+   still worth keeping". Each cycle needs its own untouched test and its own
+   registration. Cap the loop at a game budget decided before cycle 1.
+6. **4.10.6 Close.** Record the cycle table -- corpus, test, fit loss, gate
+   result, cumulative Elo -- so the diminishing return is visible rather than
+   remembered.
 
-**This step now also owns the question of whether to refit on new data**, and
-the answer is "after the endgame structure, and only on evidence". Two
-arguments were raised for refitting sooner and they are not equally good.
-
-**"The engine is stronger now, so its self-play labels are better" is not a
-licence.** That is the exact hypothesis Basilisk tested, and it failed: the
-same 348-parameter fit on its own 8k-node outcomes measured -2.85 +/- 3.11
-(H0), on its own 25k-node outcomes **+1.00 +/- 2.11** stopped unresolved with
-LTC +0.29 +/- 5.46, and on Stockfish outcomes **-7.30 +/- 4.76**, the worst
-arm of the set. Stronger labels revealed no hidden depth gain and a stronger
-external labeler was actively worse. Evaluation should model the value
-realizable by its own consuming search, so a better player is not
-automatically a better teacher. RAR-E06 changes the evaluator, not that
-conclusion.
-
-**The datagen change IS a prospective changed-data hypothesis**, and unlike
-the above it names a mechanism. `datagen-v2` removes adjudication, and RAR-M15
-measured adjudication ending **52.7% of all endgames before they are
-reached**. So `hce-v2` is not merely older, it is structurally short of the
-positions the endgame families need to be fitted on. That is a defect in the
-corpus, not a preference about freshness.
-
-It still gets screened before it gets compute. Regenerating 600,000 games and
-rerunning the full schedule is the most expensive thing in this phase, and
-"the data changed" is a hypothesis about *how much*, which is measurable for
-the price of a pilot.
-
-1. **4.10.1 Composition screen.** Generate a pilot under `datagen-v2` -- a
-   disjoint book segment, same node policy -- and compare its composition with
-   the matching `datagen-v1` archive segment: endgame-phase unique yield,
-   exact material-class coverage over the 20 reference classes, decisive/draw
-   ratio, natural mate count, and mean game length. Zero fitting. This is the
-   number that decides whether 4.10.3 happens.
-2. **4.10.2 Decision.** Refit if the screen shows a material composition shift
-   **or** 4.9/4.9a accepted structure that the current corpus cannot support.
-   Record the decision and its numbers either way; "no refit" is a result.
-3. **4.10.3 Regenerate and republish.** Only on a 4.10.2 go: generate the full
-   corpus under `datagen-v2`, re-audit provenance and content to the 4.7.1/
-   4.7.2 standard, and hash-freeze it as a new named corpus. Do not edit
-   `hce-v2` in place -- it is the corpus RAR-E06 was fitted on and must stay
-   reproducible.
-4. **4.10.4 Refit and gate.** Rerun the complete 4.8 schedule on the new
-   corpus and model, open the frozen test once, bake final PGO and run the
-   registered no-adjudication SPRT against the accepted head.
-
-If 4.9 and 4.9a accept no representation AND 4.10.1 finds no material
-composition shift, close 4.10 as satisfied by 4.8 and record both screens.
-
-A second data cycle requires a prospective changed-data hypothesis supported
-by the first fit and game verdict. More games, labels or epochs are not a
-default response to a failed fit.
+A second data cycle beyond this loop requires a prospective changed-data
+hypothesis supported by the preceding fit and game verdict. More games, labels
+or epochs are not a default response to a failed fit.
 
 ### 4.11 Post-HCE qsearch, TT and evaluation authority
 
