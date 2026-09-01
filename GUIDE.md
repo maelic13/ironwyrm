@@ -22,15 +22,19 @@ and `python tools/diag/check_guide.py` must pass.
 
 ## What you run next
 
-**4.9a.5 — RAR-E08**, the label experiment: one game set, two label sets,
-rewriting only the <=6-man positions to Syzygy truth. It decides the contract
-every later fit uses, so it comes before regeneration and before the fitted
-families.
+**RAR-E08 arm B's fit** (4.9a.5). Arm A is already the accepted head, so only
+arm B needs fitting — one full 4.8 schedule, an overnight job:
 
-4.9a.4's candidate is complete and unregistered. Per the tiering it is tier 3
-(KBN-K occurs in 0.28% of games), so it wants a `[-1.75, 0.25]` no-regression
-gate bundled with the rest of the guidance work, not a `[0,3]` gain gate. It
-is bench-identical, so nothing is lost by holding it.
+```powershell
+& .	ools	exelit_complete.ps1 -DatasetDir tools/texel/data/hce-v2-tb
+```
+
+Then a head-to-head SPRT of the two baked vectors. **Do not compare the arms by
+offline loss** — their targets differ, so a loss against different targets is
+not a comparison. Only the game result decides.
+
+While that runs, 4.9a.7 onward (the fitted families) can be implemented and
+measured on conversion; only their local refits wait on this outcome.
 
 ## Phase 4 — bounded pre-NNUE search and HCE
 
@@ -71,8 +75,8 @@ is bench-identical, so nothing is lost by holding it.
     - [x] **4.9a.2** Endgame-start cohort book — 788 verified positions, 21 families
     - [x] **4.9a.3** Regression contract: 64 frozen theory vetoes + ratcheting floors
     - [x] **4.9a.4** Mate-drive cluster — KBN-K **19.4% -> 96.9%**, KBB-K 78% -> 100%
-    - [ ] **4.9a.5** NEXT — RAR-E08: self-play vs TB-corrected labels; fixes the contract
-    - [ ] **4.9a.6** Regenerate the corpus with the improved engine and that contract
+    - [ ] **4.9a.5** RAR-E08 arm B built; **fit + SPRT are yours** — 30,480 labels changed
+    - [ ] **4.9a.6** Regenerate the corpus on the winning contract; never edit `hce-v2`
     - [ ] **4.9a.7** KRPKR scale [ref 13] — absent; conv **52%**, 10.04% of games
     - [ ] **4.9a.8** KRPKB scale [ref 14] — absent; conv 56%, 1.23%
     - [ ] **4.9a.9** KPsK scale [ref 16] — absent; 4.19%
