@@ -703,6 +703,38 @@ so nothing is lost when the two are compared.
   another refit. Texel may correctly fit a rare multi-ply guidance term toward
   zero for static WDL loss while search needs an actionable magnitude; resolve
   that with sweeps, conversion and DTZ progress, not by freezing either value.
+- **4.9a.5 RAR-E08: label contract -- ARM B BUILT; fit and gate are the
+  maintainer's.** `tools/texel/relabel_tb.py` produced
+  `tools/texel/data/hce-v2-tb`: rows, FENs, order and split membership
+  byte-identical to `hce-v2`, with only <=6-man labels replaced by the
+  tablebase verdict. Verified row-for-row -- 0 FEN mismatches, 0 length
+  differences, 0 labels changed above 6 men, 0 probe failures. **30,480 train
+  labels changed, 1.325% of all rows.**
+
+  Cursed wins are labelled draws: WDL 2 becomes 1.0, while 1, 0 and -1 all
+  become 0.5, because the label must be the result the game would really have
+  had. All three splits are relabelled; doing only train would leave the fit
+  validating against a different target than it optimises.
+
+  The transitions show the correction runs both ways, which is why neither arm
+  is obviously right: 8,826 train rows drew in self-play but are theoretically
+  won, 7,764 were won but are drawn, 7,353 drew but are lost, 6,337 were lost
+  but are drawn, and 200 are outright win/loss reversals.
+
+  Arm A needs no work -- `hce-v2`'s fit is the accepted head. Arm B needs one
+  full 4.8 schedule run and then a head-to-head SPRT. **The arms cannot be
+  compared by offline loss**: their targets differ, and a loss measured against
+  different targets is not a comparison.
+
+  `fit_complete.ps1`'s label guard correctly refused arm B and was extended to
+  a NAMED whitelist rather than widened, so an unrecognised contract still
+  throws.
+
+- **4.9a.6 Regenerate on the winning contract.** Only after RAR-E08 reports.
+  Hash-freeze under a new name; never edit `hce-v2` in place, since it is the
+  corpus the accepted head was fitted on and has to stay reproducible.
+
+
 - **4.9a.7 through 4.9a.26 -- the 20 reference functions, in working order.**
   Audit, implement where absent, and test each one. The reference set is 20,
   not 18: Stockfish 11 carried 22 and `KNPK`/`KNPKB` were later removed, while
