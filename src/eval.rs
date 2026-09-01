@@ -809,15 +809,28 @@ const LONG_DIAGONALS: Bitboard = Bitboard(
 // exactly the corner squares contained in `Bitboard::LIGHT_SQUARES` /
 // `DARK_SQUARES`. NB this engine's colour convention puts a1 in LIGHT_SQUARES
 // (see bitboard.rs), so the "light" corners are a1(0) and h8(63).
-/// Mate-drive weights (4.9a.4). Chebyshev carries the coarse pull and
-/// Manhattan supplies the resolution that breaks its rings; the pair is what
-/// takes the tied-best-move rate from 94% to 11% on won KBNK positions. The
-/// term is gated on `|approximate| > 200`, so its range (about 56..334 here,
-/// against 28..104 before) only ever applies to an already-won position.
-const MOPUP_CORNER_CHEB: i32 = 16;
-const MOPUP_CORNER_MAN: i32 = 8;
-const MOPUP_KING_CHEB: i32 = 10;
-const MOPUP_KING_MAN: i32 = 5;
+/// Mate-drive weights (4.9a.4). Chebyshev carries the coarse pull and Manhattan
+/// supplies the resolution that breaks its rings; the pair is what takes the
+/// tied-best-move rate from 94% to 11% on won KBNK positions.
+///
+/// Resolution and magnitude are BOTH needed, in that order, and the second was
+/// underestimated at first. Breaking ties is a precondition -- 40x a 0 cp gap
+/// is still 0 -- but once broken, size decides whether the difference survives
+/// the pruning thresholds. Swept on KBN-K conversion at 100 positions:
+///
+///   Chebyshev (old)  19.4%      KBB-K  78.0%
+///   these weights/2  32.7%      KBB-K  96.0%
+///   THESE            57.1%      KBB-K 100.0%
+///   these x1.5       54.1%      KBB-K 100.0%
+///
+/// The peak-then-decline matches Basilisk's own sweep shape (66.7% at their
+/// chosen weights, 63.3% above it), so this is a maximum rather than a floor.
+/// The term is gated on `|approximate| > 200` and on minor-piece mates, so its
+/// range only ever applies to an already-won bare-king ending.
+const MOPUP_CORNER_CHEB: i32 = 32;
+const MOPUP_CORNER_MAN: i32 = 16;
+const MOPUP_KING_CHEB: i32 = 20;
+const MOPUP_KING_MAN: i32 = 10;
 const KBNK_LIGHT_CORNERS: [usize; 2] = [0, 63]; // a1, h8 — on LIGHT_SQUARES
 const KBNK_DARK_CORNERS: [usize; 2] = [7, 56]; // h1, a8 — on DARK_SQUARES
 /// Endgame scale-factor framework (Phase 3.11). A scale of `SCALE_NORMAL`
