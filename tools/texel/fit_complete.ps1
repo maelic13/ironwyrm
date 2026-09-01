@@ -194,10 +194,26 @@ try {
         # actually written.
         $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
         $expectedHeldout = [Math]::Round($TargetTrain / 18.0)
+        # A NAMED WHITELIST, not a relaxation. The point of this check is that a
+        # corpus whose labels mean something different must not be fitted as if
+        # they meant self-play WDL -- and it correctly refused RAR-E08's arm B,
+        # whose <=6-man positions carry Syzygy verdicts instead of game results.
+        # The fix is to name the second contract, not to widen the test: an
+        # unrecognised label string still throws, and each accepted contract is
+        # written down here with what it means.
+        $acceptedLabels = @(
+            # hce-v2 and any corpus generated the same way.
+            "white-perspective self-play WDL",
+            # RAR-E08 arm B: identical rows, with every position of 6 men or
+            # fewer relabelled to its tablebase verdict, cursed wins counted as
+            # draws. See tools/texel/relabel_tb.py.
+            "white-perspective self-play WDL, <=6-man Syzygy corrected"
+        )
         if ($manifest.schema -ne "rarog-hce-wdl-v2" -or
-            $manifest.label -ne "white-perspective self-play WDL" -or
+            $acceptedLabels -notcontains $manifest.label -or
             [double]$manifest.train_blend -ne 1.0) {
-            throw "dataset does not have the required pure self-play-WDL contract"
+            throw ("dataset label contract '$($manifest.label)' is not one this " +
+                   "runner knows how to fit; accepted: $($acceptedLabels -join ' | ')")
         }
         if ([int]$manifest.rows.train -ne $TargetTrain) {
             throw "dataset train rows are $($manifest.rows.train), expected $TargetTrain"
