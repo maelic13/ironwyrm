@@ -22,14 +22,17 @@ and `python tools/diag/check_guide.py` must pass.
 
 ## What you run next
 
-**4.9a.3** — the regression contract: hard theory vetoes plus aggregate floors,
-using the tablebase as a test cohort and never as fit input.
+**4.9a.4** — the guidance-gradient cluster. KXK and KBNK share one defect: a
+corner-drive gradient of 8 cp per corner step and 4 cp per king-distance step,
+against the 100-500 cp pruning margins that swallow it. One change fixes both,
+and KXK's 37.34% occurrence makes the bundle gateable where KBNK's 0.28% never
+would be. Label-independent, so it does not wait on RAR-E08.
 
-The cohort book exists (`tools/books/endgame_cohort_v1.epd`, 788 positions,
-seed `0x4E9A2`). Regenerate it with:
+Check a candidate against the endgame floors before proposing it:
 
 ```powershell
-python tools/diag/endgame_book.py --syzygy D:\chess	ablebases\syzygy3456 --per-family 40 --out toolsooks\endgame_cohort_v1.epd
+python tools/diag/endgame_truth.py --engine <candidate.exe> --syzygy D:\chess	ablebases\syzygy3456 --positions 100 --nodes 60000 --max-plies 100 --per-position --output toolsesults\<run>\endgame-truth.json
+python tools/diag/endgame_floors.py --report toolsesults\<run>\endgame-truth.json
 ```
 
 Order note: 4.9a runs label-independent work first (4.9a.2-4.9a.4), then fixes
@@ -75,8 +78,8 @@ generator.
 - [ ] **4.9a** Endgame conversion and reference-function closure — worked in order
     - [x] **4.9a.1** Syzygy truth corpus and per-move grading — `endgame_truth.py`
     - [x] **4.9a.2** Endgame-start cohort book — 788 verified positions, 21 families
-    - [ ] **4.9a.3** NEXT — regression contract: TB truth as test cohort, not in the fit
-    - [ ] **4.9a.4** Guidance-gradient cluster: KXK + KBNK drive, passer approach
+    - [x] **4.9a.3** Regression contract: 64 frozen theory vetoes + ratcheting floors
+    - [ ] **4.9a.4** NEXT — guidance-gradient cluster: KXK + KBNK drive, passer approach
     - [ ] **4.9a.5** RAR-E08: self-play vs TB-corrected labels; fixes the contract
     - [ ] **4.9a.6** Regenerate the corpus with the improved engine and that contract
     - [ ] **4.9a.7** KRPKR scale [ref 13] — absent; conv **52%**, 10.04% of games

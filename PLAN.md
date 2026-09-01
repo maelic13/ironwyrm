@@ -624,14 +624,36 @@ so nothing is lost when the two are compared.
   **This book is an instrument, never training data.** Its positions are
   uniformly sampled rather than drawn from play, so feeding them to a fit would
   reweight the corpus toward a distribution the search never sees.
-- **4.9a.3 Regression contract.** Hard-veto legality, termination, exact-theory
-  and near-mate correctness regressions. Aggregate floors from reproducible
-  family conversion rates, rule-50/stalemate/material-loss counts, win-
-  preserving rate and Syzygy-DTZ progress. Long fixed-search trajectories are
-  diagnostic: investigate individual movement, accept or reject in context,
-  and never require every position to keep the same PV or mate length. Tighten
-  floors after an accepted improvement; never relax a correctness test in the
-  implementation commit.
+- **4.9a.3 Regression contract -- DONE.** The contract has two halves and they
+  need opposite treatment: correctness is absolute, statistics are not.
+
+  **Hard vetoes, in `tests/endgames.rs`.** Two EPD verdicts backed by 64
+  Syzygy-verified cases spanning 17 reference families, generated once with
+  seed `0xC0FFEE` and frozen into `tests/endgames.epd` so the suite needs no
+  tablebases at run time. `tb-win`: a position Syzygy calls won must not score
+  as drawn or lost -- sign only, because RAR-E09 measured a won KR-K at +426
+  cornered and +487 centralised, so a tighter floor would be a calibration test
+  that any refit trips. `tb-draw`: a drawn position must not be claimed as
+  forced mate -- the mate claim alone, because a drawn KR-KP really is a rook
+  up and demanding a small score there would assert a recognizer that does not
+  exist. These span families deliberately: the audit's complaint about the
+  older cases was that they test "direction and local mate recognition, not
+  class-wide conversion".
+
+  **Aggregate floors, in `tools/diag/endgame_floors.py`.** Conversion,
+  win-preserving and DTZ-progress rates per family, compared with a 5-point
+  noise allowance -- at n=100 the binomial standard error is about 3.5 points,
+  so a bare "must not decrease" test fails on resampling alone. Floors
+  **ratchet**: `--update` raises them from a passing run and refuses to lower
+  any floor without `--allow-lower`, which exists to make "never relax a
+  correctness test in the implementation commit" awkward to do by accident.
+  Baseline floors are committed at `tools/diag/endgame_floors.json`, taken from
+  the accepted HCE's truth corpus.
+
+  Long fixed-search trajectories stay diagnostic: investigate individual
+  movement, accept or reject in context, and never require every position to
+  keep the same PV or mate length.
+
 - **4.9a.4 Search-visible magnitude audit.** Measure every guidance gradient
   against the pruning margins and resolution that consume it, starting with
   KBNK/KXK mate drive and passed-pawn king approach. This is where KBNK's
