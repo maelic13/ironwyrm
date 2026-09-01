@@ -135,6 +135,50 @@ reads 7.1% here and 19% there; KBB-K reads 73% against 86%. At n=100 that is
 a change and must not be reported as one. Only two `endgame_truth.py` runs over
 the same seed are comparable, and those compare per-position.
 
+## Reference ceiling: Stockfish 18 on the identical corpus
+
+Same 100 positions per family, same 60,000 nodes, `SyzygyPath` cleared so it
+evaluates rather than reading the answer. Modern Stockfish has no endgame
+dispatcher, so this measures **what is achievable at this budget**, not a rival
+mechanism.
+
+| Family | SF 18 | Rarog now | gap | occurrence | gap x occ |
+|---|---:|---:|---:|---:|---:|
+| KR-K | 100.0% | 93.0% | 7.0 | 37.34%* | 261 |
+| KQ-K | 100.0% | 97.0% | 3.0 | 37.34%* | 112 |
+| KRP-KR | **47.9%** | 43.8% | 4.1 | 10.04% | 41 |
+| KR-KP | 100.0% | 83.7% | 16.3 | 2.40% | 39 |
+| KP-K | 100.0% | 95.0% | 5.0 | 2.84% | 14 |
+| KRP-KB | **58.3%** | 46.9% | 11.5 | 1.23% | 14 |
+| KR-KN | 100.0% | 88.9% | 11.1 | 0.61% | 7 |
+| KQ-KR | 100.0% | 75.0% | 25.0 | **0%** | 0 |
+| KPP-K | **75.5%** | 76.5% | **-1.0** | - | - |
+| KBP-K | **93.6%** | 97.9% | **-4.3** | - | - |
+
+\* KR-K and KQ-K share the KXK occurrence bucket.
+
+**Weighted totals: Stockfish 90.2%, Rarog 76.1% before 4.9a.4, 83.2% after.**
+
+### Stockfish does not convert everything, and that changes the targets
+
+It is below 100% in seven families and **worse than Rarog in three**. So the
+right yardstick is achievable conversion at the budget, not perfection:
+
+- **KRP-KR is nearly closed already.** It looked like a 52%-conversion failure
+  against an implicit 100%; Stockfish manages 47.9%. Rarog is 4.1 pp off the
+  reachable mark, not 56 pp off a perfect one. Its high occurrence still keeps
+  it near the top by expected value, but the available gain is small.
+- **The recoverable value is in the elementary mates.** KR-K at -7.0 pp and
+  KQ-K at -3.0 pp sit in the 37.34% KXK bucket, which dominates everything
+  else by expected value even at small per-position gaps.
+- **KQ-KR's -25.0 pp is the largest gap and worth nothing**, because RAR-M15
+  measured it occurring zero times in 3,915 real games.
+- Where Stockfish is itself limited -- KPP-K 75.5%, KRP-KR 47.9%, KRP-KB 58.3%,
+  KNN-KP 60.9% -- 60,000 nodes is the binding constraint, not evaluation.
+
+4.9a.4 closed **half the weighted gap** and took KBN-K from -80.6 pp behind
+Stockfish to **-3.1 pp**.
+
 ## Same defect as Basilisk, directly visible in source
 
 Rarog's KBNK drive uses Chebyshev corner distance and gradients of only **8 cp
