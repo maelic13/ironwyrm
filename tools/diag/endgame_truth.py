@@ -42,6 +42,7 @@ Example:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import random
 import statistics
@@ -306,9 +307,19 @@ def main() -> int:
         if options:
             engine.configure(options)
 
-        for family_index, name in enumerate(families):
+        for name in families:
             strong, weak = specs[name]
-            rng = random.Random(args.seed ^ ((family_index + 1) * 0x9E3779B1))
+            # Seed from the family NAME, never its index in the list. Index
+            # seeding meant `--families KBP-KB` produced a DIFFERENT position
+            # set than the same family inside the full run -- 34 theoretical
+            # wins instead of 47 -- so any subset run silently measured
+            # different positions and could not be compared with the baseline.
+            # Caught while trying to attribute a 6-point conversion difference.
+            rng = random.Random(
+                args.seed ^ int.from_bytes(
+                    hashlib.sha256(name.encode()).digest()[:8], "big"
+                )
+            )
             theory = Counter()
             outcomes = Counter()
             mate_plies = []

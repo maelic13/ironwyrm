@@ -1,94 +1,99 @@
 {
   "families": {
     "KBB-K": {
-      "conversion_rate": 0.73,
-      "dtz_progress_rate": 0.3996363636363636,
-      "win_preserving_rate": 0.9967379485320769
+      "conversion_rate": 0.78,
+      "dtz_progress_rate": 0.4216110019646365,
+      "win_preserving_rate": 0.997257053291536
     },
     "KBN-K": {
-      "conversion_rate": 0.0707070707070707,
-      "dtz_progress_rate": 0.2771184676244014,
-      "win_preserving_rate": 0.9968866749688667
+      "conversion_rate": 0.19387755102040816,
+      "dtz_progress_rate": 0.29948557369715945,
+      "win_preserving_rate": 0.9962121212121212
     },
     "KBP-K": {
-      "conversion_rate": 0.9166666666666666,
-      "dtz_progress_rate": 0.3012633624878523,
+      "conversion_rate": 0.9574468085106383,
+      "dtz_progress_rate": 0.31959798994974875,
       "win_preserving_rate": 1.0
     },
     "KBP-KB": {
-      "conversion_rate": 0.8085106382978723,
-      "dtz_progress_rate": 0.3667953667953668,
-      "win_preserving_rate": 1.0
+      "conversion_rate": 0.6923076923076923,
+      "dtz_progress_rate": 0.3704918032786885,
+      "win_preserving_rate": 0.9870550161812298
     },
     "KBP-KN": {
       "conversion_rate": 0.7894736842105263,
-      "dtz_progress_rate": 0.3687315634218289,
-      "win_preserving_rate": 0.9955947136563876
+      "dtz_progress_rate": 0.3547400611620795,
+      "win_preserving_rate": 0.990909090909091
+    },
+    "KNN-K": {
+      "conversion_rate": 1.0,
+      "dtz_progress_rate": 0.0,
+      "win_preserving_rate": 1.0
     },
     "KNN-KP": {
-      "conversion_rate": 0.15384615384615385,
-      "dtz_progress_rate": 0.42099447513812155,
-      "win_preserving_rate": 0.80875781948168
+      "conversion_rate": 0.17391304347826086,
+      "dtz_progress_rate": 0.43736263736263736,
+      "win_preserving_rate": 0.8800773694390716
     },
     "KP-K": {
-      "conversion_rate": 0.9459459459459459,
-      "dtz_progress_rate": 0.37776141384388806,
+      "conversion_rate": 0.95,
+      "dtz_progress_rate": 0.3839479392624729,
       "win_preserving_rate": 1.0
     },
     "KP-KP": {
-      "conversion_rate": 0.9375,
-      "dtz_progress_rate": 0.37392795883361923,
-      "win_preserving_rate": 1.0
+      "conversion_rate": 0.9473684210526315,
+      "dtz_progress_rate": 0.4172972972972973,
+      "win_preserving_rate": 0.9989200863930886
     },
     "KPP-K": {
-      "conversion_rate": 0.7755102040816326,
-      "dtz_progress_rate": 0.07804232804232804,
+      "conversion_rate": 0.7653061224489796,
+      "dtz_progress_rate": 0.0631704410011919,
       "win_preserving_rate": 1.0
     },
     "KQ-K": {
-      "conversion_rate": 0.95,
-      "dtz_progress_rate": 0.496137339055794,
-      "win_preserving_rate": 0.998286203941731
+      "conversion_rate": 0.97,
+      "dtz_progress_rate": 0.5096899224806202,
+      "win_preserving_rate": 0.9990319457889641
     },
     "KQ-KP": {
-      "conversion_rate": 0.9595959595959596,
-      "dtz_progress_rate": 0.47520661157024796,
-      "win_preserving_rate": 0.9991742361684558
+      "conversion_rate": 0.9693877551020408,
+      "dtz_progress_rate": 0.45689655172413796,
+      "win_preserving_rate": 0.9982788296041308
     },
     "KQ-KR": {
-      "conversion_rate": 0.83,
-      "dtz_progress_rate": 0.39078051335777897,
-      "win_preserving_rate": 0.9984309623430963
+      "conversion_rate": 0.75,
+      "dtz_progress_rate": 0.3649798477384684,
+      "win_preserving_rate": 0.9977658623771224
     },
     "KR-K": {
-      "conversion_rate": 0.96,
-      "dtz_progress_rate": 0.5706806282722513,
-      "win_preserving_rate": 0.9994186046511628
+      "conversion_rate": 0.93,
+      "dtz_progress_rate": 0.5723641126391618,
+      "win_preserving_rate": 1.0
     },
     "KR-KB": {
-      "conversion_rate": 0.9428571428571428,
-      "dtz_progress_rate": 0.6312056737588653,
-      "win_preserving_rate": 0.962457337883959
+      "conversion_rate": 0.8928571428571429,
+      "dtz_progress_rate": 0.5456,
+      "win_preserving_rate": 0.9484066767830045
     },
     "KR-KN": {
-      "conversion_rate": 0.8333333333333334,
-      "dtz_progress_rate": 0.49710982658959535,
-      "win_preserving_rate": 0.9725931131412509
+      "conversion_rate": 0.8888888888888888,
+      "dtz_progress_rate": 0.5619425173439049,
+      "win_preserving_rate": 0.9729990356798457
     },
     "KR-KP": {
-      "conversion_rate": 0.9318181818181818,
-      "dtz_progress_rate": 0.5229952830188679,
-      "win_preserving_rate": 0.998234255444379
+      "conversion_rate": 0.8367346938775511,
+      "dtz_progress_rate": 0.46430329886755295,
+      "win_preserving_rate": 0.9975442043222004
     },
     "KRP-KB": {
-      "conversion_rate": 0.5612244897959183,
-      "dtz_progress_rate": 0.15976331360946747,
-      "win_preserving_rate": 0.9991554054054054
+      "conversion_rate": 0.46875,
+      "dtz_progress_rate": 0.18739054290718038,
+      "win_preserving_rate": 0.9904596704249783
     },
     "KRP-KR": {
-      "conversion_rate": 0.5223880597014925,
-      "dtz_progress_rate": 0.3194444444444444,
-      "win_preserving_rate": 0.9863013698630136
+      "conversion_rate": 0.4383561643835616,
+      "dtz_progress_rate": 0.32451499118165783,
+      "win_preserving_rate": 0.9826689774696707
     }
   },
   "schema": "rarog-endgame-floors-v1"
