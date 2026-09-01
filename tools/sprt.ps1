@@ -166,6 +166,12 @@
     Windows scheduler / process IO jitter from being counted as a time
     forfeit. It does not change the engine's own time budget.
 
+.PARAMETER NoAdjudication
+    Omit fastchess draw and resign adjudication. Use this for HCE-changing and
+    cross-evaluator strength comparisons so an evaluator-scale change cannot
+    change which games the harness terminates. Normal same-evaluator search
+    gates retain the named strength-v2 profile.
+
 .PARAMETER Book
     Opening book, PGN or EPD (format auto-detected from the extension).
     Default tools\books\UHO_Lichess_4852_v1.epd. Balanced-book fallback:
@@ -212,6 +218,7 @@ param(
     [double]$MoveTime = 0,
     [int]$Nodes = 0,
     [int]$TimeMargin = 20,
+    [switch]$NoAdjudication,
     [string]$Book = "$PSScriptRoot\books\UHO_Lichess_4852_v1.epd",
     [string]$FastchessPath = "$PSScriptRoot\bin\fastchess.exe"
 )
@@ -233,6 +240,18 @@ $OptionsB = & $splitOpts $OptionsB
 
 $strengthProfile = Get-StrengthTestProfile
 $resignArgs = @(Get-StrengthTestResignArgs)
+if ($NoAdjudication) {
+    $adjudicationArgs = @()
+    $adjudicationLabel = "none (games play to a rules result)"
+} else {
+    $adjudicationArgs = @(
+        '-draw'
+        "movenumber=$($strengthProfile.DrawMoveNumber)"
+        "movecount=$($strengthProfile.DrawMoveCount)"
+        "score=$($strengthProfile.DrawScore)"
+    ) + $resignArgs
+    $adjudicationLabel = "$($strengthProfile.Name); resign=$($strengthProfile.ResignScore)/$($strengthProfile.ResignMoveCount)$(if ($strengthProfile.ResignTwoSided) { ' two-sided' } else { ' one-sided' }); draw=$($strengthProfile.DrawScore)/$($strengthProfile.DrawMoveCount) from move $($strengthProfile.DrawMoveNumber)"
+}
 
 # Per-engine Threads resolve to $Threads unless overridden. The game slot must
 # hold the larger of the two, so the core arithmetic uses max(ThreadsA,ThreadsB).
@@ -459,7 +478,7 @@ if (-not $repoSha) { $repoSha = "n/a" } else { $repoSha = $repoSha.Trim() }
     "test_design:     $(if ($Mode -eq 'calibrate') { "fixed ${Games}-game null; tolerance +/-${CalibrationTolerance} nElo" } elseif ($Mode -eq 'fixed') { "fixed ${Games}-game match; no stop rule" } else { "SPRT elo0=$Elo0 elo1=$Elo1 alpha=$Alpha beta=$Beta model=normalized" })"
     "game_budget:     $(if ($Mode -eq 'calibrate' -or $Mode -eq 'fixed') { $Games } else { $MaxGames })"
     "time_control:    $tcLabel; timemargin=${TimeMargin}ms"
-    "adjudication:    $($strengthProfile.Name); resign=$($strengthProfile.ResignScore)/$($strengthProfile.ResignMoveCount)$(if ($strengthProfile.ResignTwoSided) { ' two-sided' } else { ' one-sided' }); draw=$($strengthProfile.DrawScore)/$($strengthProfile.DrawMoveCount) from move $($strengthProfile.DrawMoveNumber)"
+    "adjudication:    $adjudicationLabel"
     "hash_mb:         $Hash"
     "threads:         $(if ($ThreadsA -eq $ThreadsB) { $ThreadsA } else { "$NameA=$ThreadsA $NameB=$ThreadsB" })"
     "concurrency:     $Concurrency"
@@ -494,7 +513,7 @@ if ($Mode -eq "calibrate") {
     Write-Host "  Budget: $MaxGames games; no H1 at the cap means park/revert"
 }
 Write-Host "  TC: $tcLabel   Margin: ${TimeMargin} ms   Hash: ${Hash} MB   Conc: $Concurrency"
-Write-Host "  Adjudication: resign $($strengthProfile.ResignScore)/$($strengthProfile.ResignMoveCount)$(if ($strengthProfile.ResignTwoSided) { ' two-sided' } else { ' one-sided' }); profile $($strengthProfile.Name)"
+Write-Host "  Adjudication: $adjudicationLabel"
 Write-Host "  CPUs: $AffinityCpus"
 Write-Host "  Book: $(Split-Path $Book -Leaf)"
 Write-Host "  Runner: $($fcInfo.Text)"
@@ -555,8 +574,7 @@ $dropNoise = {
     -srand $Seed `
     -ratinginterval 20 `
     @sprtArgs `
-    -draw "movenumber=$($strengthProfile.DrawMoveNumber)" "movecount=$($strengthProfile.DrawMoveCount)" "score=$($strengthProfile.DrawScore)" `
-    @resignArgs `
+    @adjudicationArgs `
     -pgnout "file=$pgnOut" `
     -output format=fastchess 2>&1 |    # console ticker format (not the PGN path)
     Tee-Object -FilePath $logOut |
