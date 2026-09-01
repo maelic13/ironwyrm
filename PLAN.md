@@ -8,14 +8,14 @@ in `EXPERIMENTS.md`; current status and commands belong in `GUIDE.md`.
 | Item | State |
 |---|---|
 | Released baseline | **2.3.2** at `f931722` on `master` |
-| Accepted search head | RAR-S70 on `dev`; `bench 13` = **6,977,070 nodes / EBF 2.466**, 1T |
+| Accepted head | RAR-E06 on `dev`; `bench 13` = **7,226,051 nodes / EBF 2.460**, 1T. RAR-S70's 6,977,070 / 2.466 is the previous head |
 | Integration state | The failed SearchCore rewrite is reverted by `c5e451d`; `d2c7788`/`e4f10ca` upgrade search evidence and `8d8f507` supplies the audited complete HCE fitting pipeline without changing accepted behavior |
 | Frozen search/HCE oracle | `hybrid` at `75d0d43`, Stockfish `9587eeeb` driving the exact Rarog 2.3.2 HCE |
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
-| Accepted Phase-4 gains | ProbCut move filtering **+15.56 +/- 10.02 Elo**; root LMR relief **+2.33 +/- 1.85 Elo** |
-| Active game job | **RAR-E06 registered; HCE gate not started** |
-| Current step | **4.8.3 — run the registered RAR-E06 complete-HCE SPRT** |
-| HCE state | Open now. No historical family or parameter group is presumed fitted; all real coordinates must be re-audited and refitted where identifiable with the correct linear/nonlinear instrument |
+| Accepted Phase-4 gains | ProbCut move filtering **+15.56 +/- 10.02 Elo**; root LMR relief **+2.33 +/- 1.85 Elo**; complete HCE refit **+22.04 +/- 7.51 Elo** |
+| Active game job | none; RAR-E06 accepted 2026-09-01 at **+22.04 +/- 7.51 Elo**, +32.05 nElo |
+| Current step | **4.8a — post-refit redundancy removal on the accepted vector** |
+| HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) and endgame closure (4.9a) remain open |
 | Next release | Conditional **2.4.0** after 4.15; baseline NNUE then targets **2.5.0** |
 
 Phase 4 remains a bounded pre-NNUE programme because the hybrid established
@@ -182,6 +182,39 @@ something other than what was asked.
 3. **4.2a.3.** Every parameter a script advertises must either be honored or
    refuse to launch. An option silently ignored in one mode is the same defect
    class as a dead `--rset`.
+
+### 4.2b Time-forfeit margin at test concurrency
+
+Zero games to diagnose; a gate for any fix. RAR-M14 measured the floor from
+RAR-E06's 3,915-game PGN and it is not what it looked like.
+
+Every game ends having spent **97-99% of its entire clock**. The five longest
+games in the match, 367 to 494 plies, sit at 97.5-98.7% and do not forfeit.
+The three that did forfeit were 90, 98 and 121 plies -- **shorter** than the
+131-ply median -- and one flagged while its own reported move times summed to
+only 94.5% of budget. So this is neither clock mismanagement nor long-game
+exhaustion. It is the gap between engine-reported thinking time and
+harness-measured wall time, set against an aggregate slack of about 2% of a
+~4.9s budget: roughly 100ms for a whole game. One descheduling event of that
+size, with all 14 physical cores running engines while fastchess contends for
+the same silicon, is a forfeit.
+
+`Move Overhead` defaults to 10ms. `time_manager.rs` reserves `2*overhead` only
+below ~520ms of clock, and its 30ms `smp_reserve` is gated on `threads > 1`,
+so a single-threaded engine under a saturated runner has no equivalent
+protection. The comment recording `0/3,460 at Threads=1` no longer holds at
+this concurrency.
+
+1. **4.2b.1 — done.** Diagnosis above.
+2. **4.2b.2.** Sweep `Move Overhead` on a null pair against forfeit rate. The
+   background rate is ~0.08-0.17%, so distinguishing values needs tens of
+   thousands of games; size it before running.
+3. **4.2b.3.** Any change to a time-management default alters playing
+   behavior and takes its own registered gate. Do not raise the default on the
+   strength of a forfeit count alone. Note that these three forfeits cost
+   almost nothing in Elo -- all were already lost by 5 to 9 pawns -- so the
+   case for changing deployed behavior rests on tournament robustness, not on
+   recovering measured strength.
 
 ### HCE maturity conclusion
 
@@ -377,12 +410,24 @@ calibration; symmetrically omitting draw/resign termination changes duration
 and variance, not arm placement, so the maintainer waived a duplicate 30k
 null. Exact hashes, seed and stop rules are frozen in `EXPERIMENTS.md` RAR-E06.
 
-#### 4.8.3 Strength verdict
+#### 4.8.3 Strength verdict — ACCEPTED
 
-Run the registered gate and accept or restore the entire fitted vector before
-4.9. RAR-E03/RAR-E04 and Basilisk establish why this is mandatory: large loss
-improvements can be neutral or catastrophically wrong, while Basilisk's
+RAR-E03/RAR-E04 and Basilisk established why the gate was mandatory: large
+loss improvements can be neutral or catastrophically wrong, while Basilisk's
 accepted +9.52 Elo came from only -0.43% holdout loss.
+
+The gate resolved on 2026-09-01. H1 at **3,914 games**: **+22.04 +/- 7.51
+Elo, +32.05 +/- 10.88 nElo**, LOS 100.00%, LLR 2.95, 44 minutes of wall time.
+The complete vector is accepted whole and the accepted fingerprint moves to
+**7,226,051 / 2.460**. Full record, artifact hashes and the anomaly
+disposition are in `EXPERIMENTS.md` RAR-E06.
+
+Two things are worth carrying forward. The effect was eight times the
+bracket's upper bound, so RAR-M10's 47,200-game sizing overshot by an order of
+magnitude -- sizing from an expected value is right, but a large true effect
+resolves in a fraction of the budget, and the cap is not a schedule. And
+offline loss again predicted neither sign nor magnitude: -0.63% test loss
+preceded +32 nElo here, while Basilisk's -6.2% preceded -77.92 Elo.
 
 ### 4.8a Post-refit redundancy removal — CONDITIONAL
 

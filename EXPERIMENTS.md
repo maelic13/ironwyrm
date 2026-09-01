@@ -90,6 +90,7 @@ X is good/bad”. If conditions or artifacts are unknown, say so.
 | RAR-M09 | Phase-4.1 normal versus diagnostic release builds on the Ryzen 9 5950X, non-PGO, `bench 13` plus four depth-10 positions. | **Retained infrastructure:** both builds matched 6,502,902 nodes / EBF 2.449; the four probes matched nodes, scores, PVs and best/ponder moves. Paired best-of-three NPS was 2,585,646 versus 2,301,097 (11.0% diagnostic cost including legacy exact atomics). | Under these conditions, the sampled observers did not alter the tree and their offline cost was bounded. This does not prove equivalence on every ISA/thread count or make counter movement an Elo proxy; repeat the gate after diagnostic control-flow changes. | `src/diag.rs`; `tools/diag_search_quality.ps1`; Plan 4.1 |
 | RAR-M12 | **Phase-4 step 4.0 — baseline and oracle freeze**, 2026-08-12 on the Ryzen 9 5950X. Reproduced the 2.3.2 baseline from `dev` at `5294e2c`, first confirming its code tree is byte-identical to `master` `f931722` (the diff is documentation only, so the build is the released revision). Toolchain `rustc 1.97.1 (8bab26f4f 2026-07-14)`, matching the `rust-toolchain.toml` pin. | **Closed; baseline accepted.** `cargo fmt --check` clean; all-feature workspace clippy clean at `-D warnings`. Tests **258 passed / 0 failed** in debug and **259 / 0** in release, 23 suites each — the one-test difference is deliberate and documented, `random_position_garbage_never_crashes_or_hangs` being `#[cfg(not(debug_assertions))]` because a debug engine spends ~5 s per process start and the property under test belongs to the shipped binary. Release `bench 13` = **6,519,711 nodes / EBF 2.449**, median 149,097, top-position share 6.8% (440,767), 2,939,454 nps. `--features tune` advertises **101** options: all ten options removed in 2.3.2 are absent, and the sampled later-owned inert options (`CorrSkipWhenTtRefined`, `SelectivityProspectiveDepth`, `SingularTtDepthMargin`, `RootConfPoolInstability`, `SmpIterationSkip`) are present. PGO PEXT asset `rarog-v2.3.2-windows-pext-pgo.exe` reproduces the identical fingerprint, SHA-256 `389E234ECCB725D81BEBB4030D4AF17ED181D130F0803E9948B5437E05046E28`; `verify-isa --arch pext` holds (pext 303, avx 6247, zero sse3/ssse3/sse4.1/sse4.2, tzcnt 344 permitted as `rep bsf`). Oracle `hybrid` at `75d0d43` re-verified: both frozen binaries hash byte-exact to the values recorded under the search-oracle section. | This is the revision every Phase-4 candidate gates against; do not re-derive it per cluster. Two conditions are recorded rather than assumed: the profile-dependent test count is a documented `cfg`, not drift, so a future 258/259 reading needs no investigation, while any *other* asymmetry does; and the doc-only equality between `dev` and `master` is what licenses building the baseline from the integration branch — it must be re-checked, not assumed, the moment Phase-4 code lands. **Risk discharged 2026-08-12:** `hybrid` and `spsa_impr` were pushed; `origin/hybrid` matches `75d0d43` exactly, so the oracle no longer lives on one machine. | `PLAN.md` §4 step 4.0; `GUIDE.md` tracker; `tests/fuzz_lite.rs`; `target/dist/rarog-v2.3.2-windows-pext-pgo.exe` |
 | RAR-M13 | **Adjudication unified on 600/3 two-sided, 2026-08-18**, by maintainer decision on consistency rather than on new measurement. `strength-v1` (600/3 one-sided) becomes `strength-v2` (600/3 two-sided); `datagen-v1` is unchanged and now carries identical values. Draw rule untouched at `movenumber=40 movecount=8 score=10`. Implemented in `tools/harness_common.ps1` and read from there by `sprt.ps1`, `spsa.ps1`, `setup_tools.ps1` and `datagen.ps1`, so the two profiles cannot drift apart again; the weather-factory patch marker moves V2 -> V3 and its guards were re-pointed. | **Instrument change, no games.** Two-sided requires both engines to agree before a game is called, so this is the conservative direction: fewer adjudications, more games played out, marginally more wall time. RAR-M06's replay over 69,350 games is what makes it cheap — one-sided and two-sided 600/3 differed on **0.20%** of triggers (71 of 35,486) and on **no** final chess result. | A verdict instrument should be one rule, not two justified rules, once the measured difference between them is 0.20% and never changes a result. The 0.20% is also the exact size of the discontinuity between ledger rows: **strength results recorded before 2026-08-18 were adjudicated one-sided.** Do not re-derive a pre-2026-08-18 Elo from post-change games without noting it. Recalibrate the whole rule after any material score-scale change, as RAR-M06 already requires. | `tools/harness_common.ps1`; RAR-M06; `SPSA_IMPROVEMENTS.md` |
+| RAR-M14 | **Time-forfeit floor at concurrency 14, Threads 1, `3+0.03`, measured from RAR-E06's 3,915-game PGN.** Every game ends having spent **97-99% of its whole clock** (base 3s plus 0.03s per move); the five longest games, 367-494 plies, sit at 97.5-98.7% and do not forfeit. The three that did forfeit were 90/98/121 plies -- **shorter** than the 131-ply median -- and one of them flagged while its own reported move times summed to only **94.5%** of budget. | **Observation.** The forfeits are not clock mismanagement and not long-game exhaustion. They are the gap between engine-reported thinking time and harness-measured wall time, against an aggregate slack of about 2% of a ~4.9s budget -- roughly 100ms for a whole game. A single descheduling event of that size, with all 14 physical cores running engines and fastchess contending for the same silicon, is a forfeit. Rate 0.077%, consistent with 0.135% and 0.172% in two identical-binary null pairs. | `Move Overhead` defaults to 10ms and `time_manager.rs` reserves `2*overhead` only below ~520ms of clock; the `smp_reserve` of 30ms is gated on `threads > 1`, so a single-threaded engine under a saturated runner gets no equivalent protection. Its comment records `0/3,460 at Threads=1`, which no longer holds at this concurrency. Retry trigger: measure forfeit rate against `Move Overhead` on a null pair before changing any default -- a TM change alters playing behavior and needs its own gate. Owner: **4.2b**. | `tools/results/sprt_HCERefit_vs_HCEBase_20260901_072106.pgn`; `src/time_manager.rs` |
 
 ### Phase-4 registration (RAR-M12, 2026-08-12)
 
@@ -535,7 +536,7 @@ make any historical parameter group exempt from the current audit and gate.
 | RAR-E03 | Stockfish-at-60k off-policy distillation with material scale pinned. | **Rejected, −17.11 Elo,** despite 4.9% lower holdout loss and 9/10 improved buckets. | For this well-fitted HCE/corpus, lower teacher-fit loss did not predict play. Basilisk's +6.75 opposite result reinforces that transfer is engine-state dependent. | legacy plan; `analysis/hce_analysis.md` |
 | RAR-E04 | 500k-game on-policy refresh yielding 2.18M unique positions; pure WDL beat blended labels on the shared holdout. | **Rejected, −1.28 ± 2.79 over 26.8k games;** pipeline and inert parameters retained. | Even on-policy lower validation loss did not improve this unchanged representation. Retry only after representation/policy changes and with a frozen external holdout. | legacy plan at `757e9a3^` |
 | RAR-E05 | Narrow L2-anchored refresh from a stronger label generator, moving 57/1,204 parameters mostly by 1 cp. | **Accepted, +11.56 ± 5.19 Elo;** frozen in 2.3.2 and throughout the completed Phase-4 search track. | A narrow anchored refresh differed materially from wholesale re-derivation. The current complete-surface programme may supersede it only through its qualified, baked and game-gated fit; the result is neither a frozen-group exemption nor evidence that an undisciplined general refit will work. | `PLAN.md` §3, §4; legacy plan |
-| RAR-E06 | Complete 1,218-slot current-HCE WDL refit, including traced linear coefficients and nonlinear king danger, confirmed on a fresh untouched self-play set. | **Registered; games not started.** Exact candidate improves fresh loss by 0.00078088 and costs 1.19% pooled PGO NPS. The `[0,3]` nElo no-adjudication gate is ready. | Offline WDL loss and broad cohort agreement license a game test but predict neither sign nor Elo. Only the registered H1 boundary promotes the full vector. | registration below; `analysis/endgame_conversion_audit_2026-09-01.md` |
+| RAR-E06 | Complete 1,218-slot current-HCE WDL refit, including traced linear coefficients and nonlinear king danger, confirmed on a fresh untouched self-play set. | **ACCEPTED.** H1 at 3,914 games: **+22.04 +/- 7.51 Elo, +32.05 +/- 10.88 nElo**, LOS 100.00%, LLR 2.95 crossing +2.94 in 44 minutes. The complete refit is the accepted HCE head at **7,226,051 / 2.460**. | A whole-surface recalibration of an unfitted HCE was worth more than eight times the bracket it was gated against, and paid for a measured -1.19% NPS. Offline loss still predicted neither sign nor magnitude: -0.63% test loss preceded +32 nElo, while Basilisk's -6.2% preceded -77.92 Elo. | verdict below; `analysis/endgame_conversion_audit_2026-09-01.md` |
 
 ### RAR-E06 — complete HCE refit gate (registered 2026-09-01)
 
@@ -607,10 +608,47 @@ make any historical parameter group exempt from the current audit and gate.
   at true +3 or 0 under its strength-v2 calibration; applying it to no
   adjudication is explicitly an extrapolation, so the cap is conservative and
   is not extended after games begin.
-- **Stop/disposition.** Only fastchess H1 accepts the entire vector. H0, any
-  anomaly, or reaching 80,000 without H1 rejects and restores the baseline
-  HCE. No point estimate, LOS, offline loss or post-hoc interval substitutes
-  for the registered boundary.
+- **Stop/disposition (as registered).** Only fastchess H1 accepts the entire
+  vector. H0, any anomaly, or reaching 80,000 without H1 rejects and restores
+  the baseline HCE. No point estimate, LOS, offline loss or post-hoc interval
+  substitutes for the registered boundary.
+
+#### RAR-E06 verdict — ACCEPTED 2026-09-01
+
+- **Result.** H1 accepted at **3,914 games**: W 1206 / L 958 / D 1750, points
+  2081.0 (53.17%). **Elo +22.04 +/- 7.51**, **nElo +32.05 +/- 10.88**, LOS
+  100.00%, DrawRatio 38.68%, PairsRatio 1.38, Ptnml(0-2)
+  [84, 421, 757, 553, 142]. LLR 2.95 against the (-2.94, 2.94) boundary.
+  Wall time 44 minutes. It resolved far short of RAR-M10's 47,200-game
+  estimate because that estimate was for a true +4 nElo and the measured
+  effect is +32.
+- **Artifacts.** `tools/results/sprt_HCERefit_vs_HCEBase_20260901_072106.*`.
+  PGN SHA-256
+  `A1B621C7CED422BA130EBEC229A4916FA361BEE20DE990AA10B4DBC265CFBA34`; log
+  SHA-256
+  `B1BD467E6566A198D73C7FDC3458AFECC7209494D3CA76CD72A872689988B71D`. **Both
+  hashes were computed after the run, not by the runner**: the anomaly guard
+  threw before `sprt.ps1` appends its completion lines, so the manifest
+  carries `started_utc` but no `completed_utc`/`pgn_sha256`/`log_sha256`.
+- **Anomaly and its disposition.** The match tripped `Assert-NoMatchAnomaly`
+  on 3 time forfeits in 3,915 games (**0.077%**). Under the registered stop
+  rule as written, any anomaly rejects. The maintainer waived that clause on
+  2026-09-01 after the following analysis, and the guard was rate-limited in
+  `334c084` so the clause is enforceable in future.
+    - All three flagged sides were already decisively lost: round 3 HCEBase at
+      -5.32, round 792 HCERefit at -8.72, round 1477 HCEBase at -8.55.
+    - The split was 2 baseline / 1 candidate. Reversing all three moves the
+      estimate by about 0.3 Elo against a +22.04 result.
+    - The guard was added in `d2c7788` and no match had ever run under it.
+      Applied to the stored logs it voids nearly every accepted gate,
+      including two null calibrations of identical binaries (0.135% and
+      0.172%), which is what establishes the forfeits as a harness property.
+- **Consequences.** The accepted head fingerprint moves from **6,977,070 /
+  2.466** to **7,226,051 / 2.460**; `AGENTS.md`'s behavior-neutral reference
+  moves with it. 4.8a (post-refit redundancy removal) and 4.11 (search
+  authority on the accepted HCE) are now open. RAR-S70's search counters are
+  priors, not a candidate basis, because this refit changed the evaluator the
+  search consumes.
 
 ## 6. Throughput, build and platforms
 

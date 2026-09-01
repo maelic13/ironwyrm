@@ -11,31 +11,30 @@ and `python tools/diag/check_guide.py` must pass.
 | Item | Value |
 |---|---|
 | Released baseline | **2.3.2** at `f931722` on `master` |
-| Accepted search head | RAR-S70, **6,977,070 nodes / EBF 2.466** |
-| Integration branch | `dev`; carries the unaccepted HCE refit `5188eca` |
+| Accepted head | RAR-E06, **7,226,051 nodes / EBF 2.460** (was RAR-S70 6,977,070 / 2.466) |
+| Integration branch | `dev`; the complete HCE refit `5188eca` is accepted |
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
 | Measured search deficit | **355.26 +/- 27.03 Elo** equal nodes; **250.77 +/- 13.12** equal time; speed worth **104.5 Elo** |
-| Accepted Phase-4 gains | ProbCut filter **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85** |
-| Active experiment | **RAR-E06 registered; games not started** |
-| Current step | **4.8.3 — run the registered complete-HCE SPRT** |
+| Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51** |
+| Active experiment | none; RAR-E06 accepted 2026-09-01 |
+| Current step | **4.8a — post-refit redundancy removal** |
 | Next release | Conditional 2.4.0 at 4.15; NNUE follows either way |
 
 ## What you run next
 
-RAR-E06 from `D:\code\rarog`: `[0,3]` nElo, 80,000-game cap, no adjudication.
-The shared Basilisk/Rarog harness calibration is accepted as sufficient; no
-duplicate 30k null is owed. Only H1 accepts. Keep the machine otherwise idle.
+RAR-E06 is accepted and `dev` carries it. Nothing is running. The next step is
+4.8a: list the coefficients the complete fit drove to zero or left without
+support, remove them as one cluster, and gate at `[-1.75, 0.25]`.
+
+Confirm the accepted head before building anything on it:
 
 ```powershell
-& .\tools\sprt.ps1 `
-    -EngineA .\tools\test_engines\rarog-hce-refit-candidate-pext-pgo.exe `
-    -EngineB .\tools\test_engines\rarog-hce-refit-base-pext-pgo.exe `
-    -NameA HCERefit -NameB HCEBase `
-    -Elo0 0 -Elo1 3 -Alpha 0.05 -Beta 0.05 -MaxGames 80000 `
-    -TC "3+0.03" -Threads 1 -Hash 64 -Concurrency 14 -TimeMargin 20 `
-    -Book .\tools\books\UHO_Lichess_4852_v1.epd `
-    -Seed 918274631 -NoAdjudication
+cargo build --release
+'bench 13' | .\target\release\rarog.exe
 ```
+
+It must print **7,226,051** nodes and **EBF 2.460**. A different number means
+different code, not a different machine.
 
 ## Phase 4 — bounded pre-NNUE search and HCE
 
@@ -45,7 +44,12 @@ duplicate 30k null is owed. Only H1 accepts. Keep the machine otherwise idle.
 - [ ] **4.2a** Harness and instrument integrity sweep — Basilisk-derived
     - [x] **4.2a.1** `sprt.ps1` options-free repair and `-NoAdjudication` wire proof — `cb5ed2a`
     - [ ] **4.2a.2** Unchecked native exit status sweep across `tools/*.ps1`
-    - [ ] **4.2a.3** Every option a script accepts must be honored or refuse to launch
+    - [x] **4.2a.3** Anomaly guard rate-limited so it discriminates instead of voiding every gate — `334c084`
+    - [ ] **4.2a.4** Every option a script accepts must be honored or refuse to launch
+- [ ] **4.2b** Time-forfeit margin at test concurrency — RAR-M14
+    - [x] **4.2b.1** Diagnosis: games end at 97-99% of clock; ~2% aggregate slack
+    - [ ] **4.2b.2** Null-pair sweep of `Move Overhead` against forfeit rate
+    - [ ] **4.2b.3** Gate any time-management default change; it alters play
 - [x] **4.3** Mechanism map and order freeze
 - [x] **4.4** Matched ablation plus fixed-node correction
 - [x] **4.5** LMR contract study — no interior gain; RAR-S70 root gain retained
@@ -58,11 +62,11 @@ duplicate 30k null is owed. Only H1 accepts. Keep the machine otherwise idle.
     - [x] **4.7.2** Hash-frozen `hce-v2`: pure self-play WDL from 750k unique openings
     - [x] **4.7.3** Exact 1,218-slot instrument partition and vector/bake/rebuild smoke
     - [x] **4.7.4** Current-source Stockfish maturity map
-- [ ] **4.8** Refit and gate the complete existing HCE surface
+- [x] **4.8** Refit and gate the complete existing HCE surface
     - [x] **4.8.1** Fresh 150k-game confirmation: test loss **0.12252203** vs **0.12330291**
     - [x] **4.8.2** Baked at **7,226,051 / 2.460**, NPS **-1.19%**; RAR-E06 registered
-    - [ ] **4.8.3 NEXT** Run RAR-E06; accept only H1
-- [ ] **4.8a** Post-refit redundancy removal — only if 4.8 accepts; Basilisk BAS-E25
+    - [x] **4.8.3** RAR-E06 **ACCEPTED**: H1 at 3,914 games, **+22.04 +/- 7.51 Elo**, +32.05 nElo
+- [ ] **4.8a NEXT** Post-refit redundancy removal — Basilisk BAS-E25 method
     - [ ] **4.8a.1** List coefficients the complete fit drove to zero or left unsupported
     - [ ] **4.8a.2** Remove as one cluster and gate at loss-permitting `[-1.75, 0.25]`
 - [ ] **4.9** At most two residual-selected structural HCE clusters
