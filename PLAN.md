@@ -596,11 +596,34 @@ so nothing is lost when the two are compared.
   conversion rate. Artifact
   `tools/results/hce-accepted/endgame-truth-accepted.json`, per-position
   records retained so a later run over the same seed is paired.
-- **4.9a.2 Endgame-start cohort.** No-adjudication games started from endgame
-  positions, so the families that never arise from UHO openings can be
-  measured at all, and the tier-2 families can be measured at a useful rate.
-  RAR-M15's tier 4 -- KQKR, KQKRPs, KRPPKRP -- occurred exactly zero times in
-  3,915 real games, so their cohort must be **constructed**, not sampled.
+- **4.9a.2 Endgame-start cohort -- DONE.** `tools/diag/endgame_book.py` writes
+  a Syzygy-verified EPD book of endgame starts, so the families that never
+  arise from UHO openings can be measured at all. RAR-M15's tier 4 -- KQKR,
+  KQKRPs, KRPPKRP -- occurred exactly zero times in 3,915 real games, so their
+  cohort must be constructed rather than sampled.
+
+  `endgame_cohort_v1.epd`: **788 unique positions across 21 families**, seed
+  `0x4E9A2`, 60% theoretical wins and 40% theoretical draws, every position
+  probed before it is written and its verdict recorded in the EPD comment.
+  SHA-256 `D23A51CD01CC3ADEEB94AABE7239A6F44C14F297FF97A750203FDDB5DA9F7942`.
+  `tools/books/` is gitignored, so the generator plus this seed and hash are
+  the reproducible record.
+
+  Drawn positions are included deliberately: a book of wins measures conversion
+  only, and holding a draw is the other half of endgame skill -- it is also
+  where the audit found the evaluator overconfident. Colour is not baked in;
+  the harness plays each start from both sides, so the cohort is a paired A/B
+  rather than a test of who drew the strong side.
+
+  Three families are short and the shortfall is reported rather than padded:
+  KQ-K and KR-K have **no drawn subset** to sample, and KNN-K yielded only 4
+  wins in 24 because KNN vs K is drawn almost everywhere -- consistent with
+  4.9a.1 finding it drawn in 100 of 100 positions. KRPPKRP is excluded
+  entirely: seven men against six-man tables.
+
+  **This book is an instrument, never training data.** Its positions are
+  uniformly sampled rather than drawn from play, so feeding them to a fit would
+  reweight the corpus toward a distribution the search never sees.
 - **4.9a.3 Regression contract.** Hard-veto legality, termination, exact-theory
   and near-mate correctness regressions. Aggregate floors from reproducible
   family conversion rates, rule-50/stalemate/material-loss counts, win-
