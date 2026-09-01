@@ -38,8 +38,13 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 GUIDE = ROOT / "GUIDE.md"
 
+# The step number must be the WHOLE bold run. Writing `**4.9 NEXT**` puts the
+# marker inside the bold, the number then fails to match, and the step drops
+# out of the count silently -- which is how the count went 100 -> 101 when one
+# such marker was moved out. Markers go after the bold: `**4.9** NEXT - ...`.
 PARENT = re.compile(r"^- \[([ x])\] \*\*(\d+\.\d+[a-z]?)\*\*")
-CHILD = re.compile(r"^( *)- \[([ x])\] \*\*(\d+\.\d+[a-z]?\.\d+)")
+CHILD = re.compile(r"^( *)- \[([ x])\] \*\*(\d+\.\d+[a-z]?\.\d+)\*\*")
+STRAY = re.compile(r"^ *- \[[ x]\] \*\*\d+\.\d+[a-z]?(\.\d+)? [^*]")
 PHASE = re.compile(r"^## Phase (\d+)")
 REQUIRED_PHASES = {4, 5, 6, 7, 8, 9}
 
@@ -71,6 +76,12 @@ def main():
             kids = []
             steps += 1
             continue
+        if STRAY.match(line):
+            problems.append(
+                "GUIDE.md:%d: text inside the step number's bold run; the "
+                "number must be the whole bold (write `**4.9** NEXT - ...`), "
+                "or the step drops out of the count silently" % n
+            )
         k = CHILD.match(line)
         if k:
             steps += 1

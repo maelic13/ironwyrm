@@ -22,24 +22,21 @@ and `python tools/diag/check_guide.py` must pass.
 
 ## What you run next
 
-4.8a closed without a gate (RAR-E07): there is no redundancy cluster to
-remove. Conversion is re-baselined on the accepted HCE at
-**94/91/86/19%** (was 94/86/76/15% pre-refit; Basilisk 100/100/87/54%).
-Next is the rest of 4.9a.1 — Syzygy WDL/DTZ truth and no-adjudication
-endgame-start games. Re-run the baseline with:
+4.9a.1's Syzygy truth corpus is built (`tools/results/hce-accepted/endgame-truth-accepted.json`).
+It reordered the endgame work: **KRP-KR converts 52% and occurs in 10.04% of
+games**, against KBN-K's 7% at 0.28%. KRP-KR is 36x more common, so a normal
+SPRT can see it and KBN-K's never will. 4.9a.16 leads.
+
+Rebuild the corpus for any candidate with the same seed, then compare
+per-position rather than differencing aggregates:
 
 ```powershell
-python tools/diag/endgame_conversion.py --engine tools/test_engines/rarog-hce-refit-candidate-pext-pgo.exe --positions 100 --nodes 60000 --max-plies 100 --output tools/results/hce-accepted/endgame-conversion-accepted.json
+python tools/diag/endgame_truth.py --engine <candidate.exe> --syzygy D:\chess	ablebases\syzygy3456 --positions 100 --nodes 60000 --max-plies 100 --per-position --output tools
+esults\<run>\endgame-truth.json
 ```
 
-Confirm the accepted head before building anything on it. It must print
-**7,226,051** nodes and **EBF 2.460**; a different number means different
-code, not a different machine.
-
-```powershell
-cargo build --release
-'bench 13' | .\target\release\rarog.exe
-```
+Open decision: whether to drop draw/resign adjudication as the harness default
+(RAR-M16 prices it at ~10% wall time against 52.7% of endgames).
 
 ## Phase 4 — bounded pre-NNUE search and HCE
 
@@ -72,15 +69,15 @@ cargo build --release
 - [x] **4.8a** Post-refit redundancy removal — **closed, no gate owed**; RAR-E07
     - [x] **4.8a.1** Inventory: 5 slots zeroed, 90 of 132 sparse slots structurally unreachable
     - [x] **4.8a.2** No removal cluster exists; 3 inert 1-slot terms handed to 4.13.2
-- [ ] **4.9 NEXT** At most two residual-selected structural HCE clusters — RAR-E07 residuals
+- [ ] **4.9** At most two residual-selected structural HCE clusters — RAR-E07 residuals
 - [ ] **4.9a** Endgame conversion and reference-function closure
-    - [ ] **4.9a.1** Syzygy/no-adjudication truth corpus and reproducible baseline
+    - [ ] **4.9a.1** Syzygy truth corpus built; no-adjudication endgame-start games open
     - [ ] **4.9a.2** Contextual regression contract: hard theory, aggregate floors
     - [ ] **4.9a.3** Search-visible gradient audit vs pruning margins — KBNK/KXK first
     - [ ] **4.9a.4** KNNK value/draw classification — present, unaudited
-    - [ ] **4.9a.5** KNNKP value and conversion boundary — absent
+    - [ ] **4.9a.5** KNNKP value — absent; discards the win on **19%** of moves
     - [ ] **4.9a.6** KXK value, with KQK/KRK/KBBK floors — present, converts 94/91/86%
-    - [ ] **4.9a.7** KBNK value, corner/king/minor gradients — present, converts **19%**
+    - [ ] **4.9a.7** KBNK value, corner/king/minor gradients — present, converts 7%; tier 3
     - [ ] **4.9a.8** KPK exact bitbase, value and rule-50 handling — present, unaudited
     - [ ] **4.9a.9** KRKP value — partial, conservative scale only
     - [ ] **4.9a.10** KRKB value — absent
@@ -89,8 +86,8 @@ cargo build --release
     - [ ] **4.9a.13** KQKR value — absent
     - [ ] **4.9a.14** KBPsK scale, wrong-bishop rook pawn — partial, wrong-corner subset
     - [ ] **4.9a.15** KQKRPs scale — absent
-    - [ ] **4.9a.16** KRPKR scale — absent
-    - [ ] **4.9a.17** KRPKB scale — absent
+    - [ ] **4.9a.16** NEXT — KRPKR scale — absent; converts **52%** at **10.04%** of games, tier 1
+    - [ ] **4.9a.17** KRPKB scale — absent; converts 56%
     - [ ] **4.9a.18** KRPPKRP scale — absent
     - [ ] **4.9a.19** KPsK scale — absent
     - [ ] **4.9a.20** KBPKB scale — absent

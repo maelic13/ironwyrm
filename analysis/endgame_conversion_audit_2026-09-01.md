@@ -60,6 +60,81 @@ repair a term whose actionable signal is smaller than the margins it must
 survive. Raw artifact:
 `tools/results/hce-accepted/endgame-conversion-accepted.json`.
 
+## Syzygy truth corpus, accepted HCE (4.9a.1), 2026-09-01
+
+`tools/diag/endgame_truth.py`, 100 positions per family, 60,000 nodes/move,
+100-ply horizon, seed `0x5E9D18`, engine `SyzygyPath` cleared so this measures
+the evaluation and not the tables. Artifact:
+`tools/results/hce-accepted/endgame-truth-accepted.json` (per-position records
+retained, so a later run over the same seed is paired).
+
+Conversion is over the **theoretically won** subset only. `won` is how many of
+the 100 generated positions Syzygy calls a clean win.
+
+| Family | won | conv | eff | dtz prog | win-preserving | graded moves |
+|---|---:|---:|---:|---:|---:|---:|
+| KQ-K | 100 | 95.0% | 1.22 | 0.496 | 0.9983 | 1,167 |
+| KR-K | 100 | 96.0% | 1.25 | 0.571 | 0.9994 | 1,720 |
+| KBB-K | 100 | 73.0% | 1.50 | 0.400 | 0.9967 | 2,759 |
+| KBN-K | 99 | **7.1%** | 1.58 | 0.277 | 0.9969 | 4,818 |
+| KNN-K | **0** | n/a | n/a | n/a | n/a | 0 |
+| KP-K | 74 | 94.6% | - | 0.378 | 1.0000 | 1,358 |
+| KPP-K | 98 | 77.6% | - | 0.078 | 1.0000 | 756 |
+| KBP-K | 96 | 91.7% | - | 0.301 | 1.0000 | 1,029 |
+| KR-KP | 88 | 93.2% | - | 0.523 | 0.9982 | 1,699 |
+| KR-KB | 35 | 94.3% | - | 0.631 | **0.9625** | 586 |
+| KR-KN | 54 | 83.3% | - | 0.497 | **0.9726** | 1,423 |
+| KQ-KP | 99 | 96.0% | - | 0.475 | 0.9992 | 1,211 |
+| KQ-KR | 100 | 83.0% | - | 0.391 | 0.9984 | 1,912 |
+| KNN-KP | 26 | **15.4%** | - | 0.421 | **0.8088** | 1,119 |
+| KRP-KR | 67 | **52.2%** | - | 0.319 | 0.9863 | 584 |
+| KRP-KB | 98 | **56.1%** | - | 0.160 | 0.9992 | 1,184 |
+| KBP-KB | 47 | 80.9% | - | 0.367 | 1.0000 | 518 |
+| KBP-KN | 57 | 78.9% | - | 0.369 | 0.9956 | 681 |
+| KP-KP | 32 | 93.8% | - | 0.374 | 1.0000 | 583 |
+
+`eff` (plies taken / optimal DTZ, median, paired per position) is reported only
+where the weak side is bare and the strong side pawnless, so DTZ equals DTM.
+`dtz prog` is a valid comparison between two engine versions in every family
+but only reads as *technique* under that same condition -- elsewhere it counts
+progress toward the next pawn push or capture, which is why KPP-K shows 0.078.
+
+### What this says that the conversion runner could not
+
+**KRP-KR is the high-value target, not KBN-K.** It converts **52.2%**, and
+RAR-M15 measured it occurring in **10.04%** of real games against KBN-K's
+**0.28%** -- 36x more often. A KRP-KR improvement is inside tier 1 and a
+normal SPRT can see it; a KBN-K improvement is tier 3 and no whole-match SPRT
+ever will. KRP-KB is the same shape: 56.1% conversion, 1.23% occurrence.
+
+**The win-preserving rate finds defects the conversion rate hides.** KNN-KP
+discards a clean theoretical win on **19.1%** of graded moves (0.8088 over
+1,119 moves), and KR-KB and KR-KN sit at 0.9625 and 0.9726. All three are
+reference functions Rarog does not implement at all (inventory items 2, 7, 8).
+In the bare-king families the metric saturates near 1.0 -- the engine rarely
+throws a win away there, it simply never finishes -- so the two metrics are
+complementary and neither is sufficient alone.
+
+**KBN-K's defect is localized, not diffuse.** Efficiency is 1.58 on the
+positions it converts, so its technique when it works is within 60% of optimal;
+the failure is that DTZ progress runs at 0.277, the lowest of any pawnless
+family, so it shuffles without approaching the zeroing move and dies on the
+fifty-move rule.
+
+**KNN-K is theoretically drawn in 100 of 100 positions**, which is correct
+chess and validates the theory gate: the tool assigned it zero graded moves
+rather than scoring the engine for failing to win a draw. It belongs in the
+drawn-subset cohort, not the conversion cohort.
+
+### Do not difference these against the earlier tables
+
+This run and the conversion-runner runs above use **different position
+generators**, so their samples differ and the numbers are not paired. KBN-K
+reads 7.1% here and 19% there; KBB-K reads 73% against 86%. At n=100 that is
+2-3 standard errors and is consistent with sampling, but it is not evidence of
+a change and must not be reported as one. Only two `endgame_truth.py` runs over
+the same seed are comparable, and those compare per-position.
+
 ## Same defect as Basilisk, directly visible in source
 
 Rarog's KBNK drive uses Chebyshev corner distance and gradients of only **8 cp
