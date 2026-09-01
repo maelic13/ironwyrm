@@ -1,6 +1,6 @@
 # Rarog development plan
 
-Updated 2026-08-31. This is the current roadmap. Historical evidence belongs
+Updated 2026-09-01. This is the current roadmap. Historical evidence belongs
 in `EXPERIMENTS.md`; current status and commands belong in `GUIDE.md`.
 
 ## 1. Current state
@@ -14,7 +14,7 @@ in `EXPERIMENTS.md`; current status and commands belong in `GUIDE.md`.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut move filtering **+15.56 +/- 10.02 Elo**; root LMR relief **+2.33 +/- 1.85 Elo** |
 | Active game job | None |
-| Current step | **4.8.1 — confirm the fixed complete-surface fit on untouched self-play WDL** |
+| Current step | **4.8.2 — bake the independently confirmed complete-surface fit and register its game gate** |
 | HCE state | Open now. No historical family or parameter group is presumed fitted; all real coordinates must be re-audited and refitted where identifiable with the correct linear/nonlinear instrument |
 | Next release | Conditional **2.4.0** after 4.15; baseline NNUE then targets **2.5.0** |
 
@@ -273,7 +273,7 @@ residue. Raw/lazy/corrected/qsearch/depth-N search interaction is intentionally
 measured at 4.11 on the accepted HCE, because this fit can move those
 populations.
 
-### 4.8 Refit the complete existing HCE surface — OFFLINE RUN NEXT
+### 4.8 Refit the complete existing HCE surface — GAME GATE NEXT
 
 This step tests whether Rarog is mis-calibrated before assuming it is
 under-featured.
@@ -310,8 +310,8 @@ reported delta is retired and no game gate is licensed. The repaired runner
 saves source defaults explicitly, reloads the rounded final vector, evaluates
 both with the full nonlinear evaluator, fixes cohort membership to the source,
 and verifies that the raw UTF-8 patch applies after restoration. Because
-`hce-v2/test.csv` was consumed, 4.8.1 remains open pending an untouched
-confirmation set from unused opening starts; do not reopen or rename that test.
+`hce-v2/test.csv` was consumed, an untouched confirmation set from unused
+opening starts was required; do not reopen or rename the original test.
 `tools/texel/confirm_hce_fit.ps1` freezes the completed candidate and K, builds
 a clean source engine, generates one game from each unused book entry
 600,001--750,000, and hash-splits those 150,000 independent starts 50/50. It
@@ -319,6 +319,14 @@ extracts 127,778 equal-phase test positions from the held-out half (the other
 127,778 positions are published but select nothing), mechanically verifies
 literal WDL targets and provenance, then runs only the repaired one-shot exact
 source-to-rounded-candidate comparison. Stockfish evaluations are never read.
+
+That confirmation completed in `hce-confirm-20260831_230548`: 150,000 new
+pure-WDL games from starts 600,001--750,000 produced 127,778 untouched test
+positions with zero parse failures or replayed starts. The exact rounded
+candidate improved loss from **0.12330291 to 0.12252203** (delta
+**-0.00078088**, about **-0.63%**) and improved every registered broad cohort.
+This closes 4.8.1 and licenses review and a prospective game gate; it does not
+establish Elo.
 
 SPSA is skipped here: deterministic traced and re-evaluation instruments own
 every existing coordinate, so there is no unexplained live nonlinear residue
@@ -345,9 +353,10 @@ accepted +9.52 Elo came from only -0.43% holdout loss.
 ### 4.9 Structural HCE upgrades — CONDITIONAL
 
 Open at most two dependency-complete structural clusters, and only for residual
-signals the full existing-surface refit could not represent. King-safety
-conditionality, material-specific winnability/endgames and passer/threat
-conditionality remain hypotheses, not an order.
+signals the full existing-surface refit could not represent. King-safety and
+passer/threat conditionality remain hypotheses, not an order. Specialized
+endgame knowledge is not optional here: the direct conversion audit already
+established a defect, and Phase 5 owns its systematic repair.
 
 For each cluster:
 
@@ -483,26 +492,103 @@ The HCE is mature for this release only when:
 - Below the bar, ship 2.3.x only by explicit decision or close Phase 4 without
   a release. NNUE follows either way.
 
-## 5. Phase 5 — NNUE runway
+## 5. Phase 5 — endgame maturity, then NNUE runway
 
-Phase 5 creates no intended playing-strength change. Work that 4.7 already
-completed is reused and extended, not rebuilt.
+Phase 5 first closes the measured classical endgame defects, then creates the
+behavior-neutral runway for NNUE. The endgame work is strength-bearing and
+must be locally fitted and gated; the runway must preserve accepted behavior.
+Work that 4.7 already completed is reused and extended, not rebuilt.
 
-- **5.0 Measurement corpus handoff.** Freeze the accepted 4.7 corpus and
+### 5.0 Endgame knowledge and conversion maturity
+
+`analysis/endgame_conversion_audit_2026-09-01.md` is the baseline. At 60,000
+nodes/move over 100 fixed-seed random positions per family, Rarog converted
+KQK/KRK/KBBK/KBNK at **94%/86%/76%/15%**, below Basilisk's latest
+**100%/100%/87%/54%**. KBNK has Basilisk's same Chebyshev plateaus,
+sub-pruning gradients and missing piece-coordination guidance. The complete
+HCE fit does not remove the material-specific drawn-subset bias. This is a
+mandatory engineering program, not a feature-shopping license.
+
+- **5.0.1 Truth corpus and baseline.** Extend the fixed-seed conversion runner
+  to all relevant winning families, add no-adjudication endgame-start games,
+  and use Syzygy WDL/DTZ as exact truth for every supported <=7-piece case.
+  Preserve position seeds, engine/hash/TT/node policy and outcome reasons.
+  Record theoretical verdict, static direction, conversion and game strength
+  separately; a played draw is statistical evidence, not theoretical truth.
+- **5.0.2 Contextual regression contract.** Hard-veto legality, termination,
+  exact-theory and near-mate correctness regressions. Use reproducible random
+  family conversion rates, rule-50/stalemate/material-loss counts and
+  Syzygy-DTZ progress as aggregate floors. Long fixed-search trajectories are
+  diagnostic: investigate individual movement, but accept/reject changes in
+  context rather than requiring every position to retain the same PV or mate
+  length. Tighten floors after accepted improvements; never relax a
+  correctness test in the implementation commit.
+- **5.0.3 Reference-function closure.** Audit, implement where absent, and
+  test every specialized function in the final pre-NNUE Stockfish HCE table.
+  The reference set is **20, not 18**; Stockfish 11 had two additional
+  functions later removed, while current NNUE Stockfish/Reckless no longer
+  provide the comparable dispatcher. Reference code supplies cases and
+  failure modes, not portable constants or implementation.
+    1. **KNNK** value/draw classification.
+    2. **KNNKP** value and conversion boundary.
+    3. **KXK**, including explicit KQK, KRK and KBBK conversion floors.
+    4. **KBNK**, including actionable corner, king and minor-piece gradients.
+    5. **KPK** exact bitbase/value integration and rule-50 handling.
+    6. **KRKP** value.
+    7. **KRKB** value.
+    8. **KRKN** value.
+    9. **KQKP** fortress-aware value.
+    10. **KQKR** value.
+    11. **KBPsK** scale, including wrong-bishop rook-pawn cases.
+    12. **KQKRPs** scale.
+    13. **KRPKR** scale.
+    14. **KRPKB** scale.
+    15. **KRPPKRP** scale.
+    16. **KPsK** scale.
+    17. **KBPKB** scale.
+    18. **KBPPKB** scale.
+    19. **KBPKN** scale.
+    20. **KPKP** scale.
+  For each item, record whether Rarog's current coverage is full, partial or
+  absent; add theory/Syzygy tests and the relevant conversion or drawn-subset
+  cohort. Rarog presently has meaningful coverage of only about **7/20**;
+  generic insufficient-material and OCB logic are retained useful extras, not
+  substitutes for this closure.
+- **5.0.4 Search-visible magnitude audit.** Measure every guidance gradient
+  against the pruning margins and resolution that consume it. Begin with
+  KBNK/KXK mate drive and passed-pawn king approach. Texel may correctly fit a
+  rare multi-ply guidance term toward zero for static WDL loss while search
+  requires an actionable magnitude; use systematic sweeps, conversion/DTZ
+  progress and games to resolve that conflict rather than freezing either the
+  old or fitted value.
+- **5.0.5 Dependency-complete family gates.** Group mutually dependent value,
+  scale, search-guidance and generic HCE terms; refit every materially
+  covariant current parameter. Do not freeze historical parameters and do not
+  SPRT each recognizer alone. Prospective semantic, support, loss, conversion
+  and NPS screens may reject; clean final-PGO no-adjudication SPRTs accept.
+- **5.0.6 Closure.** All 20 reference functions are present or have a recorded
+  theory-backed reason for exclusion, their hard tests pass, aggregate floors
+  materially improve, and accepted families transfer through STC/LTC plus an
+  explicit endgame-start cohort. Archive the exact harness and defects so the
+  NNUE path does not erase classical fallback knowledge.
+
+### 5.1 NNUE runway
+
+- **5.1 Measurement corpus handoff.** Freeze the accepted 4.7 corpus and
   manifests as the NNUE residual/stage-gate source. Add only NNUE-specific
   labels or scale; preserve untouched splits.
-- **5.1 Per-ply state and dirty pieces.** Define exact deltas for quiets,
+- **5.2 Per-ply state and dirty pieces.** Define exact deltas for quiets,
   captures, EP, promotion, castling and null. Randomized make/unmake compares
   board, keys, attacks and state against full refresh every ply.
-- **5.2 Accumulator scaffolding.** Per-thread/per-ply ownership, refresh
+- **5.3 Accumulator scaffolding.** Per-thread/per-ply ownership, refresh
   markers, debug full-recompute seams and reserved king-bucket refresh cache.
   HCE remains active and search stays fingerprint-identical.
-- **5.3 Trainer preflight.** Pin `D:/code/net_trainer`, Bullet, toolchain and
+- **5.4 Trainer preflight.** Pin `D:/code/net_trainer`, Bullet, toolchain and
   GPU; verify conversion, shuffle, splits, manifests, reference vectors and
   resume semantics.
-- **5.4 Runway gate.** Exact benchmark, debug/release tests, randomized unwind,
+- **5.5 Runway gate.** Exact benchmark, debug/release tests, randomized unwind,
   reproducible pilot corpus and trainer conformance.
-- **5.5 Threat-map hooks, optional.** Reserve only if Phase-7 relation inputs
+- **5.6 Threat-map hooks, optional.** Reserve only if Phase-7 relation inputs
   would otherwise require another make/unmake rewrite.
 
 Boundary rule: search consumes an evaluator score and evidence class, never

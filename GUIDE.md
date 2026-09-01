@@ -13,8 +13,8 @@
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes**; **250.77 +/- 13.12** at equal time; speed contribution **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut filter **+15.56 +/- 10.02 Elo**; root LMR relief **+2.33 +/- 1.85 Elo** |
-| Active experiment | None |
-| Current step | **4.8.1 — obtain an untouched confirmation set and rerun the repaired exact source-to-rounded HCE report** |
+| Active experiment | None; 4.8.2 game gate is being prepared |
+| Current step | **4.8.2 — bake the independently confirmed HCE vector and register its no-adjudication SPRT** |
 | HCE | Open now; no historical family is frozen. Refit every identifiable linear and nonlinear surface before adding features |
 | Next release | Conditional 2.4.0 at 4.15; then NNUE |
 
@@ -44,8 +44,8 @@
     - [x] **4.7.3** Exact 1,218-slot instrument partition and vector/bake/rebuild smoke
     - [x] **4.7.4** Current-source Stockfish maturity map; structural gaps remain post-fit hypotheses
 - [ ] **4.8** Refit and gate the complete existing HCE surface
-    - [ ] **4.8.1 NEXT** First fit's comparator/rounding report was invalid; use fresh unused openings and the repaired exact source-to-persisted-candidate report
-    - [ ] **4.8.2** Apply a valid fit on a clean branch, bake final PGO, measure NPS and register the game gate
+    - [x] **4.8.1** Fresh 150k-game confirmation: 127,778 untouched test positions; exact candidate loss **0.12252203** vs source **0.12330291**, delta **-0.00078088**; all broad cohorts improved
+    - [ ] **4.8.2 NEXT** Apply the confirmed fit, bake final PGO, measure NPS and register the game gate
     - [ ] **4.8.3** Run the registered SPRT; accept or restore the complete vector
 - [ ] **4.9** At most two residual-selected structural HCE clusters; skip if the complete refit leaves no supported gap
 - [ ] **4.10** Post-structure whole-HCE consolidation; satisfied by 4.8 if no structure changes
@@ -65,6 +65,22 @@ extension change.
 
 - [ ] **4.15** STC/LTC/4T, NPS, portability, ISA and release gate
 
+## Phase 5 status
+
+- [ ] **5.0** Endgame knowledge and conversion maturity before NNUE
+    - [ ] **5.0.1** Syzygy/no-adjudication truth corpus and reproducible conversion baseline
+    - [ ] **5.0.2** Contextual regression contract: hard theory/correctness, aggregate conversion floors
+    - [ ] **5.0.3** Audit and close all 20 final-HCE Stockfish value/scale functions; current meaningful coverage is about 7/20
+    - [ ] **5.0.4** Search-visible gradient magnitude audit, starting with KBNK/KXK and passer king approach
+    - [ ] **5.0.5** Refit and gate dependency-complete endgame families
+    - [ ] **5.0.6** Conversion, theory, STC/LTC and endgame-cohort closure
+- [ ] **5.1** NNUE corpus handoff
+- [ ] **5.2** Per-ply state and dirty pieces
+- [ ] **5.3** Accumulator scaffolding
+- [ ] **5.4** Trainer preflight
+- [ ] **5.5** Runway gate
+- [ ] **5.6** Optional threat-map hooks
+
 Current HCE maturity analysis:
 `analysis/hce_maturity_2026-08-25.md`; archive measurements:
 `analysis/hce_archive_audit_2026-08-31.md`. The older
@@ -73,20 +89,11 @@ are already fixed and are not current work.
 
 ## What you run next
 
-Run this from a clean `dev` worktree. It keeps the completed fit fixed, creates
-150,000 fresh pure-WDL games from the unused book entries 600,001--750,000,
-extracts an independent phase-balanced 127,778-position test, and compares the
-exact source vector with the persisted rounded candidate once.
-
-```powershell
-pwsh -NoProfile -File tools\texel\confirm_hce_fit.ps1
-```
-
-All artifacts land in a new ignored `tools/results/hce-confirm-<timestamp>/`.
-This is still an **offline result only**. Do not start games or apply the fit
-until 4.8.2 review and prospective registration. Search-authority measurement
-remains at 4.11 because an accepted HCE can change qsearch, score scale and
-pruning populations.
+The 4.8.1 confirmation is complete. The next runnable command is the registered
+4.8.2 SPRT; place it here only after its exact binaries, manifests, bounds,
+seed and stop rule have been committed prospectively. Search-authority
+measurement remains at 4.11 because an accepted HCE can change qsearch, score
+scale and pruning populations.
 
 ## Documentation ownership
 
@@ -99,6 +106,7 @@ pruning populations.
 | `analysis/hce_archive_audit_2026-08-31.md` | Exact archive provenance, content, capacity and quota audit |
 | `analysis/manta_tooling_audit_2026-08-25.md` | Manta tool dispositions, imported measurements and limits |
 | `analysis/basilisk_audit_2026-08-30.md` | Basilisk method/results audit and Rarog-specific consequences |
+| `analysis/endgame_conversion_audit_2026-09-01.md` | Rarog/Basilisk conversion, 20-function inventory, defects and test policy |
 | `analysis/ablation_results.md` | Search-deficit measurements and corrected interpretation |
 | `PROCESS.md` | Recurring build, Texel, SPSA and release procedures |
 | `TRACKER.md` | History only; never a source of the next step |
