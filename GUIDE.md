@@ -46,10 +46,8 @@ different code, not a different machine.
     - [ ] **4.2a.2** Unchecked native exit status sweep across `tools/*.ps1`
     - [x] **4.2a.3** Anomaly guard rate-limited so it discriminates instead of voiding every gate — `334c084`
     - [ ] **4.2a.4** Every option a script accepts must be honored or refuse to launch
-- [ ] **4.2b** Time-forfeit margin at test concurrency — RAR-M14
-    - [x] **4.2b.1** Diagnosis: games end at 97-99% of clock; ~2% aggregate slack
-    - [ ] **4.2b.2** Null-pair sweep of `Move Overhead` against forfeit rate
-    - [ ] **4.2b.3** Gate any time-management default change; it alters play
+- [x] **4.2b** Time-forfeit diagnosis at test concurrency — RAR-M14; fixes belong to 4.12a
+    - [x] **4.2b.1** Games end at 97-99% of clock; ~2% aggregate slack, ~100ms per game
 - [x] **4.3** Mechanism map and order freeze
 - [x] **4.4** Matched ablation plus fixed-node correction
 - [x] **4.5** LMR contract study — no interior gain; RAR-S70 root gain retained
@@ -101,6 +99,12 @@ different code, not a different machine.
     - [ ] **4.11.1** Observation, baseline and live-wire proof; write the analysis
     - [ ] **4.11.2** One candidate and gate, only if 4.11.1 isolates a unique defect
 - [ ] **4.12** Optional post-HCE search SPSA; skip without a displaced optimum
+- [ ] **4.12a** Time management: review, repair and gate — owns all TM work
+    - [ ] **4.12a.1** Revalidate accepted clock behavior on the accepted HCE — RAR-R01/R02
+    - [ ] **4.12a.2** `Move Overhead` vs forfeit rate on a null pair; size it first — RAR-M14
+    - [ ] **4.12a.3** `RootConfTime`'s six identifiable consumers: tune or remove — RAR-S47
+    - [ ] **4.12a.4** Root-instability TM from a completed snapshot only — RAR-X06, RAR-R05
+    - [ ] **4.12a.5** Registered gate; zero forfeits is a precondition, not the verdict
 - [ ] **4.13** Search cleanup and clean checkpoint
     - [ ] **4.13.1** Dead and unreachable mechanism inventory — Basilisk-derived
     - [ ] **4.13.2** Remove unconsumed 4.6 and retained default-off alternatives

@@ -205,16 +205,9 @@ so a single-threaded engine under a saturated runner has no equivalent
 protection. The comment recording `0/3,460 at Threads=1` no longer holds at
 this concurrency.
 
-1. **4.2b.1 — done.** Diagnosis above.
-2. **4.2b.2.** Sweep `Move Overhead` on a null pair against forfeit rate. The
-   background rate is ~0.08-0.17%, so distinguishing values needs tens of
-   thousands of games; size it before running.
-3. **4.2b.3.** Any change to a time-management default alters playing
-   behavior and takes its own registered gate. Do not raise the default on the
-   strength of a forfeit count alone. Note that these three forfeits cost
-   almost nothing in Elo -- all were already lost by 5 to 9 pawns -- so the
-   case for changing deployed behavior rests on tournament robustness, not on
-   recovering measured strength.
+**4.2b.1 — done.** The diagnosis above closes this step. It is a measurement,
+not a repair: every fix it implies is owned by **4.12a**, because a change to
+a time-management default alters playing behavior and takes its own gate.
 
 ### HCE maturity conclusion
 
@@ -636,6 +629,50 @@ a registered bounded sensitivity pilot, then audit the entire active
 interacting surface. Pilot theta is neither candidate nor seed; the full tune
 starts from accepted defaults and preserves its registered horizon under any
 staged `StopAfter`. Never mix HCE and search coordinates.
+
+### 4.12a Time management — review, repair and gate
+
+**This step owns all time-management work in Phase 4.** TM had no owner: its
+findings were scattered across the ledger, RAR-X06's owner cell still pointed
+at 4.9 (which is now HCE structure), and RAR-S47 left `RootConfTime` shipping
+ON with six untuned consumers and nobody named. Anything touching the clock
+enters here.
+
+**Why here.** TM consumes root scores and confidence signals, and 4.8 just
+changed the score scale those signals are expressed in. Measuring TM before
+the accepted HCE would price a surface that no longer exists. It sits after
+4.11's authority work, and before 4.13's cleanup and the 4.15 release gate,
+so a clock change cannot arrive after the checkpoint that is supposed to
+describe it.
+
+1. **4.12a.1 Revalidate accepted clock behavior.** RAR-R01's +81 Elo and
+   RAR-R02's `2*MoveOverhead` reserve were measured on the old harness and the
+   pre-refit evaluator. The direction is retained; the magnitudes are not
+   current priors. Re-measure on the accepted HCE before changing anything.
+2. **4.12a.2 Forfeit margin.** From RAR-M14: sweep `Move Overhead` against
+   forfeit rate on a null pair. The background rate is ~0.08-0.17%, so
+   distinguishing two values needs tens of thousands of games -- size it
+   before running. `PROCESS.md` prices ~10 forfeits per 3,000 games at ~1 Elo,
+   so at the observed rate the entire prize is ~0.2 Elo. This is tournament
+   robustness, not a strength lever, and RAR-E06's three forfeits were all in
+   positions already lost by 5 to 9 pawns. The specific gap to close is that
+   `time_manager.rs` gates its 30ms `smp_reserve` on `threads > 1`, leaving a
+   single-threaded engine under a saturated runner with only `2*overhead`.
+3. **4.12a.3 `RootConfTime` consumers.** RAR-S47 shipped the completed-root
+   confidence clock ON after sizing it to level-neutrality (+0.09% total
+   budget, longer on 295 iterations and shorter on 182). Its six identifiable
+   consumers were never tuned. Tune them or remove the path; an inert
+   mechanism with no owner is 4.13 material.
+4. **4.12a.4 Root-instability TM.** RAR-X06 reverified +6.46 +/- 4.12 in the
+   reference engine while Rarog's own raw pool-view variant lost 5.54
+   (RAR-R05). It may therefore enter only as one bounded input to a completed
+   authoritative root snapshot, never as a direct multiplier. Retargeted here
+   from 4.9.
+5. **4.12a.5 Gate.** One registered SPRT for the dependency-complete clock
+   change. **Zero forfeits is a precondition, not the verdict** -- RAR-S54 and
+   RAR-S57 both passed with zero forfeits while changing node counts by +23%
+   and +5%, so a clean forfeit count proves only that the change is safe to
+   measure. Never accept a TM change on a forfeit count alone.
 
 ### 4.13 Search cleanup and checkpoint
 
