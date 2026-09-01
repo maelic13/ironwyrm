@@ -22,22 +22,16 @@ and `python tools/diag/check_guide.py` must pass.
 
 ## What you run next
 
-Work Phase 4 in the order the list is written. Two items sit before the
-endgame families and both are zero-game analysis:
-
-- **4.9.1** post-fit residual/cohort analysis, which is 4.9's missing entry
-  evidence and may close 4.9 outright.
-- **4.9a.2** the no-adjudication endgame-start cohort, without which the
-  families that never arise from UHO openings cannot be measured at all.
-
-Then 4.9a.5 (KRPKR) leads the families: 52% conversion at 10.04% of games.
+4.9 is closed (RAR-E09: no residual the surface cannot represent). Phase 4 now
+runs top to bottom from **4.9a.2** — the no-adjudication endgame-start cohort,
+without which the families that never arise from UHO openings cannot be
+measured at all. Then 4.9a.5 (KRPKR) leads the families.
 
 Rebuild the truth corpus for any candidate with the same seed and compare
 per-position, never by differencing aggregates:
 
 ```powershell
-python tools/diag/endgame_truth.py --engine <candidate.exe> --syzygy D:\chess	ablebases\syzygy3456 --positions 100 --nodes 60000 --max-plies 100 --per-position --output tools
-esults\<run>\endgame-truth.json
+python tools/diag/endgame_truth.py --engine <candidate.exe> --syzygy D:\chess	ablebases\syzygy3456 --positions 100 --nodes 60000 --max-plies 100 --per-position --output toolsesults\<run>\endgame-truth.json
 ```
 
 ## Phase 4 — bounded pre-NNUE search and HCE
@@ -71,12 +65,12 @@ esults\<run>\endgame-truth.json
 - [x] **4.8a** Post-refit redundancy removal — **closed, no gate owed**; RAR-E07
     - [x] **4.8a.1** Inventory: 5 slots zeroed, 90 of 132 sparse slots structurally unreachable
     - [x] **4.8a.2** No removal cluster exists; 3 inert 1-slot terms handed to 4.13.2
-- [ ] **4.9** At most two residual-selected structural HCE clusters
+- [x] **4.9** Structural HCE clusters — **closed, none opened**; RAR-E09
     - [x] **4.9.1** Residual audit — RAR-E09: no structural residual; a label defect instead
-    - [ ] **4.9.2** NEXT — close 4.9 on RAR-E09, or justify a cluster it did not find
+    - [x] **4.9.2** Closed: no cohort residual licenses a cluster; retry trigger recorded
 - [ ] **4.9a** Endgame conversion and reference-function closure — worked in order
     - [x] **4.9a.1** Syzygy truth corpus and per-move grading — `endgame_truth.py`
-    - [ ] **4.9a.2** No-adjudication endgame-start cohort games
+    - [ ] **4.9a.2** NEXT — no-adjudication endgame-start cohort games
     - [ ] **4.9a.3** Regression contract: hard theory vetoes, aggregate floors
     - [ ] **4.9a.4** Gradient magnitude vs pruning margins — KBNK/KXK, passer approach
     - [ ] **4.9a.5** KRPKR scale [ref 13] — absent; conv **52%**, 10.04% of games

@@ -494,10 +494,23 @@ residual and cohort analysis, and nobody has run one.
    rule needs 600. The evaluator predicts 0.849 there against a label mean of
    0.625, so it is closer to the truth than its own training data and the fit
    has been pulling it down.
-2. **4.9.2 Decision.** Open at most two clusters, or close 4.9 with the reason
-   recorded. Closing is a legitimate outcome and must be written down; leaving
-   it open with no decision is what produced the ordering confusion of
-   2026-09-01. King-safety and
+2. **4.9.2 Decision -- CLOSED, no cluster opened.** The cohort table in
+   `analysis/hce_residuals_2026-09-01.md` covers 4.9's own named hypotheses and
+   none of them licenses structure: king-attack sits +3.8% and threat +3.1%
+   above global loss on very broad populations (67% and 93% of positions), and
+   passer sits **6% below** it. The largest residual, KR-K, is fully
+   representable and is a label defect. The opening cohort's +41% is outcome
+   entropy, not evidence of mis-modelling -- separating "harder" from "wrongly
+   modelled" needs an oracle's loss on the same positions, which does not
+   exist here.
+
+   **Retry trigger.** Reopen 4.9 only on a residual that a coefficient value
+   cannot fix, measured on a non-degenerate cohort. Note that the passer
+   bucket was itself degenerate until 2026-09-01 -- it selected 127,777 of
+   127,778 positions -- so any pre-fix cohort claim about passers is void. If
+   RAR-E08 accepts tablebase-corrected labels, rerun this audit afterwards:
+   correcting the labels may expose a residual that the mislabelled data was
+   hiding. King-safety and
 passer/threat conditionality remain hypotheses, not an order. Specialized
 endgame knowledge is not optional here: the direct conversion audit already
 established a defect, and 4.9a owns its systematic repair.

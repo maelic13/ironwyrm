@@ -57,10 +57,45 @@ This is a self-reinforcing loop, and it is the one RAR-E08 was registered to
 break: cannot convert → labelled a draw → evaluator learns draw → never steers
 there → never learns to convert.
 
+## Cohort residuals — 4.9's own named hypotheses
+
+`--buckets` on the same unused set, same pinned K. Global loss **0.1224102**.
+
+| Cohort | n | loss | vs global |
+|---|---:|---:|---:|
+| opening | 41,314 | 0.1728983 | +41% |
+| middlegame | 45,266 | 0.1185061 | −3% |
+| endgame | 41,198 | 0.0760696 | −38% |
+| king-attack | 85,116 | 0.1270836 | **+3.8%** |
+| threat | 119,282 | 0.1261994 | **+3.1%** |
+| passer | 77,315 | 0.1149288 | **−6.1%** |
+| no-queens | 68,244 | 0.0939508 | −23% |
+| ocb | 8,631 | 0.0799537 | −35% |
+| rook-ending | 11,705 | 0.0769564 | −37% |
+| pawn-ending | 3,496 | 0.0990179 | −19% |
+
+4.9 named king-safety and passer/threat conditionality as its two standing
+hypotheses. King-attack and threat sit 3–4% above global on very broad
+populations (67% and 93% of positions); passer sits 6% **below** it. None of
+that licenses a structural cluster.
+
+The opening cohort's +41% is not a defect signal either. Opening positions are
+further from their result, so their outcome entropy is genuinely higher; a
+cohort above global loss is not automatically mis-modelled. Distinguishing
+"harder" from "wrongly modelled" would need an oracle's loss on the same
+positions, which does not exist here.
+
+**Instrument caveat, and it nearly invalidated this table.** The `passer`
+bucket originally selected **127,777 of 127,778** positions and measured
+nothing: `family_ranges()` used one min..max span per family, and `passed*`
+is 13 non-contiguous fields whose span swept in 404 slots belonging to 113
+other fields. Fixed before these numbers were taken; `threat` and
+`king_safety_table` are contiguous and were always correct.
+
 ## What this means for 4.9 and 4.10
 
-**It is not 4.9 entry evidence.** 4.9 requires a residual the existing surface
-cannot represent. This residual is fully representable — the surface would
+**4.9 closes: no evidence licenses a structural cluster.** 4.9 requires a
+residual the existing surface cannot represent. This residual is fully representable — the surface would
 price KR-K correctly if the labels said 1.0. Nothing here licenses structural
 work, and the largest cohort residuals in the table are all of this shape:
 sparse endgame classes whose labels were produced by a datagen engine that
