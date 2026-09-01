@@ -104,10 +104,11 @@ esults\<run>\endgame-truth.json
 - [ ] **4.10** Iterated no-adjudication refit cycles — at least one is owed
     - [ ] **4.10.1** Opening supply: reuse is safe; fresh openings optional, not a blocker
     - [ ] **4.10.2** Composition screen against the `datagen-v1` archive (sizing)
-    - [ ] **4.10.3** Regenerate under `datagen-v3` (Syzygy truth); never edit `hce-v2`
-    - [ ] **4.10.4** Cycle 1: full 4.8 schedule, own frozen test, registered gate
-    - [ ] **4.10.5** Repeat while a cycle accepts; stop at the first that does not
-    - [ ] **4.10.6** Record the cycle table and close
+    - [ ] **4.10.3** RAR-E08: self-play vs TB-corrected labels; decides the contract
+    - [ ] **4.10.4** Regenerate on the winning contract; never edit `hce-v2`
+    - [ ] **4.10.5** Cycle 1: full 4.8 schedule, own frozen test, registered gate
+    - [ ] **4.10.6** Repeat while a cycle accepts; stop at the first that does not
+    - [ ] **4.10.7** Record the cycle table and close
 - [ ] **4.11** Re-measure qsearch/TT/eval authority and branching on the accepted HCE
     - [ ] **4.11.1** Observation, baseline and live-wire proof; write the analysis
     - [ ] **4.11.2** One candidate and gate, only if 4.11.1 isolates a unique defect

@@ -697,7 +697,10 @@ show*, not from *who played them*.
    hash-freeze it under a new name. Never edit `hce-v2` in place: it is the
    corpus RAR-E06 was fitted on and has to stay reproducible.
 
-   **Use `datagen-v3`, not `datagen-v2`.** Removing eval adjudication does not
+   **Which label contract to use is RAR-E08's question, not a settled call.**
+   `datagen-v3` exists and works, but do not adopt it by default before that
+   experiment reports. The argument for it, and the argument against, are both
+   strong. For it: removing eval adjudication does not
    by itself make labels truthful; it makes them reflect what the datagen
    engine can actually convert at 8,000 nodes. 4.9a.1 measured that at 60,000
    nodes -- KBN-K 7%, KRP-KR 52%, KBB-K 86% -- and 8,000 is worse. A
@@ -710,9 +713,25 @@ show*, not from *who played them*.
    cursed win is labelled the draw it really is. A 40-game probe ended 20 of
    40 games on tablebase truth, 12 of them decisively.
 
-   **Do not carry this into a strength gate.** A gate measures realized
-   conversion skill; adjudicating on tablebase truth would credit both arms
-   equally for an endgame only one of them can actually win.
+   Against it: Texel fits the value realizable by the **consuming search**, and
+   under that principle a KBN-K position Rarog converts 7% of the time really
+   is a draw. Labelling it a win teaches the evaluator to steer into endgames
+   it cannot convert -- which is the same failure mode as borrowing a stronger
+   engine's labels, and Basilisk priced that at **-7.30 +/- 4.76**, the worst
+   arm it ran. The counter-argument is that self-play labels are
+   self-reinforcing: cannot convert, so labelled a draw, so the evaluator
+   learns draw, so it never steers there, so it never learns to convert.
+
+   RAR-E08 settles it by running both. Note that its design is a **post-hoc
+   relabel at extraction, not `datagen-v3` adjudication**, and that is the
+   better instrument: TB adjudication ends the game and so changes the result
+   of every position sampled from it, including the opening ones, while a
+   relabel touches only the <=6-man positions themselves. It also needs no
+   regeneration -- one game set, two label sets, perfectly paired.
+
+   **Do not carry tablebase adjudication into a strength gate either way.** A
+   gate measures realized conversion skill; adjudicating on tablebase truth
+   would credit both arms equally for an endgame only one of them can win.
 
    **More nodes per move is NOT the answer to the same problem, and this is
    measured rather than assumed.** Basilisk ran exactly that experiment: the
