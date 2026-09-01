@@ -777,6 +777,16 @@ const SQUARE_FILE: [usize; 64] = init_square_file();
 const SQUARE_RANK: [usize; 64] = init_square_rank();
 const RELATIVE_RANKS: [[u8; 64]; 2] = init_relative_ranks();
 const KING_DISTANCE: [[u8; 64]; 64] = init_king_distance();
+/// Manhattan (taxicab) distance between squares, used only by the mate drive.
+///
+/// 4.9a.4: the drive was pure Chebyshev, and Chebyshev is FLAT -- every square
+/// in a ring around the target scores identically. Measured over 300
+/// theoretically won KBNK positions, the 19 legal moves collapsed into a median
+/// of 3 distinct mop-up values and **94% of positions had a tied best move**,
+/// median best-vs-second gap 0 cp. A term that cannot order its own moves
+/// cannot steer a search, which is why raising the magnitude alone would have
+/// changed nothing: 40x a 0 cp gap is still 0. Manhattan breaks the rings.
+const MANHATTAN_DISTANCE: [[u8; 64]; 64] = init_manhattan_distance();
 // The two main diagonals (a1-h8, a8-h1) minus their corner squares (Phase
 // 3.10 bishop-on-long-diagonal term). Square index = rank*8 + file.
 const LONG_DIAGONALS: Bitboard = Bitboard(
@@ -799,6 +809,15 @@ const LONG_DIAGONALS: Bitboard = Bitboard(
 // exactly the corner squares contained in `Bitboard::LIGHT_SQUARES` /
 // `DARK_SQUARES`. NB this engine's colour convention puts a1 in LIGHT_SQUARES
 // (see bitboard.rs), so the "light" corners are a1(0) and h8(63).
+/// Mate-drive weights (4.9a.4). Chebyshev carries the coarse pull and
+/// Manhattan supplies the resolution that breaks its rings; the pair is what
+/// takes the tied-best-move rate from 94% to 11% on won KBNK positions. The
+/// term is gated on `|approximate| > 200`, so its range (about 56..334 here,
+/// against 28..104 before) only ever applies to an already-won position.
+const MOPUP_CORNER_CHEB: i32 = 16;
+const MOPUP_CORNER_MAN: i32 = 8;
+const MOPUP_KING_CHEB: i32 = 10;
+const MOPUP_KING_MAN: i32 = 5;
 const KBNK_LIGHT_CORNERS: [usize; 2] = [0, 63]; // a1, h8 — on LIGHT_SQUARES
 const KBNK_DARK_CORNERS: [usize; 2] = [7, 56]; // h1, a8 — on DARK_SQUARES
 /// Endgame scale-factor framework (Phase 3.11). A scale of `SCALE_NORMAL`
@@ -868,6 +887,36 @@ const fn init_king_distance() -> [[u8; 64]; 64] {
             let df = if af > bf { af - bf } else { bf - af };
             let dr = if ar > br { ar - br } else { br - ar };
             table[a][b] = if df > dr { df as u8 } else { dr as u8 };
+            b += 1;
+        }
+        a += 1;
+    }
+    table
+}
+
+// Const-evaluated init, same justification as `init_relative_ranks` above: the
+// `infra` helpers are not `const fn`, both operands are file/rank differences in
+// 0..=7 so the sum is 0..=14, and any out-of-range would surface at COMPILE
+// time. Sign loss cannot occur because both differences are taken larger-minus-
+// smaller.
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss
+)]
+const fn init_manhattan_distance() -> [[u8; 64]; 64] {
+    let mut table = [[0u8; 64]; 64];
+    let mut a = 0usize;
+    while a < 64 {
+        let af = (a & 7) as i32;
+        let ar = (a >> 3) as i32;
+        let mut b = 0usize;
+        while b < 64 {
+            let bf = (b & 7) as i32;
+            let br = (b >> 3) as i32;
+            let df = if af > bf { af - bf } else { bf - af };
+            let dr = if ar > br { ar - br } else { br - ar };
+            table[a][b] = (df + dr) as u8;
             b += 1;
         }
         a += 1;
@@ -2222,22 +2271,79 @@ impl Evaluator {
             // bishop-coloured one. For that exact material pattern, drive the
             // losing king to a corner matching the winning bishop's colour
             // instead; keep the generic drive for every other won ending.
-            let mopup = if let Some(light_bishop) = kbnk_winner_bishop(board, winning) {
-                let corners = if light_bishop {
-                    KBNK_LIGHT_CORNERS
-                } else {
-                    KBNK_DARK_CORNERS
-                };
-                let corner_distance = (KING_DISTANCE[lksq.index()][corners[0]]
-                    .min(KING_DISTANCE[lksq.index()][corners[1]]))
-                    as i32;
-                sign * (8 * (7 - corner_distance) + (14 - king_distance) * 4)
-            } else {
+            // 4.9a.4. The finer drive applies ONLY when the losing side is a
+            // bare king -- the actual KXK/KBNK mating families. The enclosing
+            // gate is `|approximate| > 200`, which is "up two pawns" and fires
+            // in plenty of middlegames; scaling the drive there moved `bench 13`
+            // by +7.9% (7,226,051 -> 7,800,345) purely by perturbing positions
+            // this term was never meant to steer. Everything else keeps the old
+            // mild edge push, so the blast radius is exactly the families 4.9a
+            // is about.
+            // Scoped to MINOR-PIECE mates, following Basilisk BAS-E34. Their
+            // first version drove every bare-king mate, queen and rook
+            // included, and cost +20.5% bench nodes; restricting it to
+            // minor-piece mates returned bench to baseline byte for byte. The
+            // reason generalises: a recogniser is worth adding only where
+            // SEARCH CANNOT ALREADY SOLVE THE CLASS, and overriding a class it
+            // solves only churns aspiration windows wherever a deep line
+            // touches a won ending. Their KQ-K/KR-K were already 100/100.
+            let minor_mate = board.color_occ(losing) == Bitboard::from(lksq)
+                && !board.pieces(winning, Piece::Pawn).any()
+                && !board.pieces(winning, Piece::Rook).any()
+                && !board.pieces(winning, Piece::Queen).any();
+            let mopup = if !minor_mate {
                 let lfile = infra::to_i32(SQUARE_FILE[lksq.index()]);
                 let lrank = infra::to_i32(SQUARE_RANK[lksq.index()]);
                 let file_push = (3 - lfile).max(lfile - 4);
                 let rank_push = (3 - lrank).max(lrank - 4);
                 sign * (5 * (file_push + rank_push) + (14 - king_distance) * 4)
+            } else {
+                // Both branches below drive to a CORNER through the same
+                // Chebyshev+Manhattan metric. Chebyshev alone is flat -- it scores
+                // every square in a ring identically -- and the measured cost was
+                // total: over 300 won KBNK positions, 94% had a TIED best move and
+                // the whole term spanned 8 cp across all 19 legal moves. The same
+                // metric serves KXK and KBNK because they share that one defect,
+                // which is why one change fixes both.
+                let corners = match kbnk_winner_bishop(board, winning) {
+                    Some(true) => KBNK_LIGHT_CORNERS,
+                    Some(false) => KBNK_DARK_CORNERS,
+                    // Generic KXK: drive toward whichever corner is already
+                    // nearest. A corner is on the edge, so this subsumes the old
+                    // edge push while giving the search an ordering to follow.
+                    None => {
+                        if KING_DISTANCE[lksq.index()][KBNK_LIGHT_CORNERS[0]]
+                            .min(KING_DISTANCE[lksq.index()][KBNK_LIGHT_CORNERS[1]])
+                            <= KING_DISTANCE[lksq.index()][KBNK_DARK_CORNERS[0]]
+                                .min(KING_DISTANCE[lksq.index()][KBNK_DARK_CORNERS[1]])
+                        {
+                            KBNK_LIGHT_CORNERS
+                        } else {
+                            KBNK_DARK_CORNERS
+                        }
+                    }
+                };
+                // Pick the corner by Chebyshev first, Manhattan as the tie-break,
+                // so the target itself does not flip between equally distant
+                // corners and undo the gradient we just created.
+                let target = if (
+                    KING_DISTANCE[lksq.index()][corners[0]],
+                    MANHATTAN_DISTANCE[lksq.index()][corners[0]],
+                ) <= (
+                    KING_DISTANCE[lksq.index()][corners[1]],
+                    MANHATTAN_DISTANCE[lksq.index()][corners[1]],
+                ) {
+                    corners[0]
+                } else {
+                    corners[1]
+                };
+                let corner_cheb = i32::from(KING_DISTANCE[lksq.index()][target]);
+                let corner_man = i32::from(MANHATTAN_DISTANCE[lksq.index()][target]);
+                let king_man = i32::from(MANHATTAN_DISTANCE[wksq.index()][lksq.index()]);
+                sign * (MOPUP_CORNER_CHEB * (7 - corner_cheb)
+                    + MOPUP_CORNER_MAN * (14 - corner_man)
+                    + MOPUP_KING_CHEB * (7 - king_distance)
+                    + MOPUP_KING_MAN * (14 - king_man))
             };
             *eg += mopup;
             // Frozen mate-drive term — not a tunable weight; goes into `rest`.
