@@ -89,6 +89,45 @@ function Get-DatagenProfileV2 {
     }
 }
 
+# datagen-v3 (2026-09-01): no EVAL-based adjudication, plus Syzygy tablebase
+# adjudication. This is the label contract to prefer, and it resolves a real
+# tension that datagen-v2 alone does not.
+#
+# Removing eval adjudication does not by itself make labels truthful. It makes
+# them reflect what the DATAGEN ENGINE can actually convert at its node budget,
+# and 4.9a.1 measured that at 60,000 nodes: KBN-K converts at 7%, KRP-KR at
+# 52%, KBB-K at 86%. At datagen's 8,000 nodes it is worse. So a theoretically
+# won endgame is played out and recorded as a DRAW, which mislabels every
+# position sampled from that game -- the exact failure eval adjudication was
+# accused of, arriving from the other direction.
+#
+# Tablebase adjudication is not lossy in that way because it is not an opinion:
+# on reaching 6 men it ends the game with the position's true value. The fifty
+# move rule is deliberately NOT disabled (`-tbignore50` is not passed), because
+# the label must be the result the game would really have had; a cursed win is
+# a draw and should be labelled one.
+#
+# This is for DATAGEN ONLY. A strength gate must never use it: a gate measures
+# realized conversion skill, and adjudicating on tablebase truth would credit
+# both arms equally for an endgame only one of them can actually win.
+function Get-DatagenProfileV3 {
+    param([Parameter(Mandatory)][string]$SyzygyPath, [int]$Pieces = 6)
+    [pscustomobject]@{
+        Name               = "datagen-v3"
+        Adjudication       = $false
+        TablebaseAdjudication = $true
+        TablebasePath      = $SyzygyPath
+        TablebasePieces    = $Pieces
+        TablebaseIgnore50  = $false
+        ResignMoveCount    = $null
+        ResignScore        = $null
+        ResignTwoSided     = $false
+        DrawMoveNumber     = $null
+        DrawMoveCount      = $null
+        DrawScore          = $null
+    }
+}
+
 function Get-DatagenResignArgs {
     $profile = Get-DatagenProfile
     $args = @(

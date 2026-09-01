@@ -36,11 +36,9 @@ Rebuild the truth corpus for any candidate with the same seed and compare
 per-position, never by differencing aggregates:
 
 ```powershell
-python tools/diag/endgame_truth.py --engine <candidate.exe> --syzygy D:\chess	ablebases\syzygy3456 --positions 100 --nodes 60000 --max-plies 100 --per-position --output toolsesults\<run>\endgame-truth.json
+python tools/diag/endgame_truth.py --engine <candidate.exe> --syzygy D:\chess	ablebases\syzygy3456 --positions 100 --nodes 60000 --max-plies 100 --per-position --output tools
+esults\<run>\endgame-truth.json
 ```
-
-Blocker to clear before 4.10: `beast_seed.epd`'s 750,000 openings are fully
-consumed, and an iterated refit loop needs a fresh untouched test per cycle.
 
 ## Phase 4 — bounded pre-NNUE search and HCE
 
@@ -104,9 +102,9 @@ consumed, and an iterated refit loop needs a fresh untouched test per cycle.
     - [ ] **4.9a.25** Dependency-complete family refits and gates, tiered by occurrence
     - [ ] **4.9a.26** Conversion, theory, STC/LTC and endgame-cohort closure
 - [ ] **4.10** Iterated no-adjudication refit cycles — at least one is owed
-    - [ ] **4.10.1** Opening supply: `beast_seed.epd`'s 750,000 are fully consumed
+    - [ ] **4.10.1** Opening supply: reuse is safe; fresh openings optional, not a blocker
     - [ ] **4.10.2** Composition screen against the `datagen-v1` archive (sizing)
-    - [ ] **4.10.3** Regenerate under `datagen-v2`; hash-freeze new, never edit `hce-v2`
+    - [ ] **4.10.3** Regenerate under `datagen-v3` (Syzygy truth); never edit `hce-v2`
     - [ ] **4.10.4** Cycle 1: full 4.8 schedule, own frozen test, registered gate
     - [ ] **4.10.5** Repeat while a cycle accepts; stop at the first that does not
     - [ ] **4.10.6** Record the cycle table and close

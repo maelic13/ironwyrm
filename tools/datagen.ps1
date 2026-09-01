@@ -109,6 +109,12 @@ param(
     [switch]$Append,
     # Opt back into datagen-v1 adjudication. Off by default since 2026-09-01.
     [switch]$Adjudicate,
+    # Syzygy WDL directory. When set, games are adjudicated on TABLEBASE TRUTH
+    # at 6 men (profile datagen-v3) instead of being played out at the datagen
+    # node budget, which the engine often cannot convert. Never use this for a
+    # strength gate. Mutually exclusive with -Adjudicate.
+    [string]$SyzygyPath = "",
+    [int]$SyzygyPieces = 6,
     [switch]$SetupOnly
 )
 
@@ -226,7 +232,19 @@ try {
     }
 
     $fastchessInfo = Get-FastchessVersion -Path $FastchessPath
-    $profile = if ($Adjudicate) { Get-DatagenProfile } else { Get-DatagenProfileV2 }
+    if ($Adjudicate -and $SyzygyPath) {
+        throw "-Adjudicate and -SyzygyPath are contradictory; pick one label contract."
+    }
+    if ($SyzygyPath -and -not (Test-Path -LiteralPath $SyzygyPath -PathType Container)) {
+        throw "-SyzygyPath is not a directory: $SyzygyPath"
+    }
+    $profile = if ($Adjudicate) {
+        Get-DatagenProfile
+    } elseif ($SyzygyPath) {
+        Get-DatagenProfileV3 -SyzygyPath ((Resolve-Path $SyzygyPath).Path) -Pieces $SyzygyPieces
+    } else {
+        Get-DatagenProfileV2
+    }
     # Hash before launch so the manifest identifies the inputs fastchess
     # actually opened, even if a file is changed after the run begins.
     $engineHash = Get-HarnessSha256 -Path $enginePath
@@ -251,6 +269,10 @@ try {
         @('-draw', "movenumber=$($profile.DrawMoveNumber)",
           "movecount=$($profile.DrawMoveCount)", "score=$($profile.DrawScore)") +
         @(Get-DatagenResignArgs)
+    } elseif ($SyzygyPath) {
+        @('-tb', $profile.TablebasePath,
+          '-tbpieces', "$($profile.TablebasePieces)",
+          '-tbadjudicate', 'BOTH')
     } else {
         @()
     }
@@ -282,6 +304,8 @@ try {
     Write-Host "  Book SHA: $bookHash"
     $profileDetail = if ($Adjudicate) {
         "resign $($profile.ResignScore)/$($profile.ResignMoveCount), two-sided"
+    } elseif ($SyzygyPath) {
+        "Syzygy truth at $($profile.TablebasePieces) men, fifty-move rule kept"
     } else {
         "no adjudication; games play to a rules result"
     }

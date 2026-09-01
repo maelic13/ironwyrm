@@ -669,24 +669,60 @@ value realizable by its own consuming search, so a stronger player is not
 automatically a better teacher. Expect the gain to come from *what the games
 show*, not from *who played them*.
 
-1. **4.10.1 Opening supply -- do this first, it is a hard blocker.**
-   `beast_seed.epd` holds exactly 750,000 unique openings and **all of them are
-   consumed**: entries 1-600,000 built `hce-v2` and 600,001-750,000 built the
-   fresh confirmation set. There are none left. A loop needs more than one
-   corpus: every cycle needs its own untouched frozen test, because a test
-   opened twice is not a test. Size the requirement for the planned number of
-   cycles before generating anything, extend or replace the book, and re-audit
-   uniqueness to the 4.7.1 standard.
+1. **4.10.1 Opening supply -- reusable, and this was previously overstated as
+   a blocker.** `beast_seed.epd` holds 750,000 unique openings and all were
+   used once: 1-600,000 for `hce-v2`, 600,001-750,000 for the confirmation
+   set. That does **not** exhaust them. The engine has changed, so the same
+   opening produces different games and different positions, and the split is
+   a deterministic hash of the game's start key
+   (`extract.py::split_for_key`) -- so an opening always lands in the same
+   split, and regenerating from the same book cannot migrate a position from
+   test into train. Reuse is not merely allowed, it is the clean option.
+
+   Two things do still hold. Within a corpus, an opening may be used once
+   (`datagen.ps1` already refuses reuse; Basilisk's 93.3%-duplicate corpus is
+   why). And a *fresh* set of openings buys a genuinely independent test
+   rather than one covering the same starts as the previous cycle's, which is
+   a weak but real form of familiarity. Preparing new openings is therefore
+   worthwhile and approved -- it is a nice-to-have, not a precondition, and it
+   must not hold up cycle 1.
 2. **4.10.2 Composition screen.** Generate a pilot under `datagen-v2` on a
    disjoint segment and compare composition with the matching `datagen-v1`
    archive segment: endgame-phase unique yield, coverage over the 20 reference
    classes, decisive/draw ratio, natural mate count, mean game length. Zero
    fitting. This sizes the full run and predicts which families gain support;
    it no longer decides whether the run happens.
-3. **4.10.3 Regenerate and republish.** Generate the full corpus under
-   `datagen-v2`, re-audit provenance and content to the 4.7.1/4.7.2 standard
-   and hash-freeze it under a new name. Never edit `hce-v2` in place: it is the
+3. **4.10.3 Regenerate and republish, under `datagen-v3`.** Generate the full
+   corpus, re-audit provenance and content to the 4.7.1/4.7.2 standard and
+   hash-freeze it under a new name. Never edit `hce-v2` in place: it is the
    corpus RAR-E06 was fitted on and has to stay reproducible.
+
+   **Use `datagen-v3`, not `datagen-v2`.** Removing eval adjudication does not
+   by itself make labels truthful; it makes them reflect what the datagen
+   engine can actually convert at 8,000 nodes. 4.9a.1 measured that at 60,000
+   nodes -- KBN-K 7%, KRP-KR 52%, KBB-K 86% -- and 8,000 is worse. A
+   theoretically won endgame then gets played out, drawn on the fifty-move
+   rule, and recorded as a draw, mislabelling every position sampled from that
+   game. That is the same defect eval adjudication was accused of, arriving
+   from the opposite direction. `datagen-v3` adds Syzygy adjudication at 6 men
+   (`-tb -tbpieces 6 -tbadjudicate BOTH`), which is not an opinion but the
+   position's true value, and deliberately keeps the fifty-move rule so a
+   cursed win is labelled the draw it really is. A 40-game probe ended 20 of
+   40 games on tablebase truth, 12 of them decisively.
+
+   **Do not carry this into a strength gate.** A gate measures realized
+   conversion skill; adjudicating on tablebase truth would credit both arms
+   equally for an endgame only one of them can actually win.
+
+   **More nodes per move is NOT the answer to the same problem, and this is
+   measured rather than assumed.** Basilisk ran exactly that experiment: the
+   same fit on its own 8k-node outcomes measured -2.85 +/- 3.11, and on its own
+   25k-node outcomes **+1.00 +/- 2.11, stopped unresolved**, with LTC
+   **+0.29 +/- 5.46**. Roughly 3x the datagen compute bought a result
+   indistinguishable from zero. Treating that +1.00 point estimate as an
+   improvement is the RAR-S61 error -- accepting on a point estimate whose
+   interval contains zero. Tablebase truth fixes the endgame-label problem for
+   free; node count does not fix it at 3x the price.
 4. **4.10.4 Cycle 1.** Rerun the complete 4.8 linear/nonlinear schedule on the
    new corpus and the current model, open that cycle's own frozen test once,
    bake final PGO and run the registered no-adjudication SPRT against the
