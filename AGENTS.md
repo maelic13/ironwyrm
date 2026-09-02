@@ -73,12 +73,12 @@ did what its name suggests.**
 - Before claiming a behavior-neutral change, prove it: `bench 13` must
   reproduce the accepted fingerprint **7,226,051 / EBF 2.460** exactly
   (RAR-E06; it was 6,977,070 / EBF 2.466 under RAR-S70, and 7,467,143 /
-  EBF 2.477 before that). The fingerprint is
-  A fingerprint identifies the SEARCH, so it cannot see a change confined to
-  positions the bench suite never reaches: the accepted head carries a 4.9a.4
-  mate drive that moves KBN-K conversion from 19.4% to 96.9% and leaves this
-  number byte-identical. Never read "bench unchanged" as "behaviour unchanged"
-  for an evaluation term with a narrow activation. The fingerprint is
+  EBF 2.477 before that). A fingerprint identifies the SEARCH, so it cannot see
+  a change confined to positions the bench suite never reaches: the accepted
+  head carries a 4.9a.4 mate drive that moves KBN-K conversion from 19.4% to
+  96.9% and leaves this number byte-identical. Never read "bench unchanged" as
+  "behaviour unchanged" for an evaluation term with a narrow activation. The
+  fingerprint is
   platform-INDEPENDENT: RAR-P14 recorded three platforms agreeing exactly,
   and `aaa715a` rebuilds to 6,519,711 on x86 which is the number RAR-P16
   recorded on ARM64. A differing number means differing CODE.
