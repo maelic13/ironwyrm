@@ -281,17 +281,27 @@ function Resolve-HarnessConcurrency {
     # Each concurrent game needs `ThreadsPerGame` physical cores, so the core
     # budget is divided, not handed out one game per core. At Threads=1 the
     # arithmetic is identical to before, so 1-thread runs are unaffected.
-    param([int]$Requested, [int]$ReservePhysicalCores = 2, [int]$ThreadsPerGame = 1)
+    # `AllowOversubscribe` is for NODE-LIMITED work only, and datagen is the
+    # only caller that qualifies. The physical-core ceiling exists because a
+    # TIMED game mismeasures under contention -- that is the whole affinity and
+    # forfeit story, RAR-M14 included. A `go nodes` search has no such exposure:
+    # it plays identical moves however slowly it runs, so contention costs wall
+    # time and changes nothing else. Holding datagen to 14 of 32 logical
+    # processors therefore threw away throughput for a hazard it does not have.
+    param([int]$Requested, [int]$ReservePhysicalCores = 2, [int]$ThreadsPerGame = 1,
+          [switch]$AllowOversubscribe)
 
     if ($ThreadsPerGame -lt 1) { throw "ThreadsPerGame must be >= 1 (got $ThreadsPerGame)." }
     $physical = Get-PhysicalCoreCount
-    $budget = [Math]::Max(1, $physical - $ReservePhysicalCores)
+    $ceiling = if ($AllowOversubscribe) { [Environment]::ProcessorCount } else { $physical }
+    $budget = [Math]::Max(1, $ceiling - $ReservePhysicalCores)
     $recommended = [Math]::Max(1, [Math]::Floor($budget / $ThreadsPerGame))
     $resolved = if ($Requested -gt 0) { $Requested } else { $recommended }
     $needed = $resolved * $ThreadsPerGame
-    if ($needed -gt $physical) {
-        throw ("Concurrency $resolved x Threads $ThreadsPerGame = $needed cores, " +
-               "which exceeds the detected $physical physical cores.")
+    if ($needed -gt $ceiling) {
+        $kind = if ($AllowOversubscribe) { "logical processors" } else { "physical cores" }
+        throw ("Concurrency $resolved x Threads $ThreadsPerGame = $needed, " +
+               "which exceeds the detected $ceiling $kind.")
     }
     [pscustomobject]@{
         Concurrency   = [int]$resolved

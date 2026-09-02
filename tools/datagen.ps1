@@ -100,7 +100,7 @@ param(
     [int]   $Seed        = 10403,
     [int]   $Nodes       = 8000,
     [int]   $Hash        = 16,
-    [int]   $Concurrency = 0,        # 0 = auto (physical CPUs - 2)
+    [int]   $Concurrency = 0,        # 0 = auto (logical processors - 2; node-limited)
     [string]$OutputPgn   = "",
     [string]$Book        = "",
     [ValidateSet("pgn", "epd")]
@@ -174,7 +174,14 @@ try {
     # Auto concurrency leaves two physical cores for interactive use. Explicit
     # oversubscription is valid for deterministic fixed-node datagen.
     if ($Concurrency -le 0) {
-        $Concurrency = [Math]::Max(1, (Get-PhysicalCoreCount) - 2)
+        # Datagen is NODE-limited (`tc=inf nodes=N`), so it may oversubscribe
+        # where a timed harness may not. A `go nodes` search plays identical
+        # moves however slowly it runs: contention costs wall time and changes
+        # nothing about the result. The physical-core rule that governs
+        # sprt.ps1 exists for timed games, where contention causes the forfeits
+        # RAR-M14 measured -- a hazard this path does not have. Defaulting to
+        # physical-2 was leaving over half of a 32-thread machine idle.
+        $Concurrency = (Resolve-HarnessConcurrency -Requested 0 -AllowOversubscribe).Concurrency
     }
 
     # Book-diversity guard (Phase 6.2.0, lesson 5): fixed-node self-play from a
