@@ -8,7 +8,7 @@ in `EXPERIMENTS.md`; current status and commands belong in `GUIDE.md`.
 | Item | State |
 |---|---|
 | Released baseline | **2.3.2** at `f931722` on `master` |
-| Accepted head | RAR-E06 on `dev`; `bench 13` = **7,226,051 nodes / EBF 2.460**, 1T. RAR-S70's 6,977,070 / 2.466 is the previous head |
+| Accepted head | RAR-E06 plus the 4.9a.4 mate drive on `dev`; `bench 13` = **7,226,051 nodes / EBF 2.460**, 1T. The drive is bench-INVISIBLE, so the fingerprint identifies RAR-E06 but not it |
 | Integration state | The failed SearchCore rewrite is reverted by `c5e451d`; `d2c7788`/`e4f10ca` upgrade search evidence and `8d8f507` supplies the audited complete HCE fitting pipeline without changing accepted behavior |
 | Frozen search/HCE oracle | `hybrid` at `75d0d43`, Stockfish `9587eeeb` driving the exact Rarog 2.3.2 HCE |
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
@@ -688,11 +688,20 @@ so nothing is lost when the two are compared.
   knight and 1 stalemate, with zero fifty-move losses where there were 61. That
   is a different defect and no drive weight addresses it.
 
-  **Gate deliberately not registered.** KBN-K occurs in 0.28% of real games and
-  KBB-K under 1.35%, so this is tier 3: a `[0,3]` gain gate cannot resolve it
-  at any budget, and the change is bench-identical so holding it costs nothing.
-  It belongs in a `[-1.75, 0.25]` no-regression bundle with the rest of the
-  guidance work, gated once when 4.9a's label-independent work closes.
+  **ACCEPTED 2026-09-01 on maintainer judgement, with no game gate.** This
+  departs from the stated rule that only a registered SPRT accepts a candidate,
+  and is recorded as a judgement call rather than a gate. What justified it:
+  bench byte-identical, activation triply gated (`|eval| > 200` AND a bare
+  losing king AND no pawn, rook or queen for the winner), 15 of 19 families
+  measured exactly unchanged, theory vetoes and floors passing, and a tier-3
+  occurrence of 0.28% at which a `[0,3]` gate cannot resolve anything at any
+  budget this project has.
+
+  What that does not establish: bench-identical proves only that the 40 bench
+  positions' trees never reach a minor-piece bare-king mate within depth 13,
+  while real games at 3+0.03 reach greater depth with endgames on the board and
+  do fire the term in roughly 1.6% of games. **Retry trigger: any
+  endgame-shaped strength anomaly reopens this without needing new argument.**
 
 - **4.9a.4 (original scope) Search-visible magnitude audit.** Measure every guidance gradient
   against the pruning margins and resolution that consume it, starting with

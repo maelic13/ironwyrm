@@ -11,7 +11,7 @@ and `python tools/diag/check_guide.py` must pass.
 | Item | Value |
 |---|---|
 | Released baseline | **2.3.2** at `f931722` on `master` |
-| Accepted head | RAR-E06, **7,226,051 nodes / EBF 2.460** (was RAR-S70 6,977,070 / 2.466) |
+| Accepted head | RAR-E06 + 4.9a.4 mate drive, **7,226,051 nodes / EBF 2.460**. The drive is bench-INVISIBLE, so the fingerprint cannot identify it |
 | Integration branch | `dev`; the complete HCE refit `5188eca` is accepted |
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
 | Measured search deficit | **355.26 +/- 27.03 Elo** equal nodes; **250.77 +/- 13.12** equal time; speed worth **104.5 Elo** |
@@ -22,19 +22,22 @@ and `python tools/diag/check_guide.py` must pass.
 
 ## What you run next
 
-**RAR-E08 arm B's fit** (4.9a.5). Arm A is already the accepted head, so only
-arm B needs fitting — one full 4.8 schedule, an overnight job:
+**RAR-E08 arm B's fit** (4.9a.5). 4.9a.4 is accepted, so both arms now sit on
+the same head and the confound is gone — no worktree, fit from the current tree:
 
 ```powershell
-& .	ools	exelit_complete.ps1 -DatasetDir tools/texel/data/hce-v2-tb
+& .\tools\texel\fit_complete.ps1 -DatasetDir tools/texel/data/hce-v2-tb
 ```
 
-Then a head-to-head SPRT of the two baked vectors. **Do not compare the arms by
-offline loss** — their targets differ, so a loss against different targets is
-not a comparison. Only the game result decides.
+Then build both arms and run the head-to-head. Arm A's existing binary predates
+the mate drive, so it must be rebuilt from the current tree:
 
-While that runs, 4.9a.7 onward (the fitted families) can be implemented and
-measured on conversion; only their local refits wait on this outcome.
+```powershell
+& .\tools\build_test.ps1 -Suffix e08-arm-a
+```
+
+**Do not compare the arms by offline loss** — their targets differ, so a loss
+against different targets is not a comparison. Only the game result decides.
 
 ## Phase 4 — bounded pre-NNUE search and HCE
 
@@ -74,7 +77,7 @@ measured on conversion; only their local refits wait on this outcome.
     - [x] **4.9a.1** Syzygy truth corpus and per-move grading — `endgame_truth.py`
     - [x] **4.9a.2** Endgame-start cohort book — 788 verified positions, 21 families
     - [x] **4.9a.3** Regression contract: 64 frozen theory vetoes + ratcheting floors
-    - [x] **4.9a.4** Mate-drive cluster — KBN-K **19.4% -> 96.9%**, KBB-K 78% -> 100%
+    - [x] **4.9a.4** Mate-drive cluster **ACCEPTED**, no gate — KBN-K **19.4% -> 96.9%**
     - [ ] **4.9a.5** RAR-E08 arm B built; **fit + SPRT are yours** — 30,480 labels changed
     - [ ] **4.9a.6** Regenerate the corpus on the winning contract; never edit `hce-v2`
     - [ ] **4.9a.7** KRPKR scale [ref 13] — absent; conv **52%**, 10.04% of games
