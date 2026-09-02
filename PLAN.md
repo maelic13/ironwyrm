@@ -776,7 +776,18 @@ so nothing is lost when the two are compared.
   rather than with games. Both are held so the corpus contract differs from
   `hce-v2` in the book alone. Derivation and reproduction commands:
   `analysis/texel_corpus_book_shape_2026-09-02.md`; the matrix regenerates with
-  `python tools/diag/book_yield.py <datagen.pgn>`.
+  `python tools/diag/book_yield.py <datagen.pgn>`. The whole pipeline --
+  resources, tools, settings, contract gates and traps -- is
+  `analysis/texel_fitting_handbook.md`.
+
+  **`fit_complete.ps1` will refuse this corpus until its contract gates name
+  it.** They are pinned to `hce-v2`: `label_contract.adjudication.Name` must be
+  `datagen-v1` (we now generate `datagen-v2`), `independent_starts` and
+  `recorded_games` must be exactly 600,000, and `rows.train` must equal
+  `-TargetTrain`. Extend each by NAMING the new contract, the way the label
+  whitelist was extended for the TB relabel -- never by widening or deleting the
+  test. That edit belongs in its own commit, before the fit, with the corpus
+  manifest in hand.
 
 
 - **4.9a.7 through 4.9a.26 -- the 20 reference functions, in working order.**

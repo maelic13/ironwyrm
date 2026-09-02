@@ -205,6 +205,11 @@ Rarog: `--features ablate`, which compiles every guard away in a shipped build.
 
 ### Texel convergence procedure
 
+**`analysis/texel_fitting_handbook.md` is the full reference** — resources, the
+five-stage pipeline with commands, every tool, the settings and why they are
+what they are, the corpus contract gates, and the traps. Read it before running
+a fit or building a corpus. The ten rules below are the policy it implements.
+
 Texel is cheap enough to run locally, but its static loss is not a strength
 verdict:
 
