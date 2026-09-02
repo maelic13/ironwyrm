@@ -780,14 +780,25 @@ so nothing is lost when the two are compared.
   resources, tools, settings, contract gates and traps -- is
   `analysis/texel_fitting_handbook.md`.
 
-  **`fit_complete.ps1` will refuse this corpus until its contract gates name
-  it.** They are pinned to `hce-v2`: `label_contract.adjudication.Name` must be
-  `datagen-v1` (we now generate `datagen-v2`), `independent_starts` and
-  `recorded_games` must be exactly 600,000, and `rows.train` must equal
-  `-TargetTrain`. Extend each by NAMING the new contract, the way the label
-  whitelist was extended for the TB relabel -- never by widening or deleting the
-  test. That edit belongs in its own commit, before the fit, with the corpus
-  manifest in hand.
+  **Done: `hce-v3` and `hce-v3-tb` are published and gate-verified.** 602,619
+  games generated in 5 h 10 m (1,941 games/min), 3,888,888 rows extracted
+  (3,500,000 / 194,444 / 194,444), every per-phase quota met exactly with the
+  tightest bucket at 1.44x headroom, 0 parse errors and 0 replayed starts. The
+  Syzygy relabel changed 113,046 train labels (3.230%) with 0 probe failures.
+
+  The corpus is materially better than `hce-v2`, not merely bigger: 40
+  adjudicated games against 312,918 (52.2%), 367,664 natural mates against
+  6,428, mean 91.0 plies against 66.4. `hce-v2` resigned most games out, so the
+  evaluator learned from outcomes that were asserted rather than played. **A
+  gate on this fit therefore conflates row count, phase mix and label
+  provenance** -- a legitimate cluster, but it must be registered as one.
+
+  Two gaps found and fixed on the way, each in its own commit: `relabel_tb.py`
+  never emitted a corpus manifest, so its output was not fittable and RAR-E08's
+  was hand-built (`90e8939`); and `fit_complete.ps1`'s contract gates were
+  pinned to `datagen-v1` at exactly 600,000 starts, so they are now a NAMED
+  list of `(profile, starts)` pairs, verified to still reject an off-by-one
+  count, a crossed pair and the untested `datagen-v3` (`ec34a34`).
 
 
 - **4.9a.7 through 4.9a.26 -- the 20 reference functions, in working order.**

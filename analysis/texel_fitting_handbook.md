@@ -106,8 +106,32 @@ Published corpora are directories under `tools/texel/data/` holding
 `train.csv`, `validation.csv`, `test.csv` and `manifest.json`. Rows are
 `FEN;target` with the target in `{0, 0.5, 1}`, white perspective.
 
-`hce-v2` is the corpus the currently accepted head was fitted on. **Never edit
-it in place** — it has to stay reproducible. A new corpus gets a new name.
+| corpus | rows (train) | starts | profile | book |
+|---|---|---|---|---|
+| `hce-v2` / `hce-v2-tb` | 2,300,000 | 600,000 | `datagen-v1` | `beast_seed.epd` |
+| `hce-v3` / `hce-v3-tb` | 3,500,000 | 602,619 | `datagen-v2` | `phase_book_v1.epd` |
+
+**Never edit a published corpus in place** — `hce-v2` is what the accepted head
+was fitted on and has to stay reproducible. A new corpus gets a new name, and
+the `-tb` suffix is the tablebase-relabelled variant of the same rows.
+
+The two differ by more than size, which matters when reading a fit result:
+
+| | hce-v2 | hce-v3 |
+|---|---|---|
+| adjudicated games | 312,918 (52.2%) | 40 (0.007%) |
+| natural mates | 6,428 | 367,664 |
+| mean plies | 66.4 | 91.0 |
+| draw share of rows | 45.7% | 35.3% |
+| ≤6-man rows | 10.1% | 17.4% |
+| relabelled by Syzygy | 1.325% | 3.230% |
+
+`hce-v2` resigned most of its games out, so the evaluator largely learned from
+outcomes that were **asserted rather than played**. A gate comparing a fit on
+`hce-v3-tb` against the `hce-v2-tb` head therefore conflates row count, phase
+mix and label provenance. That is a legitimate cluster to gate, but say so in
+the registration — do not let a good result be attributed afterwards to
+whichever cause seems most appealing.
 
 ---
 
@@ -285,8 +309,15 @@ Every position of ≤6 men gets its Syzygy verdict instead of the game result.
 under the fifty-move rule a cursed win is a draw, and labelling it a win teaches
 the evaluator something false. Positions above 6 men are untouched.
 
-On `hce-v2` this changed 30,480 train labels (1.325%) with 0 FEN mismatches and
-0 probe failures.
+On `hce-v2` this changed 30,480 train labels (1.325%); on `hce-v3`, 113,046
+(3.230%). Both had 0 probe failures.
+
+The tool writes **two** manifests: `relabel-manifest.json` (its own report) and
+`manifest.json` (the corpus manifest, with the label string retargeted, the
+three output hashes replaced and a `derived_from` provenance block). The second
+is what makes the output fittable — it was hand-built for RAR-E08, which is a
+transcription step on the critical path of a multi-hour fit, and is now
+emitted automatically.
 
 Do **not** confuse this with `datagen-v3`. This corrects labels post hoc,
 leaving the games as played. `datagen-v3` adjudicates the game itself and
@@ -389,10 +420,10 @@ caught real errors and must not be loosened. They are, however, **pinned to the
 
 | gate | current requirement | note |
 |---|---|---|
-| label whitelist | two named strings | already extended once, for the TB relabel |
+| label whitelist | two named strings | extended once, for the TB relabel |
+| corpus contract | named `(profile, starts)` pairs | `datagen-v1`/600,000 and `datagen-v2`/602,619 |
+| `recorded_games` | `== independent_starts` | proves no start was replayed |
 | `rows.train` | `== TargetTrain` (default 2,300,000) | pass `-TargetTrain` |
-| `independent_starts` / `recorded_games` | **exactly 600,000** | hardcoded |
-| `label_contract.adjudication.Name` | **`datagen-v1`** | **blocks `datagen-v2`** |
 | book format | must be `epd` | auditable |
 | book SHA-256, seed, openings | must agree across all inputs | one book contract |
 | split sizes | frozen 5% / 5% | |
@@ -460,8 +491,9 @@ Each of these cost real work in this project.
 | `phase_book_v1.epd` | 1,000,000 positions, 50/10/10/10/20 |
 | datagen budget | 8,000 nodes/move, `datagen-v2` |
 | datagen throughput | ~1,714 games/min at concurrency 30 |
-| binding yield, new book | 1.6227 rows/game |
-| 3.5M rows | 602,619 games, ~5.9 h |
+| binding yield, new book | 1.6932 rows/game (measured at full scale) |
+| 3.5M rows | 602,619 games, 5 h 10 m at 1,941 games/min |
+| `hce-v3` published | 3,888,888 rows (3,500,000 / 194,444 / 194,444) |
 | linear fit | 200 epochs, Adam, `lr=0.3`, L2 `1e-7` to stage prior |
 | nonlinear fit | 40 epochs, 200,000 positions |
 | polish | 60 epochs |
