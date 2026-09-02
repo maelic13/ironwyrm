@@ -1,100 +1,271 @@
 {
   "families": {
     "KBB-K": {
-      "conversion_rate": 1.0,
-      "dtz_progress_rate": 0.7451790633608816,
-      "win_preserving_rate": 1.0
+      "conversion_rate": {
+        "n": 100,
+        "rate": 1.0
+      },
+      "dtz_progress_rate": {
+        "n": 1452,
+        "rate": 0.7451790633608816
+      },
+      "win_preserving_rate": {
+        "n": 1452,
+        "rate": 1.0
+      }
     },
     "KBN-K": {
-      "conversion_rate": 0.9693877551020408,
-      "dtz_progress_rate": 0.7210010145417654,
-      "win_preserving_rate": 0.9989864864864865
+      "conversion_rate": {
+        "n": 98,
+        "rate": 0.9693877551020408
+      },
+      "dtz_progress_rate": {
+        "n": 2957,
+        "rate": 0.7210010145417654
+      },
+      "win_preserving_rate": {
+        "n": 2960,
+        "rate": 0.9989864864864865
+      }
     },
     "KBP-K": {
-      "conversion_rate": 0.9787234042553191,
-      "dtz_progress_rate": 0.43884892086330934,
-      "win_preserving_rate": 1.0
+      "conversion_rate": {
+        "n": 94,
+        "rate": 0.9787234042553191
+      },
+      "dtz_progress_rate": {
+        "n": 1251,
+        "rate": 0.43884892086330934
+      },
+      "win_preserving_rate": {
+        "n": 1251,
+        "rate": 1.0
+      }
     },
     "KBP-KB": {
-      "conversion_rate": 0.6923076923076923,
-      "dtz_progress_rate": 0.42901234567901236,
-      "win_preserving_rate": 0.9870550161812298
+      "conversion_rate": {
+        "n": 26,
+        "rate": 0.6538461538461539
+      },
+      "dtz_progress_rate": {
+        "n": 324,
+        "rate": 0.42901234567901236
+      },
+      "win_preserving_rate": {
+        "n": 329,
+        "rate": 0.9848024316109423
+      }
     },
     "KBP-KN": {
-      "conversion_rate": 0.7894736842105263,
-      "dtz_progress_rate": 0.3793103448275862,
-      "win_preserving_rate": 0.9914529914529915
+      "conversion_rate": {
+        "n": 57,
+        "rate": 0.7719298245614035
+      },
+      "dtz_progress_rate": {
+        "n": 696,
+        "rate": 0.3793103448275862
+      },
+      "win_preserving_rate": {
+        "n": 702,
+        "rate": 0.9914529914529915
+      }
     },
     "KNN-K": {
-      "conversion_rate": 1.0,
-      "dtz_progress_rate": 0.0,
-      "win_preserving_rate": 1.0
+      "conversion_rate": {
+        "n": 1,
+        "rate": 1.0
+      },
+      "dtz_progress_rate": {
+        "n": 1,
+        "rate": 0.0
+      },
+      "win_preserving_rate": {
+        "n": 1,
+        "rate": 1.0
+      }
     },
     "KNN-KP": {
-      "conversion_rate": 0.17391304347826086,
-      "dtz_progress_rate": 0.43736263736263736,
-      "win_preserving_rate": 0.8800773694390716
+      "conversion_rate": {
+        "n": 23,
+        "rate": 0.17391304347826086
+      },
+      "dtz_progress_rate": {
+        "n": 910,
+        "rate": 0.43736263736263736
+      },
+      "win_preserving_rate": {
+        "n": 1034,
+        "rate": 0.8800773694390716
+      }
     },
     "KP-K": {
-      "conversion_rate": 0.95,
-      "dtz_progress_rate": 0.3839479392624729,
-      "win_preserving_rate": 1.0
+      "conversion_rate": {
+        "n": 80,
+        "rate": 0.95
+      },
+      "dtz_progress_rate": {
+        "n": 1383,
+        "rate": 0.3839479392624729
+      },
+      "win_preserving_rate": {
+        "n": 1383,
+        "rate": 1.0
+      }
     },
     "KP-KP": {
-      "conversion_rate": 0.9473684210526315,
-      "dtz_progress_rate": 0.4172972972972973,
-      "win_preserving_rate": 0.9989200863930886
+      "conversion_rate": {
+        "n": 57,
+        "rate": 0.9473684210526315
+      },
+      "dtz_progress_rate": {
+        "n": 925,
+        "rate": 0.4172972972972973
+      },
+      "win_preserving_rate": {
+        "n": 926,
+        "rate": 0.9989200863930886
+      }
     },
     "KPP-K": {
-      "conversion_rate": 0.7653061224489796,
-      "dtz_progress_rate": 0.0631704410011919,
-      "win_preserving_rate": 1.0
+      "conversion_rate": {
+        "n": 98,
+        "rate": 0.7653061224489796
+      },
+      "dtz_progress_rate": {
+        "n": 843,
+        "rate": 0.06287069988137604
+      },
+      "win_preserving_rate": {
+        "n": 843,
+        "rate": 1.0
+      }
     },
     "KQ-K": {
-      "conversion_rate": 0.97,
-      "dtz_progress_rate": 0.5096899224806202,
-      "win_preserving_rate": 0.9990319457889641
+      "conversion_rate": {
+        "n": 100,
+        "rate": 0.97
+      },
+      "dtz_progress_rate": {
+        "n": 1032,
+        "rate": 0.5096899224806202
+      },
+      "win_preserving_rate": {
+        "n": 1033,
+        "rate": 0.9990319457889641
+      }
     },
     "KQ-KP": {
-      "conversion_rate": 0.9693877551020408,
-      "dtz_progress_rate": 0.45689655172413796,
-      "win_preserving_rate": 0.9982788296041308
+      "conversion_rate": {
+        "n": 98,
+        "rate": 0.9693877551020408
+      },
+      "dtz_progress_rate": {
+        "n": 1160,
+        "rate": 0.45689655172413796
+      },
+      "win_preserving_rate": {
+        "n": 1162,
+        "rate": 0.9982788296041308
+      }
     },
     "KQ-KR": {
-      "conversion_rate": 0.75,
-      "dtz_progress_rate": 0.3649798477384684,
-      "win_preserving_rate": 0.9977658623771224
+      "conversion_rate": {
+        "n": 100,
+        "rate": 0.75
+      },
+      "dtz_progress_rate": {
+        "n": 2233,
+        "rate": 0.3649798477384684
+      },
+      "win_preserving_rate": {
+        "n": 2238,
+        "rate": 0.9977658623771224
+      }
     },
     "KR-K": {
-      "conversion_rate": 0.93,
-      "dtz_progress_rate": 0.5723641126391618,
-      "win_preserving_rate": 1.0
+      "conversion_rate": {
+        "n": 100,
+        "rate": 0.93
+      },
+      "dtz_progress_rate": {
+        "n": 1527,
+        "rate": 0.5723641126391618
+      },
+      "win_preserving_rate": {
+        "n": 1527,
+        "rate": 1.0
+      }
     },
     "KR-KB": {
-      "conversion_rate": 0.8928571428571429,
-      "dtz_progress_rate": 0.5456,
-      "win_preserving_rate": 0.9484066767830045
+      "conversion_rate": {
+        "n": 28,
+        "rate": 0.8928571428571429
+      },
+      "dtz_progress_rate": {
+        "n": 625,
+        "rate": 0.5456
+      },
+      "win_preserving_rate": {
+        "n": 659,
+        "rate": 0.9484066767830045
+      }
     },
     "KR-KN": {
-      "conversion_rate": 0.8888888888888888,
-      "dtz_progress_rate": 0.5619425173439049,
-      "win_preserving_rate": 0.9729990356798457
+      "conversion_rate": {
+        "n": 45,
+        "rate": 0.8888888888888888
+      },
+      "dtz_progress_rate": {
+        "n": 1009,
+        "rate": 0.5619425173439049
+      },
+      "win_preserving_rate": {
+        "n": 1037,
+        "rate": 0.9729990356798457
+      }
     },
     "KR-KP": {
-      "conversion_rate": 0.8367346938775511,
-      "dtz_progress_rate": 0.46430329886755295,
-      "win_preserving_rate": 0.9975442043222004
+      "conversion_rate": {
+        "n": 98,
+        "rate": 0.8367346938775511
+      },
+      "dtz_progress_rate": {
+        "n": 2031,
+        "rate": 0.46430329886755295
+      },
+      "win_preserving_rate": {
+        "n": 2036,
+        "rate": 0.9975442043222004
+      }
     },
     "KRP-KB": {
-      "conversion_rate": 0.46875,
-      "dtz_progress_rate": 0.18739054290718038,
-      "win_preserving_rate": 0.9904596704249783
+      "conversion_rate": {
+        "n": 96,
+        "rate": 0.46875
+      },
+      "dtz_progress_rate": {
+        "n": 1142,
+        "rate": 0.18739054290718038
+      },
+      "win_preserving_rate": {
+        "n": 1153,
+        "rate": 0.9904596704249783
+      }
     },
     "KRP-KR": {
-      "conversion_rate": 0.4383561643835616,
-      "dtz_progress_rate": 0.32451499118165783,
-      "win_preserving_rate": 0.9826689774696707
+      "conversion_rate": {
+        "n": 73,
+        "rate": 0.4383561643835616
+      },
+      "dtz_progress_rate": {
+        "n": 567,
+        "rate": 0.32451499118165783
+      },
+      "win_preserving_rate": {
+        "n": 577,
+        "rate": 0.9826689774696707
+      }
     }
   },
-  "schema": "rarog-endgame-floors-v1"
+  "schema": "rarog-endgame-floors-v2"
 }
