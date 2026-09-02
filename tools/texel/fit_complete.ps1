@@ -245,12 +245,44 @@ try {
             [int]$manifest.paired_replays_discarded -ne 0) {
             throw "dataset records parse errors or replayed starts"
         }
-        if ([int]$manifest.independent_starts -ne 600000 -or
-            [int]$manifest.recorded_games -ne 600000) {
-            throw "qualified fit requires exactly 600,000 independent, non-replayed starts"
+        # A NAMED LIST of corpus contracts, exactly as $acceptedLabels above is
+        # a named list of label contracts, and for the same reason: the check
+        # exists so a corpus generated a different way is not fitted as if it
+        # were the one the accepted head came from. Adding a corpus means
+        # NAMING it here with the profile and start count it was actually built
+        # at -- never widening the comparison or deleting it. An unlisted
+        # profile, or a listed one at the wrong start count, still throws.
+        #
+        # The start count is pinned per contract because it is the evidence
+        # that every opening was used exactly once: the extractor counts it,
+        # the datagen provenance below must sum to it, and the book audit
+        # proves the ranges never wrapped. A count that drifts means a segment
+        # was rerun or a book was reused.
+        $acceptedCorpora = @(
+            # hce-v2: 750,000-opening phase-BALANCED beast_seed.epd, adjudicated
+            # self-play. The corpus RAR-E06 and RAR-E08 were fitted on.
+            [pscustomobject]@{ Adjudication = "datagen-v1"; Starts = 600000 },
+            # hce-v3 (4.9a.6): 1,000,000-opening phase-WEIGHTED phase_book_v1.epd
+            # at 50/10/10/10/20, NO adjudication. The balanced book could not
+            # reach the row target at any schedule; see
+            # analysis/texel_corpus_book_shape_2026-09-02.md.
+            [pscustomobject]@{ Adjudication = "datagen-v2"; Starts = 602619 }
+        )
+        $corpusProfile = [string]$manifest.label_contract.adjudication.Name
+        $corpusStarts = [int]$manifest.independent_starts
+        $corpusMatch = @($acceptedCorpora | Where-Object {
+            $_.Adjudication -eq $corpusProfile -and $_.Starts -eq $corpusStarts
+        })
+        if ($corpusMatch.Count -ne 1) {
+            $known = ($acceptedCorpora | ForEach-Object {
+                "$($_.Adjudication)/$($_.Starts)"
+            }) -join ' | '
+            throw ("corpus contract '$corpusProfile' at $corpusStarts independent " +
+                   "starts is not one this runner knows how to fit; accepted: $known")
         }
-        if ($manifest.label_contract.adjudication.Name -ne "datagen-v1") {
-            throw "dataset lacks the audited datagen-v1 label provenance"
+        if ([int]$manifest.recorded_games -ne $corpusStarts) {
+            throw ("recorded games $([int]$manifest.recorded_games) do not equal " +
+                   "$corpusStarts independent starts; a start was replayed")
         }
         $bookOpenings = $null
         $bookAudited = $false
