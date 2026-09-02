@@ -93,10 +93,27 @@ function Invoke-Bench {
     }
 }
 
+# The accepted head's `bench 13` fingerprint. Bumped 2026-09-01 when RAR-E06's
+# complete HCE refit was accepted: 6,977,070 / 2.466 (RAR-S70) became
+# 7,226,051 / 2.460. It was NOT bumped at acceptance and the first fit run
+# afterwards failed here -- correctly, but for a stale reason.
+#
+# WHAT THIS CANNOT PROVE. A fingerprint identifies the SEARCH, and a change
+# confined to positions the bench suite never reaches is invisible to it. The
+# 4.9a.4 mate drive is exactly that: it moves KBN-K conversion from 19.4% to
+# 96.9% and leaves `bench 13` byte-identical, because no bench tree reaches a
+# bare-king minor-piece mate. So this guard will happily pass a tree carrying
+# an unaccepted eval change. Check `git rev-parse HEAD` against the commit the
+# fit is supposed to start from; the run manifest records it for that purpose.
+$script:AcceptedBenchNodes = 7226051
+$script:AcceptedBenchEbf = 2.460
+
 function Assert-BaselineFingerprint {
     param($Bench, [string]$Label)
-    if ($Bench.Nodes -ne 6977070 -or [Math]::Abs($Bench.Ebf - 2.466) -gt 0.0005) {
-        throw "$Label fingerprint is $($Bench.Nodes) / $($Bench.Ebf), expected 6977070 / 2.466"
+    if ($Bench.Nodes -ne $script:AcceptedBenchNodes -or
+        [Math]::Abs($Bench.Ebf - $script:AcceptedBenchEbf) -gt 0.0005) {
+        throw ("$Label fingerprint is $($Bench.Nodes) / $($Bench.Ebf), expected " +
+               "$script:AcceptedBenchNodes / $script:AcceptedBenchEbf")
     }
 }
 
@@ -489,7 +506,7 @@ try {
     Write-Host "Final vector: $final"
     Write-Host "Frozen test: $($testMatch.Groups[1].Value) (delta $($testMatch.Groups[3].Value))"
     Write-Host "Candidate bench: $($candidateBench.Nodes) / $($candidateBench.Ebf)"
-    Write-Host "Source restored and release binary rebuilt to 6977070 / 2.466."
+    Write-Host "Source restored and release binary rebuilt to $script:AcceptedBenchNodes / $script:AcceptedBenchEbf."
 } finally {
     if (-not $sourceRestored) {
         Copy-Item -LiteralPath $sourceBackup -Destination $sourcePath -Force
