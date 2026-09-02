@@ -114,6 +114,7 @@ keeps self-play labels, which is the status quo and a legitimate result.
     - [ ] **4.9a.27** Dependency-complete family refits and gates, tiered by occurrence
     - [ ] **4.9a.28** Conversion, theory, STC/LTC and endgame-cohort closure
 - [ ] **4.10** Iterated whole-surface refit cycles — at least one is owed
+    - [ ] **4.10.0** Initialization control: neutral start vs accepted start, offline
     - [ ] **4.10.1** Composition screen against the `datagen-v1` archive (sizing)
     - [ ] **4.10.2** Cycle 1: full 4.8 schedule, own frozen test, registered gate
     - [ ] **4.10.3** Repeat while a cycle accepts; stop at the first that does not
