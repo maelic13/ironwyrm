@@ -47,6 +47,14 @@ CHILD = re.compile(r"^( *)- \[([ x])\] \*\*(\d+\.\d+[a-z]?\.\d+)\*\*")
 STRAY = re.compile(r"^ *- \[[ x]\] \*\*\d+\.\d+[a-z]?(\.\d+)? [^*]")
 PHASE = re.compile(r"^## Phase (\d+)")
 REQUIRED_PHASES = {4, 5, 6, 7, 8, 9}
+PLAN = ROOT / "PLAN.md"
+# Every GUIDE step number must appear somewhere in PLAN. GUIDE and PLAN are
+# required to change in the same commit, and three times in one session a
+# scripted PLAN edit matched no anchor, reported success, and was committed with
+# a GUIDE that had changed -- leaving the two disagreeing with nothing to catch
+# it. This is the cheap half of that check: not that the prose agrees, but that
+# PLAN has heard of every step GUIDE lists.
+STEP_IN_PLAN = re.compile(r"(?<![\d.])%s(?![\d])")
 
 
 def main():
@@ -57,6 +65,7 @@ def main():
     kids = []
     phases = set()
     steps = 0
+    step_numbers = []
 
     def close():
         if parent is not None and kids and all(kids) and not parent[1]:
@@ -75,6 +84,7 @@ def main():
             parent = (m.group(2), m.group(1) == "x")
             kids = []
             steps += 1
+            step_numbers.append(m.group(2))
             continue
         if STRAY.match(line):
             problems.append(
@@ -85,6 +95,7 @@ def main():
         k = CHILD.match(line)
         if k:
             steps += 1
+            step_numbers.append(k.group(3))
             indent = len(k.group(1))
             if indent != 4:
                 problems.append(
@@ -95,6 +106,18 @@ def main():
             if parent is not None:
                 kids.append(k.group(2) == "x")
     close()
+
+    plan_text = PLAN.read_text(encoding="utf-8") if PLAN.is_file() else ""
+    if not plan_text:
+        problems.append("PLAN.md missing; GUIDE and PLAN must change together")
+    else:
+        absent = [s for s in step_numbers
+                  if not re.search(STEP_IN_PLAN.pattern % re.escape(s), plan_text)]
+        if absent:
+            problems.append(
+                "step(s) in GUIDE that PLAN never mentions: %s -- GUIDE and "
+                "PLAN change in the same commit" % ", ".join(absent)
+            )
 
     missing = sorted(REQUIRED_PHASES - phases)
     if missing:

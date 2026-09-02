@@ -206,11 +206,21 @@ something other than what was asked.
    verified in three directions. The `-NoAdjudication` wire, which had never
    played a game, was proved live over 20 games ending 20/20 by a rules
    result.
-2. **4.2a.2.** Sweep `tools/*.ps1` for native invocations whose
-   `$LASTEXITCODE` is never read, and for exit status taken through a pipe.
-3. **4.2a.3.** Every parameter a script advertises must either be honored or
-   refuse to launch. An option silently ignored in one mode is the same defect
-   class as a dead `--rset`.
+2. **4.2a.2 -- done.** Swept `tools/*.ps1` for native invocations whose
+   `$LASTEXITCODE` is never read and for exit status taken through a pipe. None
+   found: direct invocations check the status, and the measurement scripts
+   assert on their PARSE instead, which is stronger -- it verifies the number
+   exists rather than that the process returned 0.
+3. **4.2a.3 -- done, `334c084`.** The match anomaly guard was zero-tolerance
+   and had never run a match; it declared RAR-E06 invalid over 3 forfeits in
+   3,915 games. Split by evidence: crash, illegal move, disconnect and protocol
+   error stay absolute, time forfeits take a 0.5% ceiling that sits two orders
+   of magnitude clear of both healthy runs (0.03-0.33%) and genuinely poisoned
+   ones (5.5%, 34.9%).
+4. **4.2a.4 -- done, `3fb9f57`.** Every parameter a script advertises must be
+   honored or refuse to launch. `sprt.ps1` accepted `-Games` in modes that
+   ignore it, exactly Basilisk's defect; an option silently ignored in one mode
+   is the same class as a dead `--rset`.
 
 ### 4.2b Time-forfeit margin at test concurrency
 
@@ -459,7 +469,7 @@ ran on the accepted vector (RAR-E07) and **the analogue does not transfer**:
 BAS-E25 removed sixteen terms a previous Basilisk phase had *added*, and
 Rarog's existing surface has no equivalent accumulation.
 
-What the inventory found, from artifacts that already existed:
+1. **4.8a.1 Inventory -- done.** From artifacts that already existed:
 
 - The fit drove only **5 of 1,218** slots to zero, and switched **17**
   previously-zero slots back on. Three of the five are whole 1-slot terms:
@@ -481,9 +491,9 @@ activation are exactly `KS_DANGER_INPUTS`, independently reproducing 4.7.3's
 1,194 + 12 + 10 + 2 partition from a different artifact; and the freeze
 behaviour above is the sparse-cut contract working as specified.
 
-The three zeroed terms are now inert -- they multiply by zero -- so deleting
-their code is behavior-neutral and provable by the exact fingerprint, not a
-strength question. **4.13.2 owns that removal, not a gate.** One caveat for
+2. **4.8a.2 Removal -- no cluster exists.** The three zeroed terms are inert --
+they multiply by zero -- so deleting their code is behavior-neutral and
+provable by the exact fingerprint, not a strength question. **4.13.2 owns that removal, not a gate.** One caveat for
 whoever does it: `eval.rs`'s `new_terms_activate_on_curated_positions` asserts
 that `passed_freestop_eg_per_rank` still *traces*, which it does even at a
 zero coefficient. Deleting the feature breaks that test, so the test's
@@ -851,6 +861,50 @@ Stockfish outcomes **-7.30 +/- 4.76**, the worst arm. Evaluation models the
 value realizable by its own consuming search, so a stronger player is not
 automatically a better teacher. Expect the gain to come from *what the games
 show*, not from *who played them*.
+
+**Three contaminations, and regeneration only fixes two of them.**
+
+1. **Label truncation.** `hce-v2` was generated under `datagen-v1`: 52.2% of its
+   600,000 games ended by adjudication and 98% of its decisive results were
+   called by the resign rule rather than played to mate. Regeneration under
+   `datagen-v2`/`v3` fixes this.
+2. **Position distribution.** Its positions came from games played by an
+   evaluator fitted on that same truncated data. Regeneration fixes this too,
+   and it is why conversion improvements precede regeneration in 4.9a -- each
+   turn of the loop should start from a better generator.
+3. **Initialization.** The fit starts from the current accepted vector, which
+   was itself fitted on contaminated data, and **regeneration does not fix
+   this**. The mechanism is explicit in the tuner: the linear gradient is
+   `grad/n + 2*lambda*(w - base_w)`, so the L2 term pulls toward the STARTING
+   vector, not toward zero. The nonlinear king-danger stage is integer
+   coordinate descent, local by construction, and stages select a best
+   validation checkpoint within a fixed epoch budget rather than converging.
+
+   The pull looks weak in practice -- at `lambda = 1e-7` it did not stop 439 of
+   1,218 slots moving in RAR-E06 or 350 in RAR-E08's arm B -- but "looks weak"
+   is an impression, not a measurement.
+
+**The initialization question can be settled OFFLINE, and cheaply.** This is
+the one place a loss comparison is valid: two fits on the SAME corpus with the
+SAME labels differ only in where they started, so their losses are measured
+against the same target and are directly comparable. That is exactly what makes
+RAR-E08 need games and this not. One control fit from a neutral start,
+compared on the same frozen test, answers it for the price of one fit and zero
+games.
+
+Do not adopt a from-scratch fit as the default without that evidence. The ten
+PST gauge anchors and two invariant king values exist because the surface is
+not fully identifiable, so a fresh fit can land in a differently gauged place,
+and the current vector encodes accepted, gate-verified structure that a restart
+discards. Basilisk's +9.52 came from unfreezing PSTs inside a full-surface fit
+that started from existing values, not from a restart.
+
+0. **4.10.0 Initialization control.** Run one cycle from a neutral start
+   alongside the normal one, on the same regenerated corpus and labels, and
+   compare frozen-test loss. If the neutral start is not better, initialization
+   carries no material bias and the loop proceeds from the accepted vector.
+   Record the number either way; this closes the question rather than leaving
+   it a standing doubt.
 
 1. **4.10.1 Opening supply -- reusable, and this was previously overstated as
    a blocker.** `beast_seed.epd` holds 750,000 unique openings and all were
