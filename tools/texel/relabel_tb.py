@@ -161,6 +161,58 @@ def main() -> int:
         json.dumps(manifest, indent=2) + "\n", encoding="utf-8", newline="\n"
     )
     print(f"\nmanifest: {args.out / 'relabel-manifest.json'}")
+
+    # Emit the CORPUS manifest too, not just the relabel report. Without it the
+    # output is not a fittable corpus: `fit_complete.ps1` hash-verifies
+    # `manifest.json` and checks the label string, so for RAR-E08 this file was
+    # built BY HAND. That is a transcription step on the critical path of a
+    # multi-hour fit, and the transformation is fully determined -- copy the
+    # source manifest, retarget the label, replace the three output hashes, and
+    # record provenance. Doing it here removes the chance to get it wrong.
+    source_manifest = args.source / "manifest.json"
+    if not source_manifest.is_file():
+        print(f"WARNING: no {source_manifest}; wrote CSVs and the relabel report "
+              f"only. The output is NOT a fittable corpus without a corpus "
+              f"manifest.", file=sys.stderr)
+        return 0
+
+    corpus = json.loads(source_manifest.read_text(encoding="utf-8"))
+    base_label = str(corpus.get("label", ""))
+    suffix = f"<={args.max_men}-man Syzygy corrected"
+    if suffix not in base_label:
+        corpus["label"] = f"{base_label}, {suffix}" if base_label else suffix
+    corpus["derived_from"] = {
+        "tool": "tools/texel/relabel_tb.py",
+        "source_dir": str(args.source.resolve()),
+        "source_output_sha256": dict(corpus.get("output_sha256", {})),
+        "cursed_wins_are_draws": True,
+        # States only what this tool structurally guarantees. The hand-built
+        # hce-v2-tb manifest also claimed "verified row-for-row"; that was a
+        # separate check, and a tool must not assert an audit it did not run.
+        "note": (
+            "Rows, FENs, order and split membership are byte-identical to the "
+            f"source; only labels on positions of {args.max_men} men or fewer "
+            "differ, by construction -- every row is rewritten as its original "
+            "FEN with either its Syzygy verdict or its original label."
+        ),
+        "relabel": {
+            split: {
+                "rows": report[split]["rows"],
+                "eligible_le_max_men": report[split]["eligible_le_max_men"],
+                "relabelled": report[split]["relabelled"],
+                "probe_failures": report[split]["probe_failures"],
+            }
+            for split in SPLITS
+        },
+    }
+    corpus["output_sha256"] = {
+        split: report[split]["output_sha256"] for split in SPLITS
+    }
+    (args.out / "manifest.json").write_text(
+        json.dumps(corpus, indent=2) + "\n", encoding="utf-8", newline="\n"
+    )
+    print(f"corpus manifest: {args.out / 'manifest.json'}")
+    print(f"label: {corpus['label']}")
     return 0
 
 
