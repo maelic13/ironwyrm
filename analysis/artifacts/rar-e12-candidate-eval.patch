@@ -1,0 +1,373 @@
+diff --git a/src/eval.rs b/src/eval.rs
+index 0538e51..f265cbe 100644
+--- a/src/eval.rs
++++ b/src/eval.rs
+@@ -27,73 +27,73 @@ const LAZY_MARGIN: i32 = 600;
+ // Material values (Phase 4.6 fitted). King pinned 0. mg values rescaled up ~×1.1
+ // vs the old PeSTO seeds to match the lower fitted K (1.70) — ratios-to-pawn are
+ // essentially unchanged, so this is a benign scale shift, not a distortion.
+-const MG_VAL: [i32; 6] = [89, 395, 419, 538, 1131, 0];
+-const EG_VAL: [i32; 6] = [125, 235, 286, 476, 928, 0];
++const MG_VAL: [i32; 6] = [88, 394, 418, 537, 1131, 0];
++const EG_VAL: [i32; 6] = [123, 239, 290, 486, 930, 0];
+ const PHASE_W: [i32; 6] = [0, 1, 1, 2, 4, 0];
+ const PIECE_VALUES: [i32; 6] = [100, 320, 330, 500, 900, MATE_SCORE];
+ 
+ const MG_PAWN_PST: [i32; 64] = [
+-    0, 0, 0, 0, 0, 0, 0, 0, -39, -26, -14, 16, -7, 52, 51, -41, -57, -42, -22, -8, -5, -8, 2, -37,
+-    -49, -50, -16, -17, 4, -5, -43, -46, -28, -18, -12, -12, 4, 7, -9, -17, -1, 23, 51, 34, 81, 75,
++    0, 0, 0, 0, 0, 0, 0, 0, -37, -25, -13, 16, -5, 47, 47, -39, -55, -42, -25, -12, -2, -7, 0, -35,
++    -47, -48, -17, -17, 3, -5, -41, -44, -28, -18, -14, -13, 6, 9, -9, -17, -1, 21, 49, 32, 79, 75,
+     102, 32, 221, 256, 180, 216, 192, 228, 139, -29, 0, 0, 0, 0, 0, 0, 0, 0,
+ ];
+ const EG_PAWN_PST: [i32; 64] = [
+-    0, 0, 0, 0, 0, 0, 0, 0, 27, 18, 7, -32, 5, -3, -15, -7, 30, 16, 0, -10, -1, 3, -11, -5, 41, 30,
+-    -4, -10, -15, -5, 12, 7, 59, 29, -2, -27, -19, -12, 7, 13, 83, 62, 30, 8, -16, 2, 7, 33, 84,
+-    63, 92, 36, 23, 27, 71, 88, 0, 0, 0, 0, 0, 0, 0, 0,
++    0, 0, 0, 0, 0, 0, 0, 0, 27, 16, 5, -32, 5, -2, -15, -9, 28, 16, -3, -10, -1, 1, -12, -5, 41,
++    29, -5, -10, -15, -5, 12, 6, 58, 28, -2, -27, -17, -12, 7, 13, 83, 62, 30, 8, -16, 4, 9, 35,
++    85, 64, 92, 36, 23, 28, 72, 89, 0, 0, 0, 0, 0, 0, 0, 0,
+ ];
+ const MG_KNIGHT_PST: [i32; 64] = [
+-    -142, -138, -112, -21, -18, -18, 14, -56, -45, -108, -17, 12, 14, -7, -46, 31, -81, 19, 18, 40,
+-    77, 46, 43, -34, 22, 31, 63, 55, 77, 88, 115, 55, 11, -8, 46, 72, 53, 99, 99, 87, -101, -28,
+-    38, 60, 120, 107, 119, -35, -26, 20, 62, 95, 80, 48, 39, 16, -184, -43, -62, 35, 24, -17, -6,
++    -142, -130, -110, -21, -17, -16, 11, -56, -45, -106, -17, 12, 12, -7, -46, 26, -79, 18, 18, 38,
++    72, 43, 43, -32, 20, 31, 63, 57, 77, 88, 114, 53, 11, -6, 44, 72, 54, 99, 97, 87, -101, -26,
++    38, 62, 120, 109, 119, -35, -26, 20, 62, 95, 80, 48, 39, 16, -184, -43, -62, 35, 24, -17, -6,
+     19,
+ ];
+ const EG_KNIGHT_PST: [i32; 64] = [
+-    -98, 17, -6, -31, -21, -59, -40, -40, -73, 3, -24, -23, -27, -13, 5, -73, 17, -37, -20, -21,
+-    -29, -48, -44, -7, -5, -17, -6, -7, -16, -33, -36, -24, 21, -18, -7, -13, -11, -35, -44, -4,
+-    23, -18, -6, -14, -28, -33, -57, 13, 21, 3, -24, -35, -36, -26, -7, 10, -102, -54, 1, -14, -8,
+-    -49, 11, -47,
++    -98, 17, -6, -31, -21, -59, -40, -40, -73, 3, -24, -23, -28, -13, 5, -73, 17, -37, -20, -21,
++    -29, -48, -44, -7, -5, -17, -6, -6, -14, -33, -36, -24, 21, -18, -8, -13, -9, -34, -44, -4, 23,
++    -18, -6, -14, -28, -33, -57, 13, 21, 3, -24, -35, -36, -26, -7, 10, -102, -54, 1, -14, -8, -49,
++    11, -47,
+ ];
+ const MG_BISHOP_PST: [i32; 64] = [
+-    -65, -39, -1, -67, 3, -26, -32, -68, 54, -5, -9, -3, 0, 20, 20, -54, 2, 41, 27, 28, 17, 47, 14,
+-    11, 36, 13, 76, 53, 63, 38, 31, 15, 44, 27, 19, 75, 48, 52, 20, -11, -14, 11, 22, 33, 66, 68,
+-    26, 5, 14, 37, 6, -26, -60, 40, -35, -80, -6, 4, -45, -1, -60, -36, 40, -79,
++    -65, -37, -4, -65, 3, -24, -32, -68, 52, 0, -7, -5, 0, 20, 21, -54, 2, 41, 26, 27, 17, 45, 16,
++    11, 34, 13, 74, 53, 62, 38, 31, 15, 42, 27, 19, 73, 47, 52, 21, -11, -14, 11, 22, 33, 66, 68,
++    26, 7, 14, 36, 6, -26, -60, 40, -35, -80, -6, 4, -45, -1, -60, -36, 40, -79,
+ ];
+ const EG_BISHOP_PST: [i32; 64] = [
+-    1, -10, -16, -17, -22, -28, 0, -50, -10, 4, -7, -4, -21, -22, -40, -10, -1, -15, 4, -16, 3,
+-    -35, -6, -21, 2, 18, -12, 8, -16, -6, -14, -5, 15, 8, 11, -8, 5, -1, 1, 3, 17, 25, 10, 11, -11,
++    1, -10, -16, -17, -22, -28, 0, -50, -10, 4, -7, -5, -21, -22, -40, -10, -1, -15, 4, -16, 5,
++    -35, -6, -21, 2, 18, -12, 8, -16, -6, -14, -5, 13, 8, 11, -8, 5, -1, 1, 3, 17, 25, 10, 11, -11,
+     3, 19, 23, 29, 11, 15, 9, 38, 12, 31, 10, 60, 24, 20, -3, 23, 14, -4, 19,
+ ];
+ const MG_ROOK_PST: [i32; 64] = [
+-    -17, -3, -9, 5, 21, 23, 20, -23, -35, -10, -18, -1, 19, 24, 33, 1, -79, -77, -43, -10, -15, -1,
+-    -27, -36, -86, -4, -22, -11, 12, 24, 65, -63, -66, 25, 6, 67, 34, 98, 48, 4, -24, 24, -9, 47,
+-    72, 127, 88, 50, -15, 15, 63, 66, 83, 108, 119, 110, -32, 15, 55, 45, 25, 53, 58, 82,
++    -17, -5, -9, 5, 19, 26, 23, -21, -35, -12, -18, -3, 18, 24, 35, -1, -78, -75, -42, -10, -14, 1,
++    -25, -35, -86, -4, -22, -11, 12, 24, 65, -62, -64, 23, 6, 65, 34, 98, 48, 4, -24, 24, -9, 45,
++    72, 127, 88, 50, -17, 14, 61, 66, 83, 108, 119, 110, -32, 15, 55, 45, 25, 53, 58, 82,
+ ];
+ const EG_ROOK_PST: [i32; 64] = [
+-    -28, -36, -19, -31, -48, -48, -32, -50, -13, -10, -3, -9, -30, -26, -30, -29, 20, 12, 5, -12,
+-    -6, -9, 10, 11, 45, 6, 12, 4, -10, -11, -7, 18, 37, -1, -2, -24, -23, -36, -15, 2, 26, 0, 1,
+-    -21, -27, -37, -17, -22, 33, 20, -6, -9, -8, -16, -17, -15, 53, 39, 19, 10, 23, 15, 17, 21,
++    -28, -36, -19, -31, -48, -47, -32, -50, -13, -11, -3, -11, -30, -26, -30, -29, 20, 12, 5, -12,
++    -6, -9, 10, 11, 45, 6, 12, 4, -10, -11, -7, 18, 39, -1, -2, -24, -23, -36, -15, 2, 26, 0, 1,
++    -21, -27, -37, -17, -22, 33, 20, -6, -9, -8, -15, -17, -15, 53, 39, 19, 12, 24, 17, 17, 21,
+ ];
+ const MG_QUEEN_PST: [i32; 64] = [
+-    40, 0, 4, 16, 25, 8, -24, 2, -3, 3, -6, 3, 21, 51, -7, 52, 5, 7, -16, -19, 11, 57, 37, -10, 15,
+-    -2, -4, 44, 41, 31, 38, 19, -17, -55, -54, -19, 44, 7, 58, -18, 4, -7, -24, -52, 34, 63, 67,
++    40, 0, 4, 14, 25, 6, -24, 2, -3, 1, -4, 6, 21, 51, -5, 52, 5, 7, -14, -16, 11, 54, 39, -8, 12,
++    -2, -2, 42, 41, 33, 40, 20, -19, -55, -54, -19, 44, 7, 58, -16, 2, -7, -24, -52, 34, 63, 67,
+     51, -72, -69, -42, -22, -25, 16, 5, 11, -27, -51, -24, 0, 22, 51, 33, 28,
+ ];
+ const EG_QUEEN_PST: [i32; 64] = [
+     -37, -1, -15, -10, -13, -28, -25, -32, 10, 48, 47, 23, 20, -28, 16, -23, -38, 22, 74, 83, 45,
+-    18, 44, 55, 52, 64, 82, 65, 51, 55, 85, 64, -38, 16, -3, -7, -20, 17, -35, 12, -87, -60, -25,
++    18, 44, 55, 51, 64, 82, 65, 51, 56, 85, 64, -39, 16, -3, -7, -20, 17, -35, 12, -87, -60, -25,
+     15, 22, -15, -48, -48, -37, -31, 13, 12, 48, 25, 1, -17, -38, 2, 1, 10, -4, 19, 3, 6,
+ ];
+ const MG_KING_PST: [i32; 64] = [
+-    -36, 45, -6, -122, -35, -80, 35, 44, 29, 17, -53, -106, -70, -33, 36, 35, -21, -42, -26, -39,
+-    -72, 16, 59, -8, -60, 35, -93, -143, -135, -54, -16, -44, 24, 19, -116, -144, -126, -42, -6,
++    -36, 47, -2, -122, -34, -80, 31, 43, 29, 17, -53, -106, -70, -33, 38, 36, -21, -42, -26, -39,
++    -72, 14, 56, -8, -60, 35, -93, -143, -135, -54, -16, -44, 24, 19, -116, -144, -126, -42, -6,
+     -34, 19, 61, 48, -59, -66, 43, 61, 21, 83, 51, 42, 49, 20, 63, 24, 20, -14, 75, 74, 40, -9, 31,
+     66, 32,
+ ];
+ const EG_KING_PST: [i32; 64] = [
+-    -14, -39, -6, 25, 12, -3, -47, -66, -6, -3, 21, 35, 22, 11, -13, -21, 13, 14, 25, 32, 38, 11,
+-    -13, -1, 21, 10, 48, 69, 61, 43, 23, 16, 19, 49, 65, 68, 69, 67, 61, 32, 36, 56, 54, 48, 61,
+-    73, 76, 57, 43, 19, 54, 39, 40, 80, 92, 48, -67, 17, 26, 18, 28, 64, 52, -3,
++    -14, -39, -6, 23, 11, -3, -47, -68, -6, -3, 21, 35, 22, 11, -13, -21, 12, 12, 25, 32, 38, 11,
++    -15, -1, 21, 10, 48, 69, 63, 45, 23, 16, 19, 49, 67, 70, 71, 68, 61, 32, 36, 56, 55, 50, 63,
++    74, 76, 57, 43, 19, 54, 39, 40, 80, 93, 48, -67, 17, 26, 18, 28, 64, 52, -3,
+ ];
+ 
+ /// Flatten the six per-piece PST consts into one `[i32; 384]` array in
+@@ -283,20 +283,20 @@ eval_params! {
+     pst_eg: 384 = build_default_pst(false);
+     // Passers & pawn structure (Phase 4.4 fitted). passed_*/connected per-rank
+     // tables; passed bonuses stay monotonic (rank 1/8 pinned 0).
+-    passed_mg: 8 = [0, 0, 0, 4, 50, 127, 152, 0];
+-    passed_eg: 8 = [0, 0, 0, 33, 72, 101, 101, 0];
+-    passed_supported_mg: 1 = [4];
++    passed_mg: 8 = [0, 0, 0, 7, 51, 122, 152, 0];
++    passed_eg: 8 = [0, 0, 0, 24, 67, 107, 110, 0];
++    passed_supported_mg: 1 = [7];
+     passed_supported_eg_base: 1 = [0];
+     passed_supported_eg_per_rank: 1 = [0];
+     passed_freestop_mg_per_rank: 1 = [0];
+-    passed_freestop_eg_per_rank: 1 = [0];
+-    passed_safestop_eg_per_rank: 1 = [13];
++    passed_freestop_eg_per_rank: 1 = [2];
++    passed_safestop_eg_per_rank: 1 = [14];
+     passed_candidate_mg: 1 = [0];
+     passed_candidate_eg: 1 = [0];
+     pawn_doubled_mg: 1 = [0];
+-    pawn_doubled_eg: 1 = [13];
+-    pawn_isolated_mg: 1 = [0];
+-    pawn_isolated_eg: 1 = [8];
++    pawn_doubled_eg: 1 = [12];
++    pawn_isolated_mg: 1 = [1];
++    pawn_isolated_eg: 1 = [5];
+     // Rank-scaled pawn *support* (Phase 3.8), Phase 4.4 fitted; indexed by the
+     // pawn's relative rank (0..7). NB despite the historical name, this term
+     // fires only for a pawn defended diagonally from behind by an own pawn
+@@ -304,54 +304,54 @@ eval_params! {
+     // the same rank, which do not defend each other) is the separate
+     // `pawn_phalanx_*` table below. (Rename to `pawn_supported_*` deferred: it
+     // churns the tuner's string-keyed param list; see PLAN 7.4.)
+-    pawn_connected_mg: 8 = [7, 7, 34, 27, 20, 59, 175, 7];
+-    pawn_connected_eg: 8 = [5, 5, 7, 0, 13, 22, 21, 5];
++    pawn_connected_mg: 8 = [7, 7, 35, 27, 21, 57, 175, 7];
++    pawn_connected_eg: 8 = [5, 5, 7, 0, 13, 22, 22, 5];
+     // Same-rank phalanx (Phase 7.4, seeded 0): a pawn with an own pawn on an
+     // adjacent file *on the same rank* (d4+e4). Rank-scaled; the refit activates
+     // it. Was entirely unrepresented before 7.4.
+-    pawn_phalanx_mg: 8 = [0, 1, 5, 20, 15, 0, 0, 0];
+-    pawn_phalanx_eg: 8 = [0, 0, 6, 12, 17, 8, 0, 0];
+-    pawn_backward_mg: 1 = [4];
+-    pawn_backward_eg: 1 = [16];
++    pawn_phalanx_mg: 8 = [0, 2, 6, 20, 24, 2, 0, 0];
++    pawn_phalanx_eg: 8 = [0, 0, 3, 11, 24, 11, 1, 0];
++    pawn_backward_mg: 1 = [0];
++    pawn_backward_eg: 1 = [14];
+     // Pawn-structure / passer detail (Phase 3.8), Phase 4.4 fitted. pawn_lever
+     // stayed frozen at 0 (feature-support: too sparse to fit reliably).
+     pawn_lever_mg: 1 = [0];
+     pawn_lever_eg: 1 = [0];
+     pawn_doubled_isolated_mg: 1 = [4];
+     pawn_doubled_isolated_eg: 1 = [11];
+-    blocked_passer_mg: 1 = [47];
+-    blocked_passer_eg: 1 = [10];
+-    ideal_blockader_mg: 1 = [23];
++    blocked_passer_mg: 1 = [43];
++    blocked_passer_eg: 1 = [8];
++    ideal_blockader_mg: 1 = [21];
+     ideal_blockader_eg: 1 = [0];
+     // Minors & rooks (Phase 4.4 fitted). rook_7th and a few others fitted to 0 —
+     // the data verdict that they add nothing atop mobility/threats/open-file.
+-    bishop_pair_mg: 1 = [25];
+-    bishop_pair_eg: 1 = [55];
+-    rook_open_mg: 1 = [49];
+-    rook_open_eg: 1 = [3];
+-    rook_semiopen_mg: 1 = [16];
+-    rook_semiopen_eg: 1 = [15];
++    bishop_pair_mg: 1 = [24];
++    bishop_pair_eg: 1 = [57];
++    rook_open_mg: 1 = [50];
++    rook_open_eg: 1 = [12];
++    rook_semiopen_mg: 1 = [19];
++    rook_semiopen_eg: 1 = [14];
+     rook_7th_mg: 1 = [0];
+-    rook_7th_eg: 1 = [11];
++    rook_7th_eg: 1 = [13];
+     rook_behind_passer_mg: 1 = [0];
+-    rook_behind_passer_eg: 1 = [70];
+-    enemy_rook_behind_passer_mg: 1 = [21];
+-    enemy_rook_behind_passer_eg: 1 = [15];
+-    knight_outpost_mg: 1 = [59];
++    rook_behind_passer_eg: 1 = [68];
++    enemy_rook_behind_passer_mg: 1 = [23];
++    enemy_rook_behind_passer_eg: 1 = [23];
++    knight_outpost_mg: 1 = [57];
+     knight_outpost_eg: 1 = [8];
+     // Per-count mobility tables (Phase 3.7 structure; Phase 4.3 fitted). Each is
+     // non-decreasing in the count (a trapped piece is worst); low entries can go
+     // negative (e.g. a 0-mobility bishop). Fitted at 250 epochs — the clean point
+     // where every holdout bucket still improves (a fuller fit overvalued rook
+     // activity in drawish rook endings, regressing that bucket).
+-    mob_n_mg: 9 = [-16, -10, 15, 24, 33, 38, 48, 54, 54];
+-    mob_n_eg: 9 = [-20, 13, 21, 34, 51, 71, 75, 76, 76];
+-    mob_b_mg: 14 = [15, 19, 30, 37, 46, 52, 54, 58, 61, 63, 70, 70, 70, 70];
+-    mob_b_eg: 14 = [-36, -3, 40, 49, 64, 74, 82, 84, 90, 90, 90, 90, 90, 90];
+-    mob_r_mg: 15 = [16, 35, 47, 54, 54, 59, 65, 65, 69, 74, 82, 88, 89, 89, 89];
+-    mob_r_eg: 15 = [4, 41, 41, 50, 66, 77, 86, 96, 104, 106, 108, 111, 111, 111, 111];
+-    mob_q_mg: 28 = [-45, 18, 65, 65, 66, 69, 69, 70, 74, 75, 82, 85, 87, 88, 89, 97, 97, 97, 97, 101, 101, 101, 101, 101, 101, 101, 101, 101];
+-    mob_q_eg: 28 = [-13, 8, 25, 25, 33, 33, 91, 97, 97, 101, 101, 101, 108, 111, 111, 118, 118, 121, 121, 125, 125, 125, 125, 125, 125, 125, 125, 125];
++    mob_n_mg: 9 = [-17, -9, 17, 26, 33, 38, 45, 54, 54];
++    mob_n_eg: 9 = [-20, 12, 21, 34, 51, 73, 77, 78, 78];
++    mob_b_mg: 14 = [13, 19, 30, 37, 45, 50, 54, 58, 61, 63, 70, 70, 70, 70];
++    mob_b_eg: 14 = [-36, -3, 38, 49, 64, 74, 83, 85, 90, 91, 91, 91, 91, 91];
++    mob_r_mg: 15 = [19, 33, 46, 54, 56, 59, 63, 65, 68, 74, 81, 88, 90, 90, 90];
++    mob_r_eg: 15 = [4, 41, 41, 50, 66, 77, 86, 96, 104, 106, 109, 113, 113, 113, 119];
++    mob_q_mg: 28 = [-45, 18, 65, 65, 66, 69, 69, 70, 74, 75, 82, 85, 87, 89, 89, 97, 97, 97, 97, 101, 101, 101, 101, 101, 101, 101, 101, 101];
++    mob_q_eg: 28 = [-13, 8, 25, 25, 33, 33, 89, 97, 97, 101, 101, 101, 108, 111, 111, 118, 118, 121, 121, 125, 125, 125, 125, 125, 125, 125, 125, 125];
+     // Threats (Phase 3.6 structure; Phase 4.2 fitted). The base threat scalars
+     // converged to a common (38, 25) — the per-victim `threat_by_*` tables below
+     // now carry the attacker/victim-specific signal.
+@@ -366,11 +366,11 @@ eval_params! {
+     // term absorbed the old flat hanging penalty, which the joint fit drove to
+     // ~0 (see hanging_* below).
+     threat_by_minor_mg: 6 = [0, 50, 82, 82, 71, 0];
+-    threat_by_minor_eg: 6 = [8, 28, 0, 0, 0, 0];
+-    threat_by_rook_mg: 6 = [0, 31, 41, 4, 71, 0];
+-    threat_by_rook_eg: 6 = [13, 22, 30, 1, 18, 0];
+-    threat_hanging_refined_mg: 6 = [7, 20, 46, 33, 0, 0];
+-    threat_hanging_refined_eg: 6 = [52, 28, 14, 2, 0, 0];
++    threat_by_minor_eg: 6 = [7, 28, 0, 0, 0, 0];
++    threat_by_rook_mg: 6 = [0, 29, 41, 4, 71, 0];
++    threat_by_rook_eg: 6 = [11, 22, 30, 1, 18, 0];
++    threat_hanging_refined_mg: 6 = [4, 22, 44, 31, 0, 0];
++    threat_hanging_refined_eg: 6 = [49, 28, 14, 2, 0, 0];
+     threat_safe_pawn_push_mg: 1 = [35];
+     threat_safe_pawn_push_eg: 1 = [0];
+     threat_weak_piece_mg: 1 = [42];
+@@ -385,24 +385,24 @@ eval_params! {
+     // table with the danger-index inputs below by re-evaluating the 2.19M set
+     // (`--tune-kingsafety`): the tail rose well above the old 118 cap into the
+     // danger² curve strong engines use, staying monotonic non-decreasing.
+-    king_safety_table: 40 = [72, 72, 87, 87, 101, 101, 120, 122, 155, 181, 227, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 269, 295, 316, 316, 316, 316, 316, 316, 316, 316, 316, 316, 316, 316, 316, 316, 414];
++    king_safety_table: 40 = [84, 84, 98, 98, 112, 112, 153, 153, 153, 218, 248, 253, 253, 253, 253, 254, 254, 256, 256, 256, 256, 256, 256, 315, 315, 374, 374, 374, 374, 374, 374, 374, 374, 374, 374, 374, 374, 374, 440, 515];
+     // King-danger inputs (Phase 3.5). Seeded 0 (danger == the old attacker-unit
+     // sum); they select the danger bucket non-linearly, so they are invisible
+     // to the linear Texel trace and were fitted in Phase 4.1 by re-evaluation
+     // (`--tune-kingsafety`). ks_weak_ring / ks_flank_attack stayed at 0 in the
+     // fit.
+     ks_weak_ring: 1 = [0];
+-    ks_safe_check_knight: 1 = [6];
++    ks_safe_check_knight: 1 = [8];
+     ks_safe_check_bishop: 1 = [8];
+     ks_safe_check_rook: 1 = [8];
+     ks_safe_check_queen: 1 = [16];
+     ks_queen_relief: 1 = [2];
+     ks_flank_attack: 1 = [0];
+-    ks_pawnless_flank: 1 = [20];
+-    shelter_missing_file_mg: 1 = [16];
+-    shelter_missing_adjacent_mg: 1 = [7];
++    ks_pawnless_flank: 1 = [17];
++    shelter_missing_file_mg: 1 = [25];
++    shelter_missing_adjacent_mg: 1 = [8];
+     shelter_dist1_mg: 1 = [29];
+-    shelter_dist2_mg: 1 = [13];
++    shelter_dist2_mg: 1 = [14];
+     storm_file_weight: 1 = [0];
+     storm_adjacent_weight: 1 = [3];
+     // Old flat hanging penalty (Phase 3.6). Phase 4.2 dropped it data-driven:
+@@ -410,11 +410,11 @@ eval_params! {
+     // absorbed it, so the joint fit drove these to ~0. Kept (not deleted) so the
+     // term stays available; the values are now near-inert.
+     hanging_minor: 1 = [0];
+-    hanging_rook: 1 = [1];
+-    hanging_queen: 1 = [1];
+-    passer_proximity_base: 1 = [13];
++    hanging_rook: 1 = [0];
++    hanging_queen: 1 = [0];
++    passer_proximity_base: 1 = [12];
+     space_weight: 1 = [0];
+-    tempo: 1 = [32];
++    tempo: 1 = [35];
+     // trapped_bishop frozen at hand value (feature-support: too sparse to fit).
+     trapped_bishop_mg: 1 = [60];
+     trapped_bishop_eg: 1 = [40];
+@@ -429,45 +429,45 @@ eval_params! {
+     // linear and Texel-tunable; the scale is the tuner's to find (Phase 4.5).
+     // Phase 4.5 fitted (lower triangle; upper entries never fire). Rows/cols in
+     // the imbalance "piece" order [bishop_pair, pawn, knight, bishop, rook, queen].
+-    imbalance_ours: 36 = [25, 0, 0, 0, 0, 0, 2, 8, 0, 0, 0, 0, -8, 48, -19, 0, 0, 0, 26, 47, -21, -37, 0, 0, -3, 60, -44, -37, -43, 0, 5, 108, -96, -60, -126, -99];
+-    imbalance_theirs: 36 = [0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, -9, 48, 0, 0, 0, 0, 6, 51, -11, 0, 0, 0, -14, 66, 10, 12, 0, 0, 11, 133, 2, 32, -1, 0];
++    imbalance_ours: 36 = [25, 0, 0, 0, 0, 0, 2, 7, 0, 0, 0, 0, -9, 47, -20, 0, 0, 0, 26, 46, -26, -36, 0, 0, -5, 54, -47, -38, -38, 0, 3, 107, -98, -63, -130, -97];
++    imbalance_theirs: 36 = [0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, -9, 47, 0, 0, 0, 0, 6, 50, -11, 0, 0, 0, -14, 66, 11, 12, 0, 0, 13, 132, 4, 35, 0, 0];
+     // Small positional terms (Phase 3.10), all seeded 0 (bench unchanged),
+     // tuned in Phase 4.4/4.5.
+     // Small positional terms (Phase 3.10), Phase 4.4 fitted. rook_trapped frozen
+     // (feature-support: too sparse).
+     bishop_pair_pawn_mg: 1 = [0];
+-    bishop_pair_pawn_eg: 1 = [-4];
+-    bishop_outpost_mg: 1 = [47];
++    bishop_pair_pawn_eg: 1 = [-3];
++    bishop_outpost_mg: 1 = [46];
+     bishop_outpost_eg: 1 = [1];
+     rook_trapped_mg: 1 = [0];
+     rook_trapped_eg: 1 = [0];
+-    rook_connected_mg: 1 = [4];
+-    rook_connected_eg: 1 = [45];
++    rook_connected_mg: 1 = [6];
++    rook_connected_eg: 1 = [47];
+     bishop_long_diagonal_mg: 1 = [28];
+     bishop_long_diagonal_eg: 1 = [1];
+-    bad_bishop_mg: 1 = [0];
+-    bad_bishop_eg: 1 = [17];
+-    initiative_weight: 1 = [2];
++    bad_bishop_mg: 1 = [1];
++    bad_bishop_eg: 1 = [19];
++    initiative_weight: 1 = [1];
+     // Closedness (rammed-pawn count) value swing: per own-piece-count, added
+     // for knights (expected positive when tuned) and rooks (expected
+     // negative). mg-only — see eval_closedness for the caveat that the
+     // marginal lever beyond 3.7's per-count mobility is the material-value
+     // swing alone, so this is deliberately kept as a single small weight.
+-    closedness_knight_mg: 1 = [12];
+-    closedness_rook_mg: 1 = [-8];
++    closedness_knight_mg: 1 = [10];
++    closedness_rook_mg: 1 = [-9];
+     // Central-king / lost-castling danger: fires only when the king is still
+     // on its home square, on a central file, with all castling rights for
+     // that side gone.
+     king_centrality_danger_mg: 1 = [65];
+     // Gauntlet-driven additions (Phase 3.12), Phase 4.4 fitted. king_protector /
+     // space_piece fitted to 0 (no marginal value atop the rest).
+-    unstoppable_passer_eg: 1 = [52];
+-    minor_behind_pawn_mg: 1 = [20];
++    unstoppable_passer_eg: 1 = [60];
++    minor_behind_pawn_mg: 1 = [18];
+     minor_behind_pawn_eg: 1 = [0];
+     pawn_islands_mg: 1 = [9];
+     pawn_islands_eg: 1 = [0];
+-    queen_infiltration_mg: 1 = [47];
+-    queen_infiltration_eg: 1 = [77];
++    queen_infiltration_mg: 1 = [46];
++    queen_infiltration_eg: 1 = [81];
+     king_protector_mg: 1 = [7];
+     king_protector_eg: 1 = [5];
+     space_piece_mg: 1 = [0];
+@@ -479,16 +479,16 @@ eval_params! {
+     // Passed-pawn whole-path weighting: the entire path to promotion is empty
+     // ("free path") / never attacked by the enemy ("safe path"), scaled by
+     // relative rank like the existing free/safe-stop terms.
+-    passed_freepath_mg_per_rank: 1 = [-2];
+-    passed_freepath_eg_per_rank: 1 = [4];
+-    passed_safepath_eg_per_rank: 1 = [18];
++    passed_freepath_mg_per_rank: 1 = [-7];
++    passed_freepath_eg_per_rank: 1 = [8];
++    passed_safepath_eg_per_rank: 1 = [25];
+     // Deferred §3.12 trio.
+-    bishop_xray_pawns_mg: 1 = [-6];
++    bishop_xray_pawns_mg: 1 = [-8];
+     bishop_xray_pawns_eg: 1 = [4];
+-    queen_battery_mg: 1 = [10];
+-    queen_battery_eg: 1 = [14];
+-    slider_on_queen_mg: 1 = [18];
+-    slider_on_queen_eg: 1 = [4];
++    queen_battery_mg: 1 = [13];
++    queen_battery_eg: 1 = [17];
++    slider_on_queen_mg: 1 = [26];
++    slider_on_queen_eg: 1 = [6];
+     // Shelter/storm folded into the king-danger index (nonlinear — selects the
+     // safety-table bucket, so it is invisible to the linear trace and is fit by
+     // the --tune-kingsafety re-eval path, like the other ks_* inputs). The
