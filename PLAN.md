@@ -8,13 +8,13 @@ in `EXPERIMENTS.md`; current status and commands belong in `GUIDE.md`.
 | Item | State |
 |---|---|
 | Released baseline | **2.3.2** at `f931722` on `master` |
-| Accepted head | RAR-E06 plus the 4.9a.4 mate drive on `dev`; `bench 13` = **7,226,051 nodes / EBF 2.460**, 1T. The drive is bench-INVISIBLE, so the fingerprint identifies RAR-E06 but not it |
+| Accepted head | RAR-E08 on `dev`; `bench 13` = **7,165,683 nodes / EBF 2.462**, 1T. Includes the 4.9a.4 mate drive, which is bench-INVISIBLE |
 | Integration state | The failed SearchCore rewrite is reverted by `c5e451d`; `d2c7788`/`e4f10ca` upgrade search evidence and `8d8f507` supplies the audited complete HCE fitting pipeline without changing accepted behavior |
 | Frozen search/HCE oracle | `hybrid` at `75d0d43`, Stockfish `9587eeeb` driving the exact Rarog 2.3.2 HCE |
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
-| Accepted Phase-4 gains | ProbCut move filtering **+15.56 +/- 10.02 Elo**; root LMR relief **+2.33 +/- 1.85 Elo**; complete HCE refit **+22.04 +/- 7.51 Elo** |
+| Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82** |
 | Active game job | none; RAR-E06 accepted 2026-09-01 at **+22.04 +/- 7.51 Elo**, +32.05 nElo |
-| Current step | **4.9 / 4.9a — structural residuals and endgame closure** |
+| Current step | **4.9a.6 — regenerate the corpus, then TB-relabel before fitting** |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) and endgame closure (4.9a) remain open |
 | Next release | Conditional **2.4.0** after 4.15; baseline NNUE then targets **2.5.0** |
 
@@ -722,41 +722,23 @@ so nothing is lost when the two are compared.
   another refit. Texel may correctly fit a rare multi-ply guidance term toward
   zero for static WDL loss while search needs an actionable magnitude; resolve
   that with sweeps, conversion and DTZ progress, not by freezing either value.
-- **4.9a.5 RAR-E08: label contract -- ARM B BUILT; fit and gate are the
-  maintainer's.** `tools/texel/relabel_tb.py` produced
-  `tools/texel/data/hce-v2-tb`: rows, FENs, order and split membership
-  byte-identical to `hce-v2`, with only <=6-man labels replaced by the
-  tablebase verdict. Verified row-for-row -- 0 FEN mismatches, 0 length
-  differences, 0 labels changed above 6 men, 0 probe failures. **30,480 train
-  labels changed, 1.325% of all rows.**
+- **4.9a.5 RAR-E08: label contract -- ACCEPTED, +6.73 +/- 3.82 Elo.** H1 at
+  13,432 games, LOS 99.97%, zero forfeits. Arm B's vector is the accepted head
+  at **7,165,683 / 2.462**. Texel theory predicted arm A and lost by 10.34
+  nElo: the self-reinforcing label loop was the stronger effect, and correcting
+  1.325% of rows paid.
 
-  Cursed wins are labelled draws: WDL 2 becomes 1.0, while 1, 0 and -1 all
-  become 0.5, because the label must be the result the game would really have
-  had. All three splits are relabelled; doing only train would leave the fit
-  validating against a different target than it optimises.
+  **What is adopted is the post-hoc relabel of <=6-man positions**
+  (`tools/texel/relabel_tb.py`), cursed wins as draws, on an otherwise
+  unchanged corpus. It is NOT `datagen-v3`, which adjudicates the game on
+  tablebase truth and so changes the recorded result of every position sampled
+  from it, including openings. `datagen-v3` remains untested; adopting it
+  because "tablebase labels won" would be adopting a different change.
 
-  The transitions show the correction runs both ways, which is why neither arm
-  is obviously right: 8,826 train rows drew in self-play but are theoretically
-  won, 7,764 were won but are drawn, 7,353 drew but are lost, 6,337 were lost
-  but are drawn, and 200 are outright win/loss reversals.
-
-  Arm B is fitted: `hce-fit-20260902_094603`, started from the accepted vector
-  (verified byte-identical to RAR-E06's final), K pinned at 1.3806, frozen test
-  opened once, **350 of 1,218 slots moved**, candidate fingerprint
-  **7,165,683 / 2.462**. The gate is registered in `EXPERIMENTS.md` at `[0,3]`
-  nElo with an 80,000-game cap and no adjudication; only H1 adopts tablebase
-  labels for 4.9a.6 and every later fit.
-
-  **The arms cannot be compared by offline loss**: their targets differ, and a
-  loss measured against different targets is not a comparison. Arm B improved
-  its own frozen test by 0.000181 against RAR-E06's 0.00078088 on its own --
-  that the smaller number belongs to arm B is consistent with RAR-E09, where
-  the accepted vector was already closer to tablebase truth than its labels
-  were, but it is an observation and not evidence for either arm.
-
-  `fit_complete.ps1`'s label guard correctly refused arm B and was extended to
-  a NAMED whitelist rather than widened, so an unrecognised contract still
-  throws.
+  Conversion cost, resolved at n=400: KBN-K's -5.1 pp at n=100 was noise
+  (+0.5 pp, SE 1.5), and the one real regression is **KQ-KP -3.8 pp at 2.9 SE**
+  -- owner 4.9a.14, retry at 4.9a.27. Aggregate weighted conversion is flat,
+  83.24% -> 83.45%.
 
 - **4.9a.6 Regenerate on the winning contract.** Only after RAR-E08 reports.
   Hash-freeze under a new name; never edit `hce-v2` in place, since it is the

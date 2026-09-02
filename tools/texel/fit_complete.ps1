@@ -93,7 +93,9 @@ function Invoke-Bench {
     }
 }
 
-# The accepted head's `bench 13` fingerprint. Bumped 2026-09-01 when RAR-E06's
+# The accepted head's `bench 13` fingerprint. Bumped again 2026-09-02 when
+# RAR-E08 accepted the tablebase-corrected label fit: 7,226,051 / 2.460 became
+# 7,165,683 / 2.462. Bumped 2026-09-01 when RAR-E06's
 # complete HCE refit was accepted: 6,977,070 / 2.466 (RAR-S70) became
 # 7,226,051 / 2.460. It was NOT bumped at acceptance and the first fit run
 # afterwards failed here -- correctly, but for a stale reason.
@@ -105,8 +107,8 @@ function Invoke-Bench {
 # bare-king minor-piece mate. So this guard will happily pass a tree carrying
 # an unaccepted eval change. Check `git rev-parse HEAD` against the commit the
 # fit is supposed to start from; the run manifest records it for that purpose.
-$script:AcceptedBenchNodes = 7226051
-$script:AcceptedBenchEbf = 2.460
+$script:AcceptedBenchNodes = 7165683
+$script:AcceptedBenchEbf = 2.462
 
 function Assert-BaselineFingerprint {
     param($Bench, [string]$Label)

@@ -11,44 +11,28 @@ and `python tools/diag/check_guide.py` must pass.
 | Item | Value |
 |---|---|
 | Released baseline | **2.3.2** at `f931722` on `master` |
-| Accepted head | RAR-E06 + 4.9a.4 mate drive, **7,226,051 nodes / EBF 2.460**. The drive is bench-INVISIBLE, so the fingerprint cannot identify it |
+| Accepted head | RAR-E08, **7,165,683 nodes / EBF 2.462**. Includes the 4.9a.4 mate drive, which is bench-INVISIBLE |
 | Integration branch | `dev`; the complete HCE refit `5188eca` is accepted |
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
 | Measured search deficit | **355.26 +/- 27.03 Elo** equal nodes; **250.77 +/- 13.12** equal time; speed worth **104.5 Elo** |
-| Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51** |
-| Active experiment | none; RAR-E06 accepted 2026-09-01 |
+| Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82** |
+| Active experiment | none; RAR-E08 accepted 2026-09-02 |
 | Current step | **4.9 / 4.9a — structural HCE residuals and endgame closure** |
 | Next release | Conditional 2.4.0 at 4.15; NNUE follows either way |
 
 ## What you run next
 
-**RAR-E08's gate** (4.9a.5). Arm B is fitted and the gate is registered at
-`[0,3]` nElo, 80,000-game cap, no adjudication. Build both arms first -- arm
-A's existing binary predates the accepted mate drive, and arm B needs its
-vector baked in:
+**4.9a.6 — regenerate the corpus.** RAR-E08 settled the label contract: what
+won is the **post-hoc relabel of <=6-man positions** (`relabel_tb.py`), NOT
+`datagen-v3`, which adjudicates the whole game on tablebase truth and changes
+the result of every position sampled from it. That remains untested.
+
+So the pipeline is: generate with `datagen-v2` (no adjudication), then relabel,
+then fit. The relabel is now a standard step, not an experiment.
 
 ```powershell
-& .\tools\build_test.ps1 -Suffix e08-arm-a
-git apply tools/results/hce-fit-20260902_094603/candidate-eval.patch
-& .\tools\build_test.ps1 -Suffix e08-arm-b
-git checkout src/eval.rs
+python tools\texel\relabel_tb.py --source <new-corpus> --syzygy D:\chess\tablebases\syzygy3456 --out <new-corpus>-tb
 ```
-
-Arm A must bench **7,226,051 / 2.460** and arm B **7,165,683 / 2.462**; if
-either differs, stop -- the wrong source was built. Then:
-
-```powershell
-& .\tools\sprt.ps1 `
-    -EngineA .\tools\test_engines\rarog-e08-arm-b-pext-pgo.exe `
-    -EngineB .\tools\test_engines\rarog-e08-arm-a-pext-pgo.exe `
-    -NameA E08TbLabels -NameB E08SelfPlay `
-    -Elo0 0 -Elo1 3 -Alpha 0.05 -Beta 0.05 -MaxGames 80000 `
-    -TC "3+0.03" -Threads 1 -Hash 64 -Concurrency 14 -TimeMargin 20 `
-    -Seed 260902
-```
-
-Only H1 adopts tablebase labels for 4.9a.6 and every later fit. H0 or the cap
-keeps self-play labels, which is the status quo and a legitimate result.
 
 ## Phase 4 — bounded pre-NNUE search and HCE
 
@@ -89,8 +73,8 @@ keeps self-play labels, which is the status quo and a legitimate result.
     - [x] **4.9a.2** Endgame-start cohort book — 788 verified positions, 21 families
     - [x] **4.9a.3** Regression contract: 64 frozen theory vetoes + ratcheting floors
     - [x] **4.9a.4** Mate-drive cluster **ACCEPTED**, no gate — KBN-K **19.4% -> 96.9%**
-    - [ ] **4.9a.5** RAR-E08 arm B built; **fit + SPRT are yours** — 30,480 labels changed
-    - [ ] **4.9a.6** Regenerate the corpus on the winning contract; never edit `hce-v2`
+    - [x] **4.9a.5** RAR-E08 **ACCEPTED** +6.73 +/- 3.82 Elo — TB-corrected labels win
+    - [ ] **4.9a.6** NEXT — regenerate, then TB-relabel before fitting; never edit `hce-v2`
     - [ ] **4.9a.7** KRPKR scale [ref 13] — absent; conv **52%**, 10.04% of games
     - [ ] **4.9a.8** KRPKB scale [ref 14] — absent; conv 56%, 1.23%
     - [ ] **4.9a.9** KPsK scale [ref 16] — absent; 4.19%
@@ -98,7 +82,7 @@ keeps self-play labels, which is the status quo and a legitimate result.
     - [ ] **4.9a.11** KRKP value [ref 6] — partial; conv 93%, 2.40%
     - [ ] **4.9a.12** KBPsK scale [ref 11] — partial wrong-corner subset; 1.92%
     - [ ] **4.9a.13** KPKP scale [ref 20] — absent; 1.23%
-    - [ ] **4.9a.14** KQKP value [ref 9] — partial fortress; conv 96%, 1.17%
+    - [ ] **4.9a.14** KQKP value [ref 9] — partial fortress; **RAR-E08 cost it -3.8 pp**
     - [ ] **4.9a.15** KBPKB scale [ref 17] — absent; conv 81%, 0.89%
     - [ ] **4.9a.16** KBPPKB scale [ref 18] — absent; conv 79%, 0.66%
     - [ ] **4.9a.17** KRKN value [ref 8] — absent; conv 83%, win-preserving 0.973

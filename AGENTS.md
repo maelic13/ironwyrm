@@ -71,9 +71,10 @@ did what its name suggests.**
   same check -- a standalone probe confirmed the option worked while the
   instrument reporting on it did not.
 - Before claiming a behavior-neutral change, prove it: `bench 13` must
-  reproduce the accepted fingerprint **7,226,051 / EBF 2.460** exactly
-  (RAR-E06; it was 6,977,070 / EBF 2.466 under RAR-S70, and 7,467,143 /
-  EBF 2.477 before that). A fingerprint identifies the SEARCH, so it cannot see
+  reproduce the accepted fingerprint **7,165,683 / EBF 2.462** exactly
+  (RAR-E08; it was 7,226,051 / EBF 2.460 under RAR-E06 plus the 4.9a.4 mate
+  drive, 6,977,070 / EBF 2.466 under RAR-S70, and 7,467,143 / EBF 2.477 before
+  that). A fingerprint identifies the SEARCH, so it cannot see
   a change confined to positions the bench suite never reaches: the accepted
   head carries a 4.9a.4 mate drive that moves KBN-K conversion from 19.4% to
   96.9% and leaves this number byte-identical. Never read "bench unchanged" as
