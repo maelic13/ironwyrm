@@ -730,10 +730,19 @@ so nothing is lost when the two are compared.
   won, 7,764 were won but are drawn, 7,353 drew but are lost, 6,337 were lost
   but are drawn, and 200 are outright win/loss reversals.
 
-  Arm A needs no work -- `hce-v2`'s fit is the accepted head. Arm B needs one
-  full 4.8 schedule run and then a head-to-head SPRT. **The arms cannot be
-  compared by offline loss**: their targets differ, and a loss measured against
-  different targets is not a comparison.
+  Arm B is fitted: `hce-fit-20260902_094603`, started from the accepted vector
+  (verified byte-identical to RAR-E06's final), K pinned at 1.3806, frozen test
+  opened once, **350 of 1,218 slots moved**, candidate fingerprint
+  **7,165,683 / 2.462**. The gate is registered in `EXPERIMENTS.md` at `[0,3]`
+  nElo with an 80,000-game cap and no adjudication; only H1 adopts tablebase
+  labels for 4.9a.6 and every later fit.
+
+  **The arms cannot be compared by offline loss**: their targets differ, and a
+  loss measured against different targets is not a comparison. Arm B improved
+  its own frozen test by 0.000181 against RAR-E06's 0.00078088 on its own --
+  that the smaller number belongs to arm B is consistent with RAR-E09, where
+  the accepted vector was already closer to tablebase truth than its labels
+  were, but it is an observation and not evidence for either arm.
 
   `fit_complete.ps1`'s label guard correctly refused arm B and was extended to
   a NAMED whitelist rather than widened, so an unrecognised contract still

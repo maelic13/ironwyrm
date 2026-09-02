@@ -22,22 +22,33 @@ and `python tools/diag/check_guide.py` must pass.
 
 ## What you run next
 
-**RAR-E08 arm B's fit** (4.9a.5). 4.9a.4 is accepted, so both arms now sit on
-the same head and the confound is gone — no worktree, fit from the current tree:
-
-```powershell
-& .\tools\texel\fit_complete.ps1 -DatasetDir tools/texel/data/hce-v2-tb
-```
-
-Then build both arms and run the head-to-head. Arm A's existing binary predates
-the mate drive, so it must be rebuilt from the current tree:
+**RAR-E08's gate** (4.9a.5). Arm B is fitted and the gate is registered at
+`[0,3]` nElo, 80,000-game cap, no adjudication. Build both arms first -- arm
+A's existing binary predates the accepted mate drive, and arm B needs its
+vector baked in:
 
 ```powershell
 & .\tools\build_test.ps1 -Suffix e08-arm-a
+git apply tools/results/hce-fit-20260902_094603/candidate-eval.patch
+& .\tools\build_test.ps1 -Suffix e08-arm-b
+git checkout src/eval.rs
 ```
 
-**Do not compare the arms by offline loss** — their targets differ, so a loss
-against different targets is not a comparison. Only the game result decides.
+Arm A must bench **7,226,051 / 2.460** and arm B **7,165,683 / 2.462**; if
+either differs, stop -- the wrong source was built. Then:
+
+```powershell
+& .\tools\sprt.ps1 `
+    -EngineA .\tools\test_engines\rarog-e08-arm-b-pext-pgo.exe `
+    -EngineB .\tools\test_engines\rarog-e08-arm-a-pext-pgo.exe `
+    -NameA E08TbLabels -NameB E08SelfPlay `
+    -Elo0 0 -Elo1 3 -Alpha 0.05 -Beta 0.05 -MaxGames 80000 `
+    -TC "3+0.03" -Threads 1 -Hash 64 -Concurrency 14 -TimeMargin 20 `
+    -Seed 260902
+```
+
+Only H1 adopts tablebase labels for 4.9a.6 and every later fit. H0 or the cap
+keeps self-play labels, which is the status quo and a legitimate result.
 
 ## Phase 4 — bounded pre-NNUE search and HCE
 
