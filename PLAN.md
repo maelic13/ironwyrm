@@ -744,6 +744,40 @@ so nothing is lost when the two are compared.
   Hash-freeze under a new name; never edit `hce-v2` in place, since it is the
   corpus the accepted head was fitted on and has to stay reproducible.
 
+  **The start book was the constraint, not the schedule.** `beast_seed.epd`
+  holds exactly 150,000 positions in each of the five buckets, and the
+  extractor's phase is MATERIAL, not ply, so a game started below phase 20 can
+  never produce an `opening` row. Splitting the RAR-E08 pilot by the phase of
+  each game's own start and preflighting each split shows only opening starts
+  feed the opening bucket (3.4392 rows/game; every other start bucket is zero)
+  while also being the most productive overall (13.31 rows across all buckets,
+  because one game traverses every phase on the way down). Four fifths of a
+  balanced book therefore cannot contribute to the bucket that binds, and the
+  preflight -- which sizes GAMES -- asked for 1,113,504, more than the 750,000
+  openings in the book. Unreachable at any schedule.
+
+  Supply was never short: the read-only store `A:\Chess\Beast\data\txt\
+  positions.txt` is ~125M positions, 36.8% of them opening-bucket, duplicate
+  rate 0.02%. 150,000 was a quota.
+
+  `tools/texel/build_book.py` builds a phase-WEIGHTED book, defaulting to the
+  hedged **50/10/10/10/20**. The yield-maximising corner is 68/10/0/0/22; the
+  hedge is taken instead because the corner makes every middlegame and endgame
+  row a *reached* position correlated with the opening play that led there.
+  `phase_book_v1.epd` (1,000,000 positions, seed `0x5EED2`, SHA-256
+  `31E9B655...`) measures **1.6227** rows/game in the binding bucket against a
+  predicted 1.720, and sizes 3.5M rows at **602,619 games**, about 5.3 hours at
+  the pilot's 1,905 games/min. Openings 997,001-1,000,000 were consumed by the
+  validation run, so the real segment starts at 1.
+
+  Two secondary levers were measured and NOT taken: `--skip-start 2` costs 9%
+  of opening rows (3.7796 -> 3.4392 on opening starts; Basilisk uses 0), and
+  raising `--max-per-game` from 16 buys rows with within-game correlation
+  rather than with games. Both are held so the corpus contract differs from
+  `hce-v2` in the book alone. Derivation and reproduction commands:
+  `analysis/texel_corpus_book_shape_2026-09-02.md`; the matrix regenerates with
+  `python tools/diag/book_yield.py <datagen.pgn>`.
+
 
 - **4.9a.7 through 4.9a.26 -- the 20 reference functions, in working order.**
   Audit, implement where absent, and test each one. The reference set is 20,

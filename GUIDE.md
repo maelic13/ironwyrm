@@ -30,6 +30,15 @@ the result of every position sampled from it. That remains untested.
 So the pipeline is: generate with `datagen-v2` (no adjudication), then relabel,
 then fit. The relabel is now a standard step, not an experiment.
 
+Generate from `phase_book_v1.epd`, not `beast_seed.epd`. The balanced book
+could not reach the target at any schedule; the new book measures 602,619 games
+for 3.5M rows against 1,113,504 for 3.0M
+(`analysis/texel_corpus_book_shape_2026-09-02.md`).
+
+```powershell
+pwsh -File tools\datagen.ps1 -Suffix e08head -Rounds 602619 -Start 1 -Nodes 8000 -Book tools\texel\data\phase_book_v1.epd -BookFormat epd
+```
+
 ```powershell
 python tools\texel\relabel_tb.py --source <new-corpus> --syzygy D:\chess\tablebases\syzygy3456 --out <new-corpus>-tb
 ```
