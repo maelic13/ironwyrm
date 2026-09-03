@@ -3076,6 +3076,10 @@ fn specialized_endgame_scale(board: &Board) -> Option<i32> {
     if let Some(sf) = krpkr_scale(board) {
         return Some(sf);
     }
+    // KRP vs KB (Phase 4.9a.8): rook-pawn fortresses only; partial scales.
+    if let Some(sf) = krpkb_scale(board) {
+        return Some(sf);
+    }
 
     let no_pawns = board.pieces(Color::White, Piece::Pawn).is_empty()
         && board.pieces(Color::Black, Piece::Pawn).is_empty();
@@ -3232,6 +3236,76 @@ fn kqkp_fortress_scale(board: &Board) -> Option<i32> {
 /// ending is usually drawn (the rook must give itself for the pawn). A
 /// *partial* scale (≈¼) only — never a forced draw — so an actually-won KRKP
 /// keeps a clearly winning score and a wrong guess cannot throw the game.
+/// KRP vs KB (Phase 4.9a.8). The rook side is winning almost everywhere, so
+/// the drawn subset is small -- 94 of 4,000 sampled positions, 2.35% -- and the
+/// evaluator was wrong about nearly all of it: **95.74% of drawn KRP-KB
+/// positions scored above +100 cp, mean +347.2, max +771**.
+///
+/// **The reference only addresses ROOK pawns**, so it can reach at most about a
+/// quarter of that cohort by construction; a non-rook-pawn KRP-KB draw is
+/// outside its case analysis entirely. Ported from `sf_11` `endgame.cpp`, which
+/// returns partial scales here (24, 48, 8 on the same `/64` basis) and never a
+/// forced draw -- appropriate for a family this close to won.
+///
+/// Rank-normalised so the strong side is White and the pawn pushes `+8`. Every
+/// predicate used below -- square colour agreement, diagonal alignment,
+/// Chebyshev distance -- is preserved under a rank flip, since both squares in
+/// each comparison flip together.
+fn krpkb_scale(board: &Board) -> Option<i32> {
+    for strong in [Color::White, Color::Black] {
+        let weak = !strong;
+        if !has_exact_material(board, strong, 1, 0, 0, 1, 0)
+            || !has_exact_material(board, weak, 0, 0, 1, 0, 0)
+        {
+            continue;
+        }
+        let pawn_sq = board.pieces(strong, Piece::Pawn).lsb();
+        let pawn_file = SQUARE_FILE[pawn_sq.index()];
+        // Rook pawn only; the reference has no case for anything else.
+        if pawn_file != 0 && pawn_file != 7 {
+            continue;
+        }
+
+        let flip: u8 = if strong == Color::Black { 56 } else { 0 };
+        let psq = pawn_sq.0 ^ flip;
+        let ksq = board.king_sq(weak).0 ^ flip;
+        let bsq = board.pieces(weak, Piece::Bishop).lsb().0 ^ flip;
+        let strong_ksq = board.king_sq(strong).0 ^ flip;
+
+        let rank = |s: u8| s / 8;
+        let file = |s: u8| s % 8;
+        let dist = |a: u8, b: u8| i32::from(KING_DISTANCE[usize::from(a)][usize::from(b)]);
+        let same_colour = |a: u8, b: u8| (rank(a) + file(a)) % 2 == (rank(b) + file(b)) % 2;
+        let on_diagonal = |a: u8, b: u8| {
+            (i32::from(file(a)) - i32::from(file(b))).abs()
+                == (i32::from(rank(a)) - i32::from(rank(b))).abs()
+        };
+
+        let rk = rank(psq);
+        // Pawn on the 5th with the bishop on the pawn's own colour: a fortress
+        // is possible, and how good it is depends on where the defending king
+        // stands relative to the queening square.
+        if rk == 4 && same_colour(bsq, psq) {
+            let d = dist(psq + 24, ksq);
+            return if d <= 2 && !(d == 0 && ksq == strong_ksq + 16) {
+                Some(24)
+            } else {
+                Some(48)
+            };
+        }
+        // Pawn on the 6th, defending king beside the queening square, bishop
+        // covering the square in front of the pawn from a distance.
+        if rk == 5
+            && dist(psq + 16, ksq) <= 1
+            && on_diagonal(bsq, psq + 8)
+            && (i32::from(file(bsq)) - i32::from(file(psq))).abs() >= 2
+        {
+            return Some(8);
+        }
+    }
+    None
+}
+
 /// KRP vs KR (Phase 4.9a.7), the highest-expected-value open reference family:
 /// 10.04% of real games by RAR-M15 occurrence.
 ///
@@ -3539,6 +3613,31 @@ mod endgame_311c_tests {
         assert_eq!(
             krkp_drawish_scale(&board("8/8/6K1/8/8/8/1kp5/7R w - - 0 1")),
             Some(16)
+        );
+    }
+
+    /// KRP-vs-KB rook-pawn fortresses (4.9a.8). Both FENs are Syzygy DRAW.
+    ///
+    /// This is also the **live-wire proof** the null result needs: the drawn
+    /// cohort's overclaim rate did not move at all (0.9574 before and after),
+    /// because the reference addresses only rook pawns -- at most a quarter of
+    /// that cohort -- and its partial scales leave a +350 score above the
+    /// 100 cp threshold even where they fire. A null from a dead wire and a
+    /// null from a narrow mechanism look identical in the aggregate, so the
+    /// mechanism is asserted directly here instead.
+    #[test]
+    fn krpkb_scales_rook_pawn_fortresses() {
+        // Pawn a5, bishop on the pawn's own colour, defending king next to the
+        // queening square: the reference's moderate fortress reduction.
+        assert_eq!(
+            krpkb_scale(&board("8/1kb5/8/P7/8/8/8/6KR w - - 0 1")),
+            Some(24)
+        );
+        // A non-rook pawn is outside the reference's case analysis entirely,
+        // and must fall through rather than be scaled on a guess.
+        assert_eq!(
+            krpkb_scale(&board("8/2kb4/8/1P6/8/8/8/6KR w - - 0 1")),
+            None
         );
     }
 
