@@ -123,8 +123,14 @@ def main() -> int:
     ap.add_argument("--update", action="store_true",
                     help="rewrite the floors from this report (ratchet up)")
     ap.add_argument("--allow-lower", action="store_true",
-                    help="permit --update to LOWER a floor; requires its own "
-                         "commit and a recorded reason")
+                    help="permit --update to LOWER EVERY floor to this report; "
+                         "blunt, and usually wrong -- prefer --allow-lower-family")
+    ap.add_argument("--allow-lower-family", action="append", default=[],
+                    metavar="FAMILY.METRIC",
+                    help="permit --update to lower ONE named floor, e.g. "
+                         "KBN-K.dtz_progress_rate. Repeatable. Requires its own "
+                         "commit and a recorded reason. This is the option to "
+                         "use when a regression has been accepted with an owner")
     args = ap.parse_args()
 
     current = rates(load_report(args.report))
@@ -199,7 +205,22 @@ def main() -> int:
         print()
 
     if args.update:
-        if (failures or agg_failed) and not args.allow_lower:
+        # A floor is the best VERIFIED level, so the default is to keep the
+        # higher of old and new. `--allow-lower` drops that for everything at
+        # once, which on a real report lowers a dozen floors that merely
+        # sampled low -- it discards the ratchet in order to accept one
+        # regression. `--allow-lower-family FAMILY.METRIC` lowers exactly what
+        # is named and nothing else.
+        named_lower = set(args.allow_lower_family)
+        unknown = named_lower - {
+            f"{fam}.{m}" for fam, vals in current.items() for m in vals
+        }
+        if unknown:
+            raise SystemExit(
+                "--allow-lower-family names entries not in this report: "
+                + ", ".join(sorted(unknown))
+            )
+        if (failures or agg_failed) and not (args.allow_lower or named_lower):
             print("REFUSED: this report fails a floor, so --update would LOWER "
                   "it. Pass --allow-lower only with a recorded reason, in its "
                   "own commit.")
@@ -210,9 +231,10 @@ def main() -> int:
             merged[family] = {}
             for m, v in vals.items():
                 old = prev.get(m)
+                may_lower = args.allow_lower or f"{family}.{m}" in named_lower
                 keep_old = (
                     old is not None
-                    and not args.allow_lower
+                    and not may_lower
                     and old["rate"] > v["rate"]
                 )
                 merged[family][m] = dict(old) if keep_old else dict(v)
