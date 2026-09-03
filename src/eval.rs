@@ -3054,6 +3054,11 @@ fn specialized_endgame_scale(board: &Board) -> Option<i32> {
     if let Some(sf) = krkp_drawish_scale(board) {
         return Some(sf);
     }
+    // KRP vs KR (Phase 4.9a.7): the highest-value open reference family, at
+    // 10.04% of real games.
+    if let Some(sf) = krpkr_scale(board) {
+        return Some(sf);
+    }
 
     let no_pawns = board.pieces(Color::White, Piece::Pawn).is_empty()
         && board.pieces(Color::Black, Piece::Pawn).is_empty();
@@ -3210,6 +3215,117 @@ fn kqkp_fortress_scale(board: &Board) -> Option<i32> {
 /// ending is usually drawn (the rook must give itself for the pawn). A
 /// *partial* scale (≈¼) only — never a forced draw — so an actually-won KRKP
 /// keeps a clearly winning score and a wrong guess cannot throw the game.
+/// KRP vs KR (Phase 4.9a.7), the highest-expected-value open reference family:
+/// 10.04% of real games by RAR-M15 occurrence.
+///
+/// WHAT THE DEFECT ACTUALLY IS. The conversion number looks alarming and is
+/// not the problem: RAR-E11 measured Stockfish 18 converting this family at
+/// 47.9% against Rarog's 43.8% at the same node budget, so the reachable mark
+/// is about four points away, not fifty-five. The measured defect is the
+/// complementary cohort -- **37.1% of theoretically DRAWN KRP-KR positions
+/// scored above +100 cp** (46 of 124, mean +93.8, max +473), which makes the
+/// engine steer into dead-drawn rook endings from positions it could have won
+/// another way. No measurement taken inside the ending can see that happen;
+/// `tools/diag/endgame_drawn.py` is the instrument for it.
+///
+/// The case analysis is ported from the final pre-NNUE Stockfish (`sf_11`
+/// `endgame.cpp`), whose own comment calls it "far from perfect" and notes it
+/// descends from Glaurung. Both engines use a `/64` scale basis, so the
+/// constants transfer without rescaling -- a seed, not a result.
+///
+/// **The reference's two WINNING branches are deliberately NOT ported.** They
+/// return `SCALE_FACTOR_MAX - k*distance`, i.e. above the neutral 64, which
+/// AMPLIFIES the score. Rarog's surface is Texel-fitted and its magnitudes are
+/// not the reference's, so an untested amplifier interacts with a fitted
+/// evaluation in a way the drawn cohort cannot measure. Only the draw
+/// detection is taken, which is what the measured defect calls for.
+fn krpkr_scale(board: &Board) -> Option<i32> {
+    for strong in [Color::White, Color::Black] {
+        let weak = !strong;
+        if !has_exact_material(board, strong, 1, 0, 0, 1, 0)
+            || !has_exact_material(board, weak, 0, 0, 0, 1, 0)
+        {
+            continue;
+        }
+        // Normalise to the reference frame: strong side is White, pawn on
+        // files A-D. Rank flip for a Black strong side, file mirror for a
+        // pawn on the east half; both are index XORs, so the whole case
+        // analysis below reads exactly as the reference does.
+        // Indices stay `u8` throughout, so every widening below is infallible
+        // (`i32::from`) and the function needs no cast suppressions.
+        let pawn_sq = board.pieces(strong, Piece::Pawn).lsb();
+        let flip: u8 = if strong == Color::Black { 56 } else { 0 };
+        let mirror: u8 = if SQUARE_FILE[pawn_sq.index()] >= 4 {
+            7
+        } else {
+            0
+        };
+        let norm = |sq: Square| sq.0 ^ flip ^ mirror;
+
+        let wk = norm(board.king_sq(strong));
+        let bk = norm(board.king_sq(weak));
+        let wr = norm(board.pieces(strong, Piece::Rook).lsb());
+        let br = norm(board.pieces(weak, Piece::Rook).lsb());
+        let wp = norm(pawn_sq);
+
+        let rank = |s: u8| s / 8;
+        let file = |s: u8| s % 8;
+        let dist = |a: u8, b: u8| i32::from(KING_DISTANCE[usize::from(a)][usize::from(b)]);
+        let file_dist = |a: u8, b: u8| (i32::from(file(a)) - i32::from(file(b))).abs();
+
+        let r = rank(wp);
+        let queening = 56 + file(wp);
+        // The reference's `tempo` is 1 when the strong side is to move.
+        let tempo = i32::from(board.side_to_move == strong);
+
+        // Third-rank defence: pawn not far advanced, defending king on the
+        // queening square, defending rook cutting on the 6th.
+        if r <= 4
+            && dist(bk, queening) <= 1
+            && wk <= 39
+            && (rank(br) == 5 || (r <= 2 && rank(wr) != 5))
+        {
+            return Some(0);
+        }
+        // Checking from behind once the pawn reaches the 6th.
+        if r == 5
+            && dist(bk, queening) <= 1
+            && i32::from(rank(wk)) + tempo <= 5
+            && (rank(br) == 0 || (tempo == 0 && file_dist(br, wp) >= 3))
+        {
+            return Some(0);
+        }
+        if r >= 5 && bk == queening && rank(br) == 0 && (tempo == 0 || dist(wk, wp) >= 2) {
+            return Some(0);
+        }
+        // Pawn a7, rook a8, defending king boxed on g7/h7 with its rook behind.
+        if wp == 48
+            && wr == 56
+            && (bk == 55 || bk == 54)
+            && file(br) == 0
+            && (rank(br) <= 2 || file(wk) >= 3 || rank(wk) <= 4)
+        {
+            return Some(0);
+        }
+        // Defending king blockades the pawn and the attacking king is far.
+        if r <= 4 && bk == wp + 8 && dist(wk, wp) - tempo >= 2 && dist(wk, br) - tempo >= 2 {
+            return Some(0);
+        }
+        // Not a forced draw, but drawish: the defending king sits in the
+        // pawn's path with the pawn still short of the 5th. Partial scales, so
+        // an actually-won position keeps a winning score.
+        if r <= 3 && bk > wp {
+            if file(bk) == file(wp) {
+                return Some(10);
+            }
+            if file_dist(bk, wp) == 1 && dist(wk, bk) > 2 {
+                return Some(24 - 2 * dist(wk, bk));
+            }
+        }
+    }
+    None
+}
+
 fn krkp_drawish_scale(board: &Board) -> Option<i32> {
     for strong in [Color::White, Color::Black] {
         let weak = !strong;
@@ -3407,6 +3523,49 @@ mod endgame_311c_tests {
             krkp_drawish_scale(&board("8/8/6K1/8/8/8/1kp5/7R w - - 0 1")),
             Some(16)
         );
+    }
+
+    /// KRP-vs-KR draw recognition (4.9a.7). Every FEN here was probed against
+    /// Syzygy before it was written down, so these assert chess truth rather
+    /// than the recognizer's own opinion of itself.
+    #[test]
+    fn krpkr_recognizes_textbook_draws() {
+        // Philidor third-rank defence: defending rook on the 6th cuts the
+        // attacking king while the pawn is still short of it. Syzygy: DRAW.
+        assert_eq!(
+            krpkr_scale(&board("8/3k4/r7/3PK3/8/8/8/7R w - - 0 1")),
+            Some(0)
+        );
+        // Pawn a7 with the rook in front on a8 and the defending king boxed on
+        // h7, its rook behind the pawn. Syzygy: DRAW.
+        assert_eq!(
+            krpkr_scale(&board("R7/P6k/8/8/8/8/8/r5K1 w - - 0 1")),
+            Some(0)
+        );
+    }
+
+    /// The failure mode that matters: a hard `Some(0)` on a position that is
+    /// actually WON would turn wins into claimed draws. The reference calls its
+    /// own case analysis "far from perfect", so this is the guard that earns
+    /// porting it. All three are Syzygy WIN.
+    #[test]
+    fn krpkr_never_zeroes_a_won_position() {
+        for fen in [
+            "1R6/1P6/8/8/8/7k/r7/6K1 w - - 0 1",
+            "8/8/1PK5/8/8/7k/r7/1R6 w - - 0 1",
+            "8/8/8/1PK5/8/7k/r7/1R6 w - - 0 1",
+        ] {
+            assert_ne!(
+                krpkr_scale(&board(fen)),
+                Some(0),
+                "won KRP-KR must not be scaled to a forced draw: {fen}"
+            );
+            let score = static_eval(fen);
+            assert!(
+                score > 150,
+                "won KRP-KR should stay clearly winning, got {score} for {fen}"
+            );
+        }
     }
 
     /// Won endings must keep a clearly winning static score — guards against the
