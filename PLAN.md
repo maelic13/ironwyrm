@@ -8,13 +8,13 @@ in `EXPERIMENTS.md`; current status and commands belong in `GUIDE.md`.
 | Item | State |
 |---|---|
 | Released baseline | **2.3.2** at `f931722` on `master` |
-| Accepted head | RAR-E08 on `dev`; `bench 13` = **7,165,683 nodes / EBF 2.462**, 1T. Includes the 4.9a.4 mate drive, which is bench-INVISIBLE |
+| Accepted head | RAR-E12 on `dev`; `bench 13` = **8,044,078 nodes / EBF 2.481**, 1T. Includes the 4.9a.4 mate drive, which is bench-INVISIBLE |
 | Integration state | The failed SearchCore rewrite is reverted by `c5e451d`; `d2c7788`/`e4f10ca` upgrade search evidence and `8d8f507` supplies the audited complete HCE fitting pipeline without changing accepted behavior |
 | Frozen search/HCE oracle | `hybrid` at `75d0d43`, Stockfish `9587eeeb` driving the exact Rarog 2.3.2 HCE |
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
-| Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82** |
-| Active game job | none; RAR-E06 accepted 2026-09-01 at **+22.04 +/- 7.51 Elo**, +32.05 nElo |
-| Current step | **4.9a.6 — regenerate the corpus, then TB-relabel before fitting** |
+| Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
+| Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
+| Current step | **4.9a.7 — KRPKR scale, the highest-occurrence open family** |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) and endgame closure (4.9a) remain open |
 | Next release | Conditional **2.4.0** after 4.15; baseline NNUE then targets **2.5.0** |
 
@@ -723,8 +723,8 @@ so nothing is lost when the two are compared.
   zero for static WDL loss while search needs an actionable magnitude; resolve
   that with sweeps, conversion and DTZ progress, not by freezing either value.
 - **4.9a.5 RAR-E08: label contract -- ACCEPTED, +6.73 +/- 3.82 Elo.** H1 at
-  13,432 games, LOS 99.97%, zero forfeits. Arm B's vector is the accepted head
-  at **7,165,683 / 2.462**. Texel theory predicted arm A and lost by 10.34
+  13,432 games, LOS 99.97%, zero forfeits. Arm B's vector was the accepted head
+  at **7,165,683 / 2.462**, superseded by RAR-E12 at 8,044,078 / 2.481. Texel theory predicted arm A and lost by 10.34
   nElo: the self-reinforcing label loop was the stronger effect, and correcting
   1.325% of rows paid.
 
@@ -841,6 +841,14 @@ so nothing is lost when the two are compared.
   | 4.9a.24 | KRPPKRP | 15 | absent | - | **0%** |
   | 4.9a.25 | KXK | 3 | present | 94/91/86% | 37.34% |
   | 4.9a.26 | KBNK | 4 | present | **7%** | 0.28% |
+
+  **Two recorded regressions are owned inside this list and must not be lost.**
+  RAR-E08 cost KQ-KP 3.8 pp of conversion, owned by **4.9a.14**. RAR-E12 cost
+  KBN-K dtz progress 0.7260 -> 0.6753 at -4.4 SE, owned by **4.9a.26**, whose
+  acceptance target is to restore 0.7260. Neither blocks the families ahead of
+  it, and neither was measurable by the gate that caused it -- KBN-K occurs in
+  0.28% of games, so the 7,388-game RAR-E12 gate held perhaps twenty. That is
+  the whole reason the floors instrument exists alongside the SPRT.
 
   **KXK and KBNK sit last because their mechanism is handled at 4.9a.4, not
   because they are unimportant.** They share one defect -- a corner-drive

@@ -11,36 +11,29 @@ and `python tools/diag/check_guide.py` must pass.
 | Item | Value |
 |---|---|
 | Released baseline | **2.3.2** at `f931722` on `master` |
-| Accepted head | RAR-E08, **7,165,683 nodes / EBF 2.462**. Includes the 4.9a.4 mate drive, which is bench-INVISIBLE |
-| Integration branch | `dev`; the complete HCE refit `5188eca` is accepted |
+| Accepted head | RAR-E12, **8,044,078 nodes / EBF 2.481**. Includes the 4.9a.4 mate drive, which is bench-INVISIBLE |
+| Integration branch | `dev`; the hce-v3 refit `d1d95ab` is accepted |
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
 | Measured search deficit | **355.26 +/- 27.03 Elo** equal nodes; **250.77 +/- 13.12** equal time; speed worth **104.5 Elo** |
-| Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82** |
-| Active experiment | none; RAR-E08 accepted 2026-09-02 |
+| Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
+| Active experiment | none; RAR-E12 accepted 2026-09-03. RAR-E13 parked, withdrawn |
 | Current step | **4.9 / 4.9a — structural HCE residuals and endgame closure** |
 | Next release | Conditional 2.4.0 at 4.15; NNUE follows either way |
 
 ## What you run next
 
-**4.9a.6 — regenerate the corpus.** RAR-E08 settled the label contract: what
-won is the **post-hoc relabel of <=6-man positions** (`relabel_tb.py`), NOT
-`datagen-v3`, which adjudicates the whole game on tablebase truth and changes
-the result of every position sampled from it. That remains untested.
+**4.9a.7 — KRPKR scale [ref 13].** The highest-value open family: absent from
+the evaluator, 52% conversion, and **10.04% of real games** by RAR-M15
+occurrence. Audit, implement, add theory/Syzygy tests and a conversion cohort,
+per the 4.9a working order.
 
-So the pipeline is: generate with `datagen-v2` (no adjudication), then relabel,
-then fit. The relabel is now a standard step, not an experiment.
+Two debts are carried into 4.9a and must not be lost: **KQ-KP** (RAR-E08,
+-3.8 pp) is owned by 4.9a.14, and **KBN-K** (RAR-E12, dtz 0.7260 -> 0.6753) is
+owned by 4.9a.26, whose target is to restore 0.7260. Neither is a blocker for
+the families ahead of them.
 
-Generate from `phase_book_v1.epd`, not `beast_seed.epd`. The balanced book
-could not reach the target at any schedule; the new book measures 602,619 games
-for 3.5M rows against 1,113,504 for 3.0M
-(`analysis/texel_corpus_book_shape_2026-09-02.md`).
-
-```powershell
-pwsh -File tools\datagen.ps1 -Suffix e08head -Rounds 602619 -Start 1 -Nodes 8000 -Book tools\texel\data\phase_book_v1.epd -BookFormat epd
-```
-
-```powershell
-python tools\texel\relabel_tb.py --source <new-corpus> --syzygy D:\chess\tablebases\syzygy3456 --out <new-corpus>-tb
+```bash
+python tools/diag/endgame_truth.py --engine targeteleasearog.exe --syzygy D:\chess	ablebases\syzygy3456 --families KRP-KR --output toolsesults\krpkr-truth.json
 ```
 
 ## Phase 4 — bounded pre-NNUE search and HCE
@@ -83,8 +76,8 @@ python tools\texel\relabel_tb.py --source <new-corpus> --syzygy D:\chess\tableba
     - [x] **4.9a.3** Regression contract: 64 frozen theory vetoes + ratcheting floors
     - [x] **4.9a.4** Mate-drive cluster **ACCEPTED**, no gate — KBN-K **19.4% -> 96.9%**
     - [x] **4.9a.5** RAR-E08 **ACCEPTED** +6.73 +/- 3.82 Elo — TB-corrected labels win
-    - [ ] **4.9a.6** NEXT — regenerate, then TB-relabel before fitting; never edit `hce-v2`
-    - [ ] **4.9a.7** KRPKR scale [ref 13] — absent; conv **52%**, 10.04% of games
+    - [x] **4.9a.6** `hce-v3-tb` fitted and gated — RAR-E12 **+11.81 +/- 5.33 Elo**
+    - [ ] **4.9a.7** NEXT — KRPKR scale [ref 13]; absent; conv **52%**, 10.04% of games
     - [ ] **4.9a.8** KRPKB scale [ref 14] — absent; conv 56%, 1.23%
     - [ ] **4.9a.9** KPsK scale [ref 16] — absent; 4.19%
     - [ ] **4.9a.10** KPK value [ref 5] — present bitbase; conv 95%, 2.84%
@@ -103,7 +96,7 @@ python tools\texel\relabel_tb.py --source <new-corpus> --syzygy D:\chess\tableba
     - [ ] **4.9a.23** KQKRPs scale [ref 12] — absent; never occurs naturally
     - [ ] **4.9a.24** KRPPKRP scale [ref 15] — absent; never occurs naturally
     - [ ] **4.9a.25** KXK value [ref 3] — KQ-K 97%/KR-K 93%; reaching 100% is open here
-    - [ ] **4.9a.26** KBNK value [ref 4] — gradient owned by 4.9a.4; verify and close
+    - [ ] **4.9a.26** KBNK value [ref 4] — **RAR-E12 cost it dtz 0.7260 -> 0.6753**; restore 0.7260
     - [ ] **4.9a.27** Dependency-complete family refits and gates, tiered by occurrence
     - [ ] **4.9a.28** Conversion, theory, STC/LTC and endgame-cohort closure
 - [ ] **4.10** Iterated whole-surface refit cycles — at least one is owed

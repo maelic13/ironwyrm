@@ -107,8 +107,8 @@ function Invoke-Bench {
 # bare-king minor-piece mate. So this guard will happily pass a tree carrying
 # an unaccepted eval change. Check `git rev-parse HEAD` against the commit the
 # fit is supposed to start from; the run manifest records it for that purpose.
-$script:AcceptedBenchNodes = 7165683
-$script:AcceptedBenchEbf = 2.462
+$script:AcceptedBenchNodes = 8044078
+$script:AcceptedBenchEbf = 2.481
 
 function Assert-BaselineFingerprint {
     param($Bench, [string]$Label)
