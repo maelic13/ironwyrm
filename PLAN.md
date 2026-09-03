@@ -14,7 +14,7 @@ in `EXPERIMENTS.md`; current status and commands belong in `GUIDE.md`.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.9a.8 — KRPKB scale; 4.9a.7 done, gate deferred to 4.9a.27** |
+| Current step | **4.9a.9 — KPsK scale; ordering under review, see search-occurrence note** |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) and endgame closure (4.9a) remain open |
 | Next release | Conditional **2.4.0** after 4.15; baseline NNUE then targets **2.5.0** |
 
@@ -866,6 +866,28 @@ so nothing is lost when the two are compared.
   SEARCH TREE, which is a different quantity from RAR-M15's occurrence on the
   board, and the ordering of this list uses only the latter. Worth checking
   before the back half of the list is worked.
+
+  **4.9a.8 (KRPKB) is done and measured a near-null, which is recorded as a
+  result rather than a failure.** The drawn cohort's overclaim was 0.9574
+  before and after; only the mean moved, +347.2 -> +324.4. The reference
+  addresses only ROOK pawns -- a quarter of the cohort at most -- and returns
+  partial scales, so a +350 evaluation scaled by 24/64 is still +131. The
+  mechanism was asserted directly (`Some(24)` on a verified fortress, `None` on
+  a non-rook pawn) because a narrow-mechanism null and a dead-wire null are
+  indistinguishable in an aggregate. **Its 95.7% residual overclaim at mean
+  +347 is assigned to 4.9a.27**: on a family where the reference offers almost
+  nothing, that reads as material-imbalance pricing of rook-and-pawn against
+  bishop, not as a missing recognizer.
+
+  **The ordering of this list is under review.**
+  `analysis/endgame_search_occurrence_2026-09-03.md` measured search-tree
+  occurrence per family and it disagrees sharply with the board occurrence used
+  here. KRPPKRP and KQKRPs, both listed at 0% and deferred to the end, are the
+  two MOST frequent in the tree at 5.88% and 4.41%; KXK is 37.34% of games and
+  0.22% of the tree. **KQKRPs is the one actionable disagreement** -- five men,
+  fully verifiable, second in the tree, sitting at 4.9a.23. KRPPKRP tops the
+  tree list and stays deferred for an honest reason rather than a wrong one: at
+  seven men the tablebases cannot verify it at all.
 
   **Two recorded regressions are owned inside this list and must not be lost.**
   RAR-E08 cost KQ-KP 3.8 pp of conversion, owned by **4.9a.14**. RAR-E12 cost

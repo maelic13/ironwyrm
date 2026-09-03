@@ -22,17 +22,20 @@ and `python tools/diag/check_guide.py` must pass.
 
 ## What you run next
 
-**4.9a.8 — KRPKB scale [ref 14].** Absent from the evaluator; 56% conversion at
-1.23% of games. Same shape as 4.9a.7: measure the drawn cohort first, port only
-the reference's draw branches, add Syzygy-verified tests, then check floors.
+**4.9a.9 — KPsK scale [ref 16]**, if working the list in order. But the
+ordering is under review: `analysis/endgame_search_occurrence_2026-09-03.md`
+measured how often each family is reached in the SEARCH TREE, and it disagrees
+sharply with the board occurrence 4.9a is sorted on. **KQKRPs (4.9a.23) is 2nd
+in the tree at 4.41%, fully verifiable at five men, and sits near the end of
+the list on a 0% board occurrence.**
 
-Two debts are carried inside 4.9a and must not be lost: **KQ-KP** (RAR-E08,
--3.8 pp) is owned by 4.9a.14, and **KBN-K** (RAR-E12, dtz 0.7260 -> 0.6753) is
-owned by 4.9a.26, whose target is to restore 0.7260. Neither blocks the
-families ahead of them.
+Three debts are carried inside 4.9a and must not be lost: **KQ-KP** (RAR-E08,
+-3.8 pp) at 4.9a.14, **KBN-K** (RAR-E12, dtz 0.7260 -> 0.6753) at 4.9a.26 with
+a 0.7260 target, and **KRP-KB's 95.7% drawn overclaim** at 4.9a.27, which looks
+like material-imbalance pricing rather than a missing recognizer.
 
 ```bash
-python tools/diag/endgame_drawn.py --engine target/release/rarog.exe --syzygy D:/chess/tablebases/syzygy3456 --families KRP-KB
+python tools/diag/endgame_drawn.py --engine target/release/rarog.exe --syzygy D:/chess/tablebases/syzygy3456 --families KQ-KRP --positions 4000
 ```
 
 ## Phase 4 — bounded pre-NNUE search and HCE
@@ -77,8 +80,8 @@ python tools/diag/endgame_drawn.py --engine target/release/rarog.exe --syzygy D:
     - [x] **4.9a.5** RAR-E08 **ACCEPTED** +6.73 +/- 3.82 Elo — TB-corrected labels win
     - [x] **4.9a.6** `hce-v3-tb` fitted and gated — RAR-E12 **+11.81 +/- 5.33 Elo**
     - [x] **4.9a.7** KRPKR scale [ref 13] — drawn overclaim **37.1% -> 25.8%**; conv held
-    - [ ] **4.9a.8** NEXT — KRPKB scale [ref 14]; absent; conv 56%, 1.23%
-    - [ ] **4.9a.9** KPsK scale [ref 16] — absent; 4.19%
+    - [x] **4.9a.8** KRPKB scale [ref 14] — partial (rook pawns); cohort **null**, residual to 4.9a.27
+    - [ ] **4.9a.9** KPsK scale [ref 16] — absent; 4.19% board, 720 tree
     - [ ] **4.9a.10** KPK value [ref 5] — present bitbase; conv 95%, 2.84%
     - [ ] **4.9a.11** KRKP value [ref 6] — partial; conv 93%, 2.40%
     - [ ] **4.9a.12** KBPsK scale [ref 11] — partial wrong-corner subset; 1.92%
@@ -92,8 +95,8 @@ python tools/diag/endgame_drawn.py --engine target/release/rarog.exe --syzygy D:
     - [ ] **4.9a.20** KNNKP value [ref 2] — absent; discards the win on **19%** of moves
     - [ ] **4.9a.21** KNNK value [ref 1] — present; drawn 100/100, drawn-subset cohort
     - [ ] **4.9a.22** KQKR value [ref 10] — absent; conv 83%; never occurs naturally
-    - [ ] **4.9a.23** KQKRPs scale [ref 12] — absent; never occurs naturally
-    - [ ] **4.9a.24** KRPPKRP scale [ref 15] — absent; never occurs naturally
+    - [ ] **4.9a.23** KQKRPs scale [ref 12] — absent; 0% board but **2nd in tree**, verifiable
+    - [ ] **4.9a.24** KRPPKRP scale [ref 15] — **1st in tree**, but 7 men: UNVERIFIABLE
     - [ ] **4.9a.25** KXK value [ref 3] — KQ-K 97%/KR-K 93%; reaching 100% is open here
     - [ ] **4.9a.26** KBNK value [ref 4] — **RAR-E12 cost it dtz 0.7260 -> 0.6753**; restore 0.7260
     - [ ] **4.9a.27** Dependency-complete family refits and gates, tiered by occurrence
