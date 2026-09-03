@@ -8,13 +8,13 @@ in `EXPERIMENTS.md`; current status and commands belong in `GUIDE.md`.
 | Item | State |
 |---|---|
 | Released baseline | **2.3.2** at `f931722` on `master` |
-| Accepted head | RAR-E12 on `dev`; `bench 13` = **8,044,078 nodes / EBF 2.481**, 1T. Includes the 4.9a.4 mate drive, which is bench-INVISIBLE |
+| Accepted head | RAR-E12 + 4.9a.7 on `dev`; `bench 13` = **6,901,489 nodes / EBF 2.458**, 1T. Includes the 4.9a.4 mate drive, which is bench-INVISIBLE |
 | Integration state | The failed SearchCore rewrite is reverted by `c5e451d`; `d2c7788`/`e4f10ca` upgrade search evidence and `8d8f507` supplies the audited complete HCE fitting pipeline without changing accepted behavior |
 | Frozen search/HCE oracle | `hybrid` at `75d0d43`, Stockfish `9587eeeb` driving the exact Rarog 2.3.2 HCE |
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.9a.7 — KRPKR scale, the highest-occurrence open family** |
+| Current step | **4.9a.8 — KRPKB scale; 4.9a.7 done, gate deferred to 4.9a.27** |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) and endgame closure (4.9a) remain open |
 | Next release | Conditional **2.4.0** after 4.15; baseline NNUE then targets **2.5.0** |
 
@@ -841,6 +841,31 @@ so nothing is lost when the two are compared.
   | 4.9a.24 | KRPPKRP | 15 | absent | - | **0%** |
   | 4.9a.25 | KXK | 3 | present | 94/91/86% | 37.34% |
   | 4.9a.26 | KBNK | 4 | present | **7%** | 0.28% |
+
+  **4.9a.7 (KRPKR) is done, and it reframed what these steps measure.** Its
+  headline "52% conversion" is not the defect: RAR-E11 had already measured
+  Stockfish converting the family at 47.9% at the same node budget, so the
+  reachable mark was four points away, not fifty-five. The real defect was the
+  complementary cohort -- **37.1% of theoretically DRAWN KRP-KR positions scored
+  above +100 cp** -- which is what a SCALE function governs and what
+  `tools/diag/endgame_drawn.py` was built to measure. After the change: 25.8%,
+  with conversion unchanged at 0.452 and win-preservation improved to 0.9928.
+
+  **So a scale step is measured on the drawn cohort, and a value/mate step on
+  conversion.** Reading a scale function's success off a conversion number will
+  show it doing nothing, correctly and uselessly.
+
+  Only the reference's DRAW branches were ported. Its two winning branches
+  return above the neutral 64 and therefore amplify the score, and an untested
+  amplifier interacting with a Texel-fitted surface is not something the drawn
+  cohort can measure.
+
+  **4.9a.7 is bench-VISIBLE** (8,044,078 -> 6,901,489), unlike 4.9a.4, because a
+  depth-13 search reaches rook endings constantly. That difference is itself a
+  free measurement: the bench delta indicates how reachable a family is in the
+  SEARCH TREE, which is a different quantity from RAR-M15's occurrence on the
+  board, and the ordering of this list uses only the latter. Worth checking
+  before the back half of the list is worked.
 
   **Two recorded regressions are owned inside this list and must not be lost.**
   RAR-E08 cost KQ-KP 3.8 pp of conversion, owned by **4.9a.14**. RAR-E12 cost

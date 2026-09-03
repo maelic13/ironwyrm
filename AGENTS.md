@@ -71,7 +71,7 @@ did what its name suggests.**
   same check -- a standalone probe confirmed the option worked while the
   instrument reporting on it did not.
 - Before claiming a behavior-neutral change, prove it: `bench 13` must
-  reproduce the accepted fingerprint **8,044,078 / EBF 2.481** exactly
+  reproduce the accepted fingerprint **6,901,489 / EBF 2.458** exactly
   (RAR-E08; it was 7,226,051 / EBF 2.460 under RAR-E06 plus the 4.9a.4 mate
   drive, 6,977,070 / EBF 2.466 under RAR-S70, and 7,467,143 / EBF 2.477 before
   that). A fingerprint identifies the SEARCH, so it cannot see

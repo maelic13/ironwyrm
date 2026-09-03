@@ -446,8 +446,8 @@ and the start count rather than deleting the checks.
 
 ### The fingerprint guard, and what it cannot prove
 
-The driver asserts the baseline `bench 13` fingerprint — currently **8,044,078 /
-EBF 2.481** — before and after. A fingerprint identifies the **search**, so a
+The driver asserts the baseline `bench 13` fingerprint — currently **6,901,489 /
+EBF 2.458** — before and after. A fingerprint identifies the **search**, so a
 change confined to positions the bench suite never reaches is invisible to it.
 The 4.9a.4 mate drive moves KBN-K conversion from 19.4% to 96.9% and leaves the
 fingerprint byte-identical. So the guard will happily pass a tree carrying an
@@ -486,7 +486,7 @@ Each of these cost real work in this project.
 | quantity | value |
 |---|---|
 | parameter registry | 1,218 (1,194 + 12 + 10 + 2) |
-| accepted bench fingerprint | 8,044,078 / EBF 2.481 |
+| accepted bench fingerprint | 6,901,489 / EBF 2.458 |
 | store | ~124.8M positions, 36.8% opening-bucket |
 | `phase_book_v1.epd` | 1,000,000 positions, 50/10/10/10/20 |
 | datagen budget | 8,000 nodes/move, `datagen-v2` |
