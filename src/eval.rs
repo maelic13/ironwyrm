@@ -1187,6 +1187,23 @@ impl Evaluator {
     }
 
     pub fn evaluate(&mut self, board: &Board) -> i32 {
+        // 4.9a search-tree occurrence, counted BEFORE the cache lookup: a
+        // cache hit is still the search reaching that family, and counting
+        // only misses would undercount exactly the families the tree revisits
+        // most. Compiled out entirely without `--features diag`.
+        #[cfg(feature = "diag")]
+        {
+            let counts = |c: Color| {
+                [
+                    board.pieces(c, Piece::Pawn).count(),
+                    board.pieces(c, Piece::Knight).count(),
+                    board.pieces(c, Piece::Bishop).count(),
+                    board.pieces(c, Piece::Rook).count(),
+                    board.pieces(c, Piece::Queen).count(),
+                ]
+            };
+            crate::diag::record_endgame_family(counts(Color::White), counts(Color::Black));
+        }
         // The whole-eval cache must be bypassed under `texel`: a cache hit
         // returns without re-emitting trace counts, which would poison the
         // per-position trace the tuner records.

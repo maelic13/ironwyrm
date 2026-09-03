@@ -574,7 +574,151 @@ pub mod counters {
         shadow_4_5_correction,
         shadow_4_6_prospective_depth,
         shadow_4_7_root_confidence,
+        // 4.9a search-tree occurrence. RAR-M15 measured how often each
+        // reference endgame family occurs ON THE BOARD in real games, and 4.9a
+        // is ordered on that. These count how often each family is reached in
+        // the SEARCH TREE, which is a different quantity: 4.9a.4's mate drive
+        // left `bench 13` byte-identical (no bench tree reaches a bare-king
+        // minor mate at depth 13) while 4.9a.7's rook-ending scale moved it
+        // 14%. EXACT, not sampled -- these are cheap and a ratio against
+        // `nodes` must be joinable (analysis/phase4_counter_spec.md).
+        eg_krpkr,
+        eg_krpkb,
+        eg_kpsk,
+        eg_kpk,
+        eg_krkp,
+        eg_kbpsk,
+        eg_kpkp,
+        eg_kqkp,
+        eg_kbpkb,
+        eg_kbppkb,
+        eg_krkn,
+        eg_krkb,
+        eg_kbpkn,
+        eg_knnkp,
+        eg_knnk,
+        eg_kqkr,
+        eg_kqkrps,
+        eg_krppkrp,
+        eg_kxk,
+        eg_kbnk,
+        // Denominator: evaluations of positions with at most 7 men, the set
+        // the classifier looks at. Without it an occurrence count cannot be
+        // read as a rate.
+        eg_classified,
     );
+}
+
+/// Count one evaluation against the 4.9a reference-family table.
+///
+/// Called from `evaluate()` and compiled out entirely without `--features
+/// diag`, so the production fingerprint is untouched -- which is this feature's
+/// own acceptance gate.
+///
+/// The table is the 20 families of the final pre-NNUE Stockfish dispatcher, in
+/// the order 4.9a works them. `counts` is (pawns, knights, bishops, rooks,
+/// queens) per side; each family is tried in both orientations, so a Black
+/// strong side counts the same as a White one.
+#[cfg(feature = "diag")]
+pub fn record_endgame_family(w: [u32; 5], b: [u32; 5]) {
+    // At most 7 men total (2 kings + 5 pieces) can match any listed family.
+    let men: u32 = w.iter().sum::<u32>() + b.iter().sum::<u32>();
+    if men > 5 {
+        return;
+    }
+    crate::diag_count!(eg_classified);
+
+    // Each arm is (strong, weak) as (P, N, B, R, Q). `None` in a slot means
+    // "one or more", used by the families whose reference name carries `Ps`.
+    let hit = |s: [u32; 5], k: [Option<u32>; 5]| -> bool {
+        (0..5).all(|i| match k[i] {
+            Some(n) => s[i] == n,
+            None => s[i] >= 1,
+        })
+    };
+    let e = |n: u32| Some(n);
+    let bare = [e(0), e(0), e(0), e(0), e(0)];
+
+    for (i, (strong, weak)) in [(w, b), (b, w)].into_iter().enumerate() {
+        // A SYMMETRIC family matches in both orientations and would be counted
+        // twice. KPKP is the only one in this table, and it read 370 instead of
+        // 185 before this guard.
+        if i == 1 && w == b {
+            break;
+        }
+        // Order matters only for readability; the arms are disjoint.
+        if hit(strong, [e(1), e(0), e(0), e(1), e(0)]) && hit(weak, [e(0), e(0), e(0), e(1), e(0)])
+        {
+            crate::diag_count!(eg_krpkr);
+        } else if hit(strong, [e(1), e(0), e(0), e(1), e(0)])
+            && hit(weak, [e(0), e(0), e(1), e(0), e(0)])
+        {
+            crate::diag_count!(eg_krpkb);
+        } else if hit(strong, [e(2), e(0), e(0), e(1), e(0)])
+            && hit(weak, [e(1), e(0), e(0), e(1), e(0)])
+        {
+            crate::diag_count!(eg_krppkrp);
+        } else if hit(strong, [e(1), e(0), e(0), e(0), e(0)]) && hit(weak, bare) {
+            crate::diag_count!(eg_kpk);
+            crate::diag_count!(eg_kpsk);
+        } else if hit(strong, [None, e(0), e(0), e(0), e(0)]) && hit(weak, bare) {
+            crate::diag_count!(eg_kpsk);
+        } else if hit(strong, [e(0), e(0), e(0), e(1), e(0)])
+            && hit(weak, [e(1), e(0), e(0), e(0), e(0)])
+        {
+            crate::diag_count!(eg_krkp);
+        } else if hit(strong, [e(1), e(0), e(0), e(0), e(0)])
+            && hit(weak, [e(1), e(0), e(0), e(0), e(0)])
+        {
+            crate::diag_count!(eg_kpkp);
+        } else if hit(strong, [None, e(0), e(1), e(0), e(0)]) && hit(weak, bare) {
+            crate::diag_count!(eg_kbpsk);
+        } else if hit(strong, [e(0), e(0), e(0), e(0), e(1)])
+            && hit(weak, [e(1), e(0), e(0), e(0), e(0)])
+        {
+            crate::diag_count!(eg_kqkp);
+        } else if hit(strong, [e(2), e(0), e(1), e(0), e(0)])
+            && hit(weak, [e(0), e(0), e(1), e(0), e(0)])
+        {
+            crate::diag_count!(eg_kbppkb);
+        } else if hit(strong, [e(1), e(0), e(1), e(0), e(0)])
+            && hit(weak, [e(0), e(0), e(1), e(0), e(0)])
+        {
+            crate::diag_count!(eg_kbpkb);
+        } else if hit(strong, [e(1), e(0), e(1), e(0), e(0)])
+            && hit(weak, [e(0), e(1), e(0), e(0), e(0)])
+        {
+            crate::diag_count!(eg_kbpkn);
+        } else if hit(strong, [e(0), e(0), e(0), e(1), e(0)])
+            && hit(weak, [e(0), e(1), e(0), e(0), e(0)])
+        {
+            crate::diag_count!(eg_krkn);
+        } else if hit(strong, [e(0), e(0), e(0), e(1), e(0)])
+            && hit(weak, [e(0), e(0), e(1), e(0), e(0)])
+        {
+            crate::diag_count!(eg_krkb);
+        } else if hit(strong, [e(0), e(2), e(0), e(0), e(0)])
+            && hit(weak, [e(1), e(0), e(0), e(0), e(0)])
+        {
+            crate::diag_count!(eg_knnkp);
+        } else if hit(strong, [e(0), e(2), e(0), e(0), e(0)]) && hit(weak, bare) {
+            crate::diag_count!(eg_knnk);
+        } else if hit(strong, [e(0), e(0), e(0), e(0), e(1)])
+            && hit(weak, [e(0), e(0), e(0), e(1), e(0)])
+        {
+            crate::diag_count!(eg_kqkr);
+        } else if hit(strong, [e(0), e(0), e(0), e(0), e(1)])
+            && hit(weak, [None, e(0), e(0), e(1), e(0)])
+        {
+            crate::diag_count!(eg_kqkrps);
+        } else if hit(strong, [e(0), e(1), e(1), e(0), e(0)]) && hit(weak, bare) {
+            crate::diag_count!(eg_kbnk);
+            crate::diag_count!(eg_kxk);
+        } else if hit(weak, bare) && strong.iter().sum::<u32>() == 1 && strong[0] == 0 {
+            // KXK: one non-pawn piece against a bare king.
+            crate::diag_count!(eg_kxk);
+        }
+    }
 }
 
 /// Stable domains keep independent samples from accidentally selecting exactly
