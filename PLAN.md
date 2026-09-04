@@ -16,7 +16,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.10.8 — datagen label audit against tablebase truth** |
+| Current step | **4.10.9 — gate-runner provenance** |
 | Instrument state | The endgame truth harness is **defective and under repair**; every pawn-family conversion number is superseded. See `analysis/endgame_truth_instrument_audit_2026-09-04.md` and "Reopened work, 2026-09-04" |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -1196,13 +1196,43 @@ Nothing here changes the engine. These are tooling commits.
    Verified: 23 tests, each guard exercised on a known-bad input as well as a
    good one, and the CLI refuses live to pair two reports over different
    cohorts.
-8. **4.10.8 Datagen label audit.** `tools/diag/datagen_label_audit.py`: walk a
-   PGN corpus, probe every position within the table man-limit, and report the
-   share of tablebase clean wins the game did not win. Two details the count
-   depends on -- probe only to the man-limit actually present, and EXCLUDE
-   cursed wins, which are already drawn under the fifty-move rule and are not
-   evidence of weak play. Deterministic sharding so parallel output is
-   byte-identical to serial.
+8. **4.10.8 Datagen label audit -- DONE.** `tools/diag/datagen_label_audit.py`
+   walks a PGN corpus, probes to the installed man-limit, and reports the share
+   of tablebase clean wins the game did not win.
+
+   Three decisions the number depends on, each one a way to get it wrong:
+   a **missing table is UNKNOWN, never agreement** -- probing past the limit
+   silently converts "no table" into "the label was right"; **cursed wins are
+   excluded**, because WDL 1 is already drawn by the fifty-move rule and a game
+   drawing one is correct play, not a defect; and **only the FIRST clean win a
+   game reaches counts**, since later positions are consequences of how that
+   one was played and counting them all would weight long technical endings for
+   no reason.
+
+   **Both denominators are reported**, because they answer different questions:
+   `not_won / clean_wins` is how badly the endings are played, `not_won /
+   games` is how much of the CORPUS carries a wrong label. Per family too, since
+   the bias is expected to concentrate in rook and pawn endings.
+
+   Sharding is by byte offset -- python-chess 1.11 has no `scan_offsets`, so
+   `skip_game` in a loop supplies them -- with fixed-index round-robin so a
+   sharded run audits exactly the games a serial run does.
+
+   **Smoked on a real 2,700-game gauntlet PGN**: 299 games (11.07%) reached an
+   adjudicable clean win, 27 of those (9.03%) were not won, so 1.00% of that
+   corpus carries a contradicted result, with KRPP-KR the largest family at
+   4/44. That is a MATCH corpus at tournament TC, not datagen, so it is a smoke
+   test and not the measurement -- 4.11.8 runs this against `hce-v2` and
+   `hce-v3-tb`, where the node budget is 8,000 and the share should be much
+   worse.
+
+   **The smoke found a crash the unit tests missed.** On a corpus reaching no
+   clean win, `summarize` returned `None` correctly and its test covered that,
+   but the PRINT path formatted `None` as a percentage and died. Crashing was
+   the better of the two available failures -- printing 0.00% would have read
+   as "no defect" on a corpus with no data -- and it is now `n/a`. Recorded
+   because a unit test passing over the function while the caller is broken is
+   exactly the shape 4.10.4 is about.
 9. **4.10.9 Gate-runner provenance.** The gate runner refuses to start on a
    wrong revision, a dirty tree or mismatched benches, and records binary
    SHA-256, compiler, PGO status, book, TC, hash, threads, affinity,
