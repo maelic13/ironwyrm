@@ -56,6 +56,7 @@ import random
 import statistics
 import sys
 from collections import Counter
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 import chess
@@ -335,6 +336,185 @@ def play_and_grade(
     }
 
 
+def evaluate_position(
+    engine, tb, board: chess.Board, nodes: int, max_plies: int
+) -> tuple[int, int | None, dict]:
+    """One position: its theory verdict, its starting DTZ, and the playout."""
+    verdict = wdl_for_white(tb, board)
+    start_dtz = dtz_abs(tb, board)
+    played = play_and_grade(engine, tb, board, nodes, max_plies, object())
+    return verdict, start_dtz, played
+
+
+def shard(items, workers: int) -> list[list]:
+    """Round-robin the work, so a slow family cannot land wholly on one worker.
+
+    Which worker gets which item is irrelevant to the RESULT -- results are
+    reassembled by fixed index -- but it matters a lot to wall time, because
+    position cost varies by an order of magnitude within a family.
+    """
+    buckets = [[] for _ in range(workers)]
+    for i, item in enumerate(items):
+        buckets[i % workers].append(item)
+    return [b for b in buckets if b]
+
+
+def _worker_run(task):
+    """Play one shard in this process. Returns [(family, index, ...), ...].
+
+    The engine and tablebase are opened and closed HERE rather than in a pool
+    initializer holding them in globals. The initializer version deadlocked on
+    shutdown: every shard finished, `24/24 positions` printed, and the pool
+    then hung forever with five live `rarog.exe` children, because closing a
+    python-chess engine from an `atexit` handler races its asyncio loop thread.
+    One task per worker means the lifetime is the same either way, so nothing
+    is lost by making it explicit.
+    """
+    engine_path, syzygy, hash_mb, nodes, max_plies, items = task
+    tb = chess.syzygy.open_tablebase(syzygy)
+    engine = chess.engine.SimpleEngine.popen_uci(engine_path)
+    try:
+        configure_engine(engine, hash_mb)
+        out = []
+        for name, index, fen in items:
+            verdict, start_dtz, played = evaluate_position(
+                engine, tb, chess.Board(fen), nodes, max_plies
+            )
+            out.append((name, index, verdict, start_dtz, played))
+        return out
+    finally:
+        engine.quit()
+        tb.close()
+
+
+def configure_engine(engine, hash_mb: int) -> None:
+    """Identical option handling wherever an engine is opened.
+
+    The engine must not consult the tablebases itself: this measures the
+    evaluation's own endgame knowledge, and a TB-backed root would measure the
+    tables instead. A worker that skipped this would silently measure something
+    else, so there is exactly one place that does it.
+    """
+    options = {}
+    if "Hash" in engine.options:
+        options["Hash"] = hash_mb
+    if "Threads" in engine.options:
+        options["Threads"] = 1
+    if "SyzygyPath" in engine.options:
+        options["SyzygyPath"] = ""
+    if options:
+        engine.configure(options)
+
+
+def summarize(
+    name: str,
+    strong: tuple[int, ...],
+    weak: tuple[int, ...],
+    fens: list[str],
+    results: dict,
+    family_cohort: str,
+    per_position: bool,
+) -> dict:
+    """Aggregate one family from its per-position results.
+
+    Serial and sharded runs differ only in how `results` was produced; every
+    number below is computed here, once, from index-ordered inputs. That is
+    what makes `--workers` provably output-neutral instead of probably.
+    """
+    theory = Counter()
+    outcomes = Counter()
+    mate_plies = []
+    optimal_dtz = []
+    graded = preserved = dtz_checked = dtz_progress = 0
+    won_positions = 0
+    converted = 0
+    records = []
+    efficiency_pairs = []
+
+    for index, fen in enumerate(fens):
+        verdict, start_dtz, played = results[index]
+        theory[{2: "win", 1: "cursed_win", 0: "draw",
+                -1: "blessed_loss", -2: "loss"}[verdict]] += 1
+        outcomes[played["outcome"]] += 1
+        graded += played["graded_moves"]
+        preserved += played["win_preserving_moves"]
+        dtz_checked += played["dtz_checked_moves"]
+        dtz_progress += played["dtz_progress_moves"]
+
+        # Conversion is only meaningful on a CLEAN theoretical win.
+        if verdict == 2:
+            won_positions += 1
+            if played["outcome"] == "mated":
+                converted += 1
+                mate_plies.append(played["plies"])
+                if start_dtz:
+                    efficiency_pairs.append((played["plies"], start_dtz))
+            if start_dtz is not None:
+                optimal_dtz.append(start_dtz)
+
+        if per_position:
+            records.append({
+                "index": index,
+                "fen": fen,
+                "theory_wdl": verdict,
+                "theory_dtz": start_dtz,
+                **played,
+            })
+
+    entry = {
+        "spec": name,
+        "theory": dict(theory),
+        "outcomes": dict(outcomes),
+        "theoretically_won": won_positions,
+        "converted": converted,
+        "conversion_rate": (converted / won_positions) if won_positions else None,
+        "graded_moves": graded,
+        "win_preserving_moves": preserved,
+        "win_preserving_rate": (preserved / graded) if graded else None,
+        "dtz_checked_moves": dtz_checked,
+        "dtz_progress_moves": dtz_progress,
+        "dtz_progress_rate": (dtz_progress / dtz_checked) if dtz_checked else None,
+        "dtz_progress_is_technique": (not weak) and chess.PAWN not in strong,
+        "median_mate_plies": statistics.median(mate_plies) if mate_plies else None,
+        "median_optimal_dtz": statistics.median(optimal_dtz) if optimal_dtz else None,
+    }
+    # Plies taken against the tablebase's own distance, PAIRED per position and
+    # reported only where the two are the same quantity.
+    #
+    # Two traps, both hit before this was written. DTZ is distance to the next
+    # ZEROING move, not to mate; in KR-KP the zeroing move is the pawn capture
+    # and mate comes much later, which made a naive ratio read 15.5 and mean
+    # nothing. And taking median mate plies over converted games while taking
+    # median DTZ over all won positions is survivorship bias -- in KBN-K only
+    # the 3 easiest positions converted, which made the ratio read 0.811, i.e.
+    # "better than optimal".
+    #
+    # So: pair each converted position with its OWN dtz, and report the ratio
+    # only when the weak side is bare and the strong side is pawnless, where no
+    # zeroing move exists before mate and DTZ is therefore DTM. Report the rate
+    # everywhere -- it is still a valid within-family comparison between two
+    # engine versions -- but mark where it may be read as technique against
+    # optimal play. KPP-K reads 0.078 not because the engine is lost but
+    # because every pawn move resets the count.
+    dtm_comparable = not weak and chess.PAWN not in strong
+    if dtm_comparable and efficiency_pairs:
+        entry["mate_efficiency"] = round(
+            statistics.median(p / d for p, d in efficiency_pairs), 3
+        )
+        entry["mate_efficiency_n"] = len(efficiency_pairs)
+    else:
+        entry["mate_efficiency"] = None
+        entry["mate_efficiency_n"] = 0
+        entry["mate_efficiency_note"] = (
+            "reported only for pawnless strong side vs bare king, "
+            "where DTZ equals DTM"
+        )
+    entry["cohort_sha256"] = family_cohort
+    if per_position:
+        entry["positions"] = records
+    return entry
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--engine", required=True, type=Path)
@@ -346,6 +526,12 @@ def main() -> int:
     parser.add_argument("--families", default=",".join(DEFAULT_FAMILIES))
     parser.add_argument("--hash", type=int, default=16)
     parser.add_argument(
+        "--workers", type=int, default=1,
+        help="independent one-thread engine processes to shard across. "
+             "Changes wall time only; results are reassembled by fixed index "
+             "and are byte-identical to --workers 1 (PLAN 4.10.3)",
+    )
+    parser.add_argument(
         "--per-position",
         action="store_true",
         help="write every position's record, so two runs can be paired",
@@ -355,6 +541,8 @@ def main() -> int:
 
     if min(args.positions, args.nodes, args.max_plies) <= 0:
         parser.error("positions, nodes and max-plies must be positive")
+    if args.workers < 1:
+        parser.error("workers must be at least 1")
     engine_path = args.engine.resolve()
     if not engine_path.is_file():
         parser.error(f"engine not found: {engine_path}")
@@ -379,160 +567,95 @@ def main() -> int:
         "seed": args.seed,
         "hash_mb": args.hash,
         "persistent_tt_per_game": True,
+        "workers": args.workers,
         "families": {},
     }
 
-    tb = chess.syzygy.open_tablebase(str(args.syzygy))
-    engine = chess.engine.SimpleEngine.popen_uci(str(engine_path))
-    try:
-        options = {}
-        if "Hash" in engine.options:
-            options["Hash"] = args.hash
-        if "Threads" in engine.options:
-            options["Threads"] = 1
-        # The engine must not consult the tablebases itself: this measures the
-        # evaluation's own endgame knowledge, and a TB-backed root would
-        # measure the tables instead.
-        if "SyzygyPath" in engine.options:
-            options["SyzygyPath"] = ""
-        if options:
-            engine.configure(options)
+    # Generate and fingerprint the whole cohort BEFORE any engine is opened, so
+    # a sharded run and a serial run address identical positions by index.
+    cohort_fens = {}
+    cohort_family_digest = {}
+    for name in families:
+        strong, weak = specs[name]
+        boards = generate_family(args.seed, name, strong, weak, args.positions)
+        cohort_fens[name] = [b.fen() for b in boards]
+        cohort_family_digest[name] = cohort_digest(cohort_fens[name])
+        print(f"{name}: cohort {cohort_family_digest[name][:16]} over "
+              f"{args.positions} positions", flush=True)
 
-        for name in families:
-            strong, weak = specs[name]
-            boards = generate_family(
-                args.seed, name, strong, weak, args.positions
-            )
-            family_fens = [b.fen() for b in boards]
-            family_cohort = cohort_digest(family_fens)
-            print(f"{name}: cohort {family_cohort[:16]} over {len(boards)} positions",
-                  flush=True)
-            theory = Counter()
-            outcomes = Counter()
-            mate_plies = []
-            optimal_dtz = []
-            graded = preserved = dtz_checked = dtz_progress = 0
-            won_positions = 0
-            converted = 0
-            records = []
-            efficiency_pairs = []
+    work = [(name, i, fen)
+            for name in families
+            for i, fen in enumerate(cohort_fens[name])]
+    results = {name: {} for name in families}
 
-            for index, board in enumerate(boards):
-                fen = family_fens[index]
+    if args.workers == 1:
+        # The serial path is the REFERENCE. It stays a plain loop with one
+        # engine, so "sharded output equals serial output" compares against
+        # something simple enough to be obviously right.
+        tb = chess.syzygy.open_tablebase(str(args.syzygy))
+        engine = chess.engine.SimpleEngine.popen_uci(str(engine_path))
+        try:
+            configure_engine(engine, args.hash)
+            done = 0
+            for name, index, fen in work:
                 try:
-                    verdict = wdl_for_white(tb, board)
-                    start_dtz = dtz_abs(tb, board)
+                    verdict, start_dtz, played = evaluate_position(
+                        engine, tb, chess.Board(fen), args.nodes, args.max_plies
+                    )
                 except (chess.syzygy.MissingTableError, KeyError, ValueError) as exc:
                     parser.error(f"no tablebase for {name}: {exc}")
-                theory[{2: "win", 1: "cursed_win", 0: "draw",
-                        -1: "blessed_loss", -2: "loss"}[verdict]] += 1
+                results[name][index] = (verdict, start_dtz, played)
+                done += 1
+                if done % 25 == 0:
+                    print(f"{done}/{len(work)} positions", flush=True)
+        finally:
+            engine.quit()
+            tb.close()
+    else:
+        # Each worker holds its own engine and tablebase; every engine still
+        # runs Threads=1. Worker count changes wall time, never the result --
+        # verified, not assumed: a position's outcome does not depend on what
+        # the engine played before it, because python-chess sends `ucinewgame`
+        # per position and Rarog resets on it. Measured by running one family
+        # alone and again preceded by another: 5/5 per-position records
+        # identical (PLAN 4.10.3).
+        shards = shard(work, args.workers)
+        print(f"{len(work)} positions over {len(shards)} workers", flush=True)
+        tasks = [
+            (str(engine_path), str(args.syzygy.resolve()), args.hash,
+             args.nodes, args.max_plies, items)
+            for items in shards
+        ]
+        with ProcessPoolExecutor(max_workers=len(shards)) as pool:
+            done = 0
+            for produced in pool.map(_worker_run, tasks):
+                for name, index, verdict, start_dtz, played in produced:
+                    results[name][index] = (verdict, start_dtz, played)
+                done += len(produced)
+                print(f"{done}/{len(work)} positions", flush=True)
 
-                played = play_and_grade(
-                    engine, tb, board, args.nodes, args.max_plies, object()
-                )
-                outcomes[played["outcome"]] += 1
-                graded += played["graded_moves"]
-                preserved += played["win_preserving_moves"]
-                dtz_checked += played["dtz_checked_moves"]
-                dtz_progress += played["dtz_progress_moves"]
-
-                # Conversion is only meaningful on a CLEAN theoretical win.
-                if verdict == 2:
-                    won_positions += 1
-                    if played["outcome"] == "mated":
-                        converted += 1
-                        mate_plies.append(played["plies"])
-                        if start_dtz:
-                            efficiency_pairs.append((played["plies"], start_dtz))
-                    if start_dtz is not None:
-                        optimal_dtz.append(start_dtz)
-
-                if args.per_position:
-                    records.append({
-                        "index": index,
-                        "fen": fen,
-                        "theory_wdl": verdict,
-                        "theory_dtz": start_dtz,
-                        **played,
-                    })
-
-                if (index + 1) % 25 == 0:
-                    print(
-                        f"{name}: {index + 1}/{args.positions} "
-                        f"converted={converted}/{won_positions} "
-                        f"preserved={preserved}/{graded}",
-                        flush=True,
-                    )
-
-            entry = {
-                "spec": name,
-                "theory": dict(theory),
-                "outcomes": dict(outcomes),
-                "theoretically_won": won_positions,
-                "converted": converted,
-                "conversion_rate": (converted / won_positions) if won_positions else None,
-                "graded_moves": graded,
-                "win_preserving_moves": preserved,
-                "win_preserving_rate": (preserved / graded) if graded else None,
-                "dtz_checked_moves": dtz_checked,
-                "dtz_progress_moves": dtz_progress,
-                "dtz_progress_rate": (dtz_progress / dtz_checked) if dtz_checked else None,
-                "dtz_progress_is_technique": (not weak) and chess.PAWN not in strong,
-                "median_mate_plies": statistics.median(mate_plies) if mate_plies else None,
-                "median_optimal_dtz": statistics.median(optimal_dtz) if optimal_dtz else None,
-            }
-            # Plies taken against the tablebase's own distance, PAIRED per
-            # position and reported only where the two are the same quantity.
-            #
-            # Two traps, both hit before this was written. DTZ is distance to
-            # the next ZEROING move, not to mate; in KR-KP the zeroing move is
-            # the pawn capture and mate comes much later, which made a naive
-            # ratio read 15.5 and mean nothing. And taking median mate plies
-            # over converted games while taking median DTZ over all won
-            # positions is survivorship bias -- in KBN-K only the 3 easiest
-            # positions converted, which made the ratio read 0.811, i.e.
-            # "better than optimal".
-            #
-            # So: pair each converted position with its OWN dtz, and report
-            # the ratio only when the weak side is bare and the strong side is
-            # pawnless, where no zeroing move exists before mate and DTZ is
-            # therefore DTM.
-            # Same gate as the efficiency ratio, and for the same reason: DTZ
-            # counts to the next ZEROING move, so in any family with a pawn or
-            # a capturable enemy piece "progress" is measured toward a pawn
-            # push or a capture rather than toward mate. KPP-K reads 0.078 not
-            # because the engine is lost but because every pawn move resets
-            # the count. Report the rate everywhere -- it is still a valid
-            # within-family comparison between two engine versions -- but mark
-            # where it may be read as technique against optimal play.
-            dtm_comparable = not weak and chess.PAWN not in strong
-            if dtm_comparable and efficiency_pairs:
-                entry["mate_efficiency"] = round(
-                    statistics.median(p / d for p, d in efficiency_pairs), 3
-                )
-                entry["mate_efficiency_n"] = len(efficiency_pairs)
-            else:
-                entry["mate_efficiency"] = None
-                entry["mate_efficiency_n"] = 0
-                entry["mate_efficiency_note"] = (
-                    "reported only for pawnless strong side vs bare king, "
-                    "where DTZ equals DTM"
-                )
-            entry["cohort_sha256"] = family_cohort
-            if args.per_position:
-                entry["positions"] = records
-            report["families"][name] = entry
-            print(
-                f"{name}: conversion "
-                f"{entry['conversion_rate'] if entry['conversion_rate'] is None else round(entry['conversion_rate'], 3)}"
-                f" on {won_positions} won; win-preserving "
-                f"{entry['win_preserving_rate'] if entry['win_preserving_rate'] is None else round(entry['win_preserving_rate'], 4)}"
-                f" over {graded} moves",
-                flush=True,
+    for name in families:
+        strong, weak = specs[name]
+        if len(results[name]) != args.positions:
+            parser.error(
+                f"{name}: {len(results[name])} of {args.positions} positions "
+                "came back; refusing to report a partial family"
             )
-    finally:
-        engine.quit()
-        tb.close()
+        entry = summarize(
+            name, strong, weak, cohort_fens[name], results[name],
+            cohort_family_digest[name], args.per_position,
+        )
+        report["families"][name] = entry
+        rate = entry["conversion_rate"]
+        preserving = entry["win_preserving_rate"]
+        print(
+            f"{name}: conversion "
+            f"{rate if rate is None else round(rate, 3)}"
+            f" on {entry['theoretically_won']} won; win-preserving "
+            f"{preserving if preserving is None else round(preserving, 4)}"
+            f" over {entry['graded_moves']} moves",
+            flush=True,
+        )
 
     report["cohort"] = {
         "seed": args.seed,

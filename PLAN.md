@@ -16,7 +16,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.10.3 — sharded workers for the truth harness** |
+| Current step | **4.10.4 — prove every guard fails on a known-bad input** |
 | Instrument state | The endgame truth harness is **defective and under repair**; every pawn-family conversion number is superseded. See `analysis/endgame_truth_instrument_audit_2026-09-04.md` and "Reopened work, 2026-09-04" |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -1016,10 +1016,31 @@ Nothing here changes the engine. These are tooling commits.
    to the family seed was shown to fail four tests. **4.11.1's two arms must
    both report that overall digest**; anything else is not a re-measurement of
    this baseline.
-3. **4.10.3 Parallel playout.** Add fixed-index sharded workers to
-   `endgame_truth.py`. Worker count must change wall time and nothing else:
-   assert byte-identical output against a serial run in the test suite. The
-   re-measurement in 4.11 is otherwise a serial afternoon per arm.
+3. **4.10.3 Parallel playout -- DONE.** `--workers N` shards the cohort
+   round-robin across independent one-thread engine processes and reassembles
+   by fixed index. `--workers 1` stays a plain single-engine loop and is the
+   REFERENCE; both paths feed the same `summarize()`, so identity is
+   structural rather than hoped for.
+
+   **Sharding is only safe because a position's result does not depend on what
+   the engine played before it, and that was measured, not assumed.** Running
+   KBN-K alone and again preceded by KPP-K in the same engine process gave 5/5
+   identical per-position records: python-chess sends `ucinewgame` per position
+   and Rarog resets on it. Had that failed, sharding would have silently
+   changed results.
+
+   **Verified end to end:** 3 families x 8 positions at 3,000 nodes, serial
+   versus `--workers 5`, JSON identical apart from the recorded `workers`
+   field -- same SHA-256 -- and no engine process left behind.
+
+   **One real bug was found and fixed inside this leaf.** The first design kept
+   the engine in a module global filled by a pool initializer and closed by
+   `atexit`. Every shard finished, `24/24 positions` printed, and the pool then
+   hung forever with five live `rarog.exe` children: closing a python-chess
+   engine from an `atexit` handler races its asyncio loop thread. The engine's
+   lifetime is now the task's, explicitly, and a test asserts the old shape
+   cannot return. Worth recording because the failure was invisible in the
+   log -- the run looked complete and simply never wrote its report.
 4. **4.10.4 Prove the guards fire.** Every floor, veto, anchor and gate must be
    shown to FAIL on a known-bad input, not merely to pass on a good one. Three
    specific obligations, each from a guard that silently did not work: a

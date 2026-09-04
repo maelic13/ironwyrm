@@ -238,6 +238,53 @@ class CohortGuardTests(unittest.TestCase):
         self.assertIn("cohort_sha256", str(caught.exception))
 
 
+class ShardTests(unittest.TestCase):
+    """4.10.3: sharding may change wall time and nothing else."""
+
+    def test_every_item_appears_exactly_once(self):
+        items = [("f", i, "fen%d" % i) for i in range(23)]
+        for workers in (1, 2, 5, 23):
+            with self.subTest(workers=workers):
+                buckets = endgame_truth.shard(items, workers)
+                flat = [x for b in buckets for x in b]
+                self.assertEqual(sorted(flat), sorted(items))
+                self.assertEqual(len(flat), len(items))
+
+    def test_empty_buckets_are_dropped(self):
+        buckets = endgame_truth.shard([("f", 0, "a")], 8)
+        self.assertEqual(len(buckets), 1)
+        self.assertTrue(all(buckets))
+
+    def test_one_worker_preserves_order(self):
+        items = [("f", i, "fen%d" % i) for i in range(6)]
+        self.assertEqual(endgame_truth.shard(items, 1), [items])
+
+    def test_round_robin_spreads_a_family(self):
+        """A slow family must not land wholly on one worker."""
+        items = [("slow", i, "x") for i in range(10)]
+        buckets = endgame_truth.shard(items, 5)
+        self.assertEqual([len(b) for b in buckets], [2, 2, 2, 2, 2])
+
+    def test_workers_hold_no_module_level_engine(self):
+        """Regression guard for a deadlock this step actually hit.
+
+        The first version kept the engine in a module global filled by a pool
+        initializer and closed by `atexit`. Every shard finished, `24/24
+        positions` printed, and the pool then hung forever with five live
+        `rarog.exe` children -- closing a python-chess engine from an `atexit`
+        handler races its asyncio loop thread. The engine's lifetime is now the
+        task's, explicitly.
+        """
+        source = Path(endgame_truth.__file__).read_text(encoding="utf-8")
+        # Match the CONSTRUCTS, not the words: the comment above `_worker_run`
+        # names the bug on purpose, and a bare `assertNotIn("atexit", ...)`
+        # failed on that comment rather than on any code.
+        self.assertNotIn("import atexit", source)
+        self.assertNotIn("atexit.register", source)
+        self.assertNotIn("initializer=", source)
+        self.assertNotIn("initargs=", source)
+
+
 class SchemaGuardTests(unittest.TestCase):
     """4.10.4: a guard is not verified until it FAILS on a known-bad input."""
 
