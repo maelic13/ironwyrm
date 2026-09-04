@@ -18,22 +18,20 @@ and `python tools/diag/check_guide.py` must pass.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
 | Instrument state | **The endgame truth harness is defective and under repair.** Every pawn-family conversion number is superseded; bare-king families are provably unaffected |
-| Current step | **4.11.1 — re-run both truth arms; needs the maintainer's machine** |
+| Current step | **4.11.2 — re-derive the floors from the corrected head arm** |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## What you run next
 
-**4.11.1 — re-run BOTH truth arms. This one needs your machine.** 4.10 is
-complete: the instrument is repaired, cohort-identified, sharded, guarded,
-layer-stamped, budget-justified and provenance-checked.
+**4.11.2 — re-derive `endgame_floors.json` from the corrected head arm** and
+give it the cohort fingerprint the tool now demands. The committed floors fail
+closed until this runs. Restate 4.12.21's KBN-K target on an artifact that
+exists — it is now re-derived: conversion 0.8980 (n=98), dtz 0.6753 (n=3178).
 
-Re-run the accepted head and the same Stockfish binary under the recorded
-conditions — 60,000 nodes/move, one thread, 16 MB hash, 100-ply limit, engine
-tablebases disabled, `--per-position`, both binaries pinned by SHA-256 — so
-**only the termination rule differs**. Both arms must report cohort
-`fe4866045506636f884ee30526b4188c3def9ca9747f5960ea5c5e7cba5dbb5e`. The
-reference arm has no per-position records at all, so it cannot be re-analysed,
-only re-run.
+Corrected baseline (4.11.1): head **1276/1372 = 0.9300**, reference
+**1361/1372 = 0.9920**, deficit 85, hard residue 8 positions. Largest single
+deficit is **KQ-KR 77/100 against 100/100**, which the pre-correction ordering
+put near the END of 4.12.
 
 **Deployment is 153,466 nodes/move median at 3+0.03** and the endgame screen is
 60,000, below its p25 — so every fixed-node endgame verdict so far is
@@ -99,7 +97,7 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
     - [x] **4.9.1** Residual audit — RAR-E09: no structural residual; a label defect instead
     - [x] **4.9.2** Closed: no cohort residual licenses a cluster; retry trigger recorded
 - [x] **4.9a** Endgame truth foundation — done; five results SUPERSEDED, owners named
-    - [x] **4.9a.1** SUPERSEDED -> 4.11.1 — truth corpus; the material abort invalidated every pawn family
+    - [x] **4.9a.1** Truth corpus — result was invalid, REPLACED by the 4.11.1 baseline
     - [x] **4.9a.2** Endgame-start cohort book — 788 verified positions, 21 families
     - [x] **4.9a.3** SUPERSEDED -> 4.11.2 — floors half only; the 64 frozen theory vetoes stand
     - [x] **4.9a.4** SUPERSEDED -> 4.11.9 — gain stands (KBN-K **19.4% -> 96.9%**); isolation reaches 6 families
@@ -121,7 +119,7 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
     - [x] **4.10.11** Compile-time bound on the shipped mop-up constants, every build type
     - [x] **4.10.12** Feature-matrix build audit; `--all-features` is not the shipped config
 - [ ] **4.11** Re-measurement and re-derivation — corrections recorded in place
-    - [ ] **4.11.1** Re-run both truth arms, binaries pinned by SHA-256, per-position on
+    - [x] **4.11.1** Re-run both truth arms — head **0.9300**, reference **0.9920**
     - [ ] **4.11.2** Re-derive the floors; restate 4.12.21's KBN-K target on a real artifact
     - [ ] **4.11.3** Re-derive the attained reference results — replaces RAR-E11
     - [ ] **4.11.4** Re-rank 4.12 on corrected conversion, drawn-share bias and occurrence

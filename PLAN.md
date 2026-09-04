@@ -16,7 +16,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.11.1 — re-run both truth arms (MAINTAINER)** |
+| Current step | **4.11.2 — re-derive the floors from the corrected head arm** |
 | Instrument state | The endgame truth harness is **defective and under repair**; every pawn-family conversion number is superseded. See `analysis/endgame_truth_instrument_audit_2026-09-04.md` and "Reopened work, 2026-09-04" |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -902,13 +902,17 @@ the checker refuse a `SUPERSEDED` marker whose owner is missing or already
 ticked. The rule generalises: nothing sits open ahead of the work that
 discharges it.
 
-- **4.9a.1 (truth corpus) -- SUPERSEDED, owner 4.11.1.** `endgame_truth.py` ended a playout the
+- **4.9a.1 (truth corpus) -- DEBT DISCHARGED 2026-09-04.** Repaired at 4.10.1 and
+  re-measured at 4.11.1; the corrected baseline is
+  `tools/results/truth-v2-head/` and
+  `analysis/endgame_truth_v2_baseline_2026-09-04.md`. The original defect, kept
+  for the record: `endgame_truth.py` ended a playout the
   moment the strong side's piece count dropped. Shedding material is the winning
   method in most pawn technique. On the arm PLAN's numbers come from, the abort
   fired **264 times; 129 on clean wins, and 122 of those before the engine had
   played a single non-win-preserving move**, at a median abort ply of 5-20.
-  Aggregate conversion 0.8345 has an upper bound of 0.9235 once corrected.
-  Repaired at 4.10.1, re-measured at 4.11.1.
+  Aggregate conversion 0.8345 was bounded above by 0.9235 from the old
+  records; the matched re-run measured **0.9140** on the same binary.
 - **4.9a.3 (regression contract) -- SUPERSEDED, floors half only, owner 4.11.2.** The 64 frozen
   theory vetoes in `tests/endgames.rs` are static verdicts, play nothing and
   stand. The aggregate floors do not: their pawn-family conversion values are
@@ -1362,13 +1366,42 @@ everything computed from it. Corrections are recorded IN PLACE: superseded text
 is marked superseded rather than rewritten, and experiment identifiers are
 stable.
 
-1. **4.11.1 Re-run both truth arms.** The accepted head and the same Stockfish
-   binary, under the recorded conditions -- 60,000 nodes/move, one thread, 16 MB
-   hash, 100-ply limit, engine tablebases disabled, no adjudication -- with both
-   binaries verified by SHA-256 and `--per-position` on, so **only the
-   termination rule differs**. Re-running one arm against the other's old
-   artifact would be worse than leaving the numbers alone. The reference arm has
-   no per-position records at all, so it cannot be re-analysed, only re-run.
+1. **4.11.1 Re-run both truth arms -- DONE.** Three arms, one frozen cohort
+   (`fe486604...`), 30 workers.
+   Full record: `analysis/endgame_truth_v2_baseline_2026-09-04.md`.
+
+   **The instrument delta, isolated.** The first comparison written for this
+   step compared the v1 RAR-E08 arm against the v2 CURRENT-head arm, moving two
+   things at once -- exactly the confound this cluster exists to prevent. Caught
+   by checking the recorded engine paths rather than by remembering which binary
+   was which, and repaired by re-running the RAR-E08 binary, which still
+   existed. Matched arms:
+
+   | Arm | v1 | v2 | Instrument delta |
+   |---|---:|---:|---:|
+   | RAR-E08 head | 0.8345 | **0.9140** | +109, +0.0794 |
+   | reference | 0.9016 | **0.9920** | +124, +0.0904 |
+
+   Engine only, both under v2: RAR-E08 head 0.9140 -> **current head 0.9300**.
+
+   Exactly six families move on the instrument fix -- KRP-KB +40, KRP-KR +32,
+   KPP-K +23, KBP-KN +8, KBP-KB +4, KBP-K +2 -- and every bare-king family moves
+   by zero. The isolation argued at RAR-E14 and proved by construction now holds
+   empirically at full scale.
+
+   **Corrected baseline: head 1276/1372 = 0.9300, reference 1361/1372 = 0.9920,
+   deficit 85 positions.** Paired matrix: both 1273, head only 3, reference only
+   88, **neither 8**. The genuinely hard residue is eight positions. The v1
+   paired matrix cannot be computed for comparison -- `reference-sf18` was run
+   without `--per-position` -- which is why this step required re-running the
+   reference arm rather than re-analysing it.
+
+   **Defect C is closed by reproduction.** The floors recorded KBN-K conversion
+   0.8980 (n=98) and dtz progress 0.6753 (n=3178) from a run that existed
+   nowhere; the current-head arm reproduces both to four decimals with identical
+   n. KBN-K contains no `material_lost` outcomes, so v1 and v2 agree there by
+   construction, which is what makes the reproduction meaningful rather than
+   lucky.
 2. **4.11.2 Re-derive the floors.** Rebuild `endgame_floors.json` from the
    corrected head arm and give it a cohort fingerprint. Restate 4.12.21's KBN-K
    dtz target on an artifact that exists; the 0.7260 currently recorded has no
