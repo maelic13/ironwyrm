@@ -16,7 +16,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.10.2 — cohort fingerprint on every truth report** |
+| Current step | **4.10.3 — sharded workers for the truth harness** |
 | Instrument state | The endgame truth harness is **defective and under repair**; every pawn-family conversion number is superseded. See `analysis/endgame_truth_instrument_audit_2026-09-04.md` and "Reopened work, 2026-09-04" |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -985,14 +985,37 @@ Nothing here changes the engine. These are tooling commits.
    pawn at ply 2 with the win intact and playing on, where v1 would have scored
    it a failure, and a KBN-K minor giveaway still ending as
    `insufficient_material`.
-2. **4.10.2 Cohort identity.** Every truth report carries a cohort fingerprint
-   -- family list, seed, positions per family and a SHA-256 over the FEN
-   sequence -- and `endgame_floors.py` plus any paired comparison REFUSES to run
-   across differing fingerprints. This is not hypothetical: three artifacts on
-   disk share zero of 1,900 positions with the current generator, one of them is
-   the artifact PLAN cited as the baseline, and the floors tool compared across
-   them while its own comment asserted the two runs shared positions. Freeze by
-   CONTENT, never by commit SHA.
+2. **4.10.2 Cohort identity -- DONE.** Every truth report now carries a
+   `cohort` block -- family list, seed, positions per family, a SHA-256 over
+   each family's FEN sequence and one over the fold of those -- and
+   `endgame_floors.py` refuses to compare across differing digests. This was
+   not hypothetical: three artifacts on disk share zero of 1,900 positions with
+   the current generator, one of them is the artifact PLAN cited as the
+   baseline, and the floors tool compared across them while its own comment
+   asserted the two runs shared positions.
+
+   **Comparison is PER FAMILY, deliberately.** A single-family re-run is a
+   legitimate thing to do -- the family seed derives from the family NAME
+   exactly so a subset reproduces the full run's positions -- so requiring the
+   overall id to match would forbid it for no reason. What is refused is
+   comparing a family measured on one position set against the same family
+   measured on another.
+
+   Position generation moved out of the play loop into `generate_family`, so
+   the cohort is known before the first engine call and 4.10.3 can address
+   positions by fixed index. **The refactor was proved position-identical**:
+   regenerating all 19 families and comparing in order against
+   `tools/results/e08-accepted/endgame-truth.json` matched **1900/1900**.
+
+   **FROZEN COHORT IDENTITY, by content rather than by SHA.** The standard
+   cohort -- seed `6200600`, the 19 `DEFAULT_FAMILIES` in declaration order,
+   100 positions each -- has overall digest
+   `fe4866045506636f884ee30526b4188c3def9ca9747f5960ea5c5e7cba5dbb5e`, with
+   KBP-KB at `b730954492fafc8a30a8a3a4ee6e6d83eb3fdf8031fa8a9e1a6584eb830d32cb`.
+   Both are pinned in `tools/diag/test_endgame_truth.py`, and a one-bit change
+   to the family seed was shown to fail four tests. **4.11.1's two arms must
+   both report that overall digest**; anything else is not a re-measurement of
+   this baseline.
 3. **4.10.3 Parallel playout.** Add fixed-index sharded workers to
    `endgame_truth.py`. Worker count must change wall time and nothing else:
    assert byte-identical output against a serial run in the test suite. The

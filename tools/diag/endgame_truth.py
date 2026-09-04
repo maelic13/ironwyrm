@@ -150,6 +150,65 @@ def random_position(
     raise RuntimeError(f"could not generate a legal position for {strong}/{weak}")
 
 
+def family_seed(seed: int, name: str) -> int:
+    """Seed from the family NAME, never its index in the list.
+
+    Index seeding meant `--families KBP-KB` produced a DIFFERENT position set
+    than the same family inside the full run -- 34 theoretical wins instead of
+    47 -- so any subset run silently measured different positions and could not
+    be compared with the baseline. Caught while trying to attribute a 6-point
+    conversion difference. `test_subset_run_reproduces_the_full_run_cohort`
+    locks the property down.
+    """
+    return seed ^ int.from_bytes(hashlib.sha256(name.encode()).digest()[:8], "big")
+
+
+def generate_family(
+    seed: int,
+    name: str,
+    strong: tuple[int, ...],
+    weak: tuple[int, ...],
+    positions: int,
+) -> list[chess.Board]:
+    """The family's whole position set, in run order.
+
+    Generating up front rather than lazily inside the play loop is what lets
+    the cohort fingerprint be computed before any engine call, and what lets a
+    sharded run (4.10.3) address positions by fixed index. The RNG is drawn in
+    exactly the same order either way, so the set is unchanged.
+    """
+    rng = random.Random(family_seed(seed, name))
+    return [random_position(rng, strong, weak) for _ in range(positions)]
+
+
+def cohort_digest(fens) -> str:
+    """SHA-256 over a family's FEN sequence, in order.
+
+    This is the identity of a POSITION SET and nothing else -- no engine, no
+    node budget, no result. Two arms of a comparison must share it; that is the
+    whole point. RAR-E14 defect B: three artifacts on disk shared zero of 1,900
+    positions with the current generator, one of them was the cited baseline,
+    and the floors tool compared across them while its own comment asserted the
+    two runs shared positions.
+    """
+    digest = hashlib.sha256()
+    for fen in fens:
+        digest.update(fen.encode("ascii"))
+        digest.update(b"\n")
+    return digest.hexdigest()
+
+
+def overall_cohort_digest(names, per_family: dict) -> str:
+    """Fold the per-family digests, in run order, into one cohort id."""
+    digest = hashlib.sha256()
+    for name in names:
+        digest.update(name.encode("ascii"))
+        digest.update(b"\0")
+        digest.update(bytes.fromhex(per_family[name]))
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
 def wdl_for_white(tb: chess.syzygy.Tablebase, board: chess.Board) -> int:
     """WDL from WHITE's point of view, whoever is to move."""
     wdl = tb.probe_wdl(board)
@@ -341,17 +400,13 @@ def main() -> int:
 
         for name in families:
             strong, weak = specs[name]
-            # Seed from the family NAME, never its index in the list. Index
-            # seeding meant `--families KBP-KB` produced a DIFFERENT position
-            # set than the same family inside the full run -- 34 theoretical
-            # wins instead of 47 -- so any subset run silently measured
-            # different positions and could not be compared with the baseline.
-            # Caught while trying to attribute a 6-point conversion difference.
-            rng = random.Random(
-                args.seed ^ int.from_bytes(
-                    hashlib.sha256(name.encode()).digest()[:8], "big"
-                )
+            boards = generate_family(
+                args.seed, name, strong, weak, args.positions
             )
+            family_fens = [b.fen() for b in boards]
+            family_cohort = cohort_digest(family_fens)
+            print(f"{name}: cohort {family_cohort[:16]} over {len(boards)} positions",
+                  flush=True)
             theory = Counter()
             outcomes = Counter()
             mate_plies = []
@@ -362,9 +417,8 @@ def main() -> int:
             records = []
             efficiency_pairs = []
 
-            for index in range(args.positions):
-                board = random_position(rng, strong, weak)
-                fen = board.fen()
+            for index, board in enumerate(boards):
+                fen = family_fens[index]
                 try:
                     verdict = wdl_for_white(tb, board)
                     start_dtz = dtz_abs(tb, board)
@@ -464,6 +518,7 @@ def main() -> int:
                     "reported only for pawnless strong side vs bare king, "
                     "where DTZ equals DTM"
                 )
+            entry["cohort_sha256"] = family_cohort
             if args.per_position:
                 entry["positions"] = records
             report["families"][name] = entry
@@ -478,6 +533,20 @@ def main() -> int:
     finally:
         engine.quit()
         tb.close()
+
+    report["cohort"] = {
+        "seed": args.seed,
+        "positions_per_family": args.positions,
+        "families": families,
+        "family_sha256": {
+            name: report["families"][name]["cohort_sha256"] for name in families
+        },
+        "sha256": overall_cohort_digest(
+            families,
+            {name: report["families"][name]["cohort_sha256"] for name in families},
+        ),
+    }
+    print(f"cohort: {report['cohort']['sha256']}", flush=True)
 
     rendered = json.dumps(report, indent=2) + "\n"
     if args.output:

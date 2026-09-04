@@ -41,6 +41,12 @@ Keep DTZ progress. On RAR-E08 the floors flagged KQ-KP on DTZ progress and a
 later conversion measurement at n=400 confirmed a real regression there, while
 the conversion flag on KBN-K was false. It was the leading indicator.
 
+COHORT IDENTITY (4.10.2). Floors and report must describe the SAME positions.
+The floors file stores the per-family SHA-256 of the position set it was
+measured on, and a comparison across differing digests is refused rather than
+reported. Per family, not per run, so a single-family re-run still works -- the
+family seed derives from the family name so a subset reproduces the full run.
+
 Usage:
 
   python tools/diag/endgame_floors.py --report <endgame-truth.json>
@@ -87,6 +93,61 @@ def load_report(path: Path) -> dict:
             )
         raise SystemExit(f"{path}: schema {got!r}, need {TRUTH_SCHEMA!r}{extra}")
     return data
+
+
+def cohorts(report: dict) -> dict[str, str]:
+    """family -> the SHA-256 of its position set.
+
+    A missing digest is an error rather than a shrug: it means the report came
+    from a harness that could not identify its own position set, which is the
+    condition RAR-E14 defect B describes.
+    """
+    out = {}
+    for name, entry in report["families"].items():
+        digest = entry.get("cohort_sha256")
+        if not digest:
+            raise SystemExit(
+                f"family {name} carries no cohort_sha256; the report predates "
+                "4.10.2 and its position set cannot be identified. Re-run it."
+            )
+        out[name] = digest
+    return out
+
+
+def check_cohorts(floors_doc: dict, report: dict) -> None:
+    """Refuse to compare two runs over different positions.
+
+    Comparison is PER FAMILY on purpose. A single-family re-run is a legitimate
+    and useful thing to do -- the family seed is derived from the family NAME
+    precisely so a subset reproduces the full run's positions -- so requiring
+    the overall cohort id to match would forbid it for no reason. What must
+    never happen is comparing KRP-KR measured on one position set against
+    KRP-KR measured on another, which is what produced the "52% versus 47.9%"
+    claim in 4.9a.7 from two artifacts sharing zero of 1,900 positions.
+    """
+    want = floors_doc.get("cohort", {}).get("family_sha256")
+    if not want:
+        raise SystemExit(
+            "the floors file records no per-family cohort digests; it predates "
+            "4.10.2 and cannot be shown to describe the same positions as this "
+            "report. Re-derive it: PLAN step 4.11.2."
+        )
+    got = cohorts(report)
+    mismatched = sorted(
+        name for name, digest in got.items()
+        if name in want and want[name] != digest
+    )
+    if mismatched:
+        detail = ", ".join(
+            f"{name} floors {want[name][:12]} != report {got[name][:12]}"
+            for name in mismatched
+        )
+        raise SystemExit(
+            f"cohort mismatch in {len(mismatched)} family/families: {detail}. "
+            "These are different position sets, so their rates are not "
+            "comparable and no ratchet or verdict may be taken from them "
+            "(RAR-E14 defect B)."
+        )
 
 
 def rates(report: dict) -> dict[str, dict[str, dict]]:
@@ -149,12 +210,21 @@ def main() -> int:
                          "use when a regression has been accepted with an owner")
     args = ap.parse_args()
 
-    current = rates(load_report(args.report))
+    report_doc = load_report(args.report)
+    current = rates(report_doc)
+    current_cohort = {
+        "seed": report_doc.get("cohort", {}).get("seed"),
+        "positions_per_family": report_doc.get("cohort", {}).get(
+            "positions_per_family"),
+        "sha256": report_doc.get("cohort", {}).get("sha256"),
+        "family_sha256": cohorts(report_doc),
+    }
 
     if args.update and not args.floors.is_file():
         args.floors.write_text(
             json.dumps({"schema": "rarog-endgame-floors-v2",
                         "truth_schema": TRUTH_SCHEMA,
+                        "cohort": current_cohort,
                         "families": current},
                        indent=2, sort_keys=True) + "\n",
             encoding="utf-8", newline="\n")
@@ -180,6 +250,7 @@ def main() -> int:
             "depressed in every pawn family and are superseded (RAR-E14). "
             "Re-derive them from a corrected head run: PLAN step 4.11.2."
         )
+    check_cohorts(doc, report_doc)
     floors = doc["families"]
 
     failures, reports, missing, improved = [], [], [], []
@@ -270,6 +341,7 @@ def main() -> int:
         args.floors.write_text(
             json.dumps({"schema": "rarog-endgame-floors-v2",
                         "truth_schema": TRUTH_SCHEMA,
+                        "cohort": current_cohort,
                         "families": merged},
                        indent=2, sort_keys=True) + "\n",
             encoding="utf-8", newline="\n")

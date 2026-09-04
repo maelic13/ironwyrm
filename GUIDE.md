@@ -18,18 +18,19 @@ and `python tools/diag/check_guide.py` must pass.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
 | Instrument state | **The endgame truth harness is defective and under repair.** Every pawn-family conversion number is superseded; bare-king families are provably unaffected |
-| Current step | **4.10.2 — cohort fingerprint; refuse comparison across position sets** |
+| Current step | **4.10.3 — sharded workers; parallel output byte-identical to serial** |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## What you run next
 
-**4.10.2 — give every truth report a cohort fingerprint** (family list, seed,
-positions per family, SHA-256 over the FEN sequence) and make `endgame_floors.py`
-and every paired comparison refuse to run across differing fingerprints. Tooling
-commit; no engine change. 4.10.1 already bumped the report schema to
-`rarog-endgame-truth-v2`, so a v1 report and the committed floors are both
-rejected; the fingerprint closes the remaining hole, which is two v2 runs over
-different position sets.
+**4.10.3 — shard the truth harness across workers**, with parallel output
+asserted byte-identical to serial. Tooling commit; no engine change. This is
+what keeps 4.11.1 from being a serial afternoon per arm; positions are already
+addressable by fixed index after 4.10.2.
+
+The standard cohort is frozen by content: seed `6200600`, 19 families, 100
+positions each, overall digest `fe486604...`. Both of 4.11.1's arms must report
+it.
 
 Phase 4's open work was reordered on 2026-09-04 — **instruments (4.10), then
 re-measurement (4.11), then development (4.12 onward)**. PLAN section 13 maps
@@ -91,7 +92,7 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
     - [x] **4.9a.8** SUPERSEDED -> 4.12.3 — KRPKB drawn-cohort null stands; conversion half does not
 - [ ] **4.10** Instrument integrity and tooling upgrade — tooling commits, no engine change
     - [x] **4.10.1** Tablebase-truth termination; material shed becomes a diagnostic
-    - [ ] **4.10.2** Cohort fingerprint; refuse any comparison across position sets
+    - [x] **4.10.2** Cohort fingerprint; refuse any comparison across position sets
     - [ ] **4.10.3** Sharded workers; parallel output byte-identical to serial
     - [ ] **4.10.4** Prove every guard FAILS on a known-bad input; thin-sample refusal
     - [ ] **4.10.5** Measurement-layer contract and per-report layer/budget/set fields

@@ -134,6 +134,110 @@ class TerminationRuleTests(unittest.TestCase):
         self.assertIn("first_discard_ply", played)
 
 
+class CohortIdentityTests(unittest.TestCase):
+    """4.10.2: a report must be able to say which positions it measured.
+
+    The golden digests below were verified position-for-position, in order,
+    against `tools/results/e08-accepted/endgame-truth.json` -- 1900/1900 -- so
+    they pin the generator that produced every artifact currently on disk. If
+    one of these changes, the position set changed, and every baseline measured
+    on it is superseded whether or not anyone noticed.
+    """
+
+    SEED = 6200600
+    KBP_KB = "b730954492fafc8a30a8a3a4ee6e6d83eb3fdf8031fa8a9e1a6584eb830d32cb"
+    OVERALL = "fe4866045506636f884ee30526b4188c3def9ca9747f5960ea5c5e7cba5dbb5e"
+
+    def _digest(self, name, positions=100, seed=None):
+        strong, weak = endgame_truth.parse_family(name)
+        boards = endgame_truth.generate_family(
+            self.SEED if seed is None else seed, name, strong, weak, positions)
+        return endgame_truth.cohort_digest(b.fen() for b in boards)
+
+    def test_family_digest_matches_the_shipped_generator(self):
+        self.assertEqual(self._digest("KBP-KB"), self.KBP_KB)
+
+    def test_overall_digest_matches_the_shipped_generator(self):
+        names = endgame_truth.DEFAULT_FAMILIES
+        per_family = {n: self._digest(n) for n in names}
+        self.assertEqual(
+            endgame_truth.overall_cohort_digest(names, per_family), self.OVERALL)
+
+    def test_digest_changes_with_the_seed(self):
+        self.assertNotEqual(self._digest("KBP-KB", seed=self.SEED + 1),
+                            self.KBP_KB)
+
+    def test_digest_changes_with_the_position_count(self):
+        self.assertNotEqual(self._digest("KBP-KB", positions=99), self.KBP_KB)
+
+    def test_a_family_does_not_depend_on_what_else_was_generated(self):
+        """Why a subset run is comparable with a full run.
+
+        The family seed derives from the family NAME, so generating other
+        families first cannot shift this one. Under the old index seeding it
+        did, and `--families KBP-KB` silently measured 34 theoretical wins
+        where the full run measured 47.
+        """
+        for other in ("KQ-K", "KRP-KR", "KP-KP"):
+            self._digest(other, positions=7)
+        self.assertEqual(self._digest("KBP-KB"), self.KBP_KB)
+
+    def test_family_seeds_are_distinct(self):
+        seen = {endgame_truth.family_seed(self.SEED, n): n
+                for n in endgame_truth.DEFAULT_FAMILIES}
+        self.assertEqual(len(seen), len(endgame_truth.DEFAULT_FAMILIES))
+
+
+class CohortGuardTests(unittest.TestCase):
+    """The guard must FAIL on two runs over different positions (4.10.4)."""
+
+    def _report(self, digests):
+        return {
+            "schema": "rarog-endgame-truth-v2",
+            "cohort": {"seed": 1, "positions_per_family": 2,
+                       "sha256": "whatever",
+                       "family_sha256": dict(digests)},
+            "families": {name: {"cohort_sha256": d}
+                         for name, d in digests.items()},
+        }
+
+    def _floors(self, digests):
+        return {"schema": "rarog-endgame-floors-v2",
+                "truth_schema": endgame_floors.TRUTH_SCHEMA,
+                "cohort": {"family_sha256": dict(digests)},
+                "families": {}}
+
+    def test_matching_cohorts_are_accepted(self):
+        d = {"KRP-KR": "aa" * 32, "KQ-K": "bb" * 32}
+        endgame_floors.check_cohorts(self._floors(d), self._report(d))
+
+    def test_a_differing_family_is_refused(self):
+        floors = self._floors({"KRP-KR": "aa" * 32, "KQ-K": "bb" * 32})
+        report = self._report({"KRP-KR": "cc" * 32, "KQ-K": "bb" * 32})
+        with self.assertRaises(SystemExit) as caught:
+            endgame_floors.check_cohorts(floors, report)
+        message = str(caught.exception)
+        self.assertIn("KRP-KR", message)
+        self.assertNotIn("KQ-K", message)
+
+    def test_a_subset_report_is_still_comparable(self):
+        floors = self._floors({"KRP-KR": "aa" * 32, "KQ-K": "bb" * 32})
+        endgame_floors.check_cohorts(floors, self._report({"KRP-KR": "aa" * 32}))
+
+    def test_floors_without_cohort_digests_are_refused(self):
+        floors = {"schema": "rarog-endgame-floors-v2",
+                  "truth_schema": endgame_floors.TRUTH_SCHEMA, "families": {}}
+        with self.assertRaises(SystemExit) as caught:
+            endgame_floors.check_cohorts(floors, self._report({"KQ-K": "bb" * 32}))
+        self.assertIn("4.11.2", str(caught.exception))
+
+    def test_a_report_without_a_digest_is_refused(self):
+        report = {"families": {"KQ-K": {}}}
+        with self.assertRaises(SystemExit) as caught:
+            endgame_floors.cohorts(report)
+        self.assertIn("cohort_sha256", str(caught.exception))
+
+
 class SchemaGuardTests(unittest.TestCase):
     """4.10.4: a guard is not verified until it FAILS on a known-bad input."""
 
