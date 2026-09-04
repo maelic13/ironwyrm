@@ -107,7 +107,7 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
     - [x] **4.9a.6** `hce-v3-tb` fitted and gated — RAR-E12 **+11.81 +/- 5.33 Elo**
     - [x] **4.9a.7** SUPERSEDED -> 4.12.2 — KRPKR drawn overclaim **37.1% -> 25.8%** stands; conversion half does not
     - [x] **4.9a.8** SUPERSEDED -> 4.12.3 — KRPKB drawn-cohort null stands; conversion half does not
-- [ ] **4.10** Instrument integrity and tooling upgrade — tooling commits, no engine change
+- [x] **4.10** Instrument integrity and tooling upgrade — 12 leaves, complete
     - [x] **4.10.1** Tablebase-truth termination; material shed becomes a diagnostic
     - [x] **4.10.2** Cohort fingerprint; refuse any comparison across position sets
     - [x] **4.10.3** Sharded workers; parallel output byte-identical to serial
