@@ -25,12 +25,25 @@ of this checker required a bare `4.9.1`, matched no line in the file, and so
 passed vacuously for every edit it existed to guard. The step count in the
 success line is there to make that failure mode visible.
 
+There is a fourth thing that is not a failure but is just as invisible: WHICH
+LEAF IS NEXT. The board is 146 lines with 42 ticked, so reading the next few
+open items off it by eye is exactly the sort of manual step this file exists to
+replace. `--next N` prints them, generated from the board rather than copied
+into it, so the queue cannot drift from the checkboxes the way a hand-written
+list would.
+
+An ACTIONABLE leaf is an unticked item that nobody else discharges: a sub-step,
+or a step that has no sub-steps. A parent with children is a heading, not work.
+
 Usage:
   python tools/diag/check_guide.py
+  python tools/diag/check_guide.py --next 8
 
-Exit status is 0 when clean, 1 otherwise, so it can gate a commit.
+Exit status is 0 when clean, 1 otherwise, so it can gate a commit. `--next`
+does not change it.
 """
 
+import argparse
 import pathlib
 import re
 import sys
@@ -57,7 +70,41 @@ PLAN = ROOT / "PLAN.md"
 STEP_IN_PLAN = re.compile(r"(?<![\d.])%s(?![\d])")
 
 
+def actionable(lines):
+    """The unticked leaves, in board order, with their trailing text.
+
+    Returns (number, text) pairs. A step with sub-steps is a heading and is
+    skipped: ticking it is 4.10.10's hanging-parent rule, not work.
+    """
+    items = []
+    for line in lines:
+        m = PARENT.match(line)
+        if m:
+            items.append((0, m.group(2), m.group(1) == "x",
+                          line[m.end():].strip(" -—")))
+            continue
+        k = CHILD.match(line)
+        if k:
+            items.append((len(k.group(1)), k.group(3), k.group(2) == "x",
+                          line[k.end():].strip(" -—")))
+    out = []
+    for i, (indent, number, ticked, text) in enumerate(items):
+        if indent == 0:
+            has_children = i + 1 < len(items) and items[i + 1][0] > 0
+            if has_children:
+                continue
+        if not ticked:
+            out.append((number, text))
+    return out
+
+
 def main():
+    ap = argparse.ArgumentParser(description="Check GUIDE.md's status board.")
+    ap.add_argument("--next", type=int, default=0, metavar="N",
+                    help="also print the next N actionable leaves, in board "
+                         "order, generated from the checkboxes")
+    args = ap.parse_args()
+
     sys.stdout.reconfigure(encoding="utf-8")
     lines = GUIDE.read_text(encoding="utf-8").splitlines()
     problems = []
@@ -140,6 +187,14 @@ def main():
         "GUIDE.md consistent: %d steps, phases %s\n"
         % (steps, ", ".join(str(p) for p in sorted(phases)))
     )
+    if args.next:
+        queue = actionable(lines)
+        sys.stdout.write(
+            "\n%d actionable leaves open. Next %d, in board order:\n"
+            % (len(queue), min(args.next, len(queue)))
+        )
+        for number, text in queue[:args.next]:
+            sys.stdout.write("  %-9s %s\n" % (number, text[:78]))
     return 0
 
 

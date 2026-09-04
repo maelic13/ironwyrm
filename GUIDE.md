@@ -43,6 +43,12 @@ carries `SUPERSEDED -> <leaf>` naming the open leaf that repairs it — an open
 box that only a later leaf can discharge would make the board unrunnable, which
 is why the five 4.9a entries are marked rather than un-ticked.
 
+Do not read the queue off the board by eye — it is 146 lines. Generate it:
+
+```bash
+python tools/diag/check_guide.py --next 10
+```
+
 ```bash
 python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/check_guide.py
 ```
