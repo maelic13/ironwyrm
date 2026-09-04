@@ -66,10 +66,26 @@ METRICS = {
 REPORT_SIGMA = 2.0
 
 
+# Floors and report must have been measured by the same instrument. A v1 report
+# was produced by the harness that aborted correct pawn technique (RAR-E14), so
+# its conversion rates are not the same quantity as a v2 report's and comparing
+# them would manufacture a large fake improvement in exactly the pawn families
+# 4.12 is about. Fail closed rather than mix.
+TRUTH_SCHEMA = "rarog-endgame-truth-v2"
+
+
 def load_report(path: Path) -> dict:
     data = json.loads(path.read_text(encoding="utf-8"))
-    if data.get("schema") != "rarog-endgame-truth-v1":
-        raise SystemExit(f"{path}: not a rarog-endgame-truth-v1 report")
+    got = data.get("schema")
+    if got != TRUTH_SCHEMA:
+        extra = ""
+        if got == "rarog-endgame-truth-v1":
+            extra = (
+                " -- v1 was produced by the pre-4.10.1 harness, whose material "
+                "abort ended correct pawn technique. Re-run it; do not "
+                "re-analyse it."
+            )
+        raise SystemExit(f"{path}: schema {got!r}, need {TRUTH_SCHEMA!r}{extra}")
     return data
 
 
@@ -137,7 +153,9 @@ def main() -> int:
 
     if args.update and not args.floors.is_file():
         args.floors.write_text(
-            json.dumps({"schema": "rarog-endgame-floors-v2", "families": current},
+            json.dumps({"schema": "rarog-endgame-floors-v2",
+                        "truth_schema": TRUTH_SCHEMA,
+                        "families": current},
                        indent=2, sort_keys=True) + "\n",
             encoding="utf-8", newline="\n")
         print(f"created {args.floors} from {args.report}")
@@ -150,6 +168,17 @@ def main() -> int:
         raise SystemExit(
             f"{args.floors} is schema {doc.get('schema')!r}; v2 stores each rate "
             "with the n it was measured at. Regenerate it with --update."
+        )
+    # The floors file records which truth schema produced it, so a floors file
+    # built from the defective harness cannot be compared against a corrected
+    # run. The committed floors predate 4.10.1 and carry no such key, so they
+    # fail here until 4.11.2 re-derives them -- which is the point.
+    if doc.get("truth_schema") != TRUTH_SCHEMA:
+        raise SystemExit(
+            f"{args.floors} was measured by {doc.get('truth_schema')!r}, not "
+            f"{TRUTH_SCHEMA!r}. Floors derived from the pre-4.10.1 harness are "
+            "depressed in every pawn family and are superseded (RAR-E14). "
+            "Re-derive them from a corrected head run: PLAN step 4.11.2."
         )
     floors = doc["families"]
 
@@ -239,7 +268,9 @@ def main() -> int:
                 )
                 merged[family][m] = dict(old) if keep_old else dict(v)
         args.floors.write_text(
-            json.dumps({"schema": "rarog-endgame-floors-v2", "families": merged},
+            json.dumps({"schema": "rarog-endgame-floors-v2",
+                        "truth_schema": TRUTH_SCHEMA,
+                        "families": merged},
                        indent=2, sort_keys=True) + "\n",
             encoding="utf-8", newline="\n")
         print(f"floors updated from {args.report}")

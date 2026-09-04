@@ -16,7 +16,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.10.1 — repair the endgame-truth termination rule** |
+| Current step | **4.10.2 — cohort fingerprint on every truth report** |
 | Instrument state | The endgame truth harness is **defective and under repair**; every pawn-family conversion number is superseded. See `analysis/endgame_truth_instrument_audit_2026-09-04.md` and "Reopened work, 2026-09-04" |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -944,13 +944,31 @@ by 68 positions; Rarog's own numbers are in
 
 Nothing here changes the engine. These are tooling commits.
 
-1. **4.10.1 Truth-instrument termination rule.** Replace the material abort in
-   `endgame_truth.py` with a TABLEBASE-TRUTH stop: keep playing unless the
-   position stops being a clean win, and record the material-shed ply as a
-   DIAGNOSTIC field. `first_discard_ply` already carries the truth signal.
-   Leave `endgame_conversion.py` alone -- it covers only bare-king families,
-   has no insufficient-material test of its own, and there `material_lost` is
-   doing that job correctly.
+1. **4.10.1 Truth-instrument termination rule -- DONE.** The material abort is
+   replaced by a TABLEBASE-TRUTH stop: the game plays on and the shed ply is
+   recorded as the diagnostic `shed_material_ply`. `first_discard_ply` already
+   carried the truth signal. `endgame_conversion.py` is deliberately untouched
+   -- it covers only bare-king families, has no insufficient-material test of
+   its own, and there `material_lost` is doing that job correctly.
+
+   **The report schema is now `rarog-endgame-truth-v2`, and that is part of the
+   fix rather than bookkeeping.** A v1 and a v2 report use the same field names
+   for different quantities, so comparing them would manufacture a large fake
+   improvement in exactly the pawn families 4.12 is about. `endgame_floors.py`
+   rejects a v1 report by schema, and rejects any floors file lacking
+   `truth_schema: rarog-endgame-truth-v2` -- which the committed
+   `endgame_floors.json` does, so it fails closed until 4.11.2 re-derives it.
+
+   Verified in `tools/diag/test_endgame_truth.py` (9 tests): the behavioural
+   test, the shed-ply test and the no-`material_lost` test were each shown to
+   **FAIL against the restored defective rule** before being accepted, per rule
+   15. The bare-king isolation test passes under both rules, correctly -- it
+   asserts that insufficient material terminates first, which was always true
+   and is why RAR-E10 is safe. A live smoke run (4 positions per family, 3,000
+   nodes, 40 plies -- a smoke, not a measurement) shows a KPP-K game shedding a
+   pawn at ply 2 with the win intact and playing on, where v1 would have scored
+   it a failure, and a KBN-K minor giveaway still ending as
+   `insufficient_material`.
 2. **4.10.2 Cohort identity.** Every truth report carries a cohort fingerprint
    -- family list, seed, positions per family and a SHA-256 over the FEN
    sequence -- and `endgame_floors.py` plus any paired comparison REFUSES to run

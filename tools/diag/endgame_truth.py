@@ -20,6 +20,14 @@ It separates the four things the endgame audit requires be kept apart:
 A played draw is statistical evidence, not theoretical truth: only the
 `theory_*` fields are truth here, and they come from the tablebase.
 
+SCHEMA v2 (4.10.1, RAR-E14). v1 ended a game the moment the strong side's piece
+count dropped, which aborts correct pawn technique. v2 plays on and records the
+shed ply as a diagnostic. **A v1 and a v2 report are not comparable**: the same
+field names mean different things, which is why the schema string changed and
+why `endgame_floors.py` refuses to mix them. Every v1 conversion number for a
+family containing a pawn is superseded; the bare-king families are provably
+unaffected, because insufficient material terminates those on the same ply.
+
 Cursed wins matter and are kept distinct. Syzygy WDL 2 is a clean win, 1 is a
 win that the fifty-move rule turns into a draw. Downgrading a 2 to a 1 is
 exactly the KBN-K failure mode -- 73 of 100 games dying on the fifty-move rule
@@ -169,10 +177,14 @@ def play_and_grade(
     # other one: in KR-KP, capturing the enemy pawn IS the winning plan, and a
     # whole-board count scores it as "material lost" and aborts the game. That
     # misfired on 12 of 12 KR-KP positions before this was fixed.
+    #
+    # 4.10.1: the count is now a DIAGNOSTIC and never terminates the game. See
+    # the block at its use below for why.
     def strong_material(b: chess.Board) -> int:
         return chess.popcount(b.occupied_co[chess.WHITE])
 
     initial_material = strong_material(board)
+    shed_material_ply = None
     graded = 0
     preserved = 0
     dtz_checked = 0
@@ -192,9 +204,28 @@ def play_and_grade(
         if board.is_fifty_moves() or board.can_claim_fifty_moves():
             outcome = "fifty_move"
             break
-        if strong_material(board) < initial_material:
-            outcome = "material_lost"
-            break
+        # A drop in the STRONG side's material is not a failure, and ending the
+        # game here was wrong (RAR-E14). Sacrificing a pawn to promote another,
+        # giving the rook for the rook and winning the king-and-pawn ending, or
+        # clearing the promotion square with the bishop IS the winning method
+        # in most pawn technique. The old unconditional abort fired 264 times on
+        # the RAR-E08 arm; 129 of those were on clean wins and 122 of THOSE had
+        # no non-win-preserving move played yet, at a median abort ply of 5-20.
+        # Aggregate conversion 0.8345 had a corrected upper bound of 0.9235.
+        #
+        # TRUTH decides whether the win is gone, not material, and the truth is
+        # already here: `first_discard_ply` is set from Syzygy the moment a
+        # White move drops the position out of WDL 2.
+        #
+        # Bare-king families lose nothing by this, by construction rather than
+        # by luck: the insufficient-material test three lines above terminates
+        # on the same ply for every one of them. KQ-K, KR-K and KP-K shed their
+        # only unit and reach K vs K; KBN-K reaches K+N vs K or K+B vs K; KBB-K
+        # is generated with opposite-coloured bishops and reaches K+B vs K;
+        # KNN-K reaches K+N vs K. The artifacts agree -- zero `material_lost`
+        # outcomes in those six families across all ten reports on disk.
+        if shed_material_ply is None and strong_material(board) < initial_material:
+            shed_material_ply = ply
 
         white_to_move = board.turn == chess.WHITE
         before_wdl = before_dtz = None
@@ -241,6 +272,7 @@ def play_and_grade(
         "dtz_checked_moves": dtz_checked,
         "dtz_progress_moves": dtz_progress,
         "first_discard_ply": first_discard_ply,
+        "shed_material_ply": shed_material_ply,
     }
 
 
@@ -279,7 +311,7 @@ def main() -> int:
             parser.error(str(exc))
 
     report = {
-        "schema": "rarog-endgame-truth-v1",
+        "schema": "rarog-endgame-truth-v2",
         "engine": str(engine_path),
         "syzygy": str(args.syzygy.resolve()),
         "positions_per_family": args.positions,

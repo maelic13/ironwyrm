@@ -18,16 +18,18 @@ and `python tools/diag/check_guide.py` must pass.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
 | Instrument state | **The endgame truth harness is defective and under repair.** Every pawn-family conversion number is superseded; bare-king families are provably unaffected |
-| Current step | **4.10.1 — repair the endgame-truth termination rule** |
+| Current step | **4.10.2 — cohort fingerprint; refuse comparison across position sets** |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## What you run next
 
-**4.10.1 — replace the material abort in `endgame_truth.py` with a
-tablebase-truth stop.** Tooling commit; no engine change. The evidence is in
-`analysis/endgame_truth_instrument_audit_2026-09-04.md`: the abort fired 264
-times on the baseline arm, 129 on clean wins, and 122 of those before the
-engine had played a single non-win-preserving move.
+**4.10.2 — give every truth report a cohort fingerprint** (family list, seed,
+positions per family, SHA-256 over the FEN sequence) and make `endgame_floors.py`
+and every paired comparison refuse to run across differing fingerprints. Tooling
+commit; no engine change. 4.10.1 already bumped the report schema to
+`rarog-endgame-truth-v2`, so a v1 report and the committed floors are both
+rejected; the fingerprint closes the remaining hole, which is two v2 runs over
+different position sets.
 
 Phase 4's open work was reordered on 2026-09-04 — **instruments (4.10), then
 re-measurement (4.11), then development (4.12 onward)**. PLAN section 13 maps
@@ -35,7 +37,7 @@ the old numbers to the new ones. Nothing in 4.12 may be ordered or gated on a
 number the old instrument produced.
 
 ```bash
-python tools/diag/check_guide.py
+python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/check_guide.py
 ```
 
 ## Phase 4 — bounded pre-NNUE search and HCE
@@ -82,7 +84,7 @@ python tools/diag/check_guide.py
     - [ ] **4.9a.7** REOPENED — KRPKR drawn overclaim **37.1% -> 25.8%** stands; conversion half does not
     - [ ] **4.9a.8** REOPENED — KRPKB drawn-cohort null stands; conversion half does not
 - [ ] **4.10** Instrument integrity and tooling upgrade — tooling commits, no engine change
-    - [ ] **4.10.1** Tablebase-truth termination; material shed becomes a diagnostic
+    - [x] **4.10.1** Tablebase-truth termination; material shed becomes a diagnostic
     - [ ] **4.10.2** Cohort fingerprint; refuse any comparison across position sets
     - [ ] **4.10.3** Sharded workers; parallel output byte-identical to serial
     - [ ] **4.10.4** Prove every guard FAILS on a known-bad input; thin-sample refusal
