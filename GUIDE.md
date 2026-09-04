@@ -18,17 +18,16 @@ and `python tools/diag/check_guide.py` must pass.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
 | Instrument state | **The endgame truth harness is defective and under repair.** Every pawn-family conversion number is superseded; bare-king families are provably unaffected |
-| Current step | **4.10.7 — held-out split, McNemar paired z, runner-up slot** |
+| Current step | **4.10.8 — datagen label audit against tablebase truth** |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## What you run next
 
-**4.10.7 — build the held-out confirmation tooling.** A selection cohort
-splits into development and held-out halves BEFORE any candidate runs, which
-half decides is registered in advance, a runner-up is carried into
-confirmation, and a cohort that has produced a verdict is SPENT for selection
-though still valid as a veto. McNemar paired z on the shared positions.
-Tooling; no engine change.
+**4.10.8 — write `tools/diag/datagen_label_audit.py`**: walk a PGN corpus,
+probe every position inside the table man-limit, and report the share of
+tablebase clean wins the game did not win. Probe only to the man-limit actually
+present, and EXCLUDE cursed wins — already drawn under the fifty-move rule, not
+evidence of weak play. Deterministic sharding. Tooling; no engine change.
 
 **Deployment is 153,466 nodes/move median at 3+0.03** and the endgame screen is
 60,000, below its p25 — so every fixed-node endgame verdict so far is
@@ -109,7 +108,7 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
     - [x] **4.10.4** Prove every guard FAILS on a known-bad input; thin-sample refusal
     - [x] **4.10.5** Measurement-layer contract and per-report layer/budget/set fields
     - [x] **4.10.6** Node budget as a run condition; 60k/200k/600k bracket runner
-    - [ ] **4.10.7** Held-out split, McNemar paired z, runner-up slot, spent-cohort rule
+    - [x] **4.10.7** Held-out split, McNemar paired z, runner-up slot, spent-cohort rule
     - [ ] **4.10.8** `datagen_label_audit.py` — corpus labels against tablebase truth
     - [ ] **4.10.9** Gate runner refuses wrong revision, dirty tree or mismatched bench
     - [ ] **4.10.10** `check_guide.py` enforces SUPERSEDED owners and compares step sets

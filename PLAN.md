@@ -16,7 +16,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.10.7 — held-out confirmation tooling** |
+| Current step | **4.10.8 — datagen label audit against tablebase truth** |
 | Instrument state | The endgame truth harness is **defective and under repair**; every pawn-family conversion number is superseded. See `analysis/endgame_truth_instrument_audit_2026-09-04.md` and "Reopened work, 2026-09-04" |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -1163,16 +1163,39 @@ Nothing here changes the engine. These are tooling commits.
    Prefer nodes to depth for cross-variant work -- equal depth is unequal work
    once an eval change shifts pruning, and favours whichever side prunes
    harder.
-7. **4.10.7 Held-out confirmation tooling.** A selection cohort splits into
-   development and held-out halves BEFORE any candidate runs, and which half
-   decides is registered in advance. Implement the paired verdict properly:
-   McNemar paired z on the shared positions, control fingerprints, a
-   pre-registered verdict policy, and a **runner-up slot carried into
-   confirmation** -- a leader can be rejected on held-out data and the runner-up
-   is what keeps the step from ending with nothing. A cohort that has produced a
-   verdict is SPENT for selection; it stays valid as a VETO, because a safety
-   property is not an estimate. Report plateaus honestly: "best of N" without
-   separation from its neighbours is a plateau, not a winner.
+7. **4.10.7 Held-out confirmation tooling -- DONE.** `tools/diag/holdout.py`.
+
+   **The split follows the POSITION, not its index.** Assignment is a hash of
+   the FEN, so extending or reordering a cohort cannot reshuffle which half
+   decides -- the same defect class as seeding a family by its list index, and
+   the same fix.
+
+   **The registration is written once and refuses to be rewritten.** Changing
+   which half decides after seeing results is the same act as moving SPRT
+   bounds and is equally invisible afterwards. It also refuses a registration
+   with no runner-up, or one naming a runner-up outside the declared arms:
+   Basilisk's leader WAS rejected on held-out data, and only the second arm
+   kept that step from ending with nothing.
+
+   **The paired test is McNemar's on the discordant positions only**, because
+   agreement carries no information -- 200 positions both arms convert say
+   nothing about which is better. Below 6 discordant positions the result is
+   reported as INDETERMINATE rather than as a z, the same thin-sample
+   discipline as `MIN_ELIGIBLE`.
+
+   **`separation()` reports a plateau as a plateau.** "Best of N" without
+   separation from its neighbours is not a winner; Basilisk's never separated
+   (paired z +0.76 to +1.70).
+
+   **A cohort that produced a verdict is SPENT for selection and still valid as
+   a veto.** The asymmetry is not fussiness: "this candidate discards a won
+   position" is a safety property and does not get less true from reuse, while
+   "this candidate converts 74%" is an estimate and does, because the candidate
+   was chosen partly on this data's noise.
+
+   Verified: 23 tests, each guard exercised on a known-bad input as well as a
+   good one, and the CLI refuses live to pair two reports over different
+   cohorts.
 8. **4.10.8 Datagen label audit.** `tools/diag/datagen_label_audit.py`: walk a
    PGN corpus, probe every position within the table man-limit, and report the
    share of tablebase clean wins the game did not win. Two details the count
