@@ -593,7 +593,7 @@ For each cluster:
 Two fully fitted cluster failures close structural expansion and force a 4.7
 re-audit; they do not authorize more feature inventory.
 
-### 4.9a Endgame truth foundation -- DONE, partially REOPENED
+### 4.9a Endgame truth foundation -- DONE, five results SUPERSEDED
 
 **Why this is in Phase 4, not Phase 5.** It was placed in Phase 5 on
 2026-09-01 by following Basilisk's phase layout, which is not a reason. Three
@@ -657,7 +657,7 @@ re-deriving the same weakness. The bracketed `ref N` is the item's identity in t
 20-function reference inventory, which is a different ordering and is preserved
 so nothing is lost when the two are compared.
 
-- **4.9a.1 Truth corpus -- DONE; instrument REOPENED, see below.** `tools/diag/endgame_truth.py` grades every
+- **4.9a.1 Truth corpus -- DONE; result SUPERSEDED -> 4.11.1.** `tools/diag/endgame_truth.py` grades every
   strong-side move against Syzygy rather than every game against the clock,
   which is what fixes the +/-3.5 pp resolution problem of a 100-game
   conversion rate. Artifact
@@ -691,7 +691,7 @@ so nothing is lost when the two are compared.
   **This book is an instrument, never training data.** Its positions are
   uniformly sampled rather than drawn from play, so feeding them to a fit would
   reweight the corpus toward a distribution the search never sees.
-- **4.9a.3 Regression contract -- DONE; floors half REOPENED, see below.** The contract has two halves and they
+- **4.9a.3 Regression contract -- DONE; floors half SUPERSEDED -> 4.11.2.** The contract has two halves and they
   need opposite treatment: correctness is absolute, statistics are not.
 
   **Hard vetoes, in `tests/endgames.rs`.** Two EPD verdicts backed by 64
@@ -721,7 +721,7 @@ so nothing is lost when the two are compared.
   movement, accept or reject in context, and never require every position to
   keep the same PV or mate length.
 
-- **4.9a.4 Mate-drive cluster -- DONE; isolation accounting REOPENED, see below.** RAR-E10.
+- **4.9a.4 Mate-drive cluster -- DONE; isolation accounting SUPERSEDED -> 4.11.9.** RAR-E10.
   KBN-K **19.4% -> 96.9%**, KBB-K **78.0% -> 100.0%**, `bench 13` unchanged at
   7,226,051 / 2.460, floors ratcheted. Three axes were needed -- resolution,
   magnitude and ratio -- and the ratio was nearly missed: the diagonal shape
@@ -844,7 +844,7 @@ so nothing is lost when the two are compared.
   count, a crossed pair and the untested `datagen-v3` (`ec34a34`).
 
 
-- **4.9a.7 KRPKR scale -- DONE; its conversion framing is REOPENED.** The
+- **4.9a.7 KRPKR scale -- DONE; conversion framing SUPERSEDED -> 4.12.2.** The
   DRAWN-cohort result stands and is the result the step was actually about: the
   share of theoretically drawn KRP-KR positions scoring above +100 cp fell
   **37.1% -> 25.8%**, measured by `tools/diag/endgame_drawn.py`, which plays no
@@ -861,7 +861,7 @@ so nothing is lost when the two are compared.
   100 KRP-KR games on correct rook-for-rook technique. The same-set pair is
   49.3% against 47.9%. Re-derived at 4.11.3.
 
-- **4.9a.8 KRPKB scale -- DONE; its conversion framing is REOPENED.** Same
+- **4.9a.8 KRPKB scale -- DONE; conversion framing SUPERSEDED -> 4.12.3.** Same
   disposition. The drawn cohort's overclaim was 0.9574 before and after and only
   the mean moved, +347.2 -> +324.4; the reference addresses only ROOK pawns and
   returns partial scales, so a +350 evaluation scaled by 24/64 is still +131.
@@ -880,28 +880,43 @@ and RAR-E12's **KBN-K dtz 0.7260 -> 0.6753**. Both were quoted from the
 defective instrument and are re-derived at 4.11.2 and 4.11.10 before their
 owning leaves act on them.
 
-### Reopened work, 2026-09-04
+### Superseded results, 2026-09-04
 
 `analysis/endgame_truth_instrument_audit_2026-09-04.md` found three defects in
-the endgame instrument and one in the mate drive's isolation argument. Reopened
-leaves keep their numbers and are marked `REOPENED` in `GUIDE.md`; a reopened
-leaf is exempt from roadmap ORDERING, never from being open.
+the endgame instrument and one in the mate drive's isolation argument.
 
-- **4.9a.1 (truth corpus) -- REOPENED.** `endgame_truth.py` ended a playout the
+**How an invalidated result is recorded, and why not as an open checkbox.**
+The first attempt at this marked the affected leaves `REOPENED` and left their
+boxes open, borrowing a convention from Basilisk that exempts a reopened leaf
+from roadmap ordering. That was wrong here. Basilisk needs the exemption
+because it did not renumber; Rarog did, so the repair already lives in properly
+ordered leaves further down, and none of these five is independently
+actionable -- 4.9a.1's repair simply IS 4.10.1 plus 4.11.1. An open box that
+only a later leaf can discharge makes the board unrunnable top to bottom, which
+is the one thing GUIDE exists to be.
+
+So: **the STEP stays ticked, because it was done; its RESULT is marked
+`SUPERSEDED -> <leaf>`, naming the open leaf that repairs it.** The debt cannot
+evaporate, because the named owner is itself an open checkbox and 4.10.10 makes
+the checker refuse a `SUPERSEDED` marker whose owner is missing or already
+ticked. The rule generalises: nothing sits open ahead of the work that
+discharges it.
+
+- **4.9a.1 (truth corpus) -- SUPERSEDED, owner 4.11.1.** `endgame_truth.py` ended a playout the
   moment the strong side's piece count dropped. Shedding material is the winning
   method in most pawn technique. On the arm PLAN's numbers come from, the abort
   fired **264 times; 129 on clean wins, and 122 of those before the engine had
   played a single non-win-preserving move**, at a median abort ply of 5-20.
   Aggregate conversion 0.8345 has an upper bound of 0.9235 once corrected.
   Repaired at 4.10.1, re-measured at 4.11.1.
-- **4.9a.3 (regression contract) -- REOPENED, floors half only.** The 64 frozen
+- **4.9a.3 (regression contract) -- SUPERSEDED, floors half only, owner 4.11.2.** The 64 frozen
   theory vetoes in `tests/endgames.rs` are static verdicts, play nothing and
   stand. The aggregate floors do not: their pawn-family conversion values are
   depressed by the abort and so are lenient exactly where 4.12 works next, and
   the run that produced the current `endgame_floors.json` **exists nowhere** --
   `tools/results/` is gitignored and no artifact on disk carries its numbers.
   Re-derived at 4.11.2.
-- **4.9a.4 (mate drive) -- REOPENED, isolation accounting only.** The measured
+- **4.9a.4 (mate drive) -- SUPERSEDED, isolation accounting only, owner 4.11.9.** The measured
   gain stands and is unaffected: in all six bare-king families any strong-side
   material loss reaches an insufficient-material position, which is tested one
   line earlier, so the abort is unreachable there by construction and zero
@@ -914,9 +929,10 @@ leaf is exempt from roadmap ORDERING, never from being open.
   rook or queen for the winner, and under-promotion manufactures exactly that
   material. A term's blast radius is its dispatcher condition's **promotion
   closure**, not the condition. Re-accounted at 4.11.9.
-- **4.9a.7 and 4.9a.8 -- REOPENED, conversion half only.** As above.
+- **4.9a.7 and 4.9a.8 -- SUPERSEDED, conversion half only, owners 4.12.2 and
+  4.12.3.** As above.
 
-Deliberately NOT reopened, with reasons, so this is not relitigated later:
+Deliberately NOT superseded, with reasons, so this is not relitigated later:
 
 - **4.9a.2 (endgame cohort book)** probes every position before writing it and
   plays nothing. It is untouched. What it does owe is 4.10.7's development /
@@ -1046,14 +1062,16 @@ Nothing here changes the engine. These are tooling commits.
    measure parity on an IDLE machine with INTERLEAVED repeats -- a first attempt
    contaminated by a concurrent job had to be redone. Identical bench proves the
    SEARCH identical; it never proves the speed.
-10. **4.10.10 Roadmap checker.** Extend `check_guide.py` with an explicit
-    `REOPENED` marker. It exempts a leaf from ORDERING only -- a measurement
-    defect can invalidate an early step after later ones close -- never from
-    being open; it refuses to sit on a ticked item; and it requires GUIDE and
-    PLAN to agree, so an accidental un-tick still fails. Also close the gap
-    found while writing this section: GUIDE listed five sub-steps for a
-    seven-sub-step PLAN item and nothing caught it, so the checker must compare
-    the two step SETS, not just membership.
+10. **4.10.10 Roadmap checker.** Teach `check_guide.py` the `SUPERSEDED ->
+    <leaf>` marker: it may appear only on a TICKED leaf, it must name a leaf
+    that exists, and that leaf must be UNTICKED. That is what stops an
+    invalidated result from quietly becoming a closed one, and it preserves the
+    property the board depends on -- **the first unticked box is always the
+    next leaf**, with no exemptions. The rejected alternative is recorded above
+    under "Superseded results": an open box that only a later leaf can
+    discharge. Also close the gap found while writing this section: GUIDE
+    listed five sub-steps for a seven-sub-step PLAN item and nothing caught it,
+    so the checker must compare the two step SETS, not just membership.
 11. **4.10.11 Shipped-constant guards.** A safety bound on a shipped constant
     must be a compile-time assertion in EVERY build type, not a check inside an
     option-setter that only tuning builds compile. The mop-up drive's maximum
@@ -1196,8 +1214,8 @@ Record it as a gap; do not close it on unverified positions.
 
 | Step | Function | ref | Kind | Coverage | Owner note |
 |---|---|---:|---|---|---|
-| 4.12.2 | KRPKR | 13 | scale | ported, draw branches only | REOPENED, conversion half |
-| 4.12.3 | KRPKB | 14 | scale | ported, rook pawns only | REOPENED, conversion half |
+| 4.12.2 | KRPKR | 13 | scale | ported, draw branches only | owns 4.9a.7's conversion half |
+| 4.12.3 | KRPKB | 14 | scale | ported, rook pawns only | owns 4.9a.8's conversion half |
 | 4.12.4 | KPsK | 16 | scale | absent | |
 | 4.12.5 | KPK | 5 | verdict | present bitbase | |
 | 4.12.6 | KRKP | 6 | verdict | partial | |
@@ -1761,7 +1779,7 @@ reproducible artifacts outrank prose whenever documents disagree.
 | `tools/diag/endgame_book.py` | Syzygy-verified endgame-start cohort |
 | `tools/diag/endgame_search_occurrence.py` | Family frequency in the search tree; exclude endgame roots (4.11.6) |
 | `tools/diag/datagen_label_audit.py` | Corpus labels against tablebase truth; new at 4.10.8 |
-| `tools/diag/check_guide.py` | GUIDE/PLAN status-board consistency; gains REOPENED at 4.10.10 |
+| `tools/diag/check_guide.py` | GUIDE/PLAN status-board consistency; enforces SUPERSEDED owners at 4.10.10 |
 | `tools/branching_profile.ps1` | Hash-bound per-position and per-iteration depth/branching shape with robust aggregates; refutation evidence only |
 | `tools/pgn_result.ps1` | Reconstruct complete-pair PGN results |
 | `tools/build_test.ps1` | Hash-bound build manifests and exact benchmark qualification |
@@ -1791,7 +1809,7 @@ evidence.
 
 | Historical | Current | Note |
 |---|---|---|
-| 4.9a.1 - 4.9a.8 | unchanged | completed; four are REOPENED in place |
+| 4.9a.1 - 4.9a.8 | unchanged | completed; five results SUPERSEDED, owners named |
 | 4.9a.7 (KRPKR) | also 4.12.2 | leaf reopened for its conversion half |
 | 4.9a.8 (KRPKB) | also 4.12.3 | leaf reopened for its conversion half |
 | 4.9a.9 - 4.9a.26 | 4.12.4 - 4.12.21 | the twenty reference functions |

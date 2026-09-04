@@ -36,6 +36,12 @@ re-measurement (4.11), then development (4.12 onward)**. PLAN section 13 maps
 the old numbers to the new ones. Nothing in 4.12 may be ordered or gated on a
 number the old instrument produced.
 
+**Run this board strictly top to bottom: the first unticked box is the next
+leaf, always.** A completed step whose RESULT was invalidated stays ticked and
+carries `SUPERSEDED -> <leaf>` naming the open leaf that repairs it — an open
+box that only a later leaf can discharge would make the board unrunnable, which
+is why the five 4.9a entries are marked rather than un-ticked.
+
 ```bash
 python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/check_guide.py
 ```
@@ -74,15 +80,15 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
 - [x] **4.9** Structural HCE clusters — **closed, none opened**; RAR-E09
     - [x] **4.9.1** Residual audit — RAR-E09: no structural residual; a label defect instead
     - [x] **4.9.2** Closed: no cohort residual licenses a cluster; retry trigger recorded
-- [ ] **4.9a** Endgame truth foundation — done, four leaves REOPENED 2026-09-04
-    - [ ] **4.9a.1** REOPENED — truth corpus; the material abort invalidates every pawn family
+- [x] **4.9a** Endgame truth foundation — done; five results SUPERSEDED, owners named
+    - [x] **4.9a.1** SUPERSEDED -> 4.11.1 — truth corpus; the material abort invalidated every pawn family
     - [x] **4.9a.2** Endgame-start cohort book — 788 verified positions, 21 families
-    - [ ] **4.9a.3** REOPENED — floors half only; the 64 frozen theory vetoes stand
-    - [ ] **4.9a.4** REOPENED — gain stands (KBN-K **19.4% -> 96.9%**); isolation reaches 6 families
+    - [x] **4.9a.3** SUPERSEDED -> 4.11.2 — floors half only; the 64 frozen theory vetoes stand
+    - [x] **4.9a.4** SUPERSEDED -> 4.11.9 — gain stands (KBN-K **19.4% -> 96.9%**); isolation reaches 6 families
     - [x] **4.9a.5** RAR-E08 **ACCEPTED** +6.73 +/- 3.82 Elo — TB-corrected labels win
     - [x] **4.9a.6** `hce-v3-tb` fitted and gated — RAR-E12 **+11.81 +/- 5.33 Elo**
-    - [ ] **4.9a.7** REOPENED — KRPKR drawn overclaim **37.1% -> 25.8%** stands; conversion half does not
-    - [ ] **4.9a.8** REOPENED — KRPKB drawn-cohort null stands; conversion half does not
+    - [x] **4.9a.7** SUPERSEDED -> 4.12.2 — KRPKR drawn overclaim **37.1% -> 25.8%** stands; conversion half does not
+    - [x] **4.9a.8** SUPERSEDED -> 4.12.3 — KRPKB drawn-cohort null stands; conversion half does not
 - [ ] **4.10** Instrument integrity and tooling upgrade — tooling commits, no engine change
     - [x] **4.10.1** Tablebase-truth termination; material shed becomes a diagnostic
     - [ ] **4.10.2** Cohort fingerprint; refuse any comparison across position sets
@@ -93,7 +99,7 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
     - [ ] **4.10.7** Held-out split, McNemar paired z, runner-up slot, spent-cohort rule
     - [ ] **4.10.8** `datagen_label_audit.py` — corpus labels against tablebase truth
     - [ ] **4.10.9** Gate runner refuses wrong revision, dirty tree or mismatched bench
-    - [ ] **4.10.10** `check_guide.py` gains a REOPENED marker and step-set comparison
+    - [ ] **4.10.10** `check_guide.py` enforces SUPERSEDED owners and compares step sets
     - [ ] **4.10.11** Compile-time bound on the shipped mop-up constants, every build type
     - [ ] **4.10.12** Feature-matrix build audit; `--all-features` is not the shipped config
 - [ ] **4.11** Re-measurement and re-derivation — corrections recorded in place
