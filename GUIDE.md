@@ -18,21 +18,21 @@ and `python tools/diag/check_guide.py` must pass.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
 | Instrument state | **The endgame truth harness is defective and under repair.** Every pawn-family conversion number is superseded; bare-king families are provably unaffected |
-| Current step | **4.10.6 — node budget as a run condition; 60k/200k/600k bracket** |
+| Current step | **4.10.7 — held-out split, McNemar paired z, runner-up slot** |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## What you run next
 
-**4.10.6 — make the node budget a first-class run condition.** Record it
-beside TC, threads, hash, book and adjudication; add a bracket runner so a
-family verdict can be repeated at 60k / 200k / 600k rather than guessed at one
-budget; and measure Rarog's actual nodes/move at the deployment TC so the
-screen budget is justified against it rather than assumed. Tooling; no engine
-change.
+**4.10.7 — build the held-out confirmation tooling.** A selection cohort
+splits into development and held-out halves BEFORE any candidate runs, which
+half decides is registered in advance, a runner-up is carried into
+confirmation, and a cohort that has produced a verdict is SPENT for selection
+though still valid as a veto. McNemar paired z on the shared positions.
+Tooling; no engine change.
 
-The layer contract is `analysis/endgame_measurement_layers.md`: conversion
-never establishes strength, truth vetoes absolutely, and layers are never
-aggregated.
+**Deployment is 153,466 nodes/move median at 3+0.03** and the endgame screen is
+60,000, below its p25 — so every fixed-node endgame verdict so far is
+PROVISIONAL. Evidence: `analysis/node_budget_2026-09-04.md`.
 
 The standard cohort is frozen by content: seed `6200600`, 19 families, 100
 positions each, overall digest `fe486604...`. Both of 4.11.1's arms must report
@@ -108,7 +108,7 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
     - [x] **4.10.3** Sharded workers; parallel output byte-identical to serial
     - [x] **4.10.4** Prove every guard FAILS on a known-bad input; thin-sample refusal
     - [x] **4.10.5** Measurement-layer contract and per-report layer/budget/set fields
-    - [ ] **4.10.6** Node budget as a run condition; 60k/200k/600k bracket runner
+    - [x] **4.10.6** Node budget as a run condition; 60k/200k/600k bracket runner
     - [ ] **4.10.7** Held-out split, McNemar paired z, runner-up slot, spent-cohort rule
     - [ ] **4.10.8** `datagen_label_audit.py` — corpus labels against tablebase truth
     - [ ] **4.10.9** Gate runner refuses wrong revision, dirty tree or mismatched bench

@@ -22,6 +22,7 @@ from pathlib import Path
 import chess
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import endgame_budget_bracket
 import endgame_floors
 import endgame_truth
 
@@ -425,6 +426,60 @@ class MeasurementLayerTests(unittest.TestCase):
     def test_the_truth_report_disclaims_strength(self):
         source = (self.DIAG / "endgame_truth.py").read_text(encoding="utf-8")
         self.assertIn("NOT MEASURED HERE", source)
+
+
+class BudgetBracketTests(unittest.TestCase):
+    """4.10.6: one budget is a guess, and a bracket must not mix cohorts."""
+
+    def test_budgets_parse_sorted_and_deduplicated(self):
+        self.assertEqual(
+            endgame_budget_bracket.parse_budgets("600000, 60000,200000"),
+            [60000, 200000, 600000])
+
+    def test_a_duplicate_budget_is_refused(self):
+        with self.assertRaises(ValueError):
+            endgame_budget_bracket.parse_budgets("60000,60000")
+
+    def test_a_nonpositive_budget_is_refused(self):
+        for spec in ("0", "-1", ""):
+            with self.subTest(spec), self.assertRaises(ValueError):
+                endgame_budget_bracket.parse_budgets(spec)
+
+    def _arm(self, digest):
+        return {"cohort": {"sha256": digest}, "families": {}}
+
+    def test_matching_cohorts_tabulate(self):
+        arms = {60000: self._arm("aa" * 32), 200000: self._arm("aa" * 32)}
+        self.assertIsNone(endgame_budget_bracket.cohorts_agree(arms))
+
+    def test_a_bracket_over_different_positions_is_refused(self):
+        """Otherwise the bracket is RAR-E14 defect B with extra steps."""
+        arms = {60000: self._arm("aa" * 32), 200000: self._arm("bb" * 32)}
+        problem = endgame_budget_bracket.cohorts_agree(arms)
+        self.assertIsNotNone(problem)
+        self.assertIn("different position sets", problem)
+
+    def test_a_missing_digest_is_refused(self):
+        arms = {60000: self._arm("aa" * 32), 200000: {"families": {}}}
+        self.assertIn("no cohort digest",
+                      endgame_budget_bracket.cohorts_agree(arms))
+
+
+class NodeBudgetEvidenceTests(unittest.TestCase):
+    """The measured deployment budget must stay recorded, not remembered."""
+
+    NOTE = (Path(__file__).resolve().parents[2] / "analysis"
+            / "node_budget_2026-09-04.md")
+
+    def test_the_measurement_is_recorded(self):
+        text = self.NOTE.read_text(encoding="utf-8")
+        self.assertIn("153,466", text)
+        self.assertIn("3+0.03", text)
+
+    def test_it_states_the_gap_to_the_screen_budget(self):
+        text = self.NOTE.read_text(encoding="utf-8")
+        self.assertIn("60,000", text)
+        self.assertIn("PROVISIONAL", text)
 
 
 class SchemaGuardTests(unittest.TestCase):

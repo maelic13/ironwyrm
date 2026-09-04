@@ -16,7 +16,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.10.6 — node budget as a first-class run condition** |
+| Current step | **4.10.7 — held-out confirmation tooling** |
 | Instrument state | The endgame truth harness is **defective and under repair**; every pawn-family conversion number is superseded. See `analysis/endgame_truth_instrument_audit_2026-09-04.md` and "Reopened work, 2026-09-04" |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -1123,14 +1123,46 @@ Nothing here changes the engine. These are tooling commits.
    the step the contract would have saved: read on layer 3 it did nothing, read
    on drawn-share bias it moved 37.1% -> 25.8%, and the second is the one a
    SCALE function is validated on.
-6. **4.10.6 Node budget as a first-class run condition.** Record it beside TC,
-   threads, hash, book and adjudication in every report. Add a bracket runner so
-   a family verdict can be repeated at 60k / 200k / 600k rather than guessed at
-   one budget. **Measure Rarog's actual nodes/move at the deployment TC** rather
-   than assuming: the screen budget must be justified against it, and a failure
-   that appears only at low budget is PROVISIONAL. Prefer nodes to depth for
-   cross-variant work -- equal depth is unequal work once an eval change shifts
-   pruning, and favours whichever side prunes harder.
+6. **4.10.6 Node budget as a first-class run condition -- DONE, and the screen
+   budget turns out to be 2.6x below deployment.**
+
+   `tools/diag/nodes_per_move.py` measures what a move actually costs by
+   playing self-play games under a real clock, with the harness decrementing by
+   MEASURED wall time so the engine receives genuine `wtime/btime/winc/binc` and
+   exercises its own time management -- a fixed `movetime` would measure a
+   different code path (RAR-M01). At **3+0.03**, 492 moves over 4 games on the
+   accepted head: **median 153,466 nodes/move**, mean 176,208, p25 114,780,
+   p75 210,088, p90 319,892, and **115,899 median in the endgame band**.
+
+   **The maintainer's 12,000-game Colosseum arena on an Apple M4 independently
+   gives ~148,000** (2.0 M nps at 74 ms/move, same TC) -- a different
+   instrument on different hardware agreeing to within 4%. That agreement is
+   the reason to believe the number rather than merely to have it.
+
+   **Consequence, stated plainly: the 60,000-node endgame screen sits below the
+   p25 of deployment**, so every fixed-node endgame verdict this project has
+   taken is PROVISIONAL in the sense of rule 12. It does not make 60,000 wrong;
+   it makes a verdict that turns on a move a 116,000-node search would see
+   unfalsifiable at that budget, which is precisely how Basilisk rejected its
+   own leading KBNK candidate (BAS-E45).
+
+   **The 60k / 200k / 600k bracket is therefore justified rather than copied:**
+   against this distribution 60,000 is below p25, 200,000 just above p75 and
+   600,000 near the observed maximum. `tools/diag/endgame_budget_bracket.py`
+   drives `endgame_truth.py` unchanged at each budget over the same cohort --
+   one report, one budget, per the layer contract -- and REFUSES to tabulate if
+   the arms measured different position sets, which would be RAR-E14's defect B
+   with extra steps.
+
+   **The primary budget stays 60,000 for 4.11.1.** Changing it in the same step
+   as the termination rule would confound the one delta that step exists to
+   isolate; 4.11.5 owns the bracket runs. Evidence:
+   `analysis/node_budget_2026-09-04.md`. Re-measure after any time-management
+   change (4.17) or large NPS movement.
+
+   Prefer nodes to depth for cross-variant work -- equal depth is unequal work
+   once an eval change shifts pruning, and favours whichever side prunes
+   harder.
 7. **4.10.7 Held-out confirmation tooling.** A selection cohort splits into
    development and held-out halves BEFORE any candidate runs, and which half
    decides is registered in advance. Implement the paired verdict properly:
