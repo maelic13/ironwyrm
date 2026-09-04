@@ -19,6 +19,21 @@ and none is visible by reading:
    dropped during a shortening pass on 2026-08-30 and nobody caught it by
    reading; the maintainer did, weeks later.
 
+4. **A SUPERSEDED marker with nobody holding the debt.** A completed step whose
+   RESULT was invalidated stays TICKED and carries `SUPERSEDED -> <leaf>`
+   naming the open leaf that repairs it. That convention replaced leaving the
+   box open, which made the board unrunnable: its first open item was 4.9a.1,
+   whose repair simply IS 4.10.1 plus 4.11.1, so nobody could pick it up. The
+   marker only works if the owner is real and still open, so all three are
+   checked -- the marker may sit only on a ticked leaf, must name a leaf that
+   exists, and that leaf must be unticked.
+
+5. **PLAN and GUIDE listing different sub-steps.** The old check was one-way:
+   every GUIDE step had to appear in PLAN. So a PLAN item with seven sub-steps
+   listed as five in GUIDE passed, and did -- 4.10 was found that way, with
+   GUIDE's titles also off by one against PLAN's. Both directions are compared
+   now.
+
 The child pattern is checked against the format GUIDE actually uses --
 `- [ ] **4.9a.1** ...`, bold and optionally letter-suffixed. The first version
 of this checker required a bare `4.9.1`, matched no line in the file, and so
@@ -68,6 +83,18 @@ PLAN = ROOT / "PLAN.md"
 # it. This is the cheap half of that check: not that the prose agrees, but that
 # PLAN has heard of every step GUIDE lists.
 STEP_IN_PLAN = re.compile(r"(?<![\d.])%s(?![\d])")
+# `SUPERSEDED -> 4.11.1`, after the closing bold. See failure 4 above.
+SUPERSEDED = re.compile(
+    r"\*\*(\d+\.\d+[a-z]?(?:\.\d+)?)\*\*.*?SUPERSEDED\s*->\s*"
+    r"(\d+\.\d+[a-z]?(?:\.\d+)?)"
+)
+# A PLAN sub-step DEFINITION, not a reference to one. PLAN writes a definition
+# as `**4.10.1 Some title...**` -- bold, number, space, then the title -- while
+# a cross-reference is either bare (`re-derived at 4.11.2`) or bold with
+# nothing after the number (`**4.12.22**`). The trailing `\s+\S` is what
+# separates them, and without it every owner pointer in the prose would be
+# read as a step this file does not define.
+PLAN_DEFINITION = re.compile(r"\*\*(\d+\.\d+[a-z]?\.\d+)\s+\S")
 
 
 def actionable(lines):
@@ -154,6 +181,35 @@ def main():
                 kids.append(k.group(2) == "x")
     close()
 
+    # Failure 4: a SUPERSEDED marker whose owner is missing or already closed.
+    ticked = {}
+    for line in lines:
+        m = PARENT.match(line) or CHILD.match(line)
+        if m:
+            groups = m.groups()
+            ticked[groups[-1] if len(groups) == 2 else groups[2]] = (
+                groups[0] if len(groups) == 2 else groups[1]) == "x"
+    for n, line in enumerate(lines, 1):
+        marker = SUPERSEDED.search(line)
+        if not marker:
+            continue
+        step, owner = marker.group(1), marker.group(2)
+        if not ticked.get(step, False):
+            problems.append(
+                "GUIDE.md:%d: %s carries SUPERSEDED but is not ticked. The step "
+                "was done; it is its RESULT that is superseded" % (n, step)
+            )
+        if owner not in ticked:
+            problems.append(
+                "GUIDE.md:%d: %s is SUPERSEDED -> %s, which is not a step on "
+                "this board" % (n, step, owner)
+            )
+        elif ticked[owner]:
+            problems.append(
+                "GUIDE.md:%d: %s is SUPERSEDED -> %s, but %s is already ticked. "
+                "The debt has no owner left" % (n, step, owner, owner)
+            )
+
     plan_text = PLAN.read_text(encoding="utf-8") if PLAN.is_file() else ""
     if not plan_text:
         problems.append("PLAN.md missing; GUIDE and PLAN must change together")
@@ -164,6 +220,16 @@ def main():
             problems.append(
                 "step(s) in GUIDE that PLAN never mentions: %s -- GUIDE and "
                 "PLAN change in the same commit" % ", ".join(absent)
+            )
+        # Failure 5: the other direction. A sub-step PLAN defines and GUIDE
+        # does not list is invisible work.
+        defined = set(PLAN_DEFINITION.findall(plan_text))
+        unlisted = sorted(defined - set(step_numbers))
+        if unlisted:
+            problems.append(
+                "sub-step(s) PLAN defines that GUIDE does not list: %s -- the "
+                "board is the file that says what to do next, so work missing "
+                "from it does not get done" % ", ".join(unlisted)
             )
 
     missing = sorted(REQUIRED_PHASES - phases)

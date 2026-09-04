@@ -16,7 +16,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.10.10 — roadmap checker: SUPERSEDED owners and step sets** |
+| Current step | **4.10.11 — compile-time bound on the shipped mop-up constants** |
 | Instrument state | The endgame truth harness is **defective and under repair**; every pawn-family conversion number is superseded. See `analysis/endgame_truth_instrument_audit_2026-09-04.md` and "Reopened work, 2026-09-04" |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -1271,16 +1271,32 @@ Nothing here changes the engine. These are tooling commits.
    behavioural cause, worth a couple of Elo at fast TC, so measure parity on an
    IDLE machine with INTERLEAVED repeats. Identical bench proves the SEARCH
    identical; it never proves the speed.
-10. **4.10.10 Roadmap checker.** Teach `check_guide.py` the `SUPERSEDED ->
-    <leaf>` marker: it may appear only on a TICKED leaf, it must name a leaf
-    that exists, and that leaf must be UNTICKED. That is what stops an
-    invalidated result from quietly becoming a closed one, and it preserves the
-    property the board depends on -- **the first unticked box is always the
-    next leaf**, with no exemptions. The rejected alternative is recorded above
-    under "Superseded results": an open box that only a later leaf can
-    discharge. Also close the gap found while writing this section: GUIDE
-    listed five sub-steps for a seven-sub-step PLAN item and nothing caught it,
-    so the checker must compare the two step SETS, not just membership.
+10. **4.10.10 Roadmap checker -- DONE.** `check_guide.py` now understands the
+    `SUPERSEDED -> <leaf>` marker and enforces all three of its properties: it
+    may sit only on a TICKED leaf (the step was done; it is its RESULT that is
+    superseded), it must name a leaf that EXISTS, and that leaf must be
+    UNTICKED. Together those stop an invalidated result from quietly becoming a
+    closed one, and they preserve the property the board depends on -- **the
+    first unticked box is always the next leaf**, with no exemptions.
+
+    The step-set comparison now runs BOTH ways. The old check was one-way, so a
+    PLAN item with seven sub-steps listed as five in GUIDE passed -- and did,
+    with GUIDE's titles also off by one against PLAN's. Distinguishing a PLAN
+    DEFINITION from a cross-reference is the whole difficulty: PLAN writes a
+    definition as `**4.10.1 Some title...**` and a reference as either bare
+    prose or bold-with-nothing-after, so the pattern requires a title to follow
+    the number. Without that, every owner pointer in the prose would be read as
+    an undefined step.
+
+    **Verified by mutation, four ways**, each against the real files: a
+    SUPERSEDED marker moved onto an unticked leaf fails; pointed at an
+    already-ticked leaf fails; pointed at a nonexistent leaf fails; and
+    deleting one GUIDE sub-step that PLAN defines fails naming it. Restored, the
+    board is clean at 146 steps.
+
+    `--next N` was added earlier as a slice of this leaf and prints the
+    actionable queue generated from the checkboxes, so the work list cannot
+    drift from the board the way a hand-written one would.
 11. **4.10.11 Shipped-constant guards.** A safety bound on a shipped constant
     must be a compile-time assertion in EVERY build type, not a check inside an
     option-setter that only tuning builds compile. The mop-up drive's maximum
