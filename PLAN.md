@@ -16,7 +16,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.10.11 — compile-time bound on the shipped mop-up constants** |
+| Current step | **4.10.12 — feature-matrix build audit** |
 | Instrument state | The endgame truth harness is **defective and under repair**; every pawn-family conversion number is superseded. See `analysis/endgame_truth_instrument_audit_2026-09-04.md` and "Reopened work, 2026-09-04" |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -1297,14 +1297,32 @@ Nothing here changes the engine. These are tooling commits.
     `--next N` was added earlier as a slice of this leaf and prints the
     actionable queue generated from the checkboxes, so the work list cannot
     drift from the board the way a hand-written one would.
-11. **4.10.11 Shipped-constant guards.** A safety bound on a shipped constant
-    must be a compile-time assertion in EVERY build type, not a check inside an
-    option-setter that only tuning builds compile. The mop-up drive's maximum
-    (`MOPUP_DIAGONAL * 7 + MOPUP_KING_CHEB * 7 + MOPUP_KING_MAN * 14`) must be
-    provably below the search's mate band. Where the bound depends on a constant
-    owned by another module and that dependency is unwanted, keep the value next
-    to its consumer and tie the two together with an assertion in a test that
-    legitimately includes both. Then verify BOTH assertions fire.
+11. **4.10.11 Shipped-constant guards -- DONE.** `src/eval.rs` derives
+    `MOPUP_MAX = MOPUP_DIAGONAL * 7 + MOPUP_KING_CHEB * 7 + MOPUP_KING_MAN * 14`
+    -- the exact supremum, since each factor peaks at those values -- and
+    asserts `MOPUP_MAX < MATE_SCORE - MOPUP_ASSUMED_MAX_PLY` in a `const _: ()`.
+
+    **A `const` assertion is the point, not a stylistic choice.** It holds in
+    every build type including release, where a validator inside an
+    option-setter only exists in tuning builds. Basilisk shipped exactly that
+    gap: its bound was enforced in the setter, the RELEASE default was validated
+    by nothing, and its existing test exercised the validator rather than the
+    constant (BAS-E52). If this bound ever fails, the drive can manufacture a
+    mate score out of king geometry and the search will believe it.
+
+    **The cross-module half.** `MAX_PLY` lives in `search.rs` and is private --
+    it is in fact duplicated privately in three modules already -- and the
+    evaluator should not depend on the search to know its own safety bound. So
+    `eval.rs` mirrors it as `MOPUP_ASSUMED_MAX_PLY` and
+    `search::tests::mopup_mirror_matches_the_real_ply_horizon` ties the two
+    together in the module that legitimately sees both. The mirror cannot drift
+    silently.
+
+    **BOTH assertions verified to fire**, per rule 15: raising
+    `MOPUP_DIAGONAL` to 5,000 fails the build with the written message, and
+    changing the mirror to 64 fails the test with its own. Restored, and the
+    fingerprint is **6,901,489 / EBF 2.458** exactly -- byte-identical to the
+    accepted head, which is what a behaviour-neutral engine change owes.
 12. **4.10.12 Build-configuration audit.** Every module must compile under every
     shipped feature combination, and `--all-features` is not the configuration
     under test -- it enables `texel`, which bypasses the eval and pawn caches

@@ -835,6 +835,37 @@ const LONG_DIAGONALS: Bitboard = Bitboard(
 const MOPUP_DIAGONAL: i32 = 360;
 const MOPUP_KING_CHEB: i32 = 20;
 const MOPUP_KING_MAN: i32 = 10;
+
+/// The largest score `apply_mop_up`'s minor-mate branch can add.
+///
+/// `diagonal` peaks at 7 (a corner), `7 - king_distance` at 7 (adjacent kings)
+/// and `14 - king_man` at 14 (adjacent kings again), so this is the exact
+/// supremum rather than a bound with slack.
+const MOPUP_MAX: i32 = MOPUP_DIAGONAL * 7 + MOPUP_KING_CHEB * 7 + MOPUP_KING_MAN * 14;
+
+/// The search's ply horizon, mirrored here on purpose.
+///
+/// `search::MAX_PLY` is module-private, and the evaluator should not depend on
+/// the search to know its own safety bound. `search::tests::
+/// mopup_mirror_matches_the_real_ply_horizon` ties the two together in a module
+/// that legitimately sees both, so the mirror cannot drift silently.
+pub(crate) const MOPUP_ASSUMED_MAX_PLY: i32 = 128;
+
+/// A guidance term must never reach the band the search reads as a forced mate.
+///
+/// This is a `const` assertion rather than a debug check or a validator inside
+/// an option-setter, and that is the point (PLAN 4.10.11): the SHIPPED default
+/// is what plays the games, so the bound has to hold in every build type
+/// including release, not only where a tuning build happens to compile a
+/// setter. Basilisk shipped exactly that gap -- its bound was enforced only in
+/// tuning builds and the release default was validated by nothing (BAS-E52).
+///
+/// If this fails, the drive can manufacture a mate score out of king geometry
+/// and the search will believe it.
+const _: () = assert!(
+    MOPUP_MAX < MATE_SCORE - MOPUP_ASSUMED_MAX_PLY,
+    "mop-up drive can reach the search's mate band; lower MOPUP_DIAGONAL"
+);
 const KBNK_LIGHT_CORNERS: [usize; 2] = [0, 63]; // a1, h8 — on LIGHT_SQUARES
 const KBNK_DARK_CORNERS: [usize; 2] = [7, 56]; // h1, a8 — on DARK_SQUARES
 /// Endgame scale-factor framework (Phase 3.11). A scale of `SCALE_NORMAL`

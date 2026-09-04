@@ -18,18 +18,20 @@ and `python tools/diag/check_guide.py` must pass.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
 | Instrument state | **The endgame truth harness is defective and under repair.** Every pawn-family conversion number is superseded; bare-king families are provably unaffected |
-| Current step | **4.10.11 — compile-time bound on the shipped mop-up constants** |
+| Current step | **4.10.12 — feature-matrix build audit** |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## What you run next
 
-**4.10.11 — express the endgame safety bound as a compile-time assertion on
-the SHIPPED default, in every build type**, not inside a tuning-only setter.
-The mop-up drive's maximum must be provably below the search's mate band. Where
-the bound depends on a constant owned by another module, keep the value next to
-its consumer and tie them together with an assertion in a test that includes
-both — then verify BOTH assertions fire. Engine-side; behaviour must not
-change, so `bench 13` must reproduce **6,901,489 / EBF 2.458** exactly.
+**4.10.12 — audit the build configurations.** Every module must compile under
+every shipped feature combination, and `--all-features` is not the configuration
+under test: it enables `texel`, which bypasses the eval and pawn caches and must
+never be measured. Add a feature-matrix check so a configuration that only
+builds transitively cannot ship. Tooling and CI; no behaviour change.
+
+After 4.10.12 the next leaf is **4.11.1**, the first that needs the
+maintainer's machine: re-run both truth arms on the frozen cohort
+(`fe486604...`), binaries pinned by SHA-256, `--per-position`, `--workers`.
 
 **Deployment is 153,466 nodes/move median at 3+0.03** and the endgame screen is
 60,000, below its p25 — so every fixed-node endgame verdict so far is
@@ -114,7 +116,7 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
     - [x] **4.10.8** `datagen_label_audit.py` — corpus labels against tablebase truth
     - [x] **4.10.9** Gate runner refuses wrong revision, dirty tree or mismatched bench
     - [x] **4.10.10** `check_guide.py` enforces SUPERSEDED owners and compares step sets
-    - [ ] **4.10.11** Compile-time bound on the shipped mop-up constants, every build type
+    - [x] **4.10.11** Compile-time bound on the shipped mop-up constants, every build type
     - [ ] **4.10.12** Feature-matrix build audit; `--all-features` is not the shipped config
 - [ ] **4.11** Re-measurement and re-derivation — corrections recorded in place
     - [ ] **4.11.1** Re-run both truth arms, binaries pinned by SHA-256, per-position on

@@ -5260,6 +5260,21 @@ fn format_score(score: i32) -> String {
 
 #[cfg(test)]
 mod tests {
+    /// The evaluator mirrors `MAX_PLY` to bound its mop-up drive below the mate
+    /// band without taking a dependency on the search. This is the assertion
+    /// that keeps the mirror honest, and it lives here because this module is
+    /// the one that legitimately sees both constants (PLAN 4.10.11).
+    #[test]
+    fn mopup_mirror_matches_the_real_ply_horizon() {
+        assert_eq!(
+            crate::eval::MOPUP_ASSUMED_MAX_PLY as usize,
+            super::MAX_PLY,
+            "eval.rs mirrors MAX_PLY to bound the mop-up drive; the two have \
+             drifted, so the compile-time bound in eval.rs is now checking \
+             the wrong number"
+        );
+    }
+
     use super::*;
     use crate::board::Square;
     use std::time::{Duration, Instant};
