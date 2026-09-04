@@ -16,7 +16,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.10.12 — feature-matrix build audit** |
+| Current step | **4.11.1 — re-run both truth arms (MAINTAINER)** |
 | Instrument state | The endgame truth harness is **defective and under repair**; every pawn-family conversion number is superseded. See `analysis/endgame_truth_instrument_audit_2026-09-04.md` and "Reopened work, 2026-09-04" |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -1323,12 +1323,36 @@ Nothing here changes the engine. These are tooling commits.
     changing the mirror to 64 fails the test with its own. Restored, and the
     fingerprint is **6,901,489 / EBF 2.458** exactly -- byte-identical to the
     accepted head, which is what a behaviour-neutral engine change owes.
-12. **4.10.12 Build-configuration audit.** Every module must compile under every
-    shipped feature combination, and `--all-features` is not the configuration
-    under test -- it enables `texel`, which bypasses the eval and pawn caches
-    and must never be measured. Add a feature-matrix check to CI so a
-    configuration that only builds transitively cannot ship, and re-verify on
-    every toolchain and platform released.
+12. **4.10.12 Build-configuration audit -- DONE.**
+    `tools/diag/feature_matrix.py` enumerates all **16 subsets** of the four
+    declared features (`tune`, `diag`, `ablate`, `texel`) and runs
+    `cargo check --all-targets` on each. **All 16 compile**, in 52 seconds
+    total -- `check` rather than `build` is what makes the whole matrix
+    runnable on demand instead of only in CI.
+
+    **Single-feature coverage is not enough, and that is demonstrated rather
+    than argued.** Injecting a defect behind
+    `#[cfg(all(feature = "diag", feature = "ablate"))]` leaves the default
+    build, `--features diag` and `--features ablate` all GREEN, and only
+    `diag,ablate` fails. CI checked exactly those three and would have shipped
+    it.
+
+    CI gains the matrix and a plain `ablate` build: `ablate` was the one
+    declared feature CI never built at all, and it is the paired-ablation
+    instrument -- needed the moment an ablation is wanted, which is never a
+    convenient moment to discover a build error.
+
+    **`--all-features` is deliberately not used** anywhere in the matrix. It is
+    not a shipped configuration: it enables `texel`, which bypasses the eval and
+    pawn caches, and AGENTS.md records a depth sweep whose conclusion was
+    reversed by exactly that binary being left in `target/release/`. The tool
+    prints that reminder on success and flags every combination whose binary
+    must never be measured.
+
+    A test ties `SHIPPED_FEATURES` to `Cargo.toml`'s `[features]` block, so
+    adding a feature and forgetting to cover it fails the suite -- a matrix that
+    silently stops covering a feature is worse than no matrix, because it
+    reports success over a shrinking set.
 
 ### 4.11 Re-measurement and re-derivation
 

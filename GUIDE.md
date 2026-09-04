@@ -18,20 +18,22 @@ and `python tools/diag/check_guide.py` must pass.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
 | Instrument state | **The endgame truth harness is defective and under repair.** Every pawn-family conversion number is superseded; bare-king families are provably unaffected |
-| Current step | **4.10.12 — feature-matrix build audit** |
+| Current step | **4.11.1 — re-run both truth arms; needs the maintainer's machine** |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## What you run next
 
-**4.10.12 — audit the build configurations.** Every module must compile under
-every shipped feature combination, and `--all-features` is not the configuration
-under test: it enables `texel`, which bypasses the eval and pawn caches and must
-never be measured. Add a feature-matrix check so a configuration that only
-builds transitively cannot ship. Tooling and CI; no behaviour change.
+**4.11.1 — re-run BOTH truth arms. This one needs your machine.** 4.10 is
+complete: the instrument is repaired, cohort-identified, sharded, guarded,
+layer-stamped, budget-justified and provenance-checked.
 
-After 4.10.12 the next leaf is **4.11.1**, the first that needs the
-maintainer's machine: re-run both truth arms on the frozen cohort
-(`fe486604...`), binaries pinned by SHA-256, `--per-position`, `--workers`.
+Re-run the accepted head and the same Stockfish binary under the recorded
+conditions — 60,000 nodes/move, one thread, 16 MB hash, 100-ply limit, engine
+tablebases disabled, `--per-position`, both binaries pinned by SHA-256 — so
+**only the termination rule differs**. Both arms must report cohort
+`fe4866045506636f884ee30526b4188c3def9ca9747f5960ea5c5e7cba5dbb5e`. The
+reference arm has no per-position records at all, so it cannot be re-analysed,
+only re-run.
 
 **Deployment is 153,466 nodes/move median at 3+0.03** and the endgame screen is
 60,000, below its p25 — so every fixed-node endgame verdict so far is
@@ -117,7 +119,7 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
     - [x] **4.10.9** Gate runner refuses wrong revision, dirty tree or mismatched bench
     - [x] **4.10.10** `check_guide.py` enforces SUPERSEDED owners and compares step sets
     - [x] **4.10.11** Compile-time bound on the shipped mop-up constants, every build type
-    - [ ] **4.10.12** Feature-matrix build audit; `--all-features` is not the shipped config
+    - [x] **4.10.12** Feature-matrix build audit; `--all-features` is not the shipped config
 - [ ] **4.11** Re-measurement and re-derivation — corrections recorded in place
     - [ ] **4.11.1** Re-run both truth arms, binaries pinned by SHA-256, per-position on
     - [ ] **4.11.2** Re-derive the floors; restate 4.12.21's KBN-K target on a real artifact
