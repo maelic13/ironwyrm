@@ -89,6 +89,16 @@ def main() -> int:
 
     report = {
         "schema": "rarog-endgame-conversion-v1",
+        # LAYER 3 ONLY (analysis/endgame_measurement_layers.md). One bit per
+        # game: did it mate inside the budget. This instrument sees no
+        # tablebase, so it cannot report layer 1 or 2 and must not be read as
+        # evidence about either -- `material_lost` here means "the bare-king
+        # side has nothing left to mate with", not "the win was thrown".
+        "layer": "3_conversion",
+        "layer_note": (
+            "bare-king families only; no tablebase, so no theory truth and no "
+            "move quality. Never reports Elo."
+        ),
         "engine": str(engine_path),
         "positions_per_family": args.positions,
         "nodes_per_move": args.nodes,

@@ -153,6 +153,18 @@ def main() -> int:
             json.dumps(
                 {
                     "schema": "rarog-endgame-drawn-v1",
+                    # NOT one of the four layers: this measures the COMPLEMENT
+                    # of conversion -- does the evaluator claim won what theory
+                    # says is drawn. A SCALE function is validated here and is
+                    # invisible in conversion; a VERDICT function is the other
+                    # way round. Reading 4.9a.7 off conversion nearly called a
+                    # working change a failure.
+                    "layer": "drawn_share_bias",
+                    "layer_note": (
+                        "static evaluation of theoretically drawn positions; "
+                        "plays no games, so it is unaffected by the RAR-E14 "
+                        "playout defect. Never reports Elo."
+                    ),
                     "engine": str(args.engine),
                     "seed": args.seed,
                     "families": report,

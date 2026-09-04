@@ -326,6 +326,11 @@ def main() -> int:
             print(f"  {family:<10} {metric:<20} n={n}")
         print()
 
+    print("layer    : 1-3 (truth, move quality, conversion). NOT strength -- "
+          "see analysis/endgame_measurement_layers.md")
+    print(f"nodes    : {report_doc.get('nodes_per_move')} per move, "
+          f"max_plies {report_doc.get('max_plies')}")
+    print(f"cohort   : {report_doc.get('cohort', {}).get('sha256', '?')[:16]}")
     print(f"floors   : {args.floors}")
     print(f"report   : {args.report}")
     print(f"aggregate: weighted conversion {base_agg:.4f} -> {got_agg:.4f} "

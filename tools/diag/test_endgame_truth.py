@@ -384,6 +384,49 @@ class FloorGateTests(unittest.TestCase):
         self.assertIn("thin samples", out)
 
 
+class MeasurementLayerTests(unittest.TestCase):
+    """4.10.5: an instrument must say which QUESTION it answers.
+
+    Enforced rather than documented, because the contract's whole purpose is to
+    stop a number being read as answering something it never asked -- which is
+    what 4.9a.7 nearly did to a working scale function, and what RAR-E14 found
+    a conversion baseline doing.
+    """
+
+    DIAG = Path(__file__).resolve().parent
+    CONTRACT = DIAG.parents[1] / "analysis" / "endgame_measurement_layers.md"
+
+    def test_the_contract_exists_and_names_all_four_layers(self):
+        text = self.CONTRACT.read_text(encoding="utf-8")
+        for layer in ("Theory truth", "Move quality", "Conversion",
+                      "Game strength", "Occurrence"):
+            self.assertIn(layer, text)
+
+    def test_the_contract_states_the_precedence_rules(self):
+        text = self.CONTRACT.read_text(encoding="utf-8")
+        self.assertIn("Truth is an absolute veto", text)
+        self.assertIn("Conversion NEVER establishes strength", text)
+        self.assertIn("Layers are never aggregated", text)
+        self.assertIn("Bench identity is provenance", text)
+
+    def test_every_playing_instrument_stamps_its_layer(self):
+        for tool in ("endgame_truth.py", "endgame_conversion.py",
+                     "endgame_drawn.py"):
+            with self.subTest(tool):
+                source = (self.DIAG / tool).read_text(encoding="utf-8")
+                self.assertRegex(source, r'"layers?":')
+
+    def test_the_truth_report_declares_all_four_layers(self):
+        source = (self.DIAG / "endgame_truth.py").read_text(encoding="utf-8")
+        for key in ("1_theory_truth", "2_move_quality", "3_conversion",
+                    "4_game_strength"):
+            self.assertIn(key, source)
+
+    def test_the_truth_report_disclaims_strength(self):
+        source = (self.DIAG / "endgame_truth.py").read_text(encoding="utf-8")
+        self.assertIn("NOT MEASURED HERE", source)
+
+
 class SchemaGuardTests(unittest.TestCase):
     """4.10.4: a guard is not verified until it FAILS on a known-bad input."""
 

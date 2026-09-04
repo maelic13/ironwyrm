@@ -17,6 +17,11 @@ It separates the four things the endgame audit requires be kept apart:
   conversion           did the game actually finish inside the node/ply budget.
   game strength        left to a real match; this tool never reports Elo.
 
+The report stamps these as `layers`, and they are not interchangeable: truth
+vetoes absolutely, conversion never establishes strength, and move quality and
+conversion can move in opposite directions on one change. The precedence rules
+and the cases behind them are in `analysis/endgame_measurement_layers.md`.
+
 A played draw is statistical evidence, not theoretical truth: only the
 `theory_*` fields are truth here, and they come from the tablebase.
 
@@ -568,6 +573,16 @@ def main() -> int:
         "hash_mb": args.hash,
         "persistent_tt_per_game": True,
         "workers": args.workers,
+        # Which QUESTION this report answers. See
+        # `analysis/endgame_measurement_layers.md`: this instrument reports
+        # layers 1-3 and never layer 4, so a conversion number from it explains
+        # or refutes a candidate and cannot accept one.
+        "layers": {
+            "1_theory_truth": "first_discard_ply per graded move (Syzygy WDL)",
+            "2_move_quality": "win_preserving_rate and dtz_progress_rate",
+            "3_conversion": "converted / theoretically_won, per position",
+            "4_game_strength": "NOT MEASURED HERE; requires a registered SPRT",
+        },
         "families": {},
     }
 

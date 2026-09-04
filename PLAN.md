@@ -16,7 +16,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.10.5 — measurement-layer contract** |
+| Current step | **4.10.6 — node budget as a first-class run condition** |
 | Instrument state | The endgame truth harness is **defective and under repair**; every pawn-family conversion number is superseded. See `analysis/endgame_truth_instrument_audit_2026-09-04.md` and "Reopened work, 2026-09-04" |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -1094,18 +1094,35 @@ Nothing here changes the engine. These are tooling commits.
    Remaining thinness, recorded rather than papered over: the `kbnk-mate` set
    is 4 positions and the `tb-win`/`tb-draw` sets are 30 and 25. Widening the
    KBNK set belongs to **4.12.21**, which owns that family.
-5. **4.10.5 Measurement-layer contract.** Write
-   `analysis/endgame_measurement_layers.md` and make every instrument state
-   which layer it reports: **theory truth** (per move, tablebase WDL),
-   **move quality** (per move, DTZ progress and win-preservation),
-   **conversion** (per position), **game strength** (per game pair, SPRT at a
-   real TC), with **occurrence** gating whether the first three can ever reach
-   the fourth. Precedence: truth is an absolute veto and outranks conversion;
-   conversion NEVER establishes strength; move quality and conversion can move
-   in opposite directions on one change; strength never overrides truth. Never
-   aggregate across layers -- there is no exchange rate between a truth failure
-   and a conversion gain, and when layers disagree the disagreement is usually
-   the finding. Bench identity belongs to no layer; it is provenance.
+5. **4.10.5 Measurement-layer contract -- DONE.**
+   `analysis/endgame_measurement_layers.md` states the four layers -- **theory
+   truth** (per move, tablebase WDL), **move quality** (per move, DTZ progress
+   and win-preservation), **conversion** (per position) and **game strength**
+   (per game pair, SPRT at a real TC) -- with **occurrence** gating whether the
+   first three can ever reach the fourth, and **drawn-share bias** recorded as
+   the conversion-shaped measurement that is conversion's complement rather
+   than a fifth layer.
+
+   Precedence, each rule carrying its case: truth is an absolute veto and
+   outranks conversion; conversion NEVER establishes strength; move quality and
+   conversion can move in opposite directions on one change; strength never
+   overrides truth; occurrence prioritises and is never evidence of value.
+   Layers are never aggregated -- there is no exchange rate between a truth
+   failure and a conversion gain -- and when two disagree, the disagreement is
+   usually the finding. Bench identity and static fit loss belong to no layer.
+
+   **Stamped, not merely documented.** `endgame_truth.py` writes a `layers`
+   block declaring all four and marking game strength `NOT MEASURED HERE`;
+   `endgame_conversion.py` and `endgame_drawn.py` each stamp their single
+   layer, the latter as `drawn_share_bias` with a note that it plays no games
+   and so is untouched by the RAR-E14 defect. `endgame_floors.py` prints its
+   layer, node budget, ply limit and cohort digest above every verdict. Five
+   tests enforce it, because a contract nothing checks is a wish.
+
+   The document ends with 4.9a.7 worked through all six readings, since that is
+   the step the contract would have saved: read on layer 3 it did nothing, read
+   on drawn-share bias it moved 37.1% -> 25.8%, and the second is the one a
+   SCALE function is validated on.
 6. **4.10.6 Node budget as a first-class run condition.** Record it beside TC,
    threads, hash, book and adjudication in every report. Add a bracket runner so
    a family verdict can be repeated at 60k / 200k / 600k rather than guessed at
