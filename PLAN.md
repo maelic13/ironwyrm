@@ -1,7 +1,9 @@
 # Rarog development plan
 
-Updated 2026-09-01. This is the current roadmap. Historical evidence belongs
+Updated 2026-09-04. This is the current roadmap. Historical evidence belongs
 in `EXPERIMENTS.md`; current status and commands belong in `GUIDE.md`.
+Phase 4's open work was reordered and renumbered on 2026-09-04 after an
+instrument audit; section 13 maps the old numbers to the new ones.
 
 ## 1. Current state
 
@@ -14,9 +16,10 @@ in `EXPERIMENTS.md`; current status and commands belong in `GUIDE.md`.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.9a.9 — KPsK scale; ordering under review, see search-occurrence note** |
-| HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) and endgame closure (4.9a) remain open |
-| Next release | Conditional **2.4.0** after 4.15; baseline NNUE then targets **2.5.0** |
+| Current step | **4.10.1 — repair the endgame-truth termination rule** |
+| Instrument state | The endgame truth harness is **defective and under repair**; every pawn-family conversion number is superseded. See `analysis/endgame_truth_instrument_audit_2026-09-04.md` and "Reopened work, 2026-09-04" |
+| HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
+| Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
 
 Phase 4 remains a bounded pre-NNUE programme because the hybrid established
 large search and HCE populations worth investigating. It is not a commitment
@@ -62,6 +65,36 @@ gating. The following rules determine this roadmap's order.
 9. Two fully implemented clusters in the same track without an accepted gain
    stop implementation and force a new evidence audit.
 10. Engine, tooling and documentation changes remain separate commits.
+11. **State the measurement LAYER.** Theory truth, move quality, conversion and
+    game strength are four different questions with four different units, and
+    occurrence gates whether the first three can ever reach the fourth. Every
+    report names its layer, instrument, node budget and position set. Layers are
+    never aggregated -- there is no exchange rate between a truth failure and a
+    conversion gain -- and when two layers disagree, that disagreement is the
+    finding. Truth vetoes absolutely; conversion never establishes strength;
+    bench identity is provenance and belongs to no layer.
+12. **Node budget is a run condition, not a detail.** Record it beside TC,
+    threads, hash, book and adjudication. Justify a screen budget against the
+    DEPLOYMENT TC by measuring actual nodes/move rather than guessing, and
+    bracket rather than assume: a failure that appears only at a low budget is
+    PROVISIONAL. Prefer nodes to depth for cross-variant work, because equal
+    depth is unequal work once an eval change shifts pruning.
+13. **Split a selection cohort before selecting on it, and register which half
+    decides.** Carry a runner-up into confirmation; the leader can be rejected
+    there. A cohort that has produced a verdict is SPENT for selection and
+    survives only as a VETO, because a safety property is not an estimate.
+    Report a plateau as a plateau: "best of N" without separation from its
+    neighbours is not a winner.
+14. **A term's blast radius is its dispatcher condition's PROMOTION CLOSURE.**
+    Promotion manufactures material, so an argument that a term cannot reach a
+    family is incomplete until under-promotion is considered. Testing only the
+    families the safety argument already excluded proves nothing.
+15. **A guard is not verified until it FAILS on a known-bad input.** Passing on
+    a good input is not evidence. This covers regression anchors, vetoes,
+    floors, drift gates, harness wires and fingerprints; reproduce the original
+    failing conditions exactly, and hash behaviour through an explicit field
+    list rather than whole records. An interim SPRT reading is likewise not
+    evidence, in either direction.
 
 ### Minimum gates
 
@@ -89,7 +122,7 @@ value is a starting point, never a result.
 1. A ported constant is on the DONOR's score scale. RAR-E06 refit Rarog's
    entire HCE, so its centipawn means something different; an imported eval
    weight is in the wrong units by construction.
-2. So a ported constant rides the next fit. Port it, seed it, let 4.10's refit
+2. So a ported constant rides the next fit. Port it, seed it, let 4.14's refit
    cycle move it, and expect the optimum to sit somewhere else.
 3. Nothing about the gates changes. A ported mechanism still passes the same
    conversion floors, theory vetoes and registered SPRT as one written here.
@@ -122,10 +155,10 @@ named step or removed:
 
 | Owner | Retained surface |
 |---|---|
-| 4.11 | TT provenance consumers and raw/pruning/searched evaluation separation |
-| 4.13 | Unconsumed continuation/capture correction and history alternatives |
-| 4.13 or removal | NMP/IIR/singular provenance alternatives; extensions remain a measured null |
-| 4.12 | `SelectivityProspectiveDepth` and cp-valued margins whose populations move under the fitted HCE |
+| 4.15 | TT provenance consumers and raw/pruning/searched evaluation separation |
+| 4.18 | Unconsumed continuation/capture correction and history alternatives |
+| 4.18 or removal | NMP/IIR/singular provenance alternatives; extensions remain a measured null |
+| 4.16 | `SelectivityProspectiveDepth` and cp-valued margins whose populations move under the fitted HCE |
 | 8.0 | `RootConfPoolInstability`, `SmpIterationSkip` and high-thread ownership |
 
 ## 4. Phase 4 — strongest bounded pre-NNUE search and HCE
@@ -155,7 +188,7 @@ converts less. Those remain high-value search questions, but Basilisk showed
 that an HCE refit can materially move qsearch share while leaving other search
 counters stable. Since Rarog's HCE population is larger and its complete
 parameter surface has not been requalified, HCE qualification/refit is now
-4.7–4.10 and the search-authority decision follows on the accepted HCE at 4.11.
+4.7–4.14 and the search-authority decision follows on the accepted HCE at 4.15.
 
 ### Completed steps
 
@@ -245,7 +278,7 @@ protection. The comment recording `0/3,460 at Threads=1` no longer holds at
 this concurrency.
 
 **4.2b.1 — done.** The diagnosis above closes this step. It is a measurement,
-not a repair: every fix it implies is owned by **4.12a**, because a change to
+not a repair: every fix it implies is owned by **4.17**, because a change to
 a time-management default alters playing behavior and takes its own gate.
 
 ### HCE maturity conclusion
@@ -358,7 +391,7 @@ audits, classifies every existing family. It licenses the complete current
 surface fit, not a Stockfish feature port. Missing richer king, conversion,
 passer/threat and winnability conditionality remains post-fit structural
 residue. Raw/lazy/corrected/qsearch/depth-N search interaction is intentionally
-measured at 4.11 on the accepted HCE, because this fit can move those
+measured at 4.15 on the accepted HCE, because this fit can move those
 populations.
 
 ### 4.8 Refit the complete existing HCE surface — GAME GATE NEXT
@@ -493,7 +526,7 @@ behaviour above is the sparse-cut contract working as specified.
 
 2. **4.8a.2 Removal -- no cluster exists.** The three zeroed terms are inert --
 they multiply by zero -- so deleting their code is behavior-neutral and
-provable by the exact fingerprint, not a strength question. **4.13.2 owns that removal, not a gate.** One caveat for
+provable by the exact fingerprint, not a strength question. **4.18.2 owns that removal, not a gate.** One caveat for
 whoever does it: `eval.rs`'s `new_terms_activate_on_curated_positions` asserts
 that `passed_freestop_eg_per_rank` still *traces*, which it does even at a
 zero coefficient. Deleting the feature breaks that test, so the test's
@@ -560,7 +593,7 @@ For each cluster:
 Two fully fitted cluster failures close structural expansion and force a 4.7
 re-audit; they do not authorize more feature inventory.
 
-### 4.9a Endgame conversion and reference-function closure
+### 4.9a Endgame truth foundation -- DONE, partially REOPENED
 
 **Why this is in Phase 4, not Phase 5.** It was placed in Phase 5 on
 2026-09-01 by following Basilisk's phase layout, which is not a reason. Three
@@ -568,14 +601,16 @@ Rarog-specific facts put it here:
 
 1. These are HCE value and scale functions. Phase 4 is the phase that owns the
    HCE; Phase 5 is the NNUE runway and is required to be behavior-neutral.
-2. 4.15 releases 2.4.0. Shipping a release that converts KBNK at 15% and then
+2. 4.20 releases 2.4.0. Shipping a release that converts KBNK at 15% and then
    fixing it afterwards is the wrong order.
-3. 4.10 consolidates the whole HCE after the last structural change. If
-   endgame structure landed in Phase 5, 4.10 would be invalidated and a second
+3. 4.14 consolidates the whole HCE after the last structural change. If
+   endgame structure landed in Phase 5, 4.14 would be invalidated and a second
    whole-surface consolidation would have to be paid for.
 
-Phase-4 step numbers 4.10-4.15 are cited in `EXPERIMENTS.md` and in commit
-messages, so this enters as `4.9a` rather than renumbering them.
+This block keeps its `4.9a` numbering because `EXPERIMENTS.md`, `TRACKER.md`
+and commit messages cite it. The OPEN work that used to live here was
+renumbered on 2026-09-04 into 4.10-4.13 and 4.14-4.20; section 13 maps the old
+numbers to the new ones. Completed leaves are never renumbered.
 
 `analysis/endgame_conversion_audit_2026-09-01.md` is the baseline. Its
 original table measured the pre-refit source; it has been re-run on the
@@ -598,8 +633,8 @@ two structural clusters does not apply: that cap bounds speculative feature
 addition against residual signals, while this is defect repair against a
 measured conversion failure and an explicit reference inventory.
 
-The sub-steps are numbered in the order they are worked, so the GUIDE list can
-be run top to bottom.
+The 4.9a sub-steps below are the completed record and are no longer the working
+order; 4.10 through 4.13 are. The GUIDE list is still run top to bottom.
 
 **The order is set by a feedback loop, not by convenience.** Self-play labels
 depend on the engine's own conversion ability, which depends on the evaluator,
@@ -609,19 +644,20 @@ act on it, and they decide the sequence:
 - **Below 7 men, Syzygy is an external anchor** -- truth that does not depend
   on Rarog at all. That is what RAR-E08 decides how to use, and it is the only
   non-circular input available.
-- **Above 7 men nothing anchors it**, so iteration is genuinely required. 4.10's
+- **Above 7 men nothing anchors it**, so iteration is genuinely required. 4.14's
   mandated refit loop is where that is paid for; it is not a design failure.
 
 The consequence is that **conversion improvements must precede data
 regeneration**, because they improve the engine that produces the next round of
-labels. So 4.9a runs label-independent work first (4.9a.2-4.9a.4), fixes the
-label contract (4.9a.5), regenerates (4.9a.6), and only then fits families.
+labels. So 4.9a ran label-independent work first (4.9a.2-4.9a.4), fixed the
+label contract (4.9a.5) and regenerated (4.9a.6); 4.12 fits families only after
+4.10 repairs the instrument and 4.11 re-measures what it produced.
 Each turn of the loop then starts from a better generator rather than
 re-deriving the same weakness. The bracketed `ref N` is the item's identity in the
 20-function reference inventory, which is a different ordering and is preserved
 so nothing is lost when the two are compared.
 
-- **4.9a.1 Truth corpus -- DONE.** `tools/diag/endgame_truth.py` grades every
+- **4.9a.1 Truth corpus -- DONE; instrument REOPENED, see below.** `tools/diag/endgame_truth.py` grades every
   strong-side move against Syzygy rather than every game against the clock,
   which is what fixes the +/-3.5 pp resolution problem of a 100-game
   conversion rate. Artifact
@@ -655,7 +691,7 @@ so nothing is lost when the two are compared.
   **This book is an instrument, never training data.** Its positions are
   uniformly sampled rather than drawn from play, so feeding them to a fit would
   reweight the corpus toward a distribution the search never sees.
-- **4.9a.3 Regression contract -- DONE.** The contract has two halves and they
+- **4.9a.3 Regression contract -- DONE; floors half REOPENED, see below.** The contract has two halves and they
   need opposite treatment: correctness is absolute, statistics are not.
 
   **Hard vetoes, in `tests/endgames.rs`.** Two EPD verdicts backed by 64
@@ -685,7 +721,7 @@ so nothing is lost when the two are compared.
   movement, accept or reject in context, and never require every position to
   keep the same PV or mate length.
 
-- **4.9a.4 Mate-drive cluster -- DONE, candidate unregistered.** RAR-E10.
+- **4.9a.4 Mate-drive cluster -- DONE; isolation accounting REOPENED, see below.** RAR-E10.
   KBN-K **19.4% -> 96.9%**, KBB-K **78.0% -> 100.0%**, `bench 13` unchanged at
   7,226,051 / 2.460, floors ratcheted. Three axes were needed -- resolution,
   magnitude and ratio -- and the ratio was nearly missed: the diagonal shape
@@ -737,8 +773,15 @@ so nothing is lost when the two are compared.
 
   Conversion cost, resolved at n=400: KBN-K's -5.1 pp at n=100 was noise
   (+0.5 pp, SE 1.5), and the one real regression is **KQ-KP -3.8 pp at 2.9 SE**
-  -- owner 4.9a.14, retry at 4.9a.27. Aggregate weighted conversion is flat,
-  83.24% -> 83.45%.
+  -- owner **4.12.9**, retry at **4.12.22**. Aggregate weighted conversion is
+  flat, 83.24% -> 83.45%.
+
+  **SUPERSEDED, 2026-09-04.** Every conversion figure in this paragraph came
+  from the defective truth instrument; 83.45% is the arm whose corrected upper
+  bound is 92.35%. The Elo verdict is unaffected -- fastchess played those
+  games, not this harness -- and so is the adoption. The conversion numbers are
+  re-derived at 4.11.10, including whether the KQ-KP regression survives at
+  all. Text left in place as the historical record.
 
 - **4.9a.6 Regenerate on the winning contract.** Only after RAR-E08 reports.
   Hash-freeze under a new name; never edit `hce-v2` in place, since it is the
@@ -801,134 +844,440 @@ so nothing is lost when the two are compared.
   count, a crossed pair and the untested `datagen-v3` (`ec34a34`).
 
 
-- **4.9a.7 through 4.9a.26 -- the 20 reference functions, in working order.**
-  Audit, implement where absent, and test each one. The reference set is 20,
-  not 18: Stockfish 11 carried 22 and `KNPK`/`KNPKB` were later removed, while
-  current NNUE Stockfish and Reckless no longer provide a comparable
-  dispatcher, so the final pre-NNUE Stockfish table is the reference.
-  Reference code supplies cases, failure modes and seed constants (see the
-  independence boundary in section 2; a seed is not a result).
-  Each item records whether coverage is full, partial or absent and adds its
-  theory/Syzygy tests and conversion or drawn-subset cohort.
+- **4.9a.7 KRPKR scale -- DONE; its conversion framing is REOPENED.** The
+  DRAWN-cohort result stands and is the result the step was actually about: the
+  share of theoretically drawn KRP-KR positions scoring above +100 cp fell
+  **37.1% -> 25.8%**, measured by `tools/diag/endgame_drawn.py`, which plays no
+  games and is untouched by the instrument defect. Only the reference's DRAW
+  branches were ported; its two winning branches amplify above the neutral 64
+  and an untested amplifier against a Texel-fitted surface is not something a
+  drawn cohort can measure. The step is bench-VISIBLE (8,044,078 -> 6,901,489)
+  because a depth-13 search reaches rook endings constantly, unlike 4.9a.4.
 
-  **The order is by expected value -- occurrence times defect -- not by
-  drama.** RAR-M15 measured occurrence in real games and 4.9a.1 measured
-  conversion, and the product reorders the list sharply: KRPKR converts 52% at
-  10.04% of games while KBNK converts 7% at 0.28%, so KRPKR is worth about
-  36 times more attention despite being the less alarming number. KBNK
-  therefore sits at 4.9a.18, and its actual mechanism is addressed earlier and
-  separately at 4.9a.4.
+  **What is reopened is the conversion framing, not the mechanism.** The claim
+  "52% conversion is not the defect, Stockfish manages only 47.9%" compared
+  Rarog's 52% from `hce-accepted` with Stockfish's 47.9% from `reference-sf18`,
+  two artifacts sharing **zero of 1,900 positions**, and both arms aborted 62 of
+  100 KRP-KR games on correct rook-for-rook technique. The same-set pair is
+  49.3% against 47.9%. Re-derived at 4.11.3.
 
-  | Step | Function | ref | Coverage | Conversion | Occurrence |
-  |---|---|---:|---|---:|---:|
-  | 4.9a.7 | KRPKR | 13 | absent | 52% | 10.04% |
-  | 4.9a.8 | KRPKB | 14 | absent | 56% | 1.23% |
-  | 4.9a.9 | KPsK | 16 | absent | - | 4.19% |
-  | 4.9a.10 | KPK | 5 | present bitbase | 95% | 2.84% |
-  | 4.9a.11 | KRKP | 6 | partial | 93% | 2.40% |
-  | 4.9a.12 | KBPsK | 11 | partial | - | 1.92% |
-  | 4.9a.13 | KPKP | 20 | absent | 94% | 1.23% |
-  | 4.9a.14 | KQKP | 9 | partial fortress | 96% | 1.17% |
-  | 4.9a.15 | KBPKB | 17 | absent | 81% | 0.89% |
-  | 4.9a.16 | KBPPKB | 18 | absent | 79% | 0.66% |
-  | 4.9a.17 | KRKN | 8 | absent | 83% | 0.61% |
-  | 4.9a.18 | KRKB | 7 | absent | 94% | 0.51% |
-  | 4.9a.19 | KBPKN | 19 | absent | 79% | 0.28% |
-  | 4.9a.20 | KNNKP | 2 | absent | 15% | 0.05% |
-  | 4.9a.21 | KNNK | 1 | present | drawn 100/100 | 0.03% |
-  | 4.9a.22 | KQKR | 10 | absent | 83% | **0%** |
-  | 4.9a.23 | KQKRPs | 12 | absent | - | **0%** |
-  | 4.9a.24 | KRPPKRP | 15 | absent | - | **0%** |
-  | 4.9a.25 | KXK | 3 | present | 94/91/86% | 37.34% |
-  | 4.9a.26 | KBNK | 4 | present | **7%** | 0.28% |
+- **4.9a.8 KRPKB scale -- DONE; its conversion framing is REOPENED.** Same
+  disposition. The drawn cohort's overclaim was 0.9574 before and after and only
+  the mean moved, +347.2 -> +324.4; the reference addresses only ROOK pawns and
+  returns partial scales, so a +350 evaluation scaled by 24/64 is still +131.
+  The mechanism was asserted directly (`Some(24)` on a verified fortress, `None`
+  on a non-rook pawn) because a narrow-mechanism null and a dead-wire null are
+  indistinguishable in an aggregate -- that part of the design is sound and is
+  the pattern later steps should copy. Its 95.7% residual overclaim at mean +347
+  reads as material-imbalance pricing of rook-and-pawn against bishop rather
+  than a missing recognizer, and is assigned to **4.12.22**.
 
-  **4.9a.7 (KRPKR) is done, and it reframed what these steps measure.** Its
-  headline "52% conversion" is not the defect: RAR-E11 had already measured
-  Stockfish converting the family at 47.9% at the same node budget, so the
-  reachable mark was four points away, not fifty-five. The real defect was the
-  complementary cohort -- **37.1% of theoretically DRAWN KRP-KR positions scored
-  above +100 cp** -- which is what a SCALE function governs and what
-  `tools/diag/endgame_drawn.py` was built to measure. After the change: 25.8%,
-  with conversion unchanged at 0.452 and win-preservation improved to 0.9928.
+**The rest of 4.9a moved.** The twenty reference functions, their gates and
+their closure were 4.9a.9-4.9a.28; they are now **4.12**, behind the instrument
+repair (4.10) and the re-measurement (4.11) that decide their order. The two
+regressions owned inside that list travel with it: RAR-E08's **KQ-KP -3.8 pp**
+and RAR-E12's **KBN-K dtz 0.7260 -> 0.6753**. Both were quoted from the
+defective instrument and are re-derived at 4.11.2 and 4.11.10 before their
+owning leaves act on them.
 
-  **So a scale step is measured on the drawn cohort, and a value/mate step on
-  conversion.** Reading a scale function's success off a conversion number will
-  show it doing nothing, correctly and uselessly.
+### Reopened work, 2026-09-04
 
-  Only the reference's DRAW branches were ported. Its two winning branches
-  return above the neutral 64 and therefore amplify the score, and an untested
-  amplifier interacting with a Texel-fitted surface is not something the drawn
-  cohort can measure.
+`analysis/endgame_truth_instrument_audit_2026-09-04.md` found three defects in
+the endgame instrument and one in the mate drive's isolation argument. Reopened
+leaves keep their numbers and are marked `REOPENED` in `GUIDE.md`; a reopened
+leaf is exempt from roadmap ORDERING, never from being open.
 
-  **4.9a.7 is bench-VISIBLE** (8,044,078 -> 6,901,489), unlike 4.9a.4, because a
-  depth-13 search reaches rook endings constantly. That difference is itself a
-  free measurement: the bench delta indicates how reachable a family is in the
-  SEARCH TREE, which is a different quantity from RAR-M15's occurrence on the
-  board, and the ordering of this list uses only the latter. Worth checking
-  before the back half of the list is worked.
+- **4.9a.1 (truth corpus) -- REOPENED.** `endgame_truth.py` ended a playout the
+  moment the strong side's piece count dropped. Shedding material is the winning
+  method in most pawn technique. On the arm PLAN's numbers come from, the abort
+  fired **264 times; 129 on clean wins, and 122 of those before the engine had
+  played a single non-win-preserving move**, at a median abort ply of 5-20.
+  Aggregate conversion 0.8345 has an upper bound of 0.9235 once corrected.
+  Repaired at 4.10.1, re-measured at 4.11.1.
+- **4.9a.3 (regression contract) -- REOPENED, floors half only.** The 64 frozen
+  theory vetoes in `tests/endgames.rs` are static verdicts, play nothing and
+  stand. The aggregate floors do not: their pawn-family conversion values are
+  depressed by the abort and so are lenient exactly where 4.12 works next, and
+  the run that produced the current `endgame_floors.json` **exists nowhere** --
+  `tools/results/` is gitignored and no artifact on disk carries its numbers.
+  Re-derived at 4.11.2.
+- **4.9a.4 (mate drive) -- REOPENED, isolation accounting only.** The measured
+  gain stands and is unaffected: in all six bare-king families any strong-side
+  material loss reaches an insufficient-material position, which is tested one
+  line earlier, so the abort is unreachable there by construction and zero
+  `material_lost` outcomes appear in those families across all ten artifacts.
+  What does not stand is the isolation ARGUMENT. RAR-E10 recorded "15 of 19
+  families exactly unchanged"; per-position comparison of the same two artifacts
+  gives **13 of 19**, and the change reaches **KBB-K, KBN-K, KPP-K, KBP-K,
+  KBP-KB and KBP-KN** -- the last two each losing one conversion. The route is
+  knight promotion: the dispatcher fires on a bare losing king with no pawn,
+  rook or queen for the winner, and under-promotion manufactures exactly that
+  material. A term's blast radius is its dispatcher condition's **promotion
+  closure**, not the condition. Re-accounted at 4.11.9.
+- **4.9a.7 and 4.9a.8 -- REOPENED, conversion half only.** As above.
 
-  **4.9a.8 (KRPKB) is done and measured a near-null, which is recorded as a
-  result rather than a failure.** The drawn cohort's overclaim was 0.9574
-  before and after; only the mean moved, +347.2 -> +324.4. The reference
-  addresses only ROOK pawns -- a quarter of the cohort at most -- and returns
-  partial scales, so a +350 evaluation scaled by 24/64 is still +131. The
-  mechanism was asserted directly (`Some(24)` on a verified fortress, `None` on
-  a non-rook pawn) because a narrow-mechanism null and a dead-wire null are
-  indistinguishable in an aggregate. **Its 95.7% residual overclaim at mean
-  +347 is assigned to 4.9a.27**: on a family where the reference offers almost
-  nothing, that reads as material-imbalance pricing of rook-and-pawn against
-  bishop, not as a missing recognizer.
+Deliberately NOT reopened, with reasons, so this is not relitigated later:
 
-  **The ordering of this list is under review.**
-  `analysis/endgame_search_occurrence_2026-09-03.md` measured search-tree
-  occurrence per family and it disagrees sharply with the board occurrence used
-  here. KRPPKRP and KQKRPs, both listed at 0% and deferred to the end, are the
-  two MOST frequent in the tree at 5.88% and 4.41%; KXK is 37.34% of games and
-  0.22% of the tree. **KQKRPs is the one actionable disagreement** -- five men,
-  fully verifiable, second in the tree, sitting at 4.9a.23. KRPPKRP tops the
-  tree list and stays deferred for an honest reason rather than a wrong one: at
-  seven men the tablebases cannot verify it at all.
+- **4.9a.2 (endgame cohort book)** probes every position before writing it and
+  plays nothing. It is untouched. What it does owe is 4.10.7's development /
+  held-out split, which is new work rather than a defect.
+- **4.9a.5 (RAR-E08)** is a game verdict decided by fastchess, not by this
+  harness. Only its conversion-cost side note is contaminated, and that is
+  corrected in place at 4.11.10.
+- **4.9a.6 (corpus regeneration)** did not use the playout instrument. Its label
+  contract is nonetheless questioned from a different direction at 4.13, on
+  evidence the corpus itself will supply at 4.11.8.
+- **Every SPRT in the ledger.** Games were played by fastchess; this instrument
+  never touched them.
+- **`endgame_drawn.py` and every drawn-cohort number**, including 4.9a.7's
+  37.1% -> 25.8%. It evaluates statically and plays nothing.
 
-  **Two recorded regressions are owned inside this list and must not be lost.**
-  RAR-E08 cost KQ-KP 3.8 pp of conversion, owned by **4.9a.14**. RAR-E12 cost
-  KBN-K dtz progress 0.7260 -> 0.6753 at -4.4 SE, owned by **4.9a.26**, whose
-  acceptance target is to restore 0.7260. Neither blocks the families ahead of
-  it, and neither was measurable by the gate that caused it -- KBN-K occurs in
-  0.28% of games, so the 7,388-game RAR-E12 gate held perhaps twenty. That is
-  the whole reason the floors instrument exists alongside the SPRT.
+### 4.10 Instrument integrity and tooling upgrade
 
-  **KXK and KBNK sit last because their mechanism is handled at 4.9a.4, not
-  because they are unimportant.** They share one defect -- a corner-drive
-  gradient of 8 cp per corner step and 4 cp per king-distance step, against the
-  100-500 cp pruning margins that must not swallow it -- so one change fixes
-  both, and KXK's 37.34% occurrence makes the bundle the most gateable item in
-  the whole endgame programme, which KBNK's 0.28% never could be. Their entries
-  here are verification and closure, not fresh work.
+**This runs first, before any re-measurement and before any further endgame
+work.** Every verdict in 4.11-4.13 is read through these tools, and the failure
+that produced this step is the one AGENTS.md names as the dominant one: the
+check that was run did not check what it was thought to check. Basilisk found
+the same defect independently and its correction moved a 770-position baseline
+by 68 positions; Rarog's own numbers are in
+`analysis/endgame_truth_instrument_audit_2026-09-04.md`.
 
-  **KRPPKRP (4.9a.24) cannot be verified locally at all.** It is seven men and
-  the tables stop at six, and RAR-M15 found it occurring zero times in 3,915
-  real games -- so it is reachable neither by sampling play nor by verified
-  construction. Record it as a gap; do not close it on unverified positions.
+Nothing here changes the engine. These are tooling commits.
 
-  Rarog's present meaningful coverage is 7/20. Generic insufficient-material
-  and OCB logic are retained useful extras, not substitutes for this closure.
-- **4.9a.27 Dependency-complete family gates, tiered by occurrence.** Group
-  mutually dependent value, scale, search-guidance and generic HCE terms and
-  refit every materially covariant current parameter. Do not freeze historical
-  parameters and do not SPRT each recognizer alone. RAR-M15's tiers decide what
-  can accept a change: tier 1 (>2% of games) takes a normal no-adjudication
-  STC SPRT; tier 2 (0.5-2%) an endgame-start cohort; tiers 3 and 4 accept on
-  theory, Syzygy WDL and DTZ progress with the whole-match run demoted to a
-  loss-permitting `[-1.75, 0.25]` no-regression check, because a change
-  confined to 0.28% of games cannot produce a detectable whole-match Elo at any
-  budget this project has.
-- **4.9a.28 Closure.** All 20 reference functions present or excluded with a
-  recorded theory-backed reason, their hard tests passing, aggregate floors
-  materially improved, and accepted families transferring through STC/LTC plus
-  an explicit endgame-start cohort. Archive the exact harness and defects so
-  the NNUE path does not erase classical fallback knowledge.
+1. **4.10.1 Truth-instrument termination rule.** Replace the material abort in
+   `endgame_truth.py` with a TABLEBASE-TRUTH stop: keep playing unless the
+   position stops being a clean win, and record the material-shed ply as a
+   DIAGNOSTIC field. `first_discard_ply` already carries the truth signal.
+   Leave `endgame_conversion.py` alone -- it covers only bare-king families,
+   has no insufficient-material test of its own, and there `material_lost` is
+   doing that job correctly.
+2. **4.10.2 Cohort identity.** Every truth report carries a cohort fingerprint
+   -- family list, seed, positions per family and a SHA-256 over the FEN
+   sequence -- and `endgame_floors.py` plus any paired comparison REFUSES to run
+   across differing fingerprints. This is not hypothetical: three artifacts on
+   disk share zero of 1,900 positions with the current generator, one of them is
+   the artifact PLAN cited as the baseline, and the floors tool compared across
+   them while its own comment asserted the two runs shared positions. Freeze by
+   CONTENT, never by commit SHA.
+3. **4.10.3 Parallel playout.** Add fixed-index sharded workers to
+   `endgame_truth.py`. Worker count must change wall time and nothing else:
+   assert byte-identical output against a serial run in the test suite. The
+   re-measurement in 4.11 is otherwise a serial afternoon per arm.
+4. **4.10.4 Prove the guards fire.** Every floor, veto, anchor and gate must be
+   shown to FAIL on a known-bad input, not merely to pass on a good one. Three
+   specific obligations, each from a guard that silently did not work: a
+   regression anchor must reproduce the ORIGINAL conditions exactly (same node
+   budget, no depth cap, one table persisting across the game) or it passes
+   under the very vector it was written to catch; a drift gate must be re-tested
+   with a perturbation guaranteed not to be a no-op; and a frozen fingerprint
+   must hash an explicit FIELD LIST, because hashing whole records makes every
+   fingerprint unreachable the moment a diagnostic field is added. Add a
+   thin-sample refusal so a statistic over a tiny eligible set reports
+   emptiness rather than 0.0%.
+5. **4.10.5 Measurement-layer contract.** Write
+   `analysis/endgame_measurement_layers.md` and make every instrument state
+   which layer it reports: **theory truth** (per move, tablebase WDL),
+   **move quality** (per move, DTZ progress and win-preservation),
+   **conversion** (per position), **game strength** (per game pair, SPRT at a
+   real TC), with **occurrence** gating whether the first three can ever reach
+   the fourth. Precedence: truth is an absolute veto and outranks conversion;
+   conversion NEVER establishes strength; move quality and conversion can move
+   in opposite directions on one change; strength never overrides truth. Never
+   aggregate across layers -- there is no exchange rate between a truth failure
+   and a conversion gain, and when layers disagree the disagreement is usually
+   the finding. Bench identity belongs to no layer; it is provenance.
+6. **4.10.6 Node budget as a first-class run condition.** Record it beside TC,
+   threads, hash, book and adjudication in every report. Add a bracket runner so
+   a family verdict can be repeated at 60k / 200k / 600k rather than guessed at
+   one budget. **Measure Rarog's actual nodes/move at the deployment TC** rather
+   than assuming: the screen budget must be justified against it, and a failure
+   that appears only at low budget is PROVISIONAL. Prefer nodes to depth for
+   cross-variant work -- equal depth is unequal work once an eval change shifts
+   pruning, and favours whichever side prunes harder.
+7. **4.10.7 Held-out confirmation tooling.** A selection cohort splits into
+   development and held-out halves BEFORE any candidate runs, and which half
+   decides is registered in advance. Implement the paired verdict properly:
+   McNemar paired z on the shared positions, control fingerprints, a
+   pre-registered verdict policy, and a **runner-up slot carried into
+   confirmation** -- a leader can be rejected on held-out data and the runner-up
+   is what keeps the step from ending with nothing. A cohort that has produced a
+   verdict is SPENT for selection; it stays valid as a VETO, because a safety
+   property is not an estimate. Report plateaus honestly: "best of N" without
+   separation from its neighbours is a plateau, not a winner.
+8. **4.10.8 Datagen label audit.** `tools/diag/datagen_label_audit.py`: walk a
+   PGN corpus, probe every position within the table man-limit, and report the
+   share of tablebase clean wins the game did not win. Two details the count
+   depends on -- probe only to the man-limit actually present, and EXCLUDE
+   cursed wins, which are already drawn under the fifty-move rule and are not
+   evidence of weak play. Deterministic sharding so parallel output is
+   byte-identical to serial.
+9. **4.10.9 Gate-runner provenance.** The gate runner refuses to start on a
+   wrong revision, a dirty tree or mismatched benches, and records binary
+   SHA-256, compiler, PGO status, book, TC, hash, threads, affinity,
+   adjudication and node budget. Two rules it enforces rather than documents:
+   score adjudication stays OFF for any endgame-eval change, because the
+   candidate's own scores would help decide the games judging it; and an
+   adjudicated run is NEVER pooled with a natural-termination one, since two
+   sampling processes with different draw rates bias the pooled estimate by the
+   mixing ratio. Never resume an SPRT after the candidate, either engine's
+   options, book, TC, adjudication policy or hardware changed -- start a new
+   experiment ID. **An interim SPRT reading is not evidence**: a -4.29 +/- 6.06
+   at 28% of the way to a bound recovered to -1.40 +/- 4.07 by 7,720 games.
+   **Build speed is a real confound**: two separately built binaries can differ
+   by ~1% in NPS with no behavioural cause, worth a couple of Elo at fast TC, so
+   measure parity on an IDLE machine with INTERLEAVED repeats -- a first attempt
+   contaminated by a concurrent job had to be redone. Identical bench proves the
+   SEARCH identical; it never proves the speed.
+10. **4.10.10 Roadmap checker.** Extend `check_guide.py` with an explicit
+    `REOPENED` marker. It exempts a leaf from ORDERING only -- a measurement
+    defect can invalidate an early step after later ones close -- never from
+    being open; it refuses to sit on a ticked item; and it requires GUIDE and
+    PLAN to agree, so an accidental un-tick still fails. Also close the gap
+    found while writing this section: GUIDE listed five sub-steps for a
+    seven-sub-step PLAN item and nothing caught it, so the checker must compare
+    the two step SETS, not just membership.
+11. **4.10.11 Shipped-constant guards.** A safety bound on a shipped constant
+    must be a compile-time assertion in EVERY build type, not a check inside an
+    option-setter that only tuning builds compile. The mop-up drive's maximum
+    (`MOPUP_DIAGONAL * 7 + MOPUP_KING_CHEB * 7 + MOPUP_KING_MAN * 14`) must be
+    provably below the search's mate band. Where the bound depends on a constant
+    owned by another module and that dependency is unwanted, keep the value next
+    to its consumer and tie the two together with an assertion in a test that
+    legitimately includes both. Then verify BOTH assertions fire.
+12. **4.10.12 Build-configuration audit.** Every module must compile under every
+    shipped feature combination, and `--all-features` is not the configuration
+    under test -- it enables `texel`, which bypasses the eval and pawn caches
+    and must never be measured. Add a feature-matrix check to CI so a
+    configuration that only builds transitively cannot ship, and re-verify on
+    every toolchain and platform released.
 
-### 4.10 Iterated no-adjudication refit cycles
+### 4.11 Re-measurement and re-derivation
+
+Nothing in 4.12 onward may be ordered or gated on a number produced by the old
+instrument. This step re-measures what the repair invalidates and re-derives
+everything computed from it. Corrections are recorded IN PLACE: superseded text
+is marked superseded rather than rewritten, and experiment identifiers are
+stable.
+
+1. **4.11.1 Re-run both truth arms.** The accepted head and the same Stockfish
+   binary, under the recorded conditions -- 60,000 nodes/move, one thread, 16 MB
+   hash, 100-ply limit, engine tablebases disabled, no adjudication -- with both
+   binaries verified by SHA-256 and `--per-position` on, so **only the
+   termination rule differs**. Re-running one arm against the other's old
+   artifact would be worse than leaving the numbers alone. The reference arm has
+   no per-position records at all, so it cannot be re-analysed, only re-run.
+2. **4.11.2 Re-derive the floors.** Rebuild `endgame_floors.json` from the
+   corrected head arm and give it a cohort fingerprint. Restate 4.12.21's KBN-K
+   dtz target on an artifact that exists; the 0.7260 currently recorded has no
+   reproducible source.
+3. **4.11.3 Re-derive the attained reference results.** Replaces RAR-E11 per
+   family, with the paired matrix -- both converted, candidate only, reference
+   only, neither. Name it an **attained reference result**, never a ceiling:
+   it is what one engine managed at one budget, Rarog may exceed it, and failing
+   to equal it is not by itself a rejection. Expect the "neither converted"
+   bucket to collapse; most of it was two aborted games.
+4. **4.11.4 Re-rank the reference-function list.** Order 4.12 by expected value
+   on CORRECTED inputs: conversion deficit against the attained reference
+   result, drawn-share bias, and occurrence. The current order is by board
+   occurrence times a defective conversion number, and
+   `analysis/endgame_search_occurrence_2026-09-03.md` already disagrees with it
+   sharply. Register the resulting order before working the list.
+5. **4.11.5 Budget transfer.** Repeat the decisive family verdicts at
+   60k / 200k / 600k nodes. A verdict that does not reproduce at a
+   game-representative budget is provisional: Basilisk rejected its leading
+   candidate at 60,000 nodes on a losing move that a 200,000-node search sees.
+6. **4.11.6 Occurrence census with endgame roots excluded.** The census suite
+   must exclude endgame roots or the number is an artifact of the suite -- the
+   same measurement read 47.9% unrestricted and zero on non-endgame roots.
+   Report both, and note that a family absent from middlegame trees can still
+   occur inside four-man endgame trees. Occurrence PRIORITISES; it is never
+   evidence of value.
+7. **4.11.7 Drawn-share bias census.** Per material class, compare the share of
+   games actually drawn against the evaluator's own prediction. This is a
+   cheaper and sharper prioritiser than conversion counts, and it is what
+   identified rook endings as systematically overclaimed. Rarog already has
+   `endgame_drawn.py` for a single family; generalise it across the corpus.
+8. **4.11.8 Datagen label audit on the existing corpora.** Run 4.10.8 against
+   `hce-v2` and `hce-v3-tb`. If two corpora exist at different node budgets the
+   budget comparison is free. This is the input 4.13 needs and it costs no
+   games.
+9. **4.11.9 Mate-drive blast radius.** Re-run 4.9a.4's non-regression accounting
+   over the PROMOTION CLOSURE of its dispatcher condition rather than over
+   families the safety argument had already excluded. The measurement is done
+   and is recorded above: six families change, not two, and KBP-KB and KBP-KN
+   each lost one conversion. What remains is to decide whether those two count
+   as debt, and to write the closure rule into the family template so the next
+   recognizer states which families reach it by promotion -- or tests all of
+   them and lets the data name them.
+10. **4.11.10 Corrections in place.** Restate RAR-E08's "aggregate weighted
+    conversion 83.24% -> 83.45%", RAR-E12's "0.8345 -> 0.8477", RAR-E11 in full,
+    and the KQ-KP -3.8 pp debt, against the corrected instrument. Mark the
+    originals superseded; do not delete them and do not renumber the
+    experiments.
+
+### 4.12 Endgame reference functions (was 4.9a.9-4.9a.28)
+
+Audit, implement where absent, and test each of the twenty reference functions.
+The set is 20, not 18: Stockfish 11 carried 22 and `KNPK`/`KNPKB` were later
+removed, while current NNUE Stockfish and Reckless no longer provide a
+comparable dispatcher, so the final pre-NNUE Stockfish table is the reference.
+Reference code supplies cases, failure modes and seed constants; a seed is not a
+result. Rarog's present meaningful coverage is 7/20.
+
+**Five rules govern this list, and each was learned the expensive way.**
+
+- **Recognizers and scale functions are validated by different instruments.**
+  KRPKR, KRPPKRP, KBPKB, KPKP, KPsK, KBPsK, KQKRPs, KBPPKB and KBPKN are
+  SCALING functions -- they express drawishness -- and are validated by
+  drawn-share bias and SPRT, needing no tablebase truth for that family at all.
+  KXK, KBNK, KPK, KRKP, KRKB, KRKN, KQKP, KQKR, KNNK and KNNKP are VERDICTS and
+  are validated on conversion and theory truth. Reading a scale function's
+  success off a conversion number shows it doing nothing, correctly and
+  uselessly -- which is exactly what 4.9a.7 nearly concluded.
+- **A term's blast radius is its dispatcher condition's PROMOTION CLOSURE.**
+  Promotion manufactures material, so a term keyed on "no pawn, rook or queen
+  for the winner" is reachable from any pawn family through under-promotion.
+  State which families reach a term by promotion and include them, or test all
+  twenty-one and let the data name them. Rarog's own mate drive reaches six
+  families this way (4.11.9).
+- **A guidance gradient has a FLAT MAXIMUM in whatever it does not
+  reference.** Rarog's mate drive scores the two kings and the bishop's colour
+  and nothing else, so among moves that leave the losing king on the same
+  diagonal it is indifferent to where the bishop and knight stand -- and the
+  search tiebreak among equal-scoring moves can then pick a losing one. That is
+  exactly RAR-E10's recorded residue: four positions where the engine gives away
+  a minor. Check what a drive is blind to before adding weight to what it
+  already sees.
+- **DTZ slack confounds cross-family conversion comparison.** An eligibility cut
+  equalises FEASIBILITY, not MARGIN: a DTZ-10 root in a 50-halfmove budget has
+  40 spare and a DTZ-50 root has none. Compare within family, or match slack.
+- **Condition on family before believing a cross-family correlation.** An
+  apparent king-distance effect vanished and flipped sign once conditioned on
+  family; it was family composition. A negative derivation that closes a planned
+  feature is a good outcome, not a failure.
+- **Tablebase scope is smaller than it looks.** Check how many 7-man families
+  the list truly needs before treating one as blocked. The Lichess API
+  (`tablebase.lichess.ovh/standard?fen=...`) covers 7 men free and returns
+  per-move categories in one response, and agreed exactly with local Syzygy on
+  WDL and DTZ in every position tested -- excellent for spot checks, poor as a
+  harness basis, because a frozen cache only covers positions one arm visited.
+  `endgame_truth.py` should take a repeatable `--syzygy` so a 7-man directory
+  can be added alongside the 3-4-5-6 set.
+
+**The order below is the pre-correction order and 4.11.4 replaces it.** It was
+built from board occurrence times a conversion number the instrument defect
+depressed, and search-tree occurrence already disagrees sharply: KRPPKRP and
+KQKRPs are listed at 0% and deferred to the end while being the two MOST
+frequent in the tree at 5.88% and 4.41%, and KXK is 37.34% of games but 0.22%
+of the tree. **KQKRPs is the actionable disagreement** -- five men, fully
+verifiable, second in the tree, currently near the end of the list. KRPPKRP
+stays deferred for an honest reason rather than a wrong one: at seven men the
+local tables cannot verify it, and it occurred zero times in 3,915 real games,
+so it is reachable neither by sampling play nor by verified construction.
+Record it as a gap; do not close it on unverified positions.
+
+| Step | Function | ref | Kind | Coverage | Owner note |
+|---|---|---:|---|---|---|
+| 4.12.2 | KRPKR | 13 | scale | ported, draw branches only | REOPENED, conversion half |
+| 4.12.3 | KRPKB | 14 | scale | ported, rook pawns only | REOPENED, conversion half |
+| 4.12.4 | KPsK | 16 | scale | absent | |
+| 4.12.5 | KPK | 5 | verdict | present bitbase | |
+| 4.12.6 | KRKP | 6 | verdict | partial | |
+| 4.12.7 | KBPsK | 11 | scale | partial wrong-corner subset | |
+| 4.12.8 | KPKP | 20 | scale | absent | |
+| 4.12.9 | KQKP | 9 | verdict | partial fortress | owns RAR-E08's KQ-KP debt |
+| 4.12.10 | KBPKB | 17 | scale | absent | |
+| 4.12.11 | KBPPKB | 18 | scale | absent | |
+| 4.12.12 | KRKN | 8 | verdict | absent | |
+| 4.12.13 | KRKB | 7 | verdict | absent | |
+| 4.12.14 | KBPKN | 19 | scale | absent | mate-drive debt, 4.11.9 |
+| 4.12.15 | KNNKP | 2 | verdict | absent | |
+| 4.12.16 | KNNK | 1 | verdict | present | drawn-subset cohort only |
+| 4.12.17 | KQKR | 10 | verdict | absent | |
+| 4.12.18 | KQKRPs | 12 | scale | absent | 2nd in the tree; verifiable |
+| 4.12.19 | KRPPKRP | 15 | scale | absent | 7 men: UNVERIFIABLE, record as a gap |
+| 4.12.20 | KXK | 3 | verdict | present | mechanism at 4.9a.4 |
+| 4.12.21 | KBNK | 4 | verdict | present | owns RAR-E12's dtz debt; rule-50 damping unresolved |
+
+1. **4.12.1 Order and classification.** Adopt 4.11.4's ranking, confirm the
+   recognizer/scale classification above against the code, and register which
+   instrument decides each family before any of them is worked.
+2. **4.12.2 through 4.12.21** are one leaf per function, in the registered
+   order. Each records whether coverage is full, partial or absent, adds its
+   theory/Syzygy tests, states its measurement layer and node budget, and is
+   measured on the cohort its KIND calls for.
+3. **4.12.22 Dependency-complete family refits and gates, tiered by
+   occurrence.** Group mutually dependent value, scale, search-guidance and
+   generic HCE terms and refit every materially covariant current parameter. Do
+   not freeze historical parameters and do not SPRT each recognizer alone.
+   Tier 1 (>2% of games) takes a normal no-adjudication STC SPRT; tier 2
+   (0.5-2%) an endgame-start cohort; tiers 3 and 4 accept on theory, Syzygy WDL
+   and DTZ progress with the whole-match run demoted to a loss-permitting
+   `[-1.75, 0.25]` no-regression check, because a change confined to 0.28% of
+   games cannot produce a detectable whole-match Elo at any budget this project
+   has. 4.9a.8's residual 95.7% KRP-KB overclaim at mean +347 is owned here: on
+   a family where the reference offers almost nothing, that reads as
+   material-imbalance pricing rather than a missing recognizer.
+4. **4.12.23 Closure.** All twenty present or excluded with a recorded
+   theory-backed reason, hard tests passing, aggregate floors materially
+   improved against the CORRECTED baseline, and accepted families transferring
+   through STC/LTC plus an explicit endgame-start cohort. Archive the exact
+   harness and defects so the NNUE path does not erase classical fallback
+   knowledge.
+
+**Rule-50 damping is an open question at 4.12.21, not a known defect.**
+`eval.rs` applies `score -= score * rule50 / 199` after `apply_mop_up`, so the
+mate-drive override band is damped along with everything else, and the obvious
+hypothesis is that this erodes the gradient below the pruning margin exactly
+when the fifty-move clock makes conversion urgent. Basilisk formed the same
+hypothesis and **measured the opposite**. Measure it here too; do not assume
+either sign.
+
+**A note on where the endgame knowledge goes.** Modern Stockfish removed its
+endgame evaluation entirely because NNUE learned it. That argument does not
+transfer to an HCE engine: the knowledge still pays for Rarog's classical
+evaluator, and Phase 9 keeps it as the fallback.
+
+### 4.13 Datagen label truth and corpus contract
+
+**Why this sits after 4.12 and before 4.14.** The feedback loop argued above
+decides it: self-play labels depend on the engine's own conversion ability, so
+conversion improvements must precede regeneration, and each turn of the loop
+should start from a better generator. 4.12 improves the generator, 4.13 fixes
+what the generator's games are allowed to claim, and 4.14 regenerates and
+refits on the result. Reversing 4.12 and 4.13 would freeze a label contract
+around an evaluator that is about to change.
+
+4.11.8 supplies the measurement; this step decides what to do about it. If
+Rarog's HCE tuning uses game-RESULT labels from self-play, those labels are
+sound only if the games decide won endings correctly -- and Basilisk measured
+**19.77% of tablebase clean wins not won at 8,000 nodes datagen, 13.65% at
+25,000**, with roughly 43% of games reaching an adjudicable clean win, so about
+**8.5% of all games carried a result contradicting tablebase truth**. The bias
+is ONE-DIRECTIONAL toward draws, concentrated in rook and pawn families, and it
+teaches the evaluator to undervalue exactly what wins endgames. Rarog's own
+share is 4.11.8's output, not an assumption.
+
+1. **4.13.1 Quantify.** From 4.11.8: the share of rows carrying a contradicted
+   result, by family and by datagen budget, with cursed wins excluded.
+2. **4.13.2 Two arms, registered separately.** Post-hoc relabeling of positions
+   and whole-game tablebase adjudication are DIFFERENT changes and must not be
+   pooled: adjudication ends the game and so changes the recorded result of
+   every position sampled from it, including the openings, while a relabel
+   touches only the positions themselves. RAR-E08 already adopted the relabel;
+   whole-game adjudication at the table limit remains untested and removes the
+   bias for one probe per game. **Analyse the halfmove-clock interaction before
+   relabeling anything further.**
+3. **4.13.3 Do not buy this with nodes.** Raising datagen nodes is the weak fix
+   and it is measured, not assumed: 3.1x the compute bought a 31% relative
+   reduction, and the fit on the higher-budget labels measured +1.00 +/- 2.11,
+   stopped unresolved, with LTC +0.29 +/- 5.46. Treating that point estimate as
+   an improvement is the RAR-S61 error.
+4. **4.13.4 Freeze the winning contract** under a new corpus name, with the
+   audit report embedded in the manifest. Never edit an existing corpus in
+   place.
+
+### 4.14 Iterated no-adjudication refit cycles
 
 **At least one full refit cycle on no-adjudication data is owed
 unconditionally** (maintainer decision, 2026-09-01), and further cycles run
@@ -992,14 +1341,14 @@ and the current vector encodes accepted, gate-verified structure that a restart
 discards. Basilisk's +9.52 came from unfreezing PSTs inside a full-surface fit
 that started from existing values, not from a restart.
 
-0. **4.10.0 Initialization control.** Run one cycle from a neutral start
+1. **4.14.1 Initialization control.** Run one cycle from a neutral start
    alongside the normal one, on the same regenerated corpus and labels, and
    compare frozen-test loss. If the neutral start is not better, initialization
    carries no material bias and the loop proceeds from the accepted vector.
    Record the number either way; this closes the question rather than leaving
    it a standing doubt.
 
-1. **4.10.1 Opening supply -- reusable, and this was previously overstated as
+2. **4.14.2 Opening supply -- reusable, and this was previously overstated as
    a blocker.** `beast_seed.epd` holds 750,000 unique openings and all were
    used once: 1-600,000 for `hce-v2`, 600,001-750,000 for the confirmation
    set. That does **not** exhaust them. The engine has changed, so the same
@@ -1016,13 +1365,15 @@ that started from existing values, not from a restart.
    a weak but real form of familiarity. Preparing new openings is therefore
    worthwhile and approved -- it is a nice-to-have, not a precondition, and it
    must not hold up cycle 1.
-2. **4.10.2 Composition screen.** Generate a pilot under `datagen-v2` on a
+3. **4.14.3 Composition screen.** Generate a pilot under `datagen-v2` on a
    disjoint segment and compare composition with the matching `datagen-v1`
    archive segment: endgame-phase unique yield, coverage over the 20 reference
    classes, decisive/draw ratio, natural mate count, mean game length. Zero
    fitting. This sizes the full run and predicts which families gain support;
    it no longer decides whether the run happens.
-3. **4.10.3 Regenerate and republish, under `datagen-v3`.** Generate the full
+4. **4.14.4 Regenerate and republish.** The label contract is **4.13's
+   decision, not this step's** -- come here with it already settled and frozen.
+   Generate the full
    corpus, re-audit provenance and content to the 4.7.1/4.7.2 standard and
    hash-freeze it under a new name. Never edit `hce-v2` in place: it is the
    corpus RAR-E06 was fitted on and has to stay reproducible.
@@ -1072,18 +1423,18 @@ that started from existing values, not from a restart.
    improvement is the RAR-S61 error -- accepting on a point estimate whose
    interval contains zero. Tablebase truth fixes the endgame-label problem for
    free; node count does not fix it at 3x the price.
-4. **4.10.4 Cycle 1.** Rerun the complete 4.8 linear/nonlinear schedule on the
+5. **4.14.5 Cycle 1.** Rerun the complete 4.8 linear/nonlinear schedule on the
    new corpus and the current model, open that cycle's own frozen test once,
    bake final PGO and run the registered no-adjudication SPRT against the
    accepted head.
-5. **4.10.5 Loop and stop rule, registered before cycle 1 begins.** Run another
+6. **4.14.6 Loop and stop rule, registered before cycle 1 begins.** Run another
    cycle while the previous one **accepted its gate**; stop at the first cycle
    that does not. The stop rule is the gate itself rather than an Elo
    threshold, because an Elo threshold invented mid-loop is the same act as
    moving bounds -- and because a `[0,3]` nElo gate already encodes "is this
    still worth keeping". Each cycle needs its own untouched test and its own
    registration. Cap the loop at a game budget decided before cycle 1.
-6. **4.10.6 Close.** Record the cycle table -- corpus, test, fit loss, gate
+7. **4.14.7 Close.** Record the cycle table -- corpus, test, fit loss, gate
    result, cumulative Elo -- so the diminishing return is visible rather than
    remembered.
 
@@ -1091,14 +1442,14 @@ A second data cycle beyond this loop requires a prospective changed-data
 hypothesis supported by the preceding fit and game verdict. More games, labels
 or epochs are not a default response to a failed fit.
 
-### 4.11 Post-HCE qsearch, TT and evaluation authority
+### 4.15 Post-HCE qsearch, TT and evaluation authority
 
 HCE fitting can change score scale, qsearch share and pruning populations.
 Basilisk's +12-Elo HCE refit moved qsearch share from 30.8% to 35.1% while most
 ordering/LMR statistics held; which metrics move is engine-specific. Therefore
 the old RAR-S70 counters are priors, not a candidate basis.
 
-#### 4.11.1 Observation and baseline
+#### 4.15.1 Observation and baseline
 
 1. Compare the accepted HCE head with exact RAR-S70 at fixed nodes/time, then
    re-run the revision-matched oracle differential at sample stride 1.
@@ -1122,7 +1473,7 @@ the old RAR-S70 counters are priors, not a candidate basis.
 6. Write `analysis/phase4_qsearch_tt_authority.md` with the dependency map and
    an explicit candidate/no-candidate decision.
 
-#### 4.11.2 Candidate and gate, only if 4.11.1 isolates one
+#### 4.15.2 Candidate and gate, only if 4.15.1 isolates one
 
 The design prior is a Rarog-native authority bundle: preserve exact raw HCE;
 keep a separate pruning value; refine only from compatible searched evidence;
@@ -1141,10 +1492,10 @@ with a singular double extension into Basilisk's three-ply stack; Rarog also has
 no equivalent `double_ext_max` path cap. RAR-S37 already found that tightening
 the singular-double margin saved nodes while eliminating doubles cost nodes,
 without a strength verdict. That old alternative remains a measured null for
-4.13 removal unless fresh post-HCE evidence selects it under the extension gate
+4.18 removal unless fresh post-HCE evidence selects it under the extension gate
 above.
 
-### 4.12 Optional post-HCE search SPSA
+### 4.16 Optional post-HCE search SPSA
 
 Open only if several live cp-valued RFP, null, futility, ProbCut, qsearch,
 correction or LMR coordinates show a displaced interacting optimum. First run
@@ -1153,7 +1504,7 @@ interacting surface. Pilot theta is neither candidate nor seed; the full tune
 starts from accepted defaults and preserves its registered horizon under any
 staged `StopAfter`. Never mix HCE and search coordinates.
 
-### 4.12a Time management — review, repair and gate
+### 4.17 Time management — review, repair and gate
 
 **This step owns all time-management work in Phase 4.** TM had no owner: its
 findings were scattered across the ledger, RAR-X06's owner cell still pointed
@@ -1164,15 +1515,15 @@ enters here.
 **Why here.** TM consumes root scores and confidence signals, and 4.8 just
 changed the score scale those signals are expressed in. Measuring TM before
 the accepted HCE would price a surface that no longer exists. It sits after
-4.11's authority work, and before 4.13's cleanup and the 4.15 release gate,
+4.15's authority work, and before 4.18's cleanup and the 4.20 release gate,
 so a clock change cannot arrive after the checkpoint that is supposed to
 describe it.
 
-1. **4.12a.1 Revalidate accepted clock behavior.** RAR-R01's +81 Elo and
+1. **4.17.1 Revalidate accepted clock behavior.** RAR-R01's +81 Elo and
    RAR-R02's `2*MoveOverhead` reserve were measured on the old harness and the
    pre-refit evaluator. The direction is retained; the magnitudes are not
    current priors. Re-measure on the accepted HCE before changing anything.
-2. **4.12a.2 Forfeit margin.** From RAR-M14: sweep `Move Overhead` against
+2. **4.17.2 Forfeit margin.** From RAR-M14: sweep `Move Overhead` against
    forfeit rate on a null pair. The background rate is ~0.08-0.17%, so
    distinguishing two values needs tens of thousands of games -- size it
    before running. `PROCESS.md` prices ~10 forfeits per 3,000 games at ~1 Elo,
@@ -1181,38 +1532,38 @@ describe it.
    positions already lost by 5 to 9 pawns. The specific gap to close is that
    `time_manager.rs` gates its 30ms `smp_reserve` on `threads > 1`, leaving a
    single-threaded engine under a saturated runner with only `2*overhead`.
-3. **4.12a.3 `RootConfTime` consumers.** RAR-S47 shipped the completed-root
+3. **4.17.3 `RootConfTime` consumers.** RAR-S47 shipped the completed-root
    confidence clock ON after sizing it to level-neutrality (+0.09% total
    budget, longer on 295 iterations and shorter on 182). Its six identifiable
    consumers were never tuned. Tune them or remove the path; an inert
-   mechanism with no owner is 4.13 material.
-4. **4.12a.4 Root-instability TM.** RAR-X06 reverified +6.46 +/- 4.12 in the
+   mechanism with no owner is 4.18 material.
+4. **4.17.4 Root-instability TM.** RAR-X06 reverified +6.46 +/- 4.12 in the
    reference engine while Rarog's own raw pool-view variant lost 5.54
    (RAR-R05). It may therefore enter only as one bounded input to a completed
    authoritative root snapshot, never as a direct multiplier. Retargeted here
    from 4.9.
-5. **4.12a.5 Gate.** One registered SPRT for the dependency-complete clock
+5. **4.17.5 Gate.** One registered SPRT for the dependency-complete clock
    change. **Zero forfeits is a precondition, not the verdict** -- RAR-S54 and
    RAR-S57 both passed with zero forfeits while changing node counts by +23%
    and +5%, so a clean forfeit count proves only that the change is safe to
    measure. Never accept a TM change on a forfeit count alone.
 
-### 4.13 Search cleanup and checkpoint
+### 4.18 Search cleanup and checkpoint
 
-- **4.13.1 Dead and unreachable mechanism inventory.** Basilisk-derived. It
+- **4.18.1 Dead and unreachable mechanism inventory.** Basilisk-derived. It
   found history pruning nearly unreachable, and `double_ext_max` never binding
   even when cut from 200 to 16. A dead mechanism is an anomaly to explain, not
   automatically headroom: measure the population first, then either remove the
   safeguard or redesign it under this step. Report reachability for every
   retained switch in the §3 table.
-- **4.13.2 Removal.** Remove every unconsumed 4.6 and retained default-off
+- **4.18.2 Removal.** Remove every unconsumed 4.6 and retained default-off
   alternative without a future owner. Preserve only diagnostics with a named
   Phase-5/7 owner.
-- **4.13.3 Checkpoint.** Re-run debug/release tests, all-feature/all-target
+- **4.18.3 Checkpoint.** Re-run debug/release tests, all-feature/all-target
   clippy, exact benchmark, pooled-PGO NPS, fixed-time/fixed-node deficits and
-  the accepted 4.11/4.12 game verdicts.
+  the accepted 4.15/4.16 game verdicts.
 
-### 4.14 Final HCE/search checkpoint
+### 4.19 Final HCE/search checkpoint
 
 Compare final head with exact RAR-S70 using revision-matched final-PGO binaries
 and no adjudication. Record separately attributed HCE and post-HCE-search Elo,
@@ -1231,7 +1582,7 @@ The HCE is mature for this release only when:
 - optional HCE/search SPSA is completed and gated or explicitly skipped;
 - the fitted HCE remains a tested fallback and suitable datagen baseline.
 
-### 4.15 Transfer, portability, SMP and release gate
+### 4.20 Transfer, portability, SMP and release gate
 
 1. Compare final head directly with 2.3.2 at STC, LTC `10+0.1` and 4T.
 2. Record pooled-PGO NPS, benchmark, UCI, correctness, platform and ISA matrix.
@@ -1258,7 +1609,7 @@ Phase 5 creates the behavior-neutral runway for NNUE. Nothing here may change
 playing behavior: the accepted Phase-4 fingerprint must survive every step.
 Work that 4.7 already completed is reused and extended, not rebuilt. Endgame
 knowledge moved to 4.9a on 2026-09-01, because it is HCE work that must ship
-in 2.4.0 and must precede the 4.10 whole-HCE consolidation.
+in 2.4.0 and must precede the 4.14 whole-HCE consolidation.
 
 - **5.1 Measurement corpus handoff.** Freeze the accepted 4.7 corpus and
   manifests as the NNUE residual/stage-gate source. Add only NNUE-specific
@@ -1386,6 +1737,13 @@ reproducible artifacts outrank prose whenever documents disagree.
 | `tools/sprt.ps1` | Paired pentanomial GSPRT; default 1T `3+0.03`, Hash 64, UHO |
 | `tools/diag/phase4_differential.py` | Same-unit Phase-4 suite aggregation |
 | `tools/diag/bench_counters.py` | Sum all per-position bench counter dumps |
+| `tools/diag/endgame_truth.py` | Per-move Syzygy grading; **termination rule under repair at 4.10.1** |
+| `tools/diag/endgame_floors.py` | Ratcheting aggregate floors; gains a cohort fingerprint at 4.10.2 |
+| `tools/diag/endgame_drawn.py` | Drawn-cohort overclaim; static, plays nothing, unaffected by 4.10.1 |
+| `tools/diag/endgame_book.py` | Syzygy-verified endgame-start cohort |
+| `tools/diag/endgame_search_occurrence.py` | Family frequency in the search tree; exclude endgame roots (4.11.6) |
+| `tools/diag/datagen_label_audit.py` | Corpus labels against tablebase truth; new at 4.10.8 |
+| `tools/diag/check_guide.py` | GUIDE/PLAN status-board consistency; gains REOPENED at 4.10.10 |
 | `tools/branching_profile.ps1` | Hash-bound per-position and per-iteration depth/branching shape with robust aggregates; refutation evidence only |
 | `tools/pgn_result.ps1` | Reconstruct complete-pair PGN results |
 | `tools/build_test.ps1` | Hash-bound build manifests and exact benchmark qualification |
@@ -1404,3 +1762,30 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo build --release
 'bench 13' | .\target\release\rarog.exe
 ```
+
+## 13. Historical number map
+
+Phase 4's OPEN work was reordered on 2026-09-04 so that instrument repair
+precedes re-measurement and re-measurement precedes development. Completed
+steps keep their numbers, so every reference in `EXPERIMENTS.md`, `TRACKER.md`
+and git history stays valid; use this map rather than rewriting historical
+evidence.
+
+| Historical | Current | Note |
+|---|---|---|
+| 4.9a.1 - 4.9a.8 | unchanged | completed; four are REOPENED in place |
+| 4.9a.7 (KRPKR) | also 4.12.2 | leaf reopened for its conversion half |
+| 4.9a.8 (KRPKB) | also 4.12.3 | leaf reopened for its conversion half |
+| 4.9a.9 - 4.9a.26 | 4.12.4 - 4.12.21 | the twenty reference functions |
+| 4.9a.14 (KQKP) | 4.12.9 | owns RAR-E08's KQ-KP debt |
+| 4.9a.26 (KBNK) | 4.12.21 | owns RAR-E12's dtz debt |
+| 4.9a.27 | 4.12.22 | dependency-complete family gates |
+| 4.9a.28 | 4.12.23 | endgame closure |
+| 4.10 (refit cycles) | 4.14 | sub-steps 4.10.0-4.10.6 become 4.14.1-4.14.7 |
+| 4.11 (authority) | 4.15 | |
+| 4.12 (search SPSA) | 4.16 | |
+| 4.12a (time management) | 4.17 | |
+| 4.13 (search cleanup) | 4.18 | |
+| 4.14 (final checkpoint) | 4.19 | |
+| 4.15 (release gate) | 4.20 | |
+| -- | 4.10, 4.11, 4.13 | new: instruments, re-measurement, label truth |

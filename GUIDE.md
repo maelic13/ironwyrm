@@ -16,26 +16,26 @@ and `python tools/diag/check_guide.py` must pass.
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
 | Measured search deficit | **355.26 +/- 27.03 Elo** equal nodes; **250.77 +/- 13.12** equal time; speed worth **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
-| Active experiment | none; RAR-E12 accepted 2026-09-03. RAR-E13 parked, withdrawn |
-| Current step | **4.9 / 4.9a — structural HCE residuals and endgame closure** |
-| Next release | Conditional 2.4.0 at 4.15; NNUE follows either way |
+| Active experiment | none |
+| Instrument state | **The endgame truth harness is defective and under repair.** Every pawn-family conversion number is superseded; bare-king families are provably unaffected |
+| Current step | **4.10.1 — repair the endgame-truth termination rule** |
+| Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## What you run next
 
-**4.9a.9 — KPsK scale [ref 16]**, if working the list in order. But the
-ordering is under review: `analysis/endgame_search_occurrence_2026-09-03.md`
-measured how often each family is reached in the SEARCH TREE, and it disagrees
-sharply with the board occurrence 4.9a is sorted on. **KQKRPs (4.9a.23) is 2nd
-in the tree at 4.41%, fully verifiable at five men, and sits near the end of
-the list on a 0% board occurrence.**
+**4.10.1 — replace the material abort in `endgame_truth.py` with a
+tablebase-truth stop.** Tooling commit; no engine change. The evidence is in
+`analysis/endgame_truth_instrument_audit_2026-09-04.md`: the abort fired 264
+times on the baseline arm, 129 on clean wins, and 122 of those before the
+engine had played a single non-win-preserving move.
 
-Three debts are carried inside 4.9a and must not be lost: **KQ-KP** (RAR-E08,
--3.8 pp) at 4.9a.14, **KBN-K** (RAR-E12, dtz 0.7260 -> 0.6753) at 4.9a.26 with
-a 0.7260 target, and **KRP-KB's 95.7% drawn overclaim** at 4.9a.27, which looks
-like material-imbalance pricing rather than a missing recognizer.
+Phase 4's open work was reordered on 2026-09-04 — **instruments (4.10), then
+re-measurement (4.11), then development (4.12 onward)**. PLAN section 13 maps
+the old numbers to the new ones. Nothing in 4.12 may be ordered or gated on a
+number the old instrument produced.
 
 ```bash
-python tools/diag/endgame_drawn.py --engine target/release/rarog.exe --syzygy D:/chess/tablebases/syzygy3456 --families KQ-KRP --positions 4000
+python tools/diag/check_guide.py
 ```
 
 ## Phase 4 — bounded pre-NNUE search and HCE
@@ -48,7 +48,7 @@ python tools/diag/endgame_drawn.py --engine target/release/rarog.exe --syzygy D:
     - [x] **4.2a.2** Exit-status sweep: no unguarded native call found; already protected
     - [x] **4.2a.3** Anomaly guard rate-limited so it discriminates instead of voiding every gate — `334c084`
     - [x] **4.2a.4** `sprt.ps1` refuses options its mode cannot honor — `3fb9f57`
-- [x] **4.2b** Time-forfeit diagnosis at test concurrency — RAR-M14; fixes belong to 4.12a
+- [x] **4.2b** Time-forfeit diagnosis at test concurrency — RAR-M14; fixes belong to 4.17
     - [x] **4.2b.1** Games end at 97-99% of clock; ~2% aggregate slack, ~100ms per game
 - [x] **4.3** Mechanism map and order freeze
 - [x] **4.4** Matched ablation plus fixed-node correction
@@ -68,61 +68,96 @@ python tools/diag/endgame_drawn.py --engine target/release/rarog.exe --syzygy D:
     - [x] **4.8.3** RAR-E06 **ACCEPTED**: H1 at 3,914 games, **+22.04 +/- 7.51 Elo**, +32.05 nElo
 - [x] **4.8a** Post-refit redundancy removal — **closed, no gate owed**; RAR-E07
     - [x] **4.8a.1** Inventory: 5 slots zeroed, 90 of 132 sparse slots structurally unreachable
-    - [x] **4.8a.2** No removal cluster exists; 3 inert 1-slot terms handed to 4.13.2
+    - [x] **4.8a.2** No removal cluster exists; 3 inert 1-slot terms handed to 4.18.2
 - [x] **4.9** Structural HCE clusters — **closed, none opened**; RAR-E09
     - [x] **4.9.1** Residual audit — RAR-E09: no structural residual; a label defect instead
     - [x] **4.9.2** Closed: no cohort residual licenses a cluster; retry trigger recorded
-- [ ] **4.9a** Endgame conversion and reference-function closure — worked in order
-    - [x] **4.9a.1** Syzygy truth corpus and per-move grading — `endgame_truth.py`
+- [ ] **4.9a** Endgame truth foundation — done, four leaves REOPENED 2026-09-04
+    - [ ] **4.9a.1** REOPENED — truth corpus; the material abort invalidates every pawn family
     - [x] **4.9a.2** Endgame-start cohort book — 788 verified positions, 21 families
-    - [x] **4.9a.3** Regression contract: 64 frozen theory vetoes + ratcheting floors
-    - [x] **4.9a.4** Mate-drive cluster **ACCEPTED**, no gate — KBN-K **19.4% -> 96.9%**
+    - [ ] **4.9a.3** REOPENED — floors half only; the 64 frozen theory vetoes stand
+    - [ ] **4.9a.4** REOPENED — gain stands (KBN-K **19.4% -> 96.9%**); isolation reaches 6 families
     - [x] **4.9a.5** RAR-E08 **ACCEPTED** +6.73 +/- 3.82 Elo — TB-corrected labels win
     - [x] **4.9a.6** `hce-v3-tb` fitted and gated — RAR-E12 **+11.81 +/- 5.33 Elo**
-    - [x] **4.9a.7** KRPKR scale [ref 13] — drawn overclaim **37.1% -> 25.8%**; conv held
-    - [x] **4.9a.8** KRPKB scale [ref 14] — partial (rook pawns); cohort **null**, residual to 4.9a.27
-    - [ ] **4.9a.9** KPsK scale [ref 16] — absent; 4.19% board, 720 tree
-    - [ ] **4.9a.10** KPK value [ref 5] — present bitbase; conv 95%, 2.84%
-    - [ ] **4.9a.11** KRKP value [ref 6] — partial; conv 93%, 2.40%
-    - [ ] **4.9a.12** KBPsK scale [ref 11] — partial wrong-corner subset; 1.92%
-    - [ ] **4.9a.13** KPKP scale [ref 20] — absent; 1.23%
-    - [ ] **4.9a.14** KQKP value [ref 9] — partial fortress; **RAR-E08 cost it -3.8 pp**
-    - [ ] **4.9a.15** KBPKB scale [ref 17] — absent; conv 81%, 0.89%
-    - [ ] **4.9a.16** KBPPKB scale [ref 18] — absent; conv 79%, 0.66%
-    - [ ] **4.9a.17** KRKN value [ref 8] — absent; conv 83%, win-preserving 0.973
-    - [ ] **4.9a.18** KRKB value [ref 7] — absent; conv 94%, win-preserving 0.963
-    - [ ] **4.9a.19** KBPKN scale [ref 19] — absent; conv 79%, 0.28%
-    - [ ] **4.9a.20** KNNKP value [ref 2] — absent; discards the win on **19%** of moves
-    - [ ] **4.9a.21** KNNK value [ref 1] — present; drawn 100/100, drawn-subset cohort
-    - [ ] **4.9a.22** KQKR value [ref 10] — absent; conv 83%; never occurs naturally
-    - [ ] **4.9a.23** KQKRPs scale [ref 12] — absent; 0% board but **2nd in tree**, verifiable
-    - [ ] **4.9a.24** KRPPKRP scale [ref 15] — **1st in tree**, but 7 men: UNVERIFIABLE
-    - [ ] **4.9a.25** KXK value [ref 3] — KQ-K 97%/KR-K 93%; reaching 100% is open here
-    - [ ] **4.9a.26** KBNK value [ref 4] — **RAR-E12 cost it dtz 0.7260 -> 0.6753**; restore 0.7260
-    - [ ] **4.9a.27** Dependency-complete family refits and gates, tiered by occurrence
-    - [ ] **4.9a.28** Conversion, theory, STC/LTC and endgame-cohort closure
-- [ ] **4.10** Iterated whole-surface refit cycles — at least one is owed
-    - [ ] **4.10.0** Initialization control: neutral start vs accepted start, offline
-    - [ ] **4.10.1** Composition screen against the `datagen-v1` archive (sizing)
-    - [ ] **4.10.2** Cycle 1: full 4.8 schedule, own frozen test, registered gate
-    - [ ] **4.10.3** Repeat while a cycle accepts; stop at the first that does not
-    - [ ] **4.10.4** Record the cycle table and close
-- [ ] **4.11** Re-measure qsearch/TT/eval authority and branching on the accepted HCE
-    - [ ] **4.11.1** Observation, baseline and live-wire proof; write the analysis
-    - [ ] **4.11.2** One candidate and gate, only if 4.11.1 isolates a unique defect
-- [ ] **4.12** Optional post-HCE search SPSA; skip without a displaced optimum
-- [ ] **4.12a** Time management: review, repair and gate — owns all TM work
-    - [ ] **4.12a.1** Revalidate accepted clock behavior on the accepted HCE — RAR-R01/R02
-    - [ ] **4.12a.2** `Move Overhead` vs forfeit rate on a null pair; size it first — RAR-M14
-    - [ ] **4.12a.3** `RootConfTime`'s six identifiable consumers: tune or remove — RAR-S47
-    - [ ] **4.12a.4** Root-instability TM from a completed snapshot only — RAR-X06, RAR-R05
-    - [ ] **4.12a.5** Registered gate; zero forfeits is a precondition, not the verdict
-- [ ] **4.13** Search cleanup and clean checkpoint
-    - [ ] **4.13.1** Dead and unreachable mechanism inventory — Basilisk-derived
-    - [ ] **4.13.2** Remove unconsumed 4.6 alternatives, plus the 3 terms RAR-E07 left inert
-    - [ ] **4.13.3** Re-verify tests, clippy, fingerprint, NPS and deficits
-- [ ] **4.14** Final HCE/search checkpoint, attribution and maturity closure
-- [ ] **4.15** STC/LTC/4T, NPS, portability, ISA and release gate
+    - [ ] **4.9a.7** REOPENED — KRPKR drawn overclaim **37.1% -> 25.8%** stands; conversion half does not
+    - [ ] **4.9a.8** REOPENED — KRPKB drawn-cohort null stands; conversion half does not
+- [ ] **4.10** Instrument integrity and tooling upgrade — tooling commits, no engine change
+    - [ ] **4.10.1** Tablebase-truth termination; material shed becomes a diagnostic
+    - [ ] **4.10.2** Cohort fingerprint; refuse any comparison across position sets
+    - [ ] **4.10.3** Sharded workers; parallel output byte-identical to serial
+    - [ ] **4.10.4** Prove every guard FAILS on a known-bad input; thin-sample refusal
+    - [ ] **4.10.5** Measurement-layer contract and per-report layer/budget/set fields
+    - [ ] **4.10.6** Node budget as a run condition; 60k/200k/600k bracket runner
+    - [ ] **4.10.7** Held-out split, McNemar paired z, runner-up slot, spent-cohort rule
+    - [ ] **4.10.8** `datagen_label_audit.py` — corpus labels against tablebase truth
+    - [ ] **4.10.9** Gate runner refuses wrong revision, dirty tree or mismatched bench
+    - [ ] **4.10.10** `check_guide.py` gains a REOPENED marker and step-set comparison
+    - [ ] **4.10.11** Compile-time bound on the shipped mop-up constants, every build type
+    - [ ] **4.10.12** Feature-matrix build audit; `--all-features` is not the shipped config
+- [ ] **4.11** Re-measurement and re-derivation — corrections recorded in place
+    - [ ] **4.11.1** Re-run both truth arms, binaries pinned by SHA-256, per-position on
+    - [ ] **4.11.2** Re-derive the floors; restate 4.12.21's KBN-K target on a real artifact
+    - [ ] **4.11.3** Re-derive the attained reference results — replaces RAR-E11
+    - [ ] **4.11.4** Re-rank 4.12 on corrected conversion, drawn-share bias and occurrence
+    - [ ] **4.11.5** Budget transfer: repeat decisive verdicts at 60k/200k/600k
+    - [ ] **4.11.6** Occurrence census with endgame roots excluded; report both numbers
+    - [ ] **4.11.7** Drawn-share bias census per material class across the corpus
+    - [ ] **4.11.8** Datagen label audit on `hce-v2` and `hce-v3-tb`
+    - [ ] **4.11.9** Mate-drive blast radius over the dispatcher's promotion closure
+    - [ ] **4.11.10** Restate RAR-E08, RAR-E11 and RAR-E12's conversion claims as superseded
+- [ ] **4.12** Endgame reference functions — order registered by 4.11.4
+    - [ ] **4.12.1** Adopt the order; confirm recognizer-vs-scale classification per family
+    - [ ] **4.12.2** KRPKR [ref 13] scale — reopened conversion half
+    - [ ] **4.12.3** KRPKB [ref 14] scale — reopened conversion half
+    - [ ] **4.12.4** KPsK [ref 16] scale — absent
+    - [ ] **4.12.5** KPK [ref 5] verdict — present bitbase
+    - [ ] **4.12.6** KRKP [ref 6] verdict — partial
+    - [ ] **4.12.7** KBPsK [ref 11] scale — partial wrong-corner subset
+    - [ ] **4.12.8** KPKP [ref 20] scale — absent
+    - [ ] **4.12.9** KQKP [ref 9] verdict — partial fortress; owns RAR-E08's KQ-KP debt
+    - [ ] **4.12.10** KBPKB [ref 17] scale — absent
+    - [ ] **4.12.11** KBPPKB [ref 18] scale — absent
+    - [ ] **4.12.12** KRKN [ref 8] verdict — absent
+    - [ ] **4.12.13** KRKB [ref 7] verdict — absent
+    - [ ] **4.12.14** KBPKN [ref 19] scale — absent; carries a mate-drive debt from 4.11.9
+    - [ ] **4.12.15** KNNKP [ref 2] verdict — absent
+    - [ ] **4.12.16** KNNK [ref 1] verdict — present; drawn-subset cohort only
+    - [ ] **4.12.17** KQKR [ref 10] verdict — absent
+    - [ ] **4.12.18** KQKRPs [ref 12] scale — absent; 2nd in the search tree and verifiable
+    - [ ] **4.12.19** KRPPKRP [ref 15] scale — 7 men, UNVERIFIABLE; record as a gap
+    - [ ] **4.12.20** KXK [ref 3] verdict — present; mechanism at 4.9a.4
+    - [ ] **4.12.21** KBNK [ref 4] verdict — present; owns RAR-E12's dtz debt
+    - [ ] **4.12.22** Dependency-complete family refits and gates, tiered by occurrence
+    - [ ] **4.12.23** Conversion, theory, STC/LTC and endgame-cohort closure
+- [ ] **4.13** Datagen label truth and corpus contract
+    - [ ] **4.13.1** Quantify contradicted rows by family and datagen budget
+    - [ ] **4.13.2** Relabel and whole-game adjudication as separate registered arms
+    - [ ] **4.13.3** Record that more datagen nodes is the weak fix; do not buy it
+    - [ ] **4.13.4** Freeze the winning contract under a new corpus name
+- [ ] **4.14** Iterated whole-surface refit cycles — at least one is owed
+    - [ ] **4.14.1** Initialization control: neutral start vs accepted start, offline
+    - [ ] **4.14.2** Opening supply: reuse is clean; fresh starts are a nice-to-have
+    - [ ] **4.14.3** Composition screen against the `datagen-v1` archive (sizing)
+    - [ ] **4.14.4** Regenerate and hash-freeze under a new corpus name
+    - [ ] **4.14.5** Cycle 1: full 4.8 schedule, own frozen test, registered gate
+    - [ ] **4.14.6** Repeat while a cycle accepts; stop at the first that does not
+    - [ ] **4.14.7** Record the cycle table and close
+- [ ] **4.15** Re-measure qsearch/TT/eval authority and branching on the accepted HCE
+    - [ ] **4.15.1** Observation, baseline and live-wire proof; write the analysis
+    - [ ] **4.15.2** One candidate and gate, only if 4.15.1 isolates a unique defect
+- [ ] **4.16** Optional post-HCE search SPSA; skip without a displaced optimum
+- [ ] **4.17** Time management: review, repair and gate — owns all TM work
+    - [ ] **4.17.1** Revalidate accepted clock behavior on the accepted HCE — RAR-R01/R02
+    - [ ] **4.17.2** `Move Overhead` vs forfeit rate on a null pair; size it first — RAR-M14
+    - [ ] **4.17.3** `RootConfTime`'s six identifiable consumers: tune or remove — RAR-S47
+    - [ ] **4.17.4** Root-instability TM from a completed snapshot only — RAR-X06, RAR-R05
+    - [ ] **4.17.5** Registered gate; zero forfeits is a precondition, not the verdict
+- [ ] **4.18** Search cleanup and clean checkpoint
+    - [ ] **4.18.1** Dead and unreachable mechanism inventory — Basilisk-derived
+    - [ ] **4.18.2** Remove unconsumed 4.6 alternatives, plus the 3 terms RAR-E07 left inert
+    - [ ] **4.18.3** Re-verify tests, clippy, fingerprint, NPS and deficits
+- [ ] **4.19** Final HCE/search checkpoint, attribution and maturity closure
+- [ ] **4.20** STC/LTC/4T, NPS, portability, ISA and release gate
 
 ## Phase 5 — NNUE runway
 
