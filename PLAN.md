@@ -16,7 +16,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.10.9 — gate-runner provenance** |
+| Current step | **4.10.10 — roadmap checker: SUPERSEDED owners and step sets** |
 | Instrument state | The endgame truth harness is **defective and under repair**; every pawn-family conversion number is superseded. See `analysis/endgame_truth_instrument_audit_2026-09-04.md` and "Reopened work, 2026-09-04" |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -1233,23 +1233,44 @@ Nothing here changes the engine. These are tooling commits.
    as "no defect" on a corpus with no data -- and it is now `n/a`. Recorded
    because a unit test passing over the function while the caller is broken is
    exactly the shape 4.10.4 is about.
-9. **4.10.9 Gate-runner provenance.** The gate runner refuses to start on a
-   wrong revision, a dirty tree or mismatched benches, and records binary
-   SHA-256, compiler, PGO status, book, TC, hash, threads, affinity,
-   adjudication and node budget. Two rules it enforces rather than documents:
-   score adjudication stays OFF for any endgame-eval change, because the
-   candidate's own scores would help decide the games judging it; and an
-   adjudicated run is NEVER pooled with a natural-termination one, since two
-   sampling processes with different draw rates bias the pooled estimate by the
-   mixing ratio. Never resume an SPRT after the candidate, either engine's
-   options, book, TC, adjudication policy or hardware changed -- start a new
-   experiment ID. **An interim SPRT reading is not evidence**: a -4.29 +/- 6.06
-   at 28% of the way to a bound recovered to -1.40 +/- 4.07 by 7,720 games.
-   **Build speed is a real confound**: two separately built binaries can differ
-   by ~1% in NPS with no behavioural cause, worth a couple of Elo at fast TC, so
-   measure parity on an IDLE machine with INTERLEAVED repeats -- a first attempt
-   contaminated by a concurrent job had to be redone. Identical bench proves the
-   SEARCH identical; it never proves the speed.
+9. **4.10.9 Gate-runner provenance -- DONE, and mostly already there.**
+   Auditing before changing anything found `tools/sprt.ps1` already refusing on
+   a binary/manifest SHA mismatch, a non-bench verification, a tune build, a
+   build-flavor mismatch, a compiler mismatch and identical binaries outside
+   calibrate mode, and already recording repo revision, TC, adjudication, hash,
+   threads, concurrency and affinity. 4.2a did that work; this leaf did not
+   need to redo it and the record says so rather than claiming the ground.
+
+   **Two real gaps, both closed.** A dirty tree was a WARNING and is now a
+   REFUSAL: AGENTS.md's evidence rule says a ledger row must reproduce its
+   artifact without the branch it came from, and a binary built from
+   uncommitted changes cannot, by construction. A warning there is read once
+   and forgotten, and by the time the row is questioned the tree is gone.
+   `-AllowDirtyTree` exists for a deliberate throwaway screen and must be
+   justified in the registration. And `-ExpectRevision` refuses to start unless
+   both manifests record the registered revision, because a gate measuring a
+   different revision than the one it registers is not evidence for that
+   revision.
+
+   **The termination policy is now written into the artifact**, naming the
+   pooling hazard in the manifest itself: an adjudicated run must never be
+   pooled with a natural-termination one, since two sampling processes with
+   different draw rates bias a pooled estimate by the mixing ratio.
+
+   **All three verified live against the real script**: the dirty tree refuses,
+   `-AllowDirtyTree` passes it with a loud warning, `-ExpectRevision cafe9999`
+   refuses, and a matching revision still reaches the flavor and compiler
+   checks -- so the guards fire without a false refusal.
+
+   Standing rules this leaf does not automate, recorded where the runner is
+   used: never resume an SPRT after the candidate, either engine's options,
+   book, TC, adjudication policy or hardware changed -- start a new experiment
+   ID. **An interim reading is not evidence**: -4.29 +/- 6.06 at 28% of the way
+   to a bound recovered to -1.40 +/- 4.07 by 7,720 games. **Build speed is a
+   real confound**: two separately built binaries can differ ~1% in NPS with no
+   behavioural cause, worth a couple of Elo at fast TC, so measure parity on an
+   IDLE machine with INTERLEAVED repeats. Identical bench proves the SEARCH
+   identical; it never proves the speed.
 10. **4.10.10 Roadmap checker.** Teach `check_guide.py` the `SUPERSEDED ->
     <leaf>` marker: it may appear only on a TICKED leaf, it must name a leaf
     that exists, and that leaf must be UNTICKED. That is what stops an

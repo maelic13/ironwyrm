@@ -18,16 +18,16 @@ and `python tools/diag/check_guide.py` must pass.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
 | Instrument state | **The endgame truth harness is defective and under repair.** Every pawn-family conversion number is superseded; bare-king families are provably unaffected |
-| Current step | **4.10.9 — gate-runner provenance** |
+| Current step | **4.10.10 — checker enforces SUPERSEDED owners and step sets** |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## What you run next
 
-**4.10.9 — make the gate runner refuse to start on bad provenance**: a wrong
-revision, a dirty tree or mismatched benches. Record binary SHA-256, compiler,
-PGO status, book, TC, hash, threads, affinity, adjudication and node budget.
-Score adjudication stays off for an endgame-eval change, and an adjudicated run
-is never pooled with a natural-termination one. Tooling; no engine change.
+**4.10.10 — teach `check_guide.py` the `SUPERSEDED -> <leaf>` marker**: it may
+sit only on a ticked leaf, must name a leaf that exists, and that leaf must be
+unticked. Also compare the GUIDE and PLAN step SETS, not just membership — a
+seven-sub-step PLAN item was listed with five in GUIDE and nothing caught it.
+Tooling; no engine change.
 
 **Deployment is 153,466 nodes/move median at 3+0.03** and the endgame screen is
 60,000, below its p25 — so every fixed-node endgame verdict so far is
@@ -110,7 +110,7 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
     - [x] **4.10.6** Node budget as a run condition; 60k/200k/600k bracket runner
     - [x] **4.10.7** Held-out split, McNemar paired z, runner-up slot, spent-cohort rule
     - [x] **4.10.8** `datagen_label_audit.py` — corpus labels against tablebase truth
-    - [ ] **4.10.9** Gate runner refuses wrong revision, dirty tree or mismatched bench
+    - [x] **4.10.9** Gate runner refuses wrong revision, dirty tree or mismatched bench
     - [ ] **4.10.10** `check_guide.py` enforces SUPERSEDED owners and compares step sets
     - [ ] **4.10.11** Compile-time bound on the shipped mop-up constants, every build type
     - [ ] **4.10.12** Feature-matrix build audit; `--all-features` is not the shipped config

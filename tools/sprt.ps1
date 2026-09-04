@@ -166,6 +166,17 @@
     Windows scheduler / process IO jitter from being counted as a time
     forfeit. It does not change the engine's own time budget.
 
+.PARAMETER AllowDirtyTree
+    Permit an engine built from uncommitted changes. Refused by default (4.10.9):
+    such a binary cannot be reproduced from git, so a ledger row citing it is a
+    promise that someone is still storing the evidence. Use only for a
+    deliberate throwaway screen, and say why in the registration.
+
+.PARAMETER ExpectRevision
+    Refuse to start unless BOTH engines' manifests record a git SHA with this
+    prefix. A gate that measures a different revision than the one it registers
+    is not evidence for that revision.
+
 .PARAMETER Adjudicate
     Opt IN to fastchess draw and resign adjudication under the named
     strength-v2 profile. Off by default since 2026-09-01: RAR-M16 priced
@@ -230,6 +241,8 @@ param(
     [int]$TimeMargin = 20,
     [switch]$Adjudicate,
     [switch]$NoAdjudication,
+    [switch]$AllowDirtyTree,
+    [string]$ExpectRevision = "",
     [string]$Book = "$PSScriptRoot\books\UHO_Lichess_4852_v1.epd",
     [string]$FastchessPath = "$PSScriptRoot\bin\fastchess.exe"
 )
@@ -470,8 +483,30 @@ foreach ($pair in @(@($EngineA, $NameA), @($EngineB, $NameB))) {
         if ($manifestData.flavor -like "*-tune") {
             throw "Manifest for $($pair[1]) is a tune build; rebuild a PGO gate binary."
         }
+        # 4.10.9: a dirty tree is a REFUSAL, not a warning. The rule this
+        # protects is AGENTS.md's evidence rule -- a ledger row must reproduce
+        # its artifact without the branch it came from -- and a binary built
+        # from uncommitted changes cannot, by construction. A warning here is
+        # read once and forgotten; by the time the row is questioned the tree
+        # is long gone. -AllowDirtyTree exists for a deliberate throwaway
+        # screen and must be justified in the registration.
+        if ($manifestData.git_dirty -and -not $AllowDirtyTree) {
+            throw ("DIRTY TREE - $($pair[1]) was built from uncommitted changes at " +
+                   "$($manifestData.git_sha), so this result cannot be reproduced " +
+                   "from git alone.`nCommit the change and rebuild with " +
+                   "tools/build_test.ps1, or pass -AllowDirtyTree and say why in " +
+                   "the EXPERIMENTS.md registration.")
+        }
         if ($manifestData.git_dirty) {
-            Write-Warning "Manifest for $($pair[1]) records a dirty source tree."
+            Write-Warning ("$($pair[1]) was built from a DIRTY tree and -AllowDirtyTree " +
+                           "was passed. This result is not reproducible from git.")
+        }
+        if ($manifestData.git_sha -and $ExpectRevision -and
+            $manifestData.git_sha -notlike "$ExpectRevision*") {
+            throw ("WRONG REVISION - $($pair[1]) was built at $($manifestData.git_sha), " +
+                   "not the expected $ExpectRevision.`nA gate that measures a " +
+                   "different revision than the one it registers is not evidence " +
+                   "for that revision.")
         }
         Copy-Item $manifest (Join-Path $resultsDir "sprt_${NameA}_vs_${NameB}_${timestamp}.$($pair[1]).manifest.json") -Force
     } else {
@@ -533,6 +568,7 @@ if (-not $repoSha) { $repoSha = "n/a" } else { $repoSha = $repoSha.Trim() }
     "game_budget:     $(if ($Mode -eq 'calibrate' -or $Mode -eq 'fixed') { $Games } else { $MaxGames })"
     "time_control:    $tcLabel; timemargin=${TimeMargin}ms"
     "adjudication:    $adjudicationLabel"
+    "termination:     $(if ($Adjudicate) { 'ADJUDICATED - do NOT pool with natural-termination runs; different sampling processes with different draw rates bias a pooled estimate by the mixing ratio' } else { 'natural (games played out)' })"
     "hash_mb:         $Hash"
     "threads:         $(if ($ThreadsA -eq $ThreadsB) { $ThreadsA } else { "$NameA=$ThreadsA $NameB=$ThreadsB" })"
     "concurrency:     $Concurrency"
