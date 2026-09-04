@@ -71,6 +71,23 @@ METRICS = {
 }
 REPORT_SIGMA = 2.0
 
+# THIN-SAMPLE REFUSAL (PLAN 4.10.4). Below this many observations a rate is not
+# reported as a number at all -- it is reported as thin.
+#
+# The failure this prevents is not a wrong verdict, it is a CONFIDENT one. A
+# family with one eligible position that fails reads as 0.0%, which looks like
+# catastrophe and is actually emptiness; the standard error of the difference
+# on n=1 is ~0.5, so nothing could ever breach a 3-SE floor there either, and
+# the family would sit in the report looking measured while being unmeasurable.
+# Basilisk's first design left a control family with ONE eligible position of
+# 24 and a silent 0.0%.
+#
+# 5 is chosen against the cohort rather than by taste: at 100 positions per
+# family the smallest theoretical-win counts on the frozen set are KNN-K (1)
+# and KNN-KP (23), so 5 excludes the degenerate family and keeps every real
+# one. The number is stated here so it can be argued with.
+MIN_ELIGIBLE = 5
+
 
 # Floors and report must have been measured by the same instrument. A v1 report
 # was produced by the harness that aborted correct pawn technique (RAR-E14), so
@@ -151,18 +168,30 @@ def check_cohorts(floors_doc: dict, report: dict) -> None:
 
 
 def rates(report: dict) -> dict[str, dict[str, dict]]:
-    """family -> metric -> {rate, n}."""
+    """family -> metric -> {rate, n}. Thin samples are dropped, not reported."""
     out: dict[str, dict[str, dict]] = {}
     for name, entry in report["families"].items():
         vals = {}
         for metric, n_field in METRICS.items():
             value = entry.get(metric)
             n = entry.get(n_field)
-            if value is not None and n:
+            if value is not None and n and int(n) >= MIN_ELIGIBLE:
                 vals[metric] = {"rate": float(value), "n": int(n)}
         if vals:
             out[name] = vals
     return out
+
+
+def thin(report: dict) -> list[tuple[str, str, int]]:
+    """The (family, metric, n) triples suppressed as too thin to report."""
+    out = []
+    for name, entry in report["families"].items():
+        for metric, n_field in METRICS.items():
+            value = entry.get(metric)
+            n = entry.get(n_field)
+            if value is not None and n and int(n) < MIN_ELIGIBLE:
+                out.append((name, metric, int(n)))
+    return sorted(out)
 
 
 def se_diff(p0: float, n0: int, p1: float, n1: int) -> float:
@@ -287,6 +316,14 @@ def main() -> int:
         print(f"{title}:")
         for f, m, b, g, d, s in rows:
             print(f"  {f:<10} {m:<20} {b:.4f} -> {g:.4f}  ({d:+.4f}, {s:+.1f} SE)")
+        print()
+
+    suppressed = thin(report_doc)
+    if suppressed:
+        print(f"thin samples (n < {MIN_ELIGIBLE}), reported as empty rather "
+              f"than as a rate:")
+        for family, metric, n in suppressed:
+            print(f"  {family:<10} {metric:<20} n={n}")
         print()
 
     print(f"floors   : {args.floors}")

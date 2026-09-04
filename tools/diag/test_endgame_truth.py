@@ -285,6 +285,105 @@ class ShardTests(unittest.TestCase):
         self.assertNotIn("initargs=", source)
 
 
+def _family(rate, n, cohort="aa" * 32):
+    """A truth-report family entry with the three floor metrics at one rate."""
+    return {
+        "spec": "X", "theory": {}, "outcomes": {},
+        "theoretically_won": n, "converted": int(round(rate * n)),
+        "conversion_rate": rate,
+        "graded_moves": n, "win_preserving_moves": int(round(rate * n)),
+        "win_preserving_rate": rate,
+        "dtz_checked_moves": n, "dtz_progress_moves": int(round(rate * n)),
+        "dtz_progress_rate": rate,
+        "cohort_sha256": cohort,
+    }
+
+
+def _report(families):
+    return {
+        "schema": "rarog-endgame-truth-v2",
+        "cohort": {"seed": 1, "positions_per_family": 100, "sha256": "z",
+                   "family_sha256": {k: v["cohort_sha256"]
+                                     for k, v in families.items()}},
+        "families": families,
+    }
+
+
+class ThinSampleTests(unittest.TestCase):
+    """4.10.4: refuse to report a statistic over an eligible set that is tiny.
+
+    The failure prevented is a CONFIDENT wrong reading, not a wrong verdict: a
+    family with one eligible position that fails reads as 0.0%, which looks
+    like catastrophe and is emptiness.
+    """
+
+    def test_a_thin_family_is_not_given_a_rate(self):
+        report = _report({"THIN": _family(0.0, 1), "REAL": _family(0.5, 40)})
+        self.assertNotIn("THIN", endgame_floors.rates(report))
+        self.assertIn("REAL", endgame_floors.rates(report))
+
+    def test_a_thin_family_is_reported_as_thin_rather_than_dropped(self):
+        report = _report({"THIN": _family(0.0, 1)})
+        self.assertEqual(
+            [(f, m) for f, m, _ in endgame_floors.thin(report)],
+            [("THIN", "conversion_rate"), ("THIN", "dtz_progress_rate"),
+             ("THIN", "win_preserving_rate")],
+        )
+
+    def test_the_boundary_is_inclusive(self):
+        at = _report({"F": _family(0.5, endgame_floors.MIN_ELIGIBLE)})
+        under = _report({"F": _family(0.5, endgame_floors.MIN_ELIGIBLE - 1)})
+        self.assertIn("F", endgame_floors.rates(at))
+        self.assertNotIn("F", endgame_floors.rates(under))
+
+
+class FloorGateTests(unittest.TestCase):
+    """The floor gate must BLOCK on a regression, not merely pass on equality."""
+
+    def _run(self, floors_families, report_families, sigma="3"):
+        import subprocess
+        with tempfile.TemporaryDirectory() as d:
+            report = _report(report_families)
+            rp = Path(d) / "truth.json"
+            rp.write_text(json.dumps(report), encoding="utf-8")
+            fl = Path(d) / "floors.json"
+            fl.write_text(json.dumps({
+                "schema": "rarog-endgame-floors-v2",
+                "truth_schema": endgame_floors.TRUTH_SCHEMA,
+                "cohort": {"family_sha256": {k: v["cohort_sha256"]
+                                             for k, v in floors_families.items()}},
+                "families": endgame_floors.rates(_report(floors_families)),
+            }), encoding="utf-8")
+            proc = subprocess.run(
+                [sys.executable, str(Path(endgame_floors.__file__)),
+                 "--report", str(rp), "--floors", str(fl), "--sigma", sigma],
+                capture_output=True, text=True)
+            return proc.returncode, proc.stdout + proc.stderr
+
+    def test_an_equal_report_passes(self):
+        fam = {"KQ-K": _family(0.95, 100)}
+        code, out = self._run(fam, fam)
+        self.assertEqual(code, 0, out)
+
+    def test_a_large_family_regression_blocks(self):
+        code, out = self._run({"KQ-K": _family(0.95, 100)},
+                              {"KQ-K": _family(0.50, 100)})
+        self.assertEqual(code, 1, out)
+        self.assertIn("BELOW FLOOR", out)
+
+    def test_a_small_family_dip_does_not_block(self):
+        code, out = self._run({"KQ-K": _family(0.95, 100)},
+                              {"KQ-K": _family(0.94, 100)})
+        self.assertEqual(code, 0, out)
+
+    def test_a_thin_family_cannot_manufacture_a_verdict(self):
+        """n=1 at 0% must not read as a catastrophic regression."""
+        code, out = self._run({"THIN": _family(1.0, 1), "KQ-K": _family(0.95, 100)},
+                              {"THIN": _family(0.0, 1), "KQ-K": _family(0.95, 100)})
+        self.assertEqual(code, 0, out)
+        self.assertIn("thin samples", out)
+
+
 class SchemaGuardTests(unittest.TestCase):
     """4.10.4: a guard is not verified until it FAILS on a known-bad input."""
 

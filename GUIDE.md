@@ -18,15 +18,20 @@ and `python tools/diag/check_guide.py` must pass.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
 | Instrument state | **The endgame truth harness is defective and under repair.** Every pawn-family conversion number is superseded; bare-king families are provably unaffected |
-| Current step | **4.10.4 — prove every guard FAILS on a known-bad input** |
+| Current step | **4.10.5 — measurement-layer contract** |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## What you run next
 
-**4.10.4 — show that every floor, veto, anchor and gate FAILS on a known-bad
-input**, not merely passes on a good one, and add a thin-sample refusal so a
-statistic over a tiny eligible set reports emptiness rather than 0.0%. Tooling
-commit; no engine change.
+**4.10.5 — write the measurement-layer contract** (`analysis/`) and make every
+instrument state which layer it reports: theory truth, move quality,
+conversion, game strength, with occurrence gating whether the first three can
+reach the fourth. Every report names its layer, instrument, node budget and
+position set. Tooling and docs; no engine change.
+
+4.10.4 found that the KBNK anchor passed under a drive broken 24-fold. It is
+repaired and now fails on that mutant; the endgame suite costs 1.5s release /
+18.4s debug as a result.
 
 The standard cohort is frozen by content: seed `6200600`, 19 families, 100
 positions each, overall digest `fe486604...`. Both of 4.11.1's arms must report
@@ -100,7 +105,7 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
     - [x] **4.10.1** Tablebase-truth termination; material shed becomes a diagnostic
     - [x] **4.10.2** Cohort fingerprint; refuse any comparison across position sets
     - [x] **4.10.3** Sharded workers; parallel output byte-identical to serial
-    - [ ] **4.10.4** Prove every guard FAILS on a known-bad input; thin-sample refusal
+    - [x] **4.10.4** Prove every guard FAILS on a known-bad input; thin-sample refusal
     - [ ] **4.10.5** Measurement-layer contract and per-report layer/budget/set fields
     - [ ] **4.10.6** Node budget as a run condition; 60k/200k/600k bracket runner
     - [ ] **4.10.7** Held-out split, McNemar paired z, runner-up slot, spent-cohort rule

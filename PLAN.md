@@ -16,7 +16,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.10.4 — prove every guard fails on a known-bad input** |
+| Current step | **4.10.5 — measurement-layer contract** |
 | Instrument state | The endgame truth harness is **defective and under repair**; every pawn-family conversion number is superseded. See `analysis/endgame_truth_instrument_audit_2026-09-04.md` and "Reopened work, 2026-09-04" |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -1041,17 +1041,59 @@ Nothing here changes the engine. These are tooling commits.
    lifetime is now the task's, explicitly, and a test asserts the old shape
    cannot return. Worth recording because the failure was invisible in the
    log -- the run looked complete and simply never wrote its report.
-4. **4.10.4 Prove the guards fire.** Every floor, veto, anchor and gate must be
-   shown to FAIL on a known-bad input, not merely to pass on a good one. Three
-   specific obligations, each from a guard that silently did not work: a
-   regression anchor must reproduce the ORIGINAL conditions exactly (same node
-   budget, no depth cap, one table persisting across the game) or it passes
-   under the very vector it was written to catch; a drift gate must be re-tested
-   with a perturbation guaranteed not to be a no-op; and a frozen fingerprint
-   must hash an explicit FIELD LIST, because hashing whole records makes every
-   fingerprint unreachable the moment a diagnostic field is added. Add a
-   thin-sample refusal so a statistic over a tiny eligible set reports
-   emptiness rather than 0.0%.
+4. **4.10.4 Prove the guards fire -- DONE, and the KBNK anchor did not.**
+
+   **The finding: `kbnk_positions_are_driven_to_mate` passed under a broken
+   drive.** Cutting `MOPUP_DIAGONAL` from 360 to 15 -- a 24x reduction, roughly
+   the pre-4.9a.4 scale that converted KBN-K at 19.4% -- left the test green.
+   That is Basilisk's BAS-E39 reproduced here rather than imported: an anchor
+   passing under the very vector it exists to catch. Three causes, all of them
+   the same mistake of not reproducing the instrument's conditions:
+
+   - a **fresh `Searcher` per move**, so an empty transposition table every
+     move, where the measurement persists one table across the game;
+   - a **fixed depth of 10** instead of the instrument's 60,000-node budget;
+   - a **40-ply move budget**, which cannot admit a discriminating position at
+     all. The head needs **45-75 plies** from a centre-king start, so 40 plies
+     silently restricted the suite to near-corner cases -- which mate even with
+     a broken drive. The single frozen case was one of those.
+
+   **Repaired and verified both ways.** One searcher for the whole game, a
+   60,000-node budget, a 90-ply budget, and three discriminating positions
+   frozen into `tests/endgames.epd`. Chosen empirically rather than by taste:
+   head and mutant were built as separate binaries and run over 24 KBN-K
+   positions at 60,000 nodes, giving **head 20/24 versus mutant 5/24** and 16
+   positions where the head mates and the mutant does not; the three shortest
+   (45, 49 and 55 plies) were frozen. The repaired anchor now **FAILS on the
+   mutant and passes on the head**. Selecting positions on the mutant's failure
+   is legitimate here and is stated rather than hidden: this is a regression
+   ANCHOR against a known-bad state, not an estimate of anything.
+
+   Cost is real and recorded: the endgame suite goes from 0.6s to **1.5s in
+   release and 18.4s in debug**. That is the price of a suite that can fail.
+
+   **Thin-sample refusal** is added to `endgame_floors.py` as `MIN_ELIGIBLE = 5`,
+   sized against the cohort rather than by taste -- the smallest theoretical-win
+   counts on the frozen set are KNN-K at 1 and KNN-KP at 23, so 5 excludes the
+   degenerate family and keeps every real one. A rate below it is printed as
+   thin rather than as a number, because the failure being prevented is a
+   CONFIDENT wrong reading: one eligible position that fails reads as 0.0%,
+   which looks like catastrophe and is emptiness. `kbnk_positions_are_driven_to_mate`
+   also had no count guard at all and now has one; its sibling Syzygy vetoes
+   already carried `checked >= 30` and `checked >= 25`.
+
+   **The floor gate itself is now proved to fire**, end to end through the CLI:
+   it blocks on a large family regression, stays quiet on equality and on a
+   small dip, and a thin n=1 family at 0% cannot manufacture a verdict.
+
+   The fingerprint obligation was already met by construction at 4.10.2 -- the
+   cohort digest hashes FENs and nothing else, so adding a diagnostic field
+   cannot move it. `shed_material_ply` was added at 4.10.1 and the digests did
+   not change.
+
+   Remaining thinness, recorded rather than papered over: the `kbnk-mate` set
+   is 4 positions and the `tb-win`/`tb-draw` sets are 30 and 25. Widening the
+   KBNK set belongs to **4.12.21**, which owns that family.
 5. **4.10.5 Measurement-layer contract.** Write
    `analysis/endgame_measurement_layers.md` and make every instrument state
    which layer it reports: **theory truth** (per move, tablebase WDL),
