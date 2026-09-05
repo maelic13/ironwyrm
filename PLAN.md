@@ -16,7 +16,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.11.4 — drawn-share bias census** |
+| Current step | **4.11.5 — occurrence census, endgame roots excluded** |
 | Instrument state | The endgame truth harness is **defective and under repair**; every pawn-family conversion number is superseded. See `analysis/endgame_truth_instrument_audit_2026-09-04.md` and "Reopened work, 2026-09-04" |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -1475,11 +1475,60 @@ stable.
    third). That is worth carrying into 4.11.6: a family where both engines are
    weak and they fail on DIFFERENT positions is a different proposition from one
    where the reference simply wins.
-4. **4.11.4 Drawn-share bias census.** Per material class, compare the share of
-   games actually drawn against the evaluator's own prediction. This is a
-   cheaper and sharper prioritiser than conversion counts, and it is what
-   identified rook endings as systematically overclaimed. Rarog already has
-   `endgame_drawn.py` for a single family; generalise it across the corpus.
+4. **4.11.4 Drawn-share bias census -- DONE, and it reorders the list.**
+   1,500 positions per family over 19 families, tablebase-filtered to the
+   theoretical draws, each searched at 60,000 nodes. Artifact
+   `tools/results/drawn-census/drawn-v1.json`; full table in
+   `analysis/drawn_share_census_2026-09-05.md`.
+
+   | Family | drawn/1500 | overclaim | mean cp |
+   |---|---:|---:|---:|
+   | KRP-KB | 38 | **1.0000** | +328.1 |
+   | KR-KN | 796 | **1.0000** | +346.0 |
+   | KR-KB | 1002 | **0.9960** | +307.4 |
+   | KBP-KB | 884 | 0.6086 | +142.0 |
+   | KNN-KP | 1009 | 0.5768 | +159.6 |
+   | KBP-KN | 635 | 0.5071 | +143.6 |
+   | KRP-KR | 482 | 0.3071 | +84.0 |
+   | KNN-K | 1499 | **0.0000** | +0.0 |
+
+   **Rook against a lone minor is priced as close to winning, always.** KR-KN
+   overclaims EVERY one of its 796 drawn positions and KR-KB 998 of 1002, at
+   means of +346 and +307 -- far above the material edge the fitted evaluator
+   assigns, so positional terms are stacking on top of it in positions that are
+   theoretically dead. There is no drawishness scaling for these endings.
+
+   **KNN-K is the control and it is perfect**: 1,499 drawn positions, zero
+   claimed. That is what makes the failures legible as missing knowledge rather
+   than as an instrument artifact. KQ-K, KR-K and KBB-K have no drawn subset at
+   all, confirming from measurement what 4.9a.2 predicted from theory.
+
+   **The two rankings barely overlap, which is why this had to precede 4.11.6.**
+   KR-KB and KR-KN have conversion deficits of 2 and 3 -- among the smallest in
+   the cohort -- and are its two worst drawn-share offenders. Ranking on
+   conversion alone would have put them near the bottom. The mirror image is
+   KQ-KR: the largest conversion deficit at 23, and only 2 drawn positions in
+   1,500, so it is a pure technique problem. This is 4.9a.7's lesson arriving
+   from the other direction -- there a working scale change was nearly called
+   null because it was read on conversion; here three families would have been
+   called healthy for the same reason.
+
+   **Consequence for 4.12.1:** the provisional table classifies KRKB (ref 7) and
+   KRKN (ref 8) as VERDICT functions, and their measured defect is scale-shaped.
+   4.12.1 owns the classification and should revisit those two against this
+   evidence rather than against the donor's taxonomy -- what matters is which
+   instrument can see the defect.
+
+   **Two instrument defects were found and fixed here.** The tool's numbers were
+   ORDER-DEPENDENT: `engine.analyse` was called with no `game=` token, so no
+   `ucinewgame` was sent between positions and the transposition table carried
+   over. Caught by the serial-versus-sharded byte-identity check, where KBP-KB
+   read 0.702 serially and 0.750 over six workers on the same positions; fixed
+   by forcing `ucinewgame` per position, after which the two are byte-identical.
+   Prior drawn-cohort numbers (4.9a.7, 4.9a.8) were paired within themselves and
+   remain valid as comparisons, but their absolute rates carried this
+   contamination. Separately, a completed census died on its write because the
+   tool never created its output directory, losing 28,500 positions of work.
 5. **4.11.5 Occurrence census with endgame roots excluded.** The census suite
    must exclude endgame roots or the number is an artifact of the suite -- the
    same measurement read 47.9% unrestricted and zero on non-endgame roots.

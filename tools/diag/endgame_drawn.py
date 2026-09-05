@@ -47,6 +47,7 @@ import json
 import random
 import statistics
 import sys
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -59,7 +60,99 @@ except ImportError:
     print("ERROR: python-chess not installed. Run: pip install chess", file=sys.stderr)
     sys.exit(1)
 
-from endgame_truth import parse_family, random_position, wdl_for_white  # noqa: E402
+from endgame_truth import (  # noqa: E402
+    cohort_digest, configure_engine, generate_family, parse_family,
+    wdl_for_white,
+)
+
+# Below this many DRAWN positions a family's overclaim rate is reported as thin
+# rather than as a number -- the same discipline as `endgame_floors.MIN_ELIGIBLE`
+# and for the same reason. Some families have almost no drawn subset at all
+# (KQ-K and KR-K have none by construction), and an overclaim rate over three
+# positions would read as a measurement while being noise.
+MIN_DRAWN = 25
+
+
+def _worker(task):
+    """Score one shard of drawn positions. Returns [(index, cp, is_mate), ...].
+
+    Engine and tablebase lifetimes are the task's, explicitly. The pool
+    initializer version of this deadlocked in 4.10.3 and there is no reason to
+    rediscover that.
+    """
+    engine_path, syzygy, hash_mb, nodes, mate_cp, items = task
+    tb = chess.syzygy.open_tablebase(syzygy)
+    engine = chess.engine.SimpleEngine.popen_uci(engine_path)
+    try:
+        configure_engine(engine, hash_mb)
+        out = []
+        for index, fen in items:
+            board = chess.Board(fen)
+            try:
+                if wdl_for_white(tb, board) != 0:
+                    continue
+            except (chess.syzygy.MissingTableError, KeyError, ValueError):
+                continue
+            # `game=object()` forces `ucinewgame` before every position, so
+            # the transposition table starts empty each time.
+            #
+            # Without it the engine carries its table across positions and a
+            # position's score depends on which positions preceded it. That is
+            # not a theoretical worry: it was caught by the serial-vs-sharded
+            # byte-identity check at 4.11.4, where KBP-KB's overclaim rate read
+            # 0.702 serially and 0.750 over six workers on the SAME positions.
+            # A census must be position-local to be shardable at all, and
+            # order-independence is worth having on its own account.
+            info = engine.analyse(
+                board, chess.engine.Limit(nodes=nodes), game=object()
+            )
+            pov = info["score"].white()
+            if pov.is_mate():
+                mate = pov.mate()
+                out.append((index, mate_cp if mate is not None and mate > 0
+                            else -mate_cp, True))
+            else:
+                out.append((index, int(pov.score()), False))
+        return out
+    finally:
+        engine.quit()
+        tb.close()
+
+
+def shard(items, workers: int):
+    """Fixed-index round-robin, so parallel output equals serial output."""
+    buckets = [[] for _ in range(workers)]
+    for i, item in enumerate(items):
+        buckets[i % workers].append(item)
+    return [b for b in buckets if b]
+
+
+def summarize(name, scores, sampled, mates, threshold, nodes, digest):
+    """One family's overclaim statistics, or a thin-sample refusal."""
+    entry = {
+        "sampled": sampled,
+        "drawn": len(scores),
+        "threshold_cp": threshold,
+        "nodes": nodes,
+        "cohort_sha256": digest,
+    }
+    if len(scores) < MIN_DRAWN:
+        entry["thin"] = (
+            f"only {len(scores)} drawn positions (need {MIN_DRAWN}); reported "
+            "as empty rather than as a rate"
+        )
+        entry["overclaim_rate"] = None
+        return entry
+    over = [s for s in scores if s > threshold]
+    entry.update({
+        "overclaimed": len(over),
+        "overclaim_rate": round(len(over) / len(scores), 6),
+        "mate_claims": mates,
+        "mean_cp": round(statistics.mean(scores), 2),
+        "median_cp": statistics.median(scores),
+        "max_cp": max(scores),
+    })
+    return entry
 
 
 def main() -> int:
@@ -80,63 +173,73 @@ def main() -> int:
                     help="score substituted for a mate claim")
     ap.add_argument("--seed", type=int, default=0x5E9D18,
                     help="matches endgame_truth.py, so cohorts line up")
+    ap.add_argument("--hash", type=int, default=16)
+    ap.add_argument(
+        "--workers", type=int, default=1,
+        help="independent one-thread engine processes. Changes wall time only; "
+             "results are reassembled by fixed index (PLAN 4.10.3)",
+    )
     ap.add_argument("--output", type=Path)
     args = ap.parse_args()
 
     names = [n.strip() for n in args.families.split(",") if n.strip()]
     specs = {n: parse_family(n) for n in names}
 
-    tb = chess.syzygy.open_tablebase(str(args.syzygy))
-    engine = chess.engine.SimpleEngine.popen_uci(str(args.engine))
-    report: dict[str, dict] = {}
-    try:
-        for name in names:
-            strong, weak = specs[name]
-            rng = random.Random(
-                args.seed ^ int.from_bytes(
-                    hashlib.sha256(name.encode()).digest()[:8], "big"
-                )
-            )
-            scores: list[int] = []
-            mates = 0
-            sampled = 0
-            for _ in range(args.positions):
-                board = random_position(rng, strong, weak)
-                sampled += 1
-                try:
-                    if wdl_for_white(tb, board) != 0:
-                        continue
-                except (chess.syzygy.MissingTableError, KeyError, ValueError) as exc:
-                    ap.error(f"no tablebase for {name}: {exc}")
-                info = engine.analyse(board, chess.engine.Limit(nodes=args.nodes))
-                pov = info["score"].white()
-                if pov.is_mate():
-                    mates += 1
-                    mate = pov.mate()
-                    cp = args.mate_cp if mate is not None and mate > 0 else -args.mate_cp
-                else:
-                    cp = pov.score()
-                scores.append(int(cp))
+    # Generate and fingerprint every family's positions BEFORE opening an
+    # engine, so a sharded run and a serial run address identical positions by
+    # index -- the same contract as `endgame_truth.py` (PLAN 4.10.2/4.10.3).
+    fens = {}
+    digests = {}
+    for name in names:
+        strong, weak = specs[name]
+        boards = generate_family(args.seed, name, strong, weak, args.positions)
+        fens[name] = [b.fen() for b in boards]
+        digests[name] = cohort_digest(fens[name])
 
-            if not scores:
-                print(f"{name}: no drawn positions in {sampled} samples")
-                continue
-            over = [s for s in scores if s > args.threshold]
-            entry = {
-                "sampled": sampled,
-                "drawn": len(scores),
-                "overclaimed": len(over),
-                "overclaim_rate": round(len(over) / len(scores), 6),
-                "mate_claims": mates,
-                "mean_cp": round(statistics.mean(scores), 2),
-                "median_cp": statistics.median(scores),
-                "max_cp": max(scores),
-                "threshold_cp": args.threshold,
-                "nodes": args.nodes,
-            }
-            report[name] = entry
+    # Shards mix families, so work is addressed in ONE flat index space and
+    # re-split afterwards. That is what lets the round-robin balance across
+    # families whose cost differs by an order of magnitude.
+    offsets = {}
+    running = 0
+    for name in names:
+        offsets[name] = running
+        running += len(fens[name])
+    by_index = {offsets[name] + i: name
+                for name in names for i in range(len(fens[name]))}
+
+    indexed = [(offsets[name] + i, fen)
+               for name in names for i, fen in enumerate(fens[name])]
+    print(f"{len(indexed)} positions over {len(names)} families, "
+          f"{args.workers} worker(s)", flush=True)
+    tasks = [(str(args.engine.resolve()), str(args.syzygy.resolve()), args.hash,
+              args.nodes, args.mate_cp, items)
+             for items in shard(indexed, args.workers)]
+    flat = {name: {} for name in names}
+
+    if args.workers == 1:
+        produced = [_worker(tasks[0])] if tasks else []
+    else:
+        with ProcessPoolExecutor(max_workers=len(tasks)) as pool:
+            produced = list(pool.map(_worker, tasks))
+    for batch in produced:
+        for gi, cp, is_mate in batch:
+            name = by_index[gi]
+            flat[name][gi - offsets[name]] = (cp, is_mate)
+
+    report: dict[str, dict] = {}
+    for name in names:
+        got = flat[name]
+        scores = [got[i][0] for i in sorted(got)]
+        mates = sum(1 for i in got if got[i][1])
+        entry = summarize(name, scores, len(fens[name]), mates,
+                          args.threshold, args.nodes, digests[name])
+        report[name] = entry
+        if entry["overclaim_rate"] is None:
+            print(f"{name:<9} drawn {entry['drawn']:>4}/{entry['sampled']}  "
+                  f"THIN -- {entry['thin']}", flush=True)
+        else:
             print(
-                f"{name:<9} drawn {entry['drawn']:>4}/{sampled}  "
+                f"{name:<9} drawn {entry['drawn']:>4}/{entry['sampled']}  "
                 f"overclaim {entry['overclaim_rate']:.4f} "
                 f"({entry['overclaimed']}/{entry['drawn']} over "
                 f"{args.threshold}cp)  mean {entry['mean_cp']:+.1f}  "
@@ -144,11 +247,11 @@ def main() -> int:
                 f"mate claims {mates}",
                 flush=True,
             )
-    finally:
-        engine.quit()
-        tb.close()
 
     if args.output:
+        # mkdir first. endgame_truth.py does this; this tool did not, so a
+        # completed census died on the write and lost 28,500 positions of work.
+        args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(
             json.dumps(
                 {
