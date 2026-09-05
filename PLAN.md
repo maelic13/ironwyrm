@@ -16,7 +16,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.11.2 — re-derive the floors from the corrected head arm** |
+| Current step | **4.11.3 — re-derive the attained reference results** |
 | Instrument state | The endgame truth harness is **defective and under repair**; every pawn-family conversion number is superseded. See `analysis/endgame_truth_instrument_audit_2026-09-04.md` and "Reopened work, 2026-09-04" |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -913,7 +913,9 @@ discharges it.
   played a single non-win-preserving move**, at a median abort ply of 5-20.
   Aggregate conversion 0.8345 was bounded above by 0.9235 from the old
   records; the matched re-run measured **0.9140** on the same binary.
-- **4.9a.3 (regression contract) -- SUPERSEDED, floors half only, owner 4.11.2.** The 64 frozen
+- **4.9a.3 (regression contract) -- DEBT DISCHARGED 2026-09-05.** The floors were
+  re-derived at 4.11.2 from the corrected head arm and the old file is kept as
+  `endgame_floors_v1.json`. The original defect, for the record: the 64 frozen
   theory vetoes in `tests/endgames.rs` are static verdicts, play nothing and
   stand. The aggregate floors do not: their pawn-family conversion values are
   depressed by the abort and so are lenient exactly where 4.12 works next, and
@@ -1402,10 +1404,39 @@ stable.
    n. KBN-K contains no `material_lost` outcomes, so v1 and v2 agree there by
    construction, which is what makes the reproduction meaningful rather than
    lucky.
-2. **4.11.2 Re-derive the floors.** Rebuild `endgame_floors.json` from the
-   corrected head arm and give it a cohort fingerprint. Restate 4.12.21's KBN-K
-   dtz target on an artifact that exists; the 0.7260 currently recorded has no
-   reproducible source.
+2. **4.11.2 Re-derive the floors -- DONE.** `endgame_floors.json` is rebuilt
+   from `tools/results/truth-v2-head/`, stamped `truth_schema:
+   rarog-endgame-truth-v2` and carrying the cohort fingerprint
+   `fe486604...`. **Weighted conversion floor 0.9300 over n=1371, 18 families.**
+   The old file is preserved unmodified as `endgame_floors_v1.json` -- superseded,
+   not deleted -- and the tool still refuses it by name, which is the 4.10.1
+   guard doing its job on the real artifact.
+
+   **KNN-K now has no floor at all, and that is correct.** It contributes one
+   theoretical win in 100 positions, below `MIN_ELIGIBLE`, so all three of its
+   rates are reported as thin rather than as numbers. A floor on n=1 cannot be
+   breached at any sigma and would sit in the report looking measured while
+   being unmeasurable. The family is not thereby unguarded: the hard theory
+   vetoes in `tests/endgames.rs` are per position and do not care about sample
+   size. This is why the aggregate denominator is 1371 and not 1372.
+
+   **4.12.21's KBN-K target is re-derived and confirmed on a real artifact.**
+   `tools/results/truth-v2-e08/` gives the RAR-E08 head **dtz 0.7260 over
+   n=2989** and conversion **0.9184 (90/98)** -- matching the pre-`b711d4d`
+   floors to the digit -- while the current head gives **0.6753 over n=3178**
+   and **0.8980 (88/98)**, matching the post-`b711d4d` floors to the digit.
+   Both halves of the lost run are now reproduced, so RAR-E14's defect C is
+   fully closed rather than merely re-derived on one side. Note the reference
+   reaches **0.7555**, so 0.7260 is a restoration target, not a ceiling.
+
+   **The gate was proved to fire on real data, not on a synthetic input.**
+   Judging the RAR-E08 arm against the accepted head's floors BLOCKS on KP-K
+   (-3.6 SE), KQ-K (-3.9 SE) and KQ-KP (-4.3 SE) dtz progress, and reports
+   KBN-K dtz improving +4.4 SE in that direction. Those are exactly RAR-E12's
+   registered findings seen in reverse -- it claimed KP-K, KQ-K and KQ-KP
+   improving beyond 2 SE and disclosed KBN-K at -4.4 SE. An instrument rebuilt
+   on corrected data independently reproducing a registration it was not fitted
+   to is the strongest check available here.
 3. **4.11.3 Re-derive the attained reference results.** Replaces RAR-E11 per
    family, with the paired matrix -- both converted, candidate only, reference
    only, neither. Name it an **attained reference result**, never a ceiling:

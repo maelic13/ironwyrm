@@ -504,10 +504,33 @@ class SchemaGuardTests(unittest.TestCase):
                 "schema": "rarog-endgame-truth-v2", "families": {}})
             self.assertEqual(endgame_floors.load_report(good)["families"], {})
 
-    def test_committed_floors_are_rejected_until_re_derived(self):
-        """The committed floors predate 4.10.1 and must fail closed (4.11.2)."""
+    def test_the_committed_floors_carry_their_provenance(self):
+        """Inverted at 4.11.2, when the floors were re-derived.
+
+        Between 4.10.1 and 4.11.2 this asserted the OPPOSITE -- that the
+        committed floors were stale and must fail closed -- which was true and
+        was the point. 4.11.2 rebuilt them from the corrected head arm, so the
+        assertion flips to the state that must now hold and must not silently
+        regress: stamped with the truth schema that produced them, and carrying
+        the cohort they were measured on.
+
+        Nothing is weakened by the flip. That a MISMATCHED floors file is
+        refused is covered independently, on synthetic inputs, by
+        `test_floors_reject_a_v1_truth_report` and by `CohortGuardTests` --
+        those keep proving the guard fires regardless of what the committed
+        file happens to contain.
+        """
         doc = json.loads(
             endgame_floors.DEFAULT_FLOORS.read_text(encoding="utf-8"))
+        self.assertEqual(doc.get("truth_schema"), endgame_floors.TRUTH_SCHEMA)
+        self.assertIn("family_sha256", doc.get("cohort", {}))
+        self.assertTrue(doc["cohort"]["family_sha256"])
+
+    def test_the_superseded_floors_are_kept_and_still_refused(self):
+        """v1 is preserved unmodified as the historical artifact."""
+        v1 = endgame_floors.DEFAULT_FLOORS.with_name("endgame_floors_v1.json")
+        self.assertTrue(v1.is_file(), "the superseded floors must not be deleted")
+        doc = json.loads(v1.read_text(encoding="utf-8"))
         self.assertNotEqual(doc.get("truth_schema"), endgame_floors.TRUTH_SCHEMA)
 
     def test_truth_runner_emits_v2(self):

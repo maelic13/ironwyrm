@@ -1,30 +1,4 @@
 {
-  "cohort": {
-    "family_sha256": {
-      "KBB-K": "ad6339c872b5624bb6050396f3b20e5d4efb7a07a6d262ffb04772310de4daa2",
-      "KBN-K": "4866ed257acd1c2a1af8ea40f944666230fd3afd7e0af0b18930c2eb47e06f9c",
-      "KBP-K": "397951faf781fadc5cc5edb4505f6a843cc8a57eedfc5fe21d6a6162a1a833a3",
-      "KBP-KB": "b730954492fafc8a30a8a3a4ee6e6d83eb3fdf8031fa8a9e1a6584eb830d32cb",
-      "KBP-KN": "652d64e1fa5aa158e0069bfcd06bf4718f631df6844612e70a8a08301484d0bf",
-      "KNN-K": "b7992f2691261f8a4b209326e0cb7cf29c23bea612ac570d04d0e11253bb5511",
-      "KNN-KP": "144cc1f71c152b38514c170ea0a114d79a39af9cbc88225a1051e138657051b6",
-      "KP-K": "6587009f7fba8d9bc6c8789d2cf72b9ba5c49c884c408c3e37750f122e2f8c65",
-      "KP-KP": "33e36814f9252f525619ab70ec08e2868ed31fca0cb13f92930a92150b7ac1ec",
-      "KPP-K": "0727b8c47aa101de85f47b7eaba06b6946fc839e4d32de73f624ab8ce55f60e0",
-      "KQ-K": "142bc6e3ae6fb53e56904f3aa4d956f3899595fe1bbf31f6738170aea3e8ece3",
-      "KQ-KP": "6a8da560f5e4d552140488b12901567ba33fbc47e553971b7e7461f86c6405ab",
-      "KQ-KR": "603fe4f936c766a3bf63d8b752affb710dbd59bfd47f68b2cced3c49911fece4",
-      "KR-K": "e0aca4941f89942d2b1dde5ee3df13b1bcae1b27c16abb63e644f9ad814c5fd2",
-      "KR-KB": "cb657cb074b12a852102e5b5c277a62c6a592c84588f67cc56b3ddc9140d6b81",
-      "KR-KN": "775fe8e6ee096e0e628fd626da65d9912641b0d3469b506ba9fdb0a06a87de00",
-      "KR-KP": "b6b0f63a2027f970acfc82baa5138f0c7e4c7db2bbc384f7a1a33f314931dd28",
-      "KRP-KB": "d09190f0f4fc2f7ee84075b3ca96fb35be70abb2c30de7590c7077ba15610584",
-      "KRP-KR": "66ec88609820909e6933c352790220b28fa961bf78987d4fe8d7dd464e820927"
-    },
-    "positions_per_family": 100,
-    "seed": 6200600,
-    "sha256": "fe4866045506636f884ee30526b4188c3def9ca9747f5960ea5c5e7cba5dbb5e"
-  },
   "families": {
     "KBB-K": {
       "conversion_rate": {
@@ -57,43 +31,57 @@
     "KBP-K": {
       "conversion_rate": {
         "n": 94,
-        "rate": 1.0
+        "rate": 0.9787234042553191
       },
       "dtz_progress_rate": {
-        "n": 1298,
-        "rate": 0.44992295839753466
+        "n": 1296,
+        "rate": 0.4506172839506173
       },
       "win_preserving_rate": {
-        "n": 1298,
+        "n": 1296,
         "rate": 1.0
       }
     },
     "KBP-KB": {
       "conversion_rate": {
         "n": 26,
-        "rate": 0.9230769230769231
+        "rate": 0.8076923076923077
       },
       "dtz_progress_rate": {
-        "n": 471,
-        "rate": 0.43524416135881105
+        "n": 383,
+        "rate": 0.4621409921671018
       },
       "win_preserving_rate": {
-        "n": 476,
-        "rate": 0.9894957983193278
+        "n": 426,
+        "rate": 0.9906103286384976
       }
     },
     "KBP-KN": {
       "conversion_rate": {
         "n": 57,
-        "rate": 0.9649122807017544
+        "rate": 0.8245614035087719
       },
       "dtz_progress_rate": {
-        "n": 963,
-        "rate": 0.3790238836967809
+        "n": 826,
+        "rate": 0.4213075060532688
       },
       "win_preserving_rate": {
-        "n": 965,
-        "rate": 0.9979274611398964
+        "n": 828,
+        "rate": 0.9975845410628019
+      }
+    },
+    "KNN-K": {
+      "conversion_rate": {
+        "n": 1,
+        "rate": 1.0
+      },
+      "dtz_progress_rate": {
+        "n": 1,
+        "rate": 0.0
+      },
+      "win_preserving_rate": {
+        "n": 1,
+        "rate": 1.0
       }
     },
     "KNN-KP": {
@@ -102,12 +90,12 @@
         "rate": 0.21739130434782608
       },
       "dtz_progress_rate": {
-        "n": 830,
-        "rate": 0.472289156626506
+        "n": 886,
+        "rate": 0.4762979683972912
       },
       "win_preserving_rate": {
-        "n": 955,
-        "rate": 0.8691099476439791
+        "n": 1004,
+        "rate": 0.8824701195219123
       }
     },
     "KP-K": {
@@ -127,7 +115,7 @@
     "KP-KP": {
       "conversion_rate": {
         "n": 57,
-        "rate": 0.9824561403508771
+        "rate": 1.0
       },
       "dtz_progress_rate": {
         "n": 941,
@@ -141,14 +129,14 @@
     "KPP-K": {
       "conversion_rate": {
         "n": 98,
-        "rate": 0.9795918367346939
+        "rate": 0.7653061224489796
       },
       "dtz_progress_rate": {
-        "n": 1254,
-        "rate": 0.17065390749601275
+        "n": 849,
+        "rate": 0.06478209658421673
       },
       "win_preserving_rate": {
-        "n": 1254,
+        "n": 849,
         "rate": 1.0
       }
     },
@@ -162,22 +150,22 @@
         "rate": 0.5881627620221949
       },
       "win_preserving_rate": {
-        "n": 812,
-        "rate": 0.9987684729064039
+        "n": 1004,
+        "rate": 1.0
       }
     },
     "KQ-KP": {
       "conversion_rate": {
         "n": 98,
-        "rate": 0.9591836734693877
+        "rate": 0.9795918367346939
       },
       "dtz_progress_rate": {
         "n": 1083,
         "rate": 0.46075715604801476
       },
       "win_preserving_rate": {
-        "n": 1084,
-        "rate": 0.9990774907749077
+        "n": 1270,
+        "rate": 1.0
       }
     },
     "KQ-KR": {
@@ -214,12 +202,12 @@
         "rate": 0.9285714285714286
       },
       "dtz_progress_rate": {
-        "n": 647,
-        "rate": 0.5734157650695518
+        "n": 589,
+        "rate": 0.599320882852292
       },
       "win_preserving_rate": {
-        "n": 686,
-        "rate": 0.9431486880466472
+        "n": 619,
+        "rate": 0.9515347334410339
       }
     },
     "KR-KN": {
@@ -246,39 +234,38 @@
         "rate": 0.5234899328859061
       },
       "win_preserving_rate": {
-        "n": 1793,
-        "rate": 0.9972113775794758
+        "n": 1784,
+        "rate": 0.9977578475336323
       }
     },
     "KRP-KB": {
       "conversion_rate": {
         "n": 96,
-        "rate": 0.9375
+        "rate": 0.46875
       },
       "dtz_progress_rate": {
-        "n": 1942,
-        "rate": 0.32801235839340886
+        "n": 1150,
+        "rate": 0.20608695652173914
       },
       "win_preserving_rate": {
-        "n": 1944,
-        "rate": 0.9989711934156379
+        "n": 1154,
+        "rate": 0.9965337954939342
       }
     },
     "KRP-KR": {
       "conversion_rate": {
         "n": 73,
-        "rate": 0.9178082191780822
+        "rate": 0.4931506849315068
       },
       "dtz_progress_rate": {
-        "n": 1350,
-        "rate": 0.3933333333333333
+        "n": 545,
+        "rate": 0.30825688073394497
       },
       "win_preserving_rate": {
-        "n": 1354,
-        "rate": 0.9970457902511078
+        "n": 590,
+        "rate": 0.9915254237288136
       }
     }
   },
-  "schema": "rarog-endgame-floors-v2",
-  "truth_schema": "rarog-endgame-truth-v2"
+  "schema": "rarog-endgame-floors-v2"
 }

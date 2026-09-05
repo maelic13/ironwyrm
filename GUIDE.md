@@ -18,20 +18,20 @@ and `python tools/diag/check_guide.py` must pass.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
 | Instrument state | **The endgame truth harness is defective and under repair.** Every pawn-family conversion number is superseded; bare-king families are provably unaffected |
-| Current step | **4.11.2 — re-derive the floors from the corrected head arm** |
+| Current step | **4.11.3 — re-derive the attained reference results** |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## What you run next
 
-**4.11.2 — re-derive `endgame_floors.json` from the corrected head arm** and
-give it the cohort fingerprint the tool now demands. The committed floors fail
-closed until this runs. Restate 4.12.21's KBN-K target on an artifact that
-exists — it is now re-derived: conversion 0.8980 (n=98), dtz 0.6753 (n=3178).
+**4.11.3 — re-derive the attained reference results**, replacing RAR-E11 per
+family with the paired matrix. Name it an *attained reference result*, never a
+ceiling: it is what one engine managed at one budget, Rarog may exceed it, and
+failing to equal it is not by itself a rejection.
 
 Corrected baseline (4.11.1): head **1276/1372 = 0.9300**, reference
 **1361/1372 = 0.9920**, deficit 85, hard residue 8 positions. Largest single
 deficit is **KQ-KR 77/100 against 100/100**, which the pre-correction ordering
-put near the END of 4.12.
+put near the END of 4.12. Floors (4.11.2) now sit at 0.9300 over n=1371.
 
 **Deployment is 153,466 nodes/move median at 3+0.03** and the endgame screen is
 60,000, below its p25 — so every fixed-node endgame verdict so far is
@@ -99,7 +99,7 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
 - [x] **4.9a** Endgame truth foundation — done; five results SUPERSEDED, owners named
     - [x] **4.9a.1** Truth corpus — result was invalid, REPLACED by the 4.11.1 baseline
     - [x] **4.9a.2** Endgame-start cohort book — 788 verified positions, 21 families
-    - [x] **4.9a.3** SUPERSEDED -> 4.11.2 — floors half only; the 64 frozen theory vetoes stand
+    - [x] **4.9a.3** Regression contract — floors REPLACED by 4.11.2; the 64 theory vetoes always stood
     - [x] **4.9a.4** SUPERSEDED -> 4.11.9 — gain stands (KBN-K **19.4% -> 96.9%**); isolation reaches 6 families
     - [x] **4.9a.5** RAR-E08 **ACCEPTED** +6.73 +/- 3.82 Elo — TB-corrected labels win
     - [x] **4.9a.6** `hce-v3-tb` fitted and gated — RAR-E12 **+11.81 +/- 5.33 Elo**
@@ -120,7 +120,7 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
     - [x] **4.10.12** Feature-matrix build audit; `--all-features` is not the shipped config
 - [ ] **4.11** Re-measurement and re-derivation — corrections recorded in place
     - [x] **4.11.1** Re-run both truth arms — head **0.9300**, reference **0.9920**
-    - [ ] **4.11.2** Re-derive the floors; restate 4.12.21's KBN-K target on a real artifact
+    - [x] **4.11.2** Floors re-derived — **0.9300** over n=1371, 18 families, cohort-stamped
     - [ ] **4.11.3** Re-derive the attained reference results — replaces RAR-E11
     - [ ] **4.11.4** Re-rank 4.12 on corrected conversion, drawn-share bias and occurrence
     - [ ] **4.11.5** Budget transfer: repeat decisive verdicts at 60k/200k/600k
