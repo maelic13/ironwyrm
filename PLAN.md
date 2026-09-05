@@ -16,7 +16,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.11.4 — re-rank the 4.12 reference-function list** |
+| Current step | **4.11.4 — drawn-share bias census** |
 | Instrument state | The endgame truth harness is **defective and under repair**; every pawn-family conversion number is superseded. See `analysis/endgame_truth_instrument_audit_2026-09-04.md` and "Reopened work, 2026-09-04" |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -1162,7 +1162,7 @@ Nothing here changes the engine. These are tooling commits.
 
    **The primary budget stays 60,000 for 4.11.1.** Changing it in the same step
    as the termination rule would confound the one delta that step exists to
-   isolate; 4.11.5 owns the bracket runs. Evidence:
+   isolate; 4.11.7 owns the bracket runs. Evidence:
    `analysis/node_budget_2026-09-04.md`. Re-measure after any time-management
    change (4.17) or large NPS movement.
 
@@ -1472,30 +1472,39 @@ stable.
 
    KNN-KP is also the only family where the candidate converts positions the
    reference does not (2 of its 3 candidate-only positions; KRP-KR has the
-   third). That is worth carrying into 4.11.4: a family where both engines are
+   third). That is worth carrying into 4.11.6: a family where both engines are
    weak and they fail on DIFFERENT positions is a different proposition from one
    where the reference simply wins.
-4. **4.11.4 Re-rank the reference-function list.** Order 4.12 by expected value
-   on CORRECTED inputs: conversion deficit against the attained reference
-   result, drawn-share bias, and occurrence. The current order is by board
-   occurrence times a defective conversion number, and
-   `analysis/endgame_search_occurrence_2026-09-03.md` already disagrees with it
-   sharply. Register the resulting order before working the list.
-5. **4.11.5 Budget transfer.** Repeat the decisive family verdicts at
-   60k / 200k / 600k nodes. A verdict that does not reproduce at a
-   game-representative budget is provisional: Basilisk rejected its leading
-   candidate at 60,000 nodes on a losing move that a 200,000-node search sees.
-6. **4.11.6 Occurrence census with endgame roots excluded.** The census suite
+4. **4.11.4 Drawn-share bias census.** Per material class, compare the share of
+   games actually drawn against the evaluator's own prediction. This is a
+   cheaper and sharper prioritiser than conversion counts, and it is what
+   identified rook endings as systematically overclaimed. Rarog already has
+   `endgame_drawn.py` for a single family; generalise it across the corpus.
+5. **4.11.5 Occurrence census with endgame roots excluded.** The census suite
    must exclude endgame roots or the number is an artifact of the suite -- the
    same measurement read 47.9% unrestricted and zero on non-endgame roots.
    Report both, and note that a family absent from middlegame trees can still
    occur inside four-man endgame trees. Occurrence PRIORITISES; it is never
    evidence of value.
-7. **4.11.7 Drawn-share bias census.** Per material class, compare the share of
-   games actually drawn against the evaluator's own prediction. This is a
-   cheaper and sharper prioritiser than conversion counts, and it is what
-   identified rook endings as systematically overclaimed. Rarog already has
-   `endgame_drawn.py` for a single family; generalise it across the corpus.
+**Reordered 2026-09-05.** The re-ranking was numbered 4.11.4 and sat BEFORE
+two of its own three inputs -- the drawn-share census and the occurrence census.
+Ranking a list half made of SCALE functions on conversion deficit alone would
+have repeated 4.9a.7's mistake in a new form, so the four open leaves were
+renumbered to put the inputs first: drawn-share becomes 4.11.4, occurrence
+4.11.5, the re-rank 4.11.6 and budget transfer 4.11.7. Section 13 records the
+mapping. Prompted by the maintainer asking for the drawn-share census first,
+which is what exposed the dependency inversion.
+
+6. **4.11.6 Re-rank the reference-function list.** Order 4.12 by expected value
+   on CORRECTED inputs: conversion deficit against the attained reference
+   result, drawn-share bias, and occurrence. The current order is by board
+   occurrence times a defective conversion number, and
+   `analysis/endgame_search_occurrence_2026-09-03.md` already disagrees with it
+   sharply. Register the resulting order before working the list.
+7. **4.11.7 Budget transfer.** Repeat the decisive family verdicts at
+   60k / 200k / 600k nodes. A verdict that does not reproduce at a
+   game-representative budget is provisional: Basilisk rejected its leading
+   candidate at 60,000 nodes on a losing move that a 200,000-node search sees.
 8. **4.11.8 Datagen label audit on the existing corpora.** Run 4.10.8 against
    `hce-v2` and `hce-v3-tb`. If two corpora exist at different node budgets the
    budget comparison is free. This is the input 4.13 needs and it costs no
@@ -1563,7 +1572,7 @@ result. Rarog's present meaningful coverage is 7/20.
   `endgame_truth.py` should take a repeatable `--syzygy` so a 7-man directory
   can be added alongside the 3-4-5-6 set.
 
-**The order below is the pre-correction order and 4.11.4 replaces it.** It was
+**The order below is the pre-correction order and 4.11.6 replaces it.** It was
 built from board occurrence times a conversion number the instrument defect
 depressed, and search-tree occurrence already disagrees sharply: KRPPKRP and
 KQKRPs are listed at 0% and deferred to the end while being the two MOST
@@ -1598,7 +1607,7 @@ Record it as a gap; do not close it on unverified positions.
 | 4.12.20 | KXK | 3 | verdict | present | mechanism at 4.9a.4 |
 | 4.12.21 | KBNK | 4 | verdict | present | owns RAR-E12's dtz debt; rule-50 damping unresolved |
 
-1. **4.12.1 Order and classification.** Adopt 4.11.4's ranking, confirm the
+1. **4.12.1 Order and classification.** Adopt 4.11.6's ranking, confirm the
    recognizer/scale classification above against the code, and register which
    instrument decides each family before any of them is worked.
 2. **4.12.2 through 4.12.21** are one leaf per function, in the registered
@@ -2226,7 +2235,7 @@ reproducible artifacts outrank prose whenever documents disagree.
 | `tools/diag/endgame_floors.py` | Ratcheting aggregate floors; gains a cohort fingerprint at 4.10.2 |
 | `tools/diag/endgame_drawn.py` | Drawn-cohort overclaim; static, plays nothing, unaffected by 4.10.1 |
 | `tools/diag/endgame_book.py` | Syzygy-verified endgame-start cohort |
-| `tools/diag/endgame_search_occurrence.py` | Family frequency in the search tree; exclude endgame roots (4.11.6) |
+| `tools/diag/endgame_search_occurrence.py` | Family frequency in the search tree; exclude endgame roots (4.11.5) |
 | `tools/diag/datagen_label_audit.py` | Corpus labels against tablebase truth; new at 4.10.8 |
 | `tools/diag/check_guide.py` | GUIDE/PLAN status-board consistency; enforces SUPERSEDED owners at 4.10.10 |
 | `tools/branching_profile.ps1` | Hash-bound per-position and per-iteration depth/branching shape with robust aggregates; refutation evidence only |
@@ -2274,3 +2283,13 @@ evidence.
 | 4.14 (final checkpoint) | 4.19 | |
 | 4.15 (release gate) | 4.20 | |
 | -- | 4.10, 4.11, 4.13 | new: instruments, re-measurement, label truth |
+
+Reordered again on 2026-09-05, inside 4.11 only, because the re-ranking was
+placed before two of its own inputs:
+
+| Historical | Current |
+|---|---|
+| 4.11.4 re-rank 4.12 | 4.11.6 |
+| 4.11.5 budget transfer | 4.11.7 |
+| 4.11.6 occurrence census | 4.11.5 |
+| 4.11.7 drawn-share bias | 4.11.4 |

@@ -18,23 +18,18 @@ and `python tools/diag/check_guide.py` must pass.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
 | Instrument state | **The endgame truth harness is defective and under repair.** Every pawn-family conversion number is superseded; bare-king families are provably unaffected |
-| Current step | **4.11.4 — re-rank the 4.12 reference-function list** |
+| Current step | **4.11.4 — drawn-share bias census** |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## What you run next
 
-**4.11.4 — re-rank the 4.12 reference-function list** on corrected inputs:
-conversion deficit against the attained reference result, drawn-share bias, and
-occurrence. Register the resulting order before working the list. The current
-order came from board occurrence times a conversion number the instrument
-defect depressed.
+**4.11.4 — measure drawn-share bias per material class across the corpus.**
+Compare the share of games actually drawn against the evaluator's own
+prediction. This is what validates a SCALE function, and roughly half of 4.12's
+list is scale functions — so the re-rank (now 4.11.6) waits for it.
 
-Inputs now in hand: deficit per family from
-`tools/diag/endgame_reference_results_v1.json` (**KQ-KR 23, KBN-K 10, KNN-KP 9,
-KR-KP 8** lead it), floors at 0.9300 over n=1371, and the tree-occurrence
-census in `analysis/endgame_search_occurrence_2026-09-03.md`. Drawn-share bias
-across families is 4.11.7 and is not yet measured — decide whether 4.11.4 waits
-for it.
+The four open 4.11 leaves were renumbered on 2026-09-05: the re-rank sat before
+two of its own three inputs. PLAN section 13 maps old to new.
 
 **Deployment is 153,466 nodes/move median at 3+0.03** and the endgame screen is
 60,000, below its p25 — so every fixed-node endgame verdict so far is
@@ -125,14 +120,14 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
     - [x] **4.11.1** Re-run both truth arms — head **0.9300**, reference **0.9920**
     - [x] **4.11.2** Floors re-derived — **0.9300** over n=1371, 18 families, cohort-stamped
     - [x] **4.11.3** Attained reference results frozen — **1361/1372**, hard residue **8**
-    - [ ] **4.11.4** Re-rank 4.12 on corrected conversion, drawn-share bias and occurrence
-    - [ ] **4.11.5** Budget transfer: repeat decisive verdicts at 60k/200k/600k
-    - [ ] **4.11.6** Occurrence census with endgame roots excluded; report both numbers
-    - [ ] **4.11.7** Drawn-share bias census per material class across the corpus
+    - [ ] **4.11.4** Drawn-share bias census per material class across the corpus
+    - [ ] **4.11.5** Occurrence census with endgame roots excluded; report both numbers
+    - [ ] **4.11.6** Re-rank 4.12 on corrected conversion, drawn-share bias and occurrence
+    - [ ] **4.11.7** Budget transfer: repeat decisive verdicts at 60k/200k/600k
     - [ ] **4.11.8** Datagen label audit on `hce-v2` and `hce-v3-tb`
     - [ ] **4.11.9** Mate-drive blast radius over the dispatcher's promotion closure
     - [ ] **4.11.10** Restate RAR-E08, RAR-E11 and RAR-E12's conversion claims as superseded
-- [ ] **4.12** Endgame reference functions — order registered by 4.11.4
+- [ ] **4.12** Endgame reference functions — order registered by 4.11.6
     - [ ] **4.12.1** Adopt the order; confirm recognizer-vs-scale classification per family
     - [ ] **4.12.2** KRPKR [ref 13] scale — reopened conversion half
     - [ ] **4.12.3** KRPKB [ref 14] scale — reopened conversion half
