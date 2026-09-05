@@ -51,6 +51,12 @@ def run_bench(exe, depth, stride, options):
     )
     totals = collections.Counter()
     dumps = collections.Counter()
+    # Per-position values, in bench order, for callers that need to attribute a
+    # counter to the ROOT it was measured under (PLAN 4.11.5). The sum is still
+    # the only thing this tool prints: keeping the sequence does not reintroduce
+    # the "read the last dump" mistake, it makes the legitimate version of that
+    # question answerable.
+    sequence = collections.defaultdict(list)
     nodes = 0
     try:
         if options:
@@ -75,6 +81,7 @@ def run_bench(exe, depth, stride, options):
                 # the last position and silently understate the corpus.
                 totals[parts[3]] += int(parts[4])
                 dumps[parts[3]] += 1
+                sequence[parts[3]].append(int(parts[4]))
             elif line.startswith("Nodes searched"):
                 nodes = int(line.split()[-1])
             elif line.startswith("Nodes/second"):
@@ -86,7 +93,7 @@ def run_bench(exe, depth, stride, options):
             proc.wait(timeout=30)
         except subprocess.TimeoutExpired:
             proc.kill()
-    return nodes, totals, dumps
+    return nodes, totals, dumps, dict(sequence)
 
 
 def main():
@@ -108,7 +115,8 @@ def main():
             ap.error("--set expects NAME=VALUE, got %r" % item)
         options.append((name, value))
 
-    nodes, totals, dumps = run_bench(args.exe, args.depth, args.stride, options)
+    nodes, totals, dumps, sequence = run_bench(
+        args.exe, args.depth, args.stride, options)
     if not totals:
         sys.stdout.write(
             "no diag lines: this binary was not built with --features diag\n")

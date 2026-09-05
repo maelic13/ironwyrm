@@ -16,7 +16,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.11.5 — occurrence census, endgame roots excluded** |
+| Current step | **4.11.6 — re-rank the 4.12 reference-function list** |
 | Instrument state | The endgame truth harness is **defective and under repair**; every pawn-family conversion number is superseded. See `analysis/endgame_truth_instrument_audit_2026-09-04.md` and "Reopened work, 2026-09-04" |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -1529,12 +1529,43 @@ stable.
    remain valid as comparisons, but their absolute rates carried this
    contamination. Separately, a completed census died on its write because the
    tool never created its output directory, losing 28,500 positions of work.
-5. **4.11.5 Occurrence census with endgame roots excluded.** The census suite
-   must exclude endgame roots or the number is an artifact of the suite -- the
-   same measurement read 47.9% unrestricted and zero on non-endgame roots.
-   Report both, and note that a family absent from middlegame trees can still
-   occur inside four-man endgame trees. Occurrence PRIORITISES; it is never
-   evidence of value.
+5. **4.11.5 Occurrence census split by root -- DONE. The defect is present,
+   and the first answer said it was not.** `tools/diag/endgame_occurrence.py`,
+   artifact `tools/results/occurrence/occurrence-v1.json`, write-up
+   `analysis/endgame_occurrence_split_2026-09-05.md`.
+
+   | endgame root = <= men | endgame roots | middlegame evaluations | share |
+   |---:|---:|---:|---:|
+   | 7 | 0 | 80,589 | **1.0000** |
+   | 8 | 3 | 35,435 | **0.4397** |
+   | 10 | 8 | 4,494 | **0.0558** |
+   | 12 | 10 | 242 | 0.0030 |
+
+   **Three roots out of forty produce 56% of every reference-family evaluation;
+   eight produce 94%.** At a 7-man threshold the suite contains no endgame roots
+   at all -- its smallest position is 8 men -- and the census looks perfectly
+   clean. That was the first reading, and moving the line by ONE MAN turns it
+   into "more than half of this measurement comes from three positions". The
+   tool therefore sweeps and prints the whole curve; `--endgame-men` selects only
+   which threshold gets the detailed table. A report quoting one threshold would
+   be quoting a choice, not a measurement.
+
+   Four families read **zero over all forty roots** and no threshold argument
+   touches them: KBNK, KNNK, KNNKP and KRKN. The families that dominate the
+   census -- KRPPKRP 5.88%, KQKRPs 4.41%, KRPKR 3.46% -- are exactly the ones
+   that collapse when late-material roots are removed, and KQKRPs is reached only
+   from endgame roots at a threshold as low as 8.
+
+   **The tension for 4.11.6 is explicit: KR-KN has tree occurrence ZERO and the
+   worst drawn-share bias in the cohort** (4.11.4: 796/796 overclaimed at mean
+   +346). Those must be reconciled, not averaged.
+
+   The honest conclusion is that **the bench suite is a weak instrument for this
+   question**: 40 positions chosen to fingerprint the SEARCH, not to sample the
+   game distribution. `bench_counters.py` gained per-position retention to make
+   the split possible; summing stays its only printed output, so the rule that
+   file exists to enforce is untouched. Verified under `--features diag` with
+   `bench 13` reproducing 6,901,489 / EBF 2.458.
 **Reordered 2026-09-05.** The re-ranking was numbered 4.11.4 and sat BEFORE
 two of its own three inputs -- the drawn-share census and the occurrence census.
 Ranking a list half made of SCALE functions on conversion deficit alone would

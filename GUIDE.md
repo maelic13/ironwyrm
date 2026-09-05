@@ -18,20 +18,23 @@ and `python tools/diag/check_guide.py` must pass.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
 | Instrument state | **The endgame truth harness is defective and under repair.** Every pawn-family conversion number is superseded; bare-king families are provably unaffected |
-| Current step | **4.11.5 — occurrence census, endgame roots excluded** |
+| Current step | **4.11.6 — re-rank the 4.12 reference-function list** |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## What you run next
 
-**4.11.5 — re-run the occurrence census with endgame roots EXCLUDED.** The
-suite must exclude them or the number is an artifact of the suite: the same
-measurement read 47.9% unrestricted and zero on non-endgame roots. Report both.
-Occurrence prioritises; it is never evidence of value.
+**4.11.6 — re-rank the 4.12 reference-function list** on corrected inputs and
+register the order before working the list. All three inputs are now in hand:
 
-4.11.4 found **rook-versus-lone-minor priced as near-winning always** — KR-KN
-overclaims 796/796 drawn positions at mean +346, KR-KB 998/1002 at +307 — while
-their conversion deficits are 3 and 2. Evidence:
-`analysis/drawn_share_census_2026-09-05.md`.
+- conversion deficit — `tools/diag/endgame_reference_results_v1.json`
+- drawn-share bias — `analysis/drawn_share_census_2026-09-05.md`
+- occurrence, split by root — `analysis/endgame_occurrence_split_2026-09-05.md`
+
+They disagree sharply and the disagreement is the finding. **KR-KN has the
+worst drawn-share bias in the cohort (796/796 at +346), a conversion deficit of
+3, and ZERO tree occurrence.** KQ-KR has the largest conversion deficit (23) and
+only 2 drawn positions in 1,500. Reconcile these explicitly rather than
+averaging them.
 
 **Deployment is 153,466 nodes/move median at 3+0.03** and the endgame screen is
 60,000, below its p25 — so every fixed-node endgame verdict so far is
@@ -123,7 +126,7 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
     - [x] **4.11.2** Floors re-derived — **0.9300** over n=1371, 18 families, cohort-stamped
     - [x] **4.11.3** Attained reference results frozen — **1361/1372**, hard residue **8**
     - [x] **4.11.4** Drawn-share census — **KR-KN 1.000, KR-KB 0.996** at +346/+307 cp
-    - [ ] **4.11.5** Occurrence census with endgame roots excluded; report both numbers
+    - [x] **4.11.5** Occurrence split by root — **3 of 40 roots give 56%** of the census
     - [ ] **4.11.6** Re-rank 4.12 on corrected conversion, drawn-share bias and occurrence
     - [ ] **4.11.7** Budget transfer: repeat decisive verdicts at 60k/200k/600k
     - [ ] **4.11.8** Datagen label audit on `hce-v2` and `hce-v3-tb`
