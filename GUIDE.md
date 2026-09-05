@@ -18,20 +18,23 @@ and `python tools/diag/check_guide.py` must pass.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
 | Instrument state | **The endgame truth harness is defective and under repair.** Every pawn-family conversion number is superseded; bare-king families are provably unaffected |
-| Current step | **4.11.3 — re-derive the attained reference results** |
+| Current step | **4.11.4 — re-rank the 4.12 reference-function list** |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## What you run next
 
-**4.11.3 — re-derive the attained reference results**, replacing RAR-E11 per
-family with the paired matrix. Name it an *attained reference result*, never a
-ceiling: it is what one engine managed at one budget, Rarog may exceed it, and
-failing to equal it is not by itself a rejection.
+**4.11.4 — re-rank the 4.12 reference-function list** on corrected inputs:
+conversion deficit against the attained reference result, drawn-share bias, and
+occurrence. Register the resulting order before working the list. The current
+order came from board occurrence times a conversion number the instrument
+defect depressed.
 
-Corrected baseline (4.11.1): head **1276/1372 = 0.9300**, reference
-**1361/1372 = 0.9920**, deficit 85, hard residue 8 positions. Largest single
-deficit is **KQ-KR 77/100 against 100/100**, which the pre-correction ordering
-put near the END of 4.12. Floors (4.11.2) now sit at 0.9300 over n=1371.
+Inputs now in hand: deficit per family from
+`tools/diag/endgame_reference_results_v1.json` (**KQ-KR 23, KBN-K 10, KNN-KP 9,
+KR-KP 8** lead it), floors at 0.9300 over n=1371, and the tree-occurrence
+census in `analysis/endgame_search_occurrence_2026-09-03.md`. Drawn-share bias
+across families is 4.11.7 and is not yet measured — decide whether 4.11.4 waits
+for it.
 
 **Deployment is 153,466 nodes/move median at 3+0.03** and the endgame screen is
 60,000, below its p25 — so every fixed-node endgame verdict so far is
@@ -121,7 +124,7 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
 - [ ] **4.11** Re-measurement and re-derivation — corrections recorded in place
     - [x] **4.11.1** Re-run both truth arms — head **0.9300**, reference **0.9920**
     - [x] **4.11.2** Floors re-derived — **0.9300** over n=1371, 18 families, cohort-stamped
-    - [ ] **4.11.3** Re-derive the attained reference results — replaces RAR-E11
+    - [x] **4.11.3** Attained reference results frozen — **1361/1372**, hard residue **8**
     - [ ] **4.11.4** Re-rank 4.12 on corrected conversion, drawn-share bias and occurrence
     - [ ] **4.11.5** Budget transfer: repeat decisive verdicts at 60k/200k/600k
     - [ ] **4.11.6** Occurrence census with endgame roots excluded; report both numbers

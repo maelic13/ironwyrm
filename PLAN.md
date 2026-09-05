@@ -16,7 +16,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.11.3 — re-derive the attained reference results** |
+| Current step | **4.11.4 — re-rank the 4.12 reference-function list** |
 | Instrument state | The endgame truth harness is **defective and under repair**; every pawn-family conversion number is superseded. See `analysis/endgame_truth_instrument_audit_2026-09-04.md` and "Reopened work, 2026-09-04" |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -1437,12 +1437,44 @@ stable.
    improving beyond 2 SE and disclosed KBN-K at -4.4 SE. An instrument rebuilt
    on corrected data independently reproducing a registration it was not fitted
    to is the strongest check available here.
-3. **4.11.3 Re-derive the attained reference results.** Replaces RAR-E11 per
-   family, with the paired matrix -- both converted, candidate only, reference
-   only, neither. Name it an **attained reference result**, never a ceiling:
-   it is what one engine managed at one budget, Rarog may exceed it, and failing
-   to equal it is not by itself a rejection. Expect the "neither converted"
-   bucket to collapse; most of it was two aborted games.
+3. **4.11.3 Re-derive the attained reference results -- DONE.**
+   `tools/diag/endgame_reference_results.py` freezes
+   `tools/diag/endgame_reference_results_v1.json`, replacing RAR-E11 per family.
+
+   **The name is load-bearing and so is the artifact's self-description.**
+   Basilisk's equivalent field was called `attained_single_engine_ceiling`, was
+   read downstream as an ACCEPTANCE TARGET, and was wrong in seven families by
+   77 positions -- far too lenient in exactly the families the next phase would
+   work (BAS-E50). This artifact carries its own limits in a
+   `what_this_is_not` list: not a ceiling, not an acceptance target, not
+   transferable to another budget or cohort, and the paired union proves only
+   that each position was converted by at least one engine -- never that one
+   engine can convert the union. A test asserts no FIELD is named a ceiling.
+
+   **Validation precedes reproduction, and every check fails closed:** identical
+   schema, cohort digest, per-family digest, node budget, ply limit, positions
+   per family, seed, hash, family set, and exact FEN/theory pairing position by
+   position. Two arms differing in any of those are not two arms of one
+   measurement. All ten refusals are exercised on the input each exists to
+   reject.
+
+   | | Clean wins | Candidate | Attained reference | Deficit | Neither |
+   |---|---:|---:|---:|---:|---:|
+   | **total** | 1372 | 1276 | **1361** | **85** | **8** |
+
+   Paired matrix: both 1273, candidate only 3, reference only 88, neither 8.
+
+   **The hard residue collapsed to 8 positions and is almost entirely one
+   family.** KNN-KP holds 7 of the 8; KRP-KB holds the last one. **Seventeen of
+   nineteen families have a ZERO neither-bucket** -- every clean win in them is
+   convertible by at least one engine at 60,000 nodes. There is no broad set of
+   genuinely hard positions here; there is one hard family.
+
+   KNN-KP is also the only family where the candidate converts positions the
+   reference does not (2 of its 3 candidate-only positions; KRP-KR has the
+   third). That is worth carrying into 4.11.4: a family where both engines are
+   weak and they fail on DIFFERENT positions is a different proposition from one
+   where the reference simply wins.
 4. **4.11.4 Re-rank the reference-function list.** Order 4.12 by expected value
    on CORRECTED inputs: conversion deficit against the attained reference
    result, drawn-share bias, and occurrence. The current order is by board
