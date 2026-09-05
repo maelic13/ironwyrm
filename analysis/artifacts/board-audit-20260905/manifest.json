@@ -1,0 +1,763 @@
+{
+  "date": "2026-09-05T11:08:29.183433+00:00",
+  "cpu": "AMD Ryzen 9 5950X",
+  "affinity_mask": 4,
+  "logical_processor": 2,
+  "sampling": "150ms warmup + 11x150ms per workload; 3 cyclic rounds; median of printed round medians",
+  "reject_host_busy_above_percent": 12,
+  "pgo": false,
+  "binaries": {
+    "rarog": {
+      "path": "C:\\Users\\macur\\AppData\\Local\\Temp\\rarog-board-timing-20260905\\release\\deps\\board-12ca175dd86ea15e.exe",
+      "sha256": "40f8fa53874bd0e8155b846ce6eba30995c158bf6edf093016f8f367f031c636",
+      "archived_path": "D:\\chess\\results\\board-audit-20260905\\binaries\\rarog-board.exe"
+    },
+    "basilisk": {
+      "path": "C:\\Users\\macur\\AppData\\Local\\Temp\\basilisk-board-timing-20260905\\board_performance_test.exe",
+      "sha256": "7eeaff0cf52dc304eee5e9d68c2982662023b8050c3d8394f578d8b3386c81b8",
+      "archived_path": "D:\\chess\\results\\board-audit-20260905\\binaries\\basilisk-board.exe"
+    },
+    "reckless": {
+      "path": "C:\\Users\\macur\\AppData\\Local\\Temp\\reckless-board-timing-20260905\\release\\deps\\board-8ae3e21b46b77bc3.exe",
+      "sha256": "449897a137b43ff9154484d906f57fdb9a482a197151ee3a85b244f9b748d70a",
+      "archived_path": "D:\\chess\\results\\board-audit-20260905\\binaries\\reckless-board.exe"
+    }
+  },
+  "runs": [
+    {
+      "round": 1,
+      "engine": "rarog",
+      "elapsed": 10.905999999959022,
+      "host_busy_percent": 6.858218656147743,
+      "rows": [
+        {
+          "workload": "legal moves",
+          "ops_per_sec": 446835610,
+          "mad": 398857,
+          "mad_percent": 0.09,
+          "ops_per_iter": 128,
+          "iterations": 5786924
+        },
+        {
+          "workload": "legal captures",
+          "ops_per_sec": 98203955,
+          "mad": 342960,
+          "mad_percent": 0.35,
+          "ops_per_iter": 10,
+          "iterations": 15898542
+        },
+        {
+          "workload": "make/unmake",
+          "ops_per_sec": 42880416,
+          "mad": 571762,
+          "mad_percent": 1.33,
+          "ops_per_iter": 128,
+          "iterations": 526750
+        },
+        {
+          "workload": "threshold SEE",
+          "ops_per_sec": 46362836,
+          "mad": 360229,
+          "mad_percent": 0.78,
+          "ops_per_iter": 10,
+          "iterations": 7443904
+        },
+        {
+          "workload": "perft(4) startpos",
+          "ops_per_sec": 270582440,
+          "mad": 5964154,
+          "mad_percent": 2.2,
+          "ops_per_iter": 197281,
+          "iterations": 2221
+        },
+        {
+          "workload": "two-ply simulation",
+          "ops_per_sec": 334454431,
+          "mad": 24208463,
+          "mad_percent": 7.24,
+          "ops_per_iter": 4597,
+          "iterations": 119280
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "engine": "basilisk",
+      "elapsed": 10.875,
+      "host_busy_percent": 6.535771920387305,
+      "rows": [
+        {
+          "workload": "legal moves",
+          "ops_per_sec": 641375549,
+          "mad": 383916,
+          "mad_percent": 0.06,
+          "ops_per_iter": 128,
+          "iterations": 8299776
+        },
+        {
+          "workload": "legal captures",
+          "ops_per_sec": 120044251,
+          "mad": 140070,
+          "mad_percent": 0.12,
+          "ops_per_iter": 10,
+          "iterations": 18867628
+        },
+        {
+          "workload": "make/unmake",
+          "ops_per_sec": 56420047,
+          "mad": 289578,
+          "mad_percent": 0.51,
+          "ops_per_iter": 128,
+          "iterations": 699660
+        },
+        {
+          "workload": "threshold SEE",
+          "ops_per_sec": 58638662,
+          "mad": 107069,
+          "mad_percent": 0.18,
+          "ops_per_iter": 10,
+          "iterations": 9604425
+        },
+        {
+          "workload": "perft(4) startpos",
+          "ops_per_sec": 382726065,
+          "mad": 7836417,
+          "mad_percent": 2.05,
+          "ops_per_iter": 197281,
+          "iterations": 3029
+        },
+        {
+          "workload": "two-ply simulation",
+          "ops_per_sec": 506161729,
+          "mad": 14986168,
+          "mad_percent": 2.96,
+          "ops_per_iter": 4597,
+          "iterations": 180612
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "engine": "reckless",
+      "elapsed": 10.890999999945052,
+      "host_busy_percent": 6.724045185583647,
+      "rows": [
+        {
+          "workload": "legal moves",
+          "ops_per_sec": 315357805,
+          "mad": 460036,
+          "mad_percent": 0.15,
+          "ops_per_iter": 128,
+          "iterations": 4072187
+        },
+        {
+          "workload": "legal captures",
+          "ops_per_sec": 53646306,
+          "mad": 89794,
+          "mad_percent": 0.17,
+          "ops_per_iter": 10,
+          "iterations": 8640060
+        },
+        {
+          "workload": "make/unmake",
+          "ops_per_sec": 23494488,
+          "mad": 33145,
+          "mad_percent": 0.14,
+          "ops_per_iter": 128,
+          "iterations": 300900
+        },
+        {
+          "workload": "threshold SEE",
+          "ops_per_sec": 34603389,
+          "mad": 1495736,
+          "mad_percent": 4.32,
+          "ops_per_iter": 10,
+          "iterations": 5619930
+        },
+        {
+          "workload": "perft(4) startpos",
+          "ops_per_sec": 177943984,
+          "mad": 1366565,
+          "mad_percent": 0.77,
+          "ops_per_iter": 197281,
+          "iterations": 1436
+        },
+        {
+          "workload": "two-ply simulation",
+          "ops_per_sec": 237570427,
+          "mad": 6853828,
+          "mad_percent": 2.88,
+          "ops_per_iter": 4597,
+          "iterations": 83480
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "engine": "basilisk",
+      "elapsed": 10.875,
+      "host_busy_percent": 7.046483482002779,
+      "rows": [
+        {
+          "workload": "legal moves",
+          "ops_per_sec": 642645770,
+          "mad": 290149,
+          "mad_percent": 0.05,
+          "ops_per_iter": 128,
+          "iterations": 8310024
+        },
+        {
+          "workload": "legal captures",
+          "ops_per_sec": 120137542,
+          "mad": 215488,
+          "mad_percent": 0.18,
+          "ops_per_iter": 10,
+          "iterations": 19519024
+        },
+        {
+          "workload": "make/unmake",
+          "ops_per_sec": 53741047,
+          "mad": 2411718,
+          "mad_percent": 4.49,
+          "ops_per_iter": 128,
+          "iterations": 680016
+        },
+        {
+          "workload": "threshold SEE",
+          "ops_per_sec": 58983916,
+          "mad": 233613,
+          "mad_percent": 0.4,
+          "ops_per_iter": 10,
+          "iterations": 9483340
+        },
+        {
+          "workload": "perft(4) startpos",
+          "ops_per_sec": 374068307,
+          "mad": 13529803,
+          "mad_percent": 3.62,
+          "ops_per_iter": 197281,
+          "iterations": 3052
+        },
+        {
+          "workload": "two-ply simulation",
+          "ops_per_sec": 513536852,
+          "mad": 9544855,
+          "mad_percent": 1.86,
+          "ops_per_iter": 4597,
+          "iterations": 171054
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "engine": "reckless",
+      "elapsed": 10.89000000001397,
+      "host_busy_percent": 9.16913148695886,
+      "rows": [
+        {
+          "workload": "legal moves",
+          "ops_per_sec": 341709244,
+          "mad": 168434,
+          "mad_percent": 0.05,
+          "ops_per_iter": 128,
+          "iterations": 4418304
+        },
+        {
+          "workload": "legal captures",
+          "ops_per_sec": 61704779,
+          "mad": 163130,
+          "mad_percent": 0.26,
+          "ops_per_iter": 10,
+          "iterations": 9467848
+        },
+        {
+          "workload": "make/unmake",
+          "ops_per_sec": 18168284,
+          "mad": 1646452,
+          "mad_percent": 9.06,
+          "ops_per_iter": 128,
+          "iterations": 254951
+        },
+        {
+          "workload": "threshold SEE",
+          "ops_per_sec": 40518759,
+          "mad": 366683,
+          "mad_percent": 0.9,
+          "ops_per_iter": 10,
+          "iterations": 6478130
+        },
+        {
+          "workload": "perft(4) startpos",
+          "ops_per_sec": 173339067,
+          "mad": 1258203,
+          "mad_percent": 0.73,
+          "ops_per_iter": 197281,
+          "iterations": 1417
+        },
+        {
+          "workload": "two-ply simulation",
+          "ops_per_sec": 246625657,
+          "mad": 11206429,
+          "mad_percent": 4.54,
+          "ops_per_iter": 4597,
+          "iterations": 84436
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "engine": "rarog",
+      "elapsed": 10.891000000061467,
+      "host_busy_percent": 6.251686606098768,
+      "rows": [
+        {
+          "workload": "legal moves",
+          "ops_per_sec": 450020873,
+          "mad": 287778,
+          "mad_percent": 0.06,
+          "ops_per_iter": 128,
+          "iterations": 5820224
+        },
+        {
+          "workload": "legal captures",
+          "ops_per_sec": 97706249,
+          "mad": 333571,
+          "mad_percent": 0.34,
+          "ops_per_iter": 10,
+          "iterations": 15852672
+        },
+        {
+          "workload": "make/unmake",
+          "ops_per_sec": 42520810,
+          "mad": 683248,
+          "mad_percent": 1.61,
+          "ops_per_iter": 128,
+          "iterations": 534232
+        },
+        {
+          "workload": "threshold SEE",
+          "ops_per_sec": 47290470,
+          "mad": 462700,
+          "mad_percent": 0.98,
+          "ops_per_iter": 10,
+          "iterations": 7635342
+        },
+        {
+          "workload": "perft(4) startpos",
+          "ops_per_sec": 279844251,
+          "mad": 2115395,
+          "mad_percent": 0.76,
+          "ops_per_iter": 197281,
+          "iterations": 2257
+        },
+        {
+          "workload": "two-ply simulation",
+          "ops_per_sec": 351808501,
+          "mad": 5651799,
+          "mad_percent": 1.61,
+          "ops_per_iter": 4597,
+          "iterations": 121028
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "engine": "reckless",
+      "elapsed": 10.905999999959022,
+      "host_busy_percent": 7.177996422182469,
+      "rows": [
+        {
+          "workload": "legal moves",
+          "ops_per_sec": 339844427,
+          "mad": 400528,
+          "mad_percent": 0.12,
+          "ops_per_iter": 128,
+          "iterations": 4338981
+        },
+        {
+          "workload": "legal captures",
+          "ops_per_sec": 61597216,
+          "mad": 60838,
+          "mad_percent": 0.1,
+          "ops_per_iter": 10,
+          "iterations": 9961608
+        },
+        {
+          "workload": "make/unmake",
+          "ops_per_sec": 23737926,
+          "mad": 319704,
+          "mad_percent": 1.35,
+          "ops_per_iter": 128,
+          "iterations": 295740
+        },
+        {
+          "workload": "threshold SEE",
+          "ops_per_sec": 39722097,
+          "mad": 358141,
+          "mad_percent": 0.9,
+          "ops_per_iter": 10,
+          "iterations": 6308880
+        },
+        {
+          "workload": "perft(4) startpos",
+          "ops_per_sec": 180350887,
+          "mad": 329152,
+          "mad_percent": 0.18,
+          "ops_per_iter": 197281,
+          "iterations": 1474
+        },
+        {
+          "workload": "two-ply simulation",
+          "ops_per_sec": 256257625,
+          "mad": 1691080,
+          "mad_percent": 0.66,
+          "ops_per_iter": 4597,
+          "iterations": 89490
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "engine": "rarog",
+      "elapsed": 10.875,
+      "host_busy_percent": 6.586395902596819,
+      "rows": [
+        {
+          "workload": "legal moves",
+          "ops_per_sec": 447131123,
+          "mad": 664847,
+          "mad_percent": 0.15,
+          "ops_per_iter": 128,
+          "iterations": 5783440
+        },
+        {
+          "workload": "legal captures",
+          "ops_per_sec": 100675265,
+          "mad": 193008,
+          "mad_percent": 0.19,
+          "ops_per_iter": 10,
+          "iterations": 16348068
+        },
+        {
+          "workload": "make/unmake",
+          "ops_per_sec": 41952617,
+          "mad": 1051183,
+          "mad_percent": 2.51,
+          "ops_per_iter": 128,
+          "iterations": 523912
+        },
+        {
+          "workload": "threshold SEE",
+          "ops_per_sec": 46676180,
+          "mad": 1509425,
+          "mad_percent": 3.23,
+          "ops_per_iter": 10,
+          "iterations": 7492404
+        },
+        {
+          "workload": "perft(4) startpos",
+          "ops_per_sec": 273741073,
+          "mad": 7636994,
+          "mad_percent": 2.79,
+          "ops_per_iter": 197281,
+          "iterations": 2215
+        },
+        {
+          "workload": "two-ply simulation",
+          "ops_per_sec": 362488899,
+          "mad": 1407429,
+          "mad_percent": 0.39,
+          "ops_per_iter": 4597,
+          "iterations": 123222
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "engine": "basilisk",
+      "elapsed": 10.875,
+      "host_busy_percent": 6.650500696034847,
+      "rows": [
+        {
+          "workload": "legal moves",
+          "ops_per_sec": 646286043,
+          "mad": 357443,
+          "mad_percent": 0.06,
+          "ops_per_iter": 128,
+          "iterations": 8344485
+        },
+        {
+          "workload": "legal captures",
+          "ops_per_sec": 120405617,
+          "mad": 287756,
+          "mad_percent": 0.24,
+          "ops_per_iter": 10,
+          "iterations": 19519024
+        },
+        {
+          "workload": "make/unmake",
+          "ops_per_sec": 55031107,
+          "mad": 1825084,
+          "mad_percent": 3.32,
+          "ops_per_iter": 128,
+          "iterations": 687573
+        },
+        {
+          "workload": "threshold SEE",
+          "ops_per_sec": 58814379,
+          "mad": 95255,
+          "mad_percent": 0.16,
+          "ops_per_iter": 10,
+          "iterations": 9562950
+        },
+        {
+          "workload": "perft(4) startpos",
+          "ops_per_sec": 388373995,
+          "mad": 5265052,
+          "mad_percent": 1.36,
+          "ops_per_iter": 197281,
+          "iterations": 3159
+        },
+        {
+          "workload": "two-ply simulation",
+          "ops_per_sec": 520436862,
+          "mad": 3367547,
+          "mad_percent": 0.65,
+          "ops_per_iter": 4597,
+          "iterations": 183512
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "rarog": {
+      "legal moves": {
+        "median_ops_per_sec": 447131123,
+        "round_medians": [
+          446835610,
+          450020873,
+          447131123
+        ],
+        "round_range_percent": 0.7123778319497567,
+        "max_within_run_mad_percent": 0.15
+      },
+      "legal captures": {
+        "median_ops_per_sec": 98203955,
+        "round_medians": [
+          98203955,
+          97706249,
+          100675265
+        ],
+        "round_range_percent": 3.0233161179710124,
+        "max_within_run_mad_percent": 0.35
+      },
+      "make/unmake": {
+        "median_ops_per_sec": 42520810,
+        "round_medians": [
+          42880416,
+          42520810,
+          41952617
+        ],
+        "round_range_percent": 2.1819880665490614,
+        "max_within_run_mad_percent": 2.51
+      },
+      "threshold SEE": {
+        "median_ops_per_sec": 46676180,
+        "round_medians": [
+          46362836,
+          47290470,
+          46676180
+        ],
+        "round_range_percent": 1.9873820008406857,
+        "max_within_run_mad_percent": 3.23
+      },
+      "perft(4) startpos": {
+        "median_ops_per_sec": 273741073,
+        "round_medians": [
+          270582440,
+          279844251,
+          273741073
+        ],
+        "round_range_percent": 3.3834202878279798,
+        "max_within_run_mad_percent": 2.79
+      },
+      "two-ply simulation": {
+        "median_ops_per_sec": 351808501,
+        "round_medians": [
+          334454431,
+          351808501,
+          362488899
+        ],
+        "round_range_percent": 7.968672706973615,
+        "max_within_run_mad_percent": 7.24
+      }
+    },
+    "basilisk": {
+      "legal moves": {
+        "median_ops_per_sec": 642645770,
+        "round_medians": [
+          641375549,
+          642645770,
+          646286043
+        ],
+        "round_range_percent": 0.7641058619276371,
+        "max_within_run_mad_percent": 0.06
+      },
+      "legal captures": {
+        "median_ops_per_sec": 120137542,
+        "round_medians": [
+          120044251,
+          120137542,
+          120405617
+        ],
+        "round_range_percent": 0.300793568758049,
+        "max_within_run_mad_percent": 0.24
+      },
+      "make/unmake": {
+        "median_ops_per_sec": 55031107,
+        "round_medians": [
+          56420047,
+          53741047,
+          55031107
+        ],
+        "round_range_percent": 4.868155750528515,
+        "max_within_run_mad_percent": 4.49
+      },
+      "threshold SEE": {
+        "median_ops_per_sec": 58814379,
+        "round_medians": [
+          58638662,
+          58983916,
+          58814379
+        ],
+        "round_range_percent": 0.5870231155547864,
+        "max_within_run_mad_percent": 0.4
+      },
+      "perft(4) startpos": {
+        "median_ops_per_sec": 382726065,
+        "round_medians": [
+          382726065,
+          374068307,
+          388373995
+        ],
+        "round_range_percent": 3.7378400135877863,
+        "max_within_run_mad_percent": 3.62
+      },
+      "two-ply simulation": {
+        "median_ops_per_sec": 513536852,
+        "round_medians": [
+          506161729,
+          513536852,
+          520436862
+        ],
+        "round_range_percent": 2.7797679844016336,
+        "max_within_run_mad_percent": 2.96
+      }
+    },
+    "reckless": {
+      "legal moves": {
+        "median_ops_per_sec": 339844427,
+        "round_medians": [
+          315357805,
+          341709244,
+          339844427
+        ],
+        "round_range_percent": 7.753971201652219,
+        "max_within_run_mad_percent": 0.15
+      },
+      "legal captures": {
+        "median_ops_per_sec": 61597216,
+        "round_medians": [
+          53646306,
+          61704779,
+          61597216
+        ],
+        "round_range_percent": 13.082527950613873,
+        "max_within_run_mad_percent": 0.26
+      },
+      "make/unmake": {
+        "median_ops_per_sec": 23494488,
+        "round_medians": [
+          23494488,
+          18168284,
+          23737926
+        ],
+        "round_range_percent": 23.706164611886837,
+        "max_within_run_mad_percent": 9.06
+      },
+      "threshold SEE": {
+        "median_ops_per_sec": 39722097,
+        "round_medians": [
+          34603389,
+          40518759,
+          39722097
+        ],
+        "round_range_percent": 14.891887505334877,
+        "max_within_run_mad_percent": 4.32
+      },
+      "perft(4) startpos": {
+        "median_ops_per_sec": 177943984,
+        "round_medians": [
+          177943984,
+          173339067,
+          180350887
+        ],
+        "round_range_percent": 3.9404647700818027,
+        "max_within_run_mad_percent": 0.77
+      },
+      "two-ply simulation": {
+        "median_ops_per_sec": 246625657,
+        "round_medians": [
+          237570427,
+          246625657,
+          256257625
+        ],
+        "round_range_percent": 7.577150823363037,
+        "max_within_run_mad_percent": 4.54
+      }
+    }
+  },
+  "adapter_patch_sha256": "ffd86bf66efc1f86f6b3c722644816281d87dd79cbef036bebb92f637f206bea",
+  "source_revisions": {
+    "rarog": "60bd1f1106a8cb3c3f29651ab5652b36b1ccae11",
+    "basilisk": "d73476614701863e61871de62f12568b52191d79",
+    "Reckless": "91b56c29861f0a5713204bdeffd6c45e9eb9f649",
+    "stockfish": "1dc0912d86dafb99e96d679a6ac76cbdf1553459",
+    "rarog_at_measurement": "ca03a46db74197bc32c8cf3441359de421fcddd5"
+  },
+  "source_revision_note": "Rarog advanced to 60bd1f1 while documentation was being prepared. Board, bench and Cargo.toml are unchanged from measured ca03a46; ranking and crash reporting changed in parallel.",
+  "toolchains": {
+    "rust": "rustc 1.97.1 (8bab26f4f), LLVM 22.1.6, x86_64-pc-windows-msvc",
+    "basilisk": "Clang 22.1.8, x86_64-w64-windows-gnu, thin LTO"
+  },
+  "builds": {
+    "rarog": "cargo bench --locked --bench board --no-run -j 2; RUSTFLAGS=-C target-cpu=native --cfg rarog_pext; default features (none), release fat LTO",
+    "basilisk": "cmake Release, COMP=clang, USE_PEXT=ON; -O3 -march=native -mbmi2 -flto=thin; board_performance_test",
+    "reckless": "cargo bench --locked --no-default-features --features board-bench --bench board --no-run -j 2; RUSTFLAGS=-C target-cpu=native; release fat LTO; native magic sliders, AVX2 setwise attacks; NullBoardObserver"
+  },
+  "source_hashes": {
+    "rarog": {
+      "src/board.rs": "9994fd2a31aff9eeb80dfaced344ddf64f540abf013f9393ce97f700f800f262",
+      "src/board/board.rs": "138b6e507aa60b1644a5be1b8d95168217d5d75cd21ea613aaaf9fb9a61f02c7",
+      "src/board/movegen.rs": "7277ce0f5f2b9d64b079665e3b28cb2bd0eac8f4f53ecc98e6387a940af7bd60",
+      "src/board/moves.rs": "51d7f1a1b3c26b0fc5d161b8b6ccb00507a7799d9170e4c644ae0e38aca05c29",
+      "src/board/attacks.rs": "29c73b28cdf28ed50669e789fd75ff4d74351da99e32e9b6dc441647bedb9e7d",
+      "benches/board.rs": "3c864f5610514585513af65d0837cb89fd3178e9cdfa85991a718edbbc738e96"
+    },
+    "reckless": {
+      "src/board.rs": "d0b4cac8ea23311f6e9b52c10a2e258ffc87e0f72e904c109423db91c5d76f88",
+      "src/board/makemove.rs": "75f91d7f248fee1ca8187af793fd887bd039c87a658908e0c7d1371628e4164c",
+      "src/board/see.rs": "db6d412c8181443d075edd723a2e82db1e2af6490e70a348c7958be9535eb4e3",
+      "src/board/movegen.rs": "410c64c710415056c2576940c27a9aebc81f6ae9f87f2d9dc2de2cf2958b3ef5",
+      "src/tools/board_bench.rs": "066f9e264f83e993e8938b0ce408e584c1c5cf69d4017706acc708856896f79e",
+      "benches/board.rs": "089d4bd9dbe9b0b9b8b9160f9a199ad43fca3cfc195f2f3abecd6cd67b91ba80"
+    },
+    "basilisk": {
+      "src/board.h": "6ba1dfbf8aada3d43acb2100c399181abdb16b520a608a2dc000754fe18591bd",
+      "src/board.cpp": "3336ddee1da0666cdf04384957612d955ccdd9c9af3faa481d71e62a20995ac9",
+      "tests/board_performance.cpp": "a44c98aae12b6f98b79f0e75d450268b1aa7d557da9b3ec1b60ebdaca4295761"
+    }
+  },
+  "adapter_patch_sha256_lf_normalized": "7a8ebd53dad6bbf27c04858fa0bb7e8fcedb87e96996f6fecb6534f7d0b43574",
+  "adapter_patch_hash_note": "Original field hashed LF-normalized text. On-disk patch uses CRLF. Both digests retained; adapter content unchanged. Reconciled by verify_bundle.py preparation."
+}

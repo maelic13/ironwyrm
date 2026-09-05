@@ -1,0 +1,14 @@
+
+Rarog board benchmark
+profile: cross-engine-board-v1
+positions: 5
+samples: 11 x 150 ms after a 150 ms warm-up (median +/- MAD)
+preflight: PASS
+
+workload                estimate ops/s       MAD ops/s      MAD %     ops/iter  total iters
+legal moves                  450020873          287778      0.06%          128      5820224 moves
+legal captures                97706249          333571      0.34%           10     15852672 moves
+make/unmake                   42520810          683248      1.61%          128       534232 moves
+threshold SEE                 47290470          462700      0.98%           10      7635342 captures
+perft(4) startpos            279844251         2115395      0.76%       197281         2257 nodes
+two-ply simulation           351808501         5651799      1.61%         4597       121028 moves

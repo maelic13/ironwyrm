@@ -1,0 +1,9 @@
+use rarog::board::{Board,Move,Piece,Square};
+fn value(p:Piece)->i32{match p{Piece::Pawn=>100,Piece::Knight=>320,Piece::Bishop=>330,Piece::Rook=>500,Piece::Queen=>900,Piece::King=>32000}}
+fn gain(b:&Board,m:Move)->i32{b.captured_piece(m).map_or(0,value)+m.promotion().map_or(0,|p|value(p)-100)}
+fn reply(b:&mut Board,t:Square)->i32{let mut best=0;for m in b.generate_legal_moves(){if m.is_capture()&&m.to_sq()==t{let g=gain(b,m);b.make_move(m);let v=g-reply(b,t);b.unmake_move(m);best=best.max(v);}}best}
+fn main(){for(f,u)in[("7k/8/2p5/3pK3/8/8/3R4/8 w - - 0 1","d2d5"),("7r/P7/7k/8/8/8/8/K7 w - - 0 1","a7a8q")]{let mut b=Board::from_fen(f).unwrap();let m=b.parse_move(u).unwrap();let s=b.see(m);let ge=b.see_ge(m,0);let g=gain(&b,m);b.make_move(m);let oracle=g-reply(&mut b,m.to_sq());println!("FEN={f}; MOVE={u}; SEE={s}; GE0={ge}; ORACLE={oracle}");}
+std::panic::set_hook(Box::new(|_|{}));
+println!("unicode_panics={}",std::panic::catch_unwind(||Move::from_uci("aé1")).is_err());
+let mut b=Board::from_fen("7k/8/8/8/8/8/8/KR6 b - - 0 65535").unwrap();let m=b.parse_move("h8g8").unwrap();let fail=std::panic::catch_unwind(std::panic::AssertUnwindSafe(||b.make_move(m))).is_err();println!("fullmove_panics={fail}; fullmove={}",b.fullmove);
+}

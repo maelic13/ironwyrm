@@ -1,0 +1,73 @@
+{
+  "note": "Convenience .txt artifacts normalize CRLF to LF and trim trailing blank lines. Printed data unchanged. Hash archived text after that same normalization; original byte outputs remain in the external D:/chess bundle. Adapter patch is base64 for exact byte preservation.",
+  "text_files": {
+    "audit_bridge.rs.txt": {
+      "original_sha256": "11f0ed91c49f1392dac9a0f74c78047837e8b8f4f5fd43a3bda69c30f347e323",
+      "lf_trimmed_sha256": "c59cce3045406ee0bbb0a33df37180d1cdc013bae6b169651541659026c71b61"
+    },
+    "audit_differential.py.txt": {
+      "original_sha256": "48f038a0ee129fa2fa3f041c0842618064ab653b731fce11a773707eb5af1102",
+      "lf_trimmed_sha256": "6186f6d34dc34afc5e86eebaca2af71b6f19b5dfb5cae73b5fe52449ad2612c4"
+    },
+    "audit_probes.rs.txt": {
+      "original_sha256": "e6f57a0e9f90e698e9736193913e7619e6adc034db6abcee76627e24a87c757c",
+      "lf_trimmed_sha256": "e6f57a0e9f90e698e9736193913e7619e6adc034db6abcee76627e24a87c757c"
+    },
+    "probe-debug.txt": {
+      "original_sha256": "fe2296d0a07c5d49cc581c95e8ea62fe0dca96e692834a5c3ce5cc27688465e6",
+      "lf_trimmed_sha256": "4c20abc029d46c95d07e054740dc0ce5c42103662a755e1b6debd16a3b07f088"
+    },
+    "probe-release.txt": {
+      "original_sha256": "0695c50868626062eeb1ef8b96a4fec228b246ec97a1a77eb6ab02134492e733",
+      "lf_trimmed_sha256": "12c241fcfb3cfed5d0dee6c484afc65d1dde1cb926db2bbd79a57ae6a44dafa8"
+    },
+    "round1-basilisk.txt": {
+      "original_sha256": "ab80414370db158d6ee43d7aa4e64f2478c72334a3e8bdf148cbc0d8c6639d36",
+      "lf_trimmed_sha256": "9434d14cf19934ed6b82e75d808c848460c5495ad9942c903e8b650eb6af6a60"
+    },
+    "round1-rarog.txt": {
+      "original_sha256": "0b4a807b3d48ec2c8a37bf03b4e4681e51cb5192f74e4e5d0d2ef7426be2960c",
+      "lf_trimmed_sha256": "68d91f2c994e25c9e2ec2fb5e998f085a32d5f0db671bd191bccb6bc9fa494a9"
+    },
+    "round1-reckless.txt": {
+      "original_sha256": "13d1e4f9b6eb6f4a7490b028abac66e9de119f9f4afeb4ec66d64a564a6402dd",
+      "lf_trimmed_sha256": "c18fe68e840743667e08f4d3adba3bfdf75025cf562b88c1b9287a22f2c6c600"
+    },
+    "round2-basilisk.txt": {
+      "original_sha256": "51c0a2c83ba91b52d6c21f42879f64b86bf4e1676b29a94d77f9d8928f564d5b",
+      "lf_trimmed_sha256": "9859ea559a55cdaef01fa92a3d872cb50aebf343f6370b9e52f698bb1011edb4"
+    },
+    "round2-rarog.txt": {
+      "original_sha256": "2faed675a0e6103e5686be4fb7aee0575b1968b5484abe9976935cca46c2fda0",
+      "lf_trimmed_sha256": "7e99297712580e020e319c10ee15433597202b9475f9e018f6539459251be5b1"
+    },
+    "round2-reckless.txt": {
+      "original_sha256": "b2e8b5a4922917b7c5cd468fa2c885647872d54414a796b6461a76d4187f9406",
+      "lf_trimmed_sha256": "44866aa1062afe9976aa08311256bb239f03be4d054cd6f1a43c7d368dc86c38"
+    },
+    "round3-basilisk.txt": {
+      "original_sha256": "c3dc270822dc594f43d83c1503ec4f5c5933ee06ada25fec6860dda02cd41840",
+      "lf_trimmed_sha256": "14590cc5604e94877f2e51889bef0be6c34d68769c7d70246933184198516f4c"
+    },
+    "round3-rarog.txt": {
+      "original_sha256": "4e42ffa9872923335a6d49265b956fbf7f54f87a2896ff94dbf51827b6e3e615",
+      "lf_trimmed_sha256": "144eba313d097ef34ea0c93c7a141894d5e397ecb823e672e089d97af56f87a3"
+    },
+    "round3-reckless.txt": {
+      "original_sha256": "17c9aeb1f190defaac1c2ae4b290e73a40e00a1fe304b6cf67431c65b0f698ea",
+      "lf_trimmed_sha256": "610adfeda3fd8a261eee8d912c499ab3c79553c7555a3dfe6908d800804e9b67"
+    },
+    "run_comparison.py.txt": {
+      "original_sha256": "20f5a16f36173a69af90c7b86053da899175b9b12e2c585849f4ba68bef89c8f",
+      "lf_trimmed_sha256": "67f33df23a3154a45616fc770a4e9b9df09c018dbae0a502a91e691992210563"
+    },
+    "validation.txt": {
+      "original_sha256": "d01e65c0b3bd75452caa73bfa58aa9e25e2160237b26ea35a185e0248422fb8d",
+      "lf_trimmed_sha256": "c608d9f2e36e9a91766ad45a75d2f5182d3d9a19b2c420bc3a0c708bbd0a1c6b"
+    },
+    "verify_bundle.py.txt": {
+      "original_sha256": "83b3808e6868d70ef60d4dbbbf2876e1bf56a3b9b3a1bdac06adf2940d0ed257",
+      "lf_trimmed_sha256": "fa21e988afebc91198738460fd623b9971787135d6b41f01dff8f8eca81551ea"
+    }
+  }
+}

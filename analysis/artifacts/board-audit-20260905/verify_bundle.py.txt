@@ -1,0 +1,96 @@
+"""Read-only evidence checks; never runs a timed benchmark."""
+import hashlib, json, pathlib, re, statistics
+import chess
+
+root = pathlib.Path(__file__).resolve().parent
+m = json.loads((root / "manifest.json").read_text())
+assert len(m["runs"]) == 9
+for engine, b in m["binaries"].items():
+    p = pathlib.Path(b["archived_path"])
+    assert hashlib.sha256(p.read_bytes()).hexdigest() == b["sha256"], engine
+patch = root / "reckless-board-adapter.patch"
+assert hashlib.sha256(patch.read_bytes()).hexdigest() == m["adapter_patch_sha256"]
+expected = [128, 10, 128, 10, 197281, 4597]
+for engine in ("rarog", "basilisk", "reckless"):
+    runs = [r for r in m["runs"] if r["engine"] == engine]
+    assert sorted(r["round"] for r in runs) == [1, 2, 3]
+    for run in runs:
+        assert [r["ops_per_iter"] for r in run["rows"]] == expected
+        assert run["host_busy_percent"] <= m["reject_host_busy_above_percent"]
+        raw = (root / f'round{run["round"]}-{engine}.txt').read_text()
+        assert "preflight: PASS" in raw
+        for row in run["rows"]:
+            line = next(s for s in raw.splitlines() if s.startswith(row["workload"]))
+            values = re.findall(r"\d+(?:\.\d+)?", line[len(row["workload"]):])
+            assert int(values[0]) == row["ops_per_sec"]
+            assert int(values[3]) == row["ops_per_iter"]
+    for work, summary in m["summary"][engine].items():
+        vals = [next(x["ops_per_sec"] for x in r["rows"] if x["workload"] == work) for r in runs]
+        assert vals == summary["round_medians"]
+        assert statistics.median(vals) == summary["median_ops_per_sec"]
+for work in m["summary"]["rarog"]:
+    if work == "threshold SEE":
+        continue
+    assert min(m["summary"]["basilisk"][work]["round_medians"]) > max(m["summary"]["rarog"][work]["round_medians"])
+    assert min(m["summary"]["rarog"][work]["round_medians"]) > max(m["summary"]["reckless"][work]["round_medians"])
+
+fens = [
+chess.STARTING_FEN,
+"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+"rnbq1k1r/pppp1ppp/4pn2/8/1b1PP3/2N2N2/PPP2PPP/R1BQKB1R w KQ - 2 5",
+"8/2p5/3p4/KP5r/8/8/8/7k w - - 0 1",
+"rnbqkb1r/pppp1ppp/5n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 3 3"]
+coverage = []
+for round_no in (1, 2, 3):
+    raw = (root / f"round{round_no}-reckless.txt").read_text()
+    for i, fen in enumerate(fens):
+        b = chess.Board(fen)
+        expected_moves = sorted(x.uci() for x in b.legal_moves)
+        line = next(s for s in raw.splitlines() if s.startswith(f"legal[{i}]: "))
+        assert line.split(": ", 1)[1].split(",") == expected_moves
+        if round_no == 1:
+            coverage.append({"root": i, "legal": len(expected_moves),
+                             "captures": sum(b.is_capture(x) for x in b.legal_moves),
+                             "in_check": b.is_check(),
+                             "promotions": sum(x.promotion is not None for x in b.legal_moves),
+                             "ep": sum(b.is_en_passant(x) for x in b.legal_moves),
+                             "castles": sum(b.is_castling(x) for x in b.legal_moves)})
+assert sum(r["legal"] for r in coverage) == 128
+assert [r["captures"] for r in coverage] == [0, 8, 0, 0, 2]
+assert not any(r["in_check"] or r["promotions"] or r["ep"] for r in coverage)
+values = {chess.PAWN: 100, chess.KNIGHT: 320, chess.BISHOP: 330, chess.ROOK: 500, chess.QUEEN: 900, chess.KING: 32000}
+def gain(b, move):
+    victim = chess.PAWN if b.is_en_passant(move) else b.piece_type_at(move.to_square)
+    return values.get(victim, 0) + (values[move.promotion] - 100 if move.promotion else 0)
+def recapture(b, target):
+    best = 0
+    for move in list(b.legal_moves):
+        if move.to_square == target and b.is_capture(move):
+            value = gain(b, move)
+            b.push(move)
+            value -= recapture(b, target)
+            b.pop()
+            best = max(best, value)
+    return best
+for fen, uci, expected_score in [
+    ("7k/8/2p5/3pK3/8/8/3R4/8 w - - 0 1", "d2d5", -300),
+    ("7r/P7/7k/8/8/8/8/K7 w - - 0 1", "a7a8q", -100)]:
+    b = chess.Board(fen)
+    move = chess.Move.from_uci(uci)
+    assert move in b.legal_moves
+    value = gain(b, move)
+    b.push(move)
+    assert value - recapture(b, move.to_square) == expected_score
+p = (root / "drafts/PLAN_ADDITIONS.md").read_text(encoding="utf-8")
+g = (root / "drafts/GUIDE_ADDITIONS.md").read_text(encoding="utf-8")
+ids = [f"4.11b.{i}" for i in range(1, 19)] + [f"5.{i}.{j}" for i in (2, 3) for j in range(1, 5)]
+for ident in ids:
+    assert len(re.findall(r"\*\*" + re.escape(ident) + r" ", p)) == 1, ident
+    assert len(re.findall(r"\*\*" + re.escape(ident) + r"\*\*", g)) == 1, ident
+assert re.findall(r"- \[x\] \*\*([^*]+)\*\*", g) == ["4.11b.1"]
+assert not re.search(r"^ {6}- ", g, re.M)
+print("PASS: binary/patch hashes, nine raw rounds, medians, work counts, pairwise direction.")
+print("PASS: all 15 Reckless root move sets match python-chess", chess.__version__)
+print("PASS: both exchange scores independently match legal same-square capture trees.")
+print("PASS: 26 proposed PLAN/GUIDE leaf IDs match; only audit is checked.")
+print(json.dumps(coverage, indent=2))

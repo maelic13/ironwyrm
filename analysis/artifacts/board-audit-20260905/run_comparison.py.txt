@@ -1,0 +1,50 @@
+import ctypes, datetime, hashlib, json, pathlib, re, statistics, subprocess, time
+OUT=pathlib.Path(__file__).resolve().parent
+bins={
+"rarog":pathlib.Path(r"C:\Users\macur\AppData\Local\Temp\rarog-board-timing-20260905\release\deps\board-12ca175dd86ea15e.exe"),
+"basilisk":pathlib.Path(r"C:\Users\macur\AppData\Local\Temp\basilisk-board-timing-20260905\board_performance_test.exe"),
+"reckless":pathlib.Path(r"C:\Users\macur\AppData\Local\Temp\reckless-board-timing-20260905\release\deps\board-8ae3e21b46b77bc3.exe")}
+k=ctypes.WinDLL("kernel32",use_last_error=True)
+k.GetCurrentProcess.restype=ctypes.c_void_p
+k.SetProcessAffinityMask.argtypes=[ctypes.c_void_p,ctypes.c_size_t]
+assert k.SetProcessAffinityMask(k.GetCurrentProcess(),4),ctypes.get_last_error()
+def times():
+ vals=[ctypes.c_ulonglong() for _ in range(3)]
+ assert k.GetSystemTimes(*(ctypes.byref(v) for v in vals))
+ return [v.value for v in vals]
+def busy(a,b):
+ d=[y-x for x,y in zip(a,b)]
+ return 100*(d[1]+d[2]-d[0])/(d[1]+d[2])
+pattern=re.compile(r"^(legal moves|legal captures|make/unmake|threshold SEE|perft\(4\) startpos|two-ply simulation)\s+(\d+)\s+(\d+)\s+([\d.]+)%\s+(\d+)\s+(\d+)")
+expected=[128,10,128,10,197281,4597]
+manifest={"date":datetime.datetime.now(datetime.timezone.utc).isoformat(),"cpu":"AMD Ryzen 9 5950X","affinity_mask":4,"logical_processor":2,"sampling":"150ms warmup + 11x150ms per workload; 3 cyclic rounds; median of printed round medians","reject_host_busy_above_percent":12,"pgo":False,"binaries":{n:{"path":str(p),"sha256":hashlib.sha256(p.read_bytes()).hexdigest()}for n,p in bins.items()},"runs":[]}
+(OUT/"manifest.json").write_text(json.dumps(manifest,indent=2))
+for r in range(3):
+ order=list(bins)[r:]+list(bins)[:r]
+ for n in order:
+  a=times();start=time.monotonic()
+  p=subprocess.run([str(bins[n])],capture_output=True,text=True,timeout=60,creationflags=0x08000000)
+  load=busy(a,times());elapsed=time.monotonic()-start
+  (OUT/f"round{r+1}-{n}.txt").write_text(p.stdout+p.stderr)
+  assert p.returncode==0,(n,p.returncode,p.stderr)
+  assert "preflight: PASS" in p.stdout
+  rows=[]
+  for line in p.stdout.splitlines():
+   m=pattern.match(line)
+   if m: rows.append({"workload":m[1],"ops_per_sec":int(m[2]),"mad":int(m[3]),"mad_percent":float(m[4]),"ops_per_iter":int(m[5]),"iterations":int(m[6])})
+  assert len(rows)==6,(n,rows,p.stdout)
+  assert [x["ops_per_iter"]for x in rows]==expected
+  run={"round":r+1,"engine":n,"elapsed":elapsed,"host_busy_percent":load,"rows":rows}
+  manifest["runs"].append(run);(OUT/"manifest.json").write_text(json.dumps(manifest,indent=2))
+  print(f"round {r+1} {n}: host busy {load:.2f}%; "+", ".join(f'{x["workload"]}={x["ops_per_sec"]/1e6:.3f}M'for x in rows),flush=True)
+  assert load<=12,("contaminated run",n,load)
+summary={}
+for n in bins:
+ summary[n]={}
+ for i in range(6):
+  rows=[r["rows"][i]for r in manifest["runs"]if r["engine"]==n]
+  vals=[v["ops_per_sec"]for v in rows];med=statistics.median(vals)
+  summary[n][rows[0]["workload"]]={"median_ops_per_sec":med,"round_medians":vals,"round_range_percent":100*(max(vals)-min(vals))/med,"max_within_run_mad_percent":max(x["mad_percent"]for x in rows)}
+manifest["summary"]=summary
+(OUT/"manifest.json").write_text(json.dumps(manifest,indent=2))
+print(json.dumps(summary,indent=2),flush=True)

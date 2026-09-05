@@ -1,6 +1,6 @@
 # Rarog development plan
 
-Updated 2026-09-04. This is the current roadmap. Historical evidence belongs
+Updated 2026-09-05. This is the current roadmap. Historical evidence belongs
 in `EXPERIMENTS.md`; current status and commands belong in `GUIDE.md`.
 Phase 4's open work was reordered and renumbered on 2026-09-04 after an
 instrument audit; section 13 maps the old numbers to the new ones.
@@ -17,7 +17,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
 | Current step | **4.11.7 — budget transfer at 60k/200k/600k** |
-| Instrument state | The endgame truth harness is **defective and under repair**; every pawn-family conversion number is superseded. See `analysis/endgame_truth_instrument_audit_2026-09-04.md` and "Reopened work, 2026-09-04" |
+| Instrument state | 4.10 repairs are complete; corrected v2 baselines/floors recorded at 4.11.1–4.11.3. Historical v1 pawn-family conversion claims remain superseded; budget transfer and remaining corrections are open at 4.11.7–4.11.10 |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
 
@@ -394,7 +394,7 @@ residue. Raw/lazy/corrected/qsearch/depth-N search interaction is intentionally
 measured at 4.15 on the accepted HCE, because this fit can move those
 populations.
 
-### 4.8 Refit the complete existing HCE surface — GAME GATE NEXT
+### 4.8 Refit the complete existing HCE surface — COMPLETE, RAR-E06 ACCEPTED
 
 This step tests whether Rarog is mis-calibrated before assuming it is
 under-featured.
@@ -537,18 +537,16 @@ candidate passers at zero in the middlegame and safe pawn pushes at zero in
 the endgame. Those are statements about the current representation, and 4.9
 decides whether a different representation expresses them better.
 
-### 4.9 Structural HCE upgrades — CONDITIONAL
+### 4.9 Structural HCE upgrades — CLOSED, NO CLUSTER OPENED
 
 Open at most two dependency-complete structural clusters, and only for residual
 signals the full existing-surface refit could not represent.
 
-**4.9 has not been skipped; its entry evidence does not exist yet.** RAR-E07
-noted two observations -- the fit priced candidate passers at zero in the
-middlegame and safe pawn pushes at zero in the endgame -- but those are signals
-the surface DID represent, and represented as zero. That is the surface saying
-the term is worthless as currently defined, which is not the same as a residual
-it cannot express. The entry evidence this step requires is a post-fit
-residual and cohort analysis, and nobody has run one.
+**4.9 is closed on RAR-E09's measured entry evidence.** Candidate passers
+priced at zero in the middlegame and safe pawn pushes priced at zero in the
+endgame were observations the surface already represented, not proof of a
+missing feature. The completed residual analysis below found a label defect
+instead. The rules here remain the contract for a justified future reopening.
 
 1. **4.9.1 Entry evidence -- DONE, RAR-E09.** See
    `analysis/hce_residuals_2026-09-01.md`. It found **no residual the existing
@@ -571,13 +569,14 @@ residual and cohort analysis, and nobody has run one.
    **Retry trigger.** Reopen 4.9 only on a residual that a coefficient value
    cannot fix, measured on a non-degenerate cohort. Note that the passer
    bucket was itself degenerate until 2026-09-01 -- it selected 127,777 of
-   127,778 positions -- so any pre-fix cohort claim about passers is void. If
-   RAR-E08 accepts tablebase-corrected labels, rerun this audit afterwards:
-   correcting the labels may expose a residual that the mislabelled data was
-   hiding. King-safety and
-passer/threat conditionality remain hypotheses, not an order. Specialized
-endgame knowledge is not optional here: the direct conversion audit already
-established a defect, and 4.9a owns its systematic repair.
+   127,778 positions -- so any pre-fix cohort claim about passers is void.
+   RAR-E08 accepted tablebase-corrected labels, firing the follow-up trigger:
+   correcting the labels may expose a residual the mislabelled data hid.
+   That post-label audit remains owed; 4.14.7 owns the refreshed
+   residual review and any resulting reopen/keep-closed disposition.
+   King-safety and passer/threat conditionality remain hypotheses, not an
+   order. Specialized endgame knowledge has independent evidence from the
+   conversion audit: 4.9a supplied the foundation and 4.12 owns development.
 
 For each cluster:
 
@@ -1629,6 +1628,11 @@ which is what exposed the dependency inversion.
    60k / 200k / 600k nodes. A verdict that does not reproduce at a
    game-representative budget is provisional: Basilisk rejected its leading
    candidate at 60,000 nodes on a losing move that a 200,000-node search sees.
+   Use `tools/diag/endgame_budget_bracket.py` and the run/selection contract
+   in 4.10.6–4.10.7. Deployment measured 153,466 nodes/move median at 3+0.03;
+   60k is below p25 (`analysis/node_budget_2026-09-04.md`). Keep the corrected
+   cohort and arm fingerprints fixed, name decisive cases before running,
+   and record which conclusions transfer before 4.11b changes the board.
 8. **4.11.8 Datagen label audit on the existing corpora.** Run 4.10.8 against
    `hce-v2` and `hce-v3-tb`. If two corpora exist at different node budgets the
    budget comparison is free. This is the input 4.13 needs and it costs no
@@ -1722,6 +1726,315 @@ which is what exposed the dependency inversion.
     its position inside that band. Full derivation:
     `analysis/endgame_occurrence_tournament_2026-09-05.md`.
 
+### 4.11b Board correctness and HCE throughput, before endgame development
+
+**Integrated 2026-09-05 after reconciling the a0aeb68 roadmap.** Finish the
+remaining 4.11 leaves first, then execute this section before 4.12. The current
+next step remains 4.11.7; this insertion preserves all completed work and
+4.11.12's registered v2 endgame order until changed evidence warrants a rerank.
+The board audit and measurement are complete; the repairs and optimizations
+below are NOT implemented. NNUE-only work belongs to 5.2, 5.3, 5.6 and 6.4.
+
+Evidence: RAR-M20, [board audit](analysis/board_audit_2026-09-05.md), and
+[measurement recipe](analysis/board_benchmark_recipe_2026-09-05.md).
+Measured Rarog was ca03a46, Basilisk d734766, Reckless 91b56c2 plus the archived
+benchmark-only adapter. Rarog subsequently advanced through a0aeb68: its board,
+benchmark and Cargo manifest were unchanged, but endgame ranking, occurrence
+evidence and panic reporting changed. Refresh source and roadmap again before
+starting implementation; a0aeb68 is the audited snapshot, not a frozen future baseline.
+
+#### What the measurements change
+
+On the Ryzen 9 5950X, native optimized non-PGO builds, three cyclic rounds of
+the same five-root workload gave these median throughputs (million operations/s):
+
+| Workload | Rarog | Basilisk | Reckless | Basilisk speedup over Rarog |
+|---|---:|---:|---:|---:|
+| Legal moves | 447.131 | 642.646 | 339.844 | 43.7% |
+| Legal captures | 98.204 | 120.138 | 61.597 | 22.3% |
+| Generation + make/unmake | 42.521 | 55.031 | 23.494 | 29.4% |
+| Start-position perft(4) | 273.741 | 382.726 | 177.944 | 39.8% |
+| Two-ply simulation | 351.809 | 513.537 | 246.626 | 46.0% |
+
+These are workload speedups, NOT whole-search NPS or Elo gains. Total host busy
+time was 6.25-9.17%, including the benchmark; this was an active desktop, not an
+idle laboratory. Some cells varied materially: Rarog simulation round medians
+spanned 8.0%, and Reckless make/unmake spanned 23.7%. Every Basilisk round still
+beat every Rarog round in all five columns. Use the direction and broad scale
+for prioritization; do not use these data to accept a small candidate.
+
+Consequently, after correctness, **profile and prioritize legal generation and
+the complete node's board work**, not only a cached king square or undo-record
+packing. The old July perft report's 6.4% gap is a different historical workload
+and does not override this measurement. Reckless is an architecture/correctness
+reference, not a microbenchmark speed target: its native board maintains
+threats, pins, checking squares and repetition state; its move list also stores
+a score per move. The adapter keeps that work and removes only NNUE arithmetic
+via NullBoardObserver. That disables NNUE arithmetic, so the remaining gap
+does not isolate NNUE enablement cost. Preserve the raw baseline for 5.2.1,
+price event/scaffold costs at 5.2.5/5.3.4, and isolate actual-network updates
+and inference at 6.4.3. Do not delete useful state to win this benchmark.
+
+Native-value SEE measured 46.676 / 58.814 / 39.722 million captures/s for
+Rarog / Basilisk / Reckless. **Those three rates are NOT a comparable SEE
+ranking.** Their P/N/B/R/Q/K vectors are respectively
+100/320/330/500/900/32000, 100/300/300/500/900/20000, and
+109/403/435/679/1242/0, and their shortcuts differ. 4.11b.6 repairs the
+measurement interface while preserving playing defaults. Actual value fitting
+remains after the final HCE in 4.15.3-4.15.4.
+
+#### Execution contract
+
+- Work one leaf at a time and record a result or a justified no-change
+  disposition. "Conditional" means measure its prerequisite and close it if
+  absent; it does not authorize speculative implementation.
+- Separate correctness repairs, behavior-preserving optimizations and tuning.
+  Preserve a correctness-only candidate so speed refactors can be compared
+  against a board with the same chess semantics. Never tune away a failing
+  correctness test or restore a known defect merely to recover an old number.
+- A behavior-preserving candidate must retain its immediate baseline's exact
+  search fingerprint AND pass targeted board-state/legal-move tests. The
+  section-entry fingerprint may change at the SEE repair; explain and record
+  that change rather than forcing 6,901,489 forever.
+- No HCE coefficient refit, speculative search-policy change, NNUE accumulator,
+  full threat-feature maintenance, or Chess960 implementation is hidden here.
+  Preserve a seam for future work, not its current runtime cost.
+- Follow AGENTS.md: debug and release, fmt, all-feature/all-target Clippy,
+  direct exit statuses, exact feature rebuild before measurement, native
+  feature/ISA tests for touched backends, source/binary hashes, separate engine
+  and tooling/doc commits. Never measure a texel/all-features engine.
+- Internal optimization leaves do not each earn a game gate. One
+  dependency-complete playing change is qualified at 4.11b.17. Bench counts
+  and cross-engine microbenchmarks never substitute for that verdict.
+
+1. **4.11b.1 Freeze the audit and comparison -- DONE.** RAR-M20 and its committed evidence preserve the
+   three-engine results, limitations, raw output, binary/source hashes, exact
+   build commands and full Reckless adapter patch. Original Rarog audit:
+   63 selected debug tests and 64 release tests passed; 1,975 independent
+   python-chess positions, 48,462 hinted make/unmakes and 107,648 magic-slider
+   occupancies passed. None of that disproves the focused failures below.
+
+2. **4.11b.2 Strengthen the instrument and regression corpus.** Keep
+   cross-engine-board-v1 immutable for historical comparison. Add a versioned
+   coverage profile containing real single/double checks, evasions, legal and
+   illegal EP, promotions/underpromotions, both castlings, sparse endgames and
+   long histories. The v1 position named "in-check" is NOT in check; none of
+   its five roots has a promotion or EP move, and Kiwipete supplies eight of
+   its ten captures. Assert these categories mechanically for the new corpus.
+   Outside timing, compare sorted legal/capture move identities against an
+   independent implementation, exact perft/divides, canonical FEN, every
+   incremental key and full make/unmake restoration. Add independent
+   coordinate-ray tests for every slider occupancy on magic AND PEXT.
+   Exercise both normal and hinted make, both staged-generation paths, null
+   roundtrips, randomized unwind and clone/history growth.
+   Preserve the five combined v1 workloads, but add separately named isolated
+   primitives with precomputed inputs to distinguish generation from mutation
+   and capture generation from SEE. Prove allocation freedom and live output
+   barriers, including compiler-specific barriers; Basilisk's non-GNU/Clang
+   fallback barriers are no-ops. Record per-sample data and a full build/ISA
+   manifest. Do not relabel the old tests/board_performance.rs as v1: it uses
+   the legacy corpus/estimator. Done when preflight fails on deliberately
+   wrong moves, work counts or state, and the corrected corpus passes.
+
+3. **4.11b.3 Repair parser and counter boundaries.** Move::from_uci("aé1")
+   currently panics because a four-byte string is sliced through a UTF-8
+   character. Validate the ASCII move grammar before indexing; retain the
+   documented controlled UCI error policy rather than silently accepting bad
+   tokens. A FEN ending "b - - 0 65535" can be accepted and then overflow
+   fullmove on a black move: debug panics, release wraps to zero. Widen the
+   counter or explicitly specify checked/saturating behavior across parsing,
+   real/null make and undo. Test the accepted maximum and the first rejected
+   value, for both colors and both profiles. The new crash-report hook reports
+   a panic; it does not repair either cause. Done when malformed moves take the
+   intended error path and all accepted counter states remain well-defined.
+
+4. **4.11b.4 Define SEE contracts and independent fixtures.** Inventory every
+   full-SEE, threshold-SEE and quiet-aware caller in search/move ordering.
+   Specify captures, ordinary quiets, capture/quiet promotions, EP and castling
+   separately: distinguish a true exchange verdict from a deliberate
+   "always admit this move" policy. Do not demand that a heuristic SEE solve
+   a full tactical search. Use a small independent legal same-square
+   capture-tree oracle and explicit expected arithmetic, not see_ge == see
+   as the sole oracle. Cover king recaptures, defended king destinations,
+   pins released/created during exchanges, x-rays and promotion recaptures.
+   The quiet promotion a7a8q in
+   "7r/P7/7k/8/8/8/8/K7 w - - 0 1" returns +800/true although ...Rxa8 gives
+   -100. This is an existing explicit shortcut: decide its caller contract
+   before changing it. Done when every special-move policy has a named
+   consumer and an independent test or a documented heuristic disposition.
+
+5. **4.11b.5 Repair the confirmed SEE king-exchange defect.** On
+   "7k/8/2p5/3pK3/8/8/3R4/8 w - - 0 1", d2d5 gives
+   Rxd5 cxd5 Kxd5 = 100 - 500 + 100 = -300. Current full see returns -400,
+   and see_ge(move, 0) incorrectly returns true in debug and release.
+   board.rs's exchange loops break on an opposing king in next_attackers
+   even when the selected recapturer was a PAWN. Implement the correct
+   selected-king legality/parity logic; prove behavior around thresholds
+   -301, -300, -299 and 0. Reference Reckless board/see.rs's explicit
+   attacker == King condition and Stockfish Position::see_ge's king branch;
+   do not copy their value scales or their special-move exemptions.
+   Keep the production value vector fixed. Extend the same narrowly stated
+   contract to any further demonstrated exchange defects from 4.11b.4.
+   Record the search-fingerprint change and affected pruning/ordering sites.
+   Done when independent fixtures pass; playing qualification remains open.
+
+6. **4.11b.6 Separate SEE value injection from value tuning.** Introduce a
+   board/search-owned value interface that preserves the existing production
+   vector exactly. The benchmark must be able to pass the v1 contract vector
+   without changing eval.rs or the playing defaults. Static/generic
+   specialization is acceptable; avoid an unmeasured dynamic-dispatch cost in
+   the hot path. Test injected and production values against independent
+   fixtures, prove a deliberately absurd injected value changes a known
+   verdict THROUGH THE BENCH HARNESS, and prove default-injection identity
+   against the corrected 4.11b.5 baseline. Then restore the comparable SEE
+   column in a separate tooling commit. Coordinate the normalized peer
+   adapters and check answers, not just ten function calls.
+   This pulls the measurement prerequisite forward from 4.15.5; tuning and
+   ownership of fitted values still remain in 4.15.3-4.15.4. No premature fit.
+
+7. **4.11b.7 Profile board work in actual HCE search.** Freeze representative
+   opening, middlegame, check-heavy, promotion and sparse-endgame cohorts at
+   realistic search budgets. Measure generation, legality, check queries,
+   SEE, make/unmake and history allocation as shares of full-search time.
+   Distinguish plain perft make from search's make_move_with_check, and
+   standalone captures from the shared-pin staged picker. Inspect emitted
+   code if a native sampler is unavailable; label that evidence appropriately.
+   Count hot caller frequencies and allocation events using observational
+   instrumentation proven live, with instrumentation-off identity. Set the
+   following leaves' priorities from actual search cost and a written time
+   budget; a 40% microbench gain in a 2% search component is not 40% NPS.
+
+8. **4.11b.8 Optimize legal generation and move-list delivery.** This is the
+   first speed candidate because the measured Basilisk gap is 43.7% in legal
+   generation and 46.0% in two-ply simulation. Inspect compile-time
+   color/mode specialization, setwise pawns, pin discovery, king-target
+   safety, and repeated large move-list returns/initialization. Check emitted
+   code before claiming that Rust actually copies a returned list.
+   Basilisk board.cpp::gen_legal and Reckless board/movegen.rs show different
+   ways of combining targets and pins; Reckless's scored MoveEntry output
+   does more stores than Rarog's compact MoveList. Preserve required output,
+   all underpromotions and exact capture/quiet partition. Preserve existing
+   order when practical; if order changes, classify and measure the search
+   behavior change explicitly. Done with independent move-set/perft parity,
+   controlled within-Rarog A/B and a full-search NPS result.
+
+9. **4.11b.9 Measure fused ordinary-piece relocation.** Price a dedicated
+   move_piece(from, to) path against remove_piece + add_piece. Update the
+   moving piece and both occupancies with a combined from/to mask, mailbox
+   endpoints and the required keys; keep captures, EP, promotion and castling
+   correct. Reference Basilisk board.cpp::move_piece, not a broad C++ port.
+   Inspect whether LLVM already combines the current operations, and verify
+   every redundant field after make AND unmake. Retain only a measured
+   benefit with the same chess semantics.
+
+10. **4.11b.10 Share useful pin/check information.** Current search already
+    passes check hints and shares pins across capture/quiet stages. Do not
+    implement that work again. Measure the remaining duplication between
+    compute_pinned, check_info and see_pins, including both kings. Compare
+    node-local lazy sharing with per-ply cached state; explicitly invalidate
+    or restore it through real/null moves, undo and worker cloning. Reckless
+    InternalState/update_threats and Stockfish StateInfo/set_check_info are
+    reference ownership models, not instructions to eagerly compute every
+    threat map. Keep only caches whose consumers repay their maintenance.
+
+11. **4.11b.11 Optimize the corrected SEE kernel.** Carry attacker sets through
+    the exchange and add newly exposed bishop/rook rays after removing the
+    selected attacker, rather than recomputing all attackers twice per
+    exchange step. Reuse valid pin information and preserve selected-king
+    legality and threshold boundary parity. Reference Reckless board/see.rs,
+    and test its logic against the Rarog contract rather than assuming it is
+    an exact oracle. Evaluate real search thresholds as well as zero; keep
+    a corpus with more than the v1 ten captures. Default-value verdicts must
+    be identical to the corrected baseline. Compare normalized benchmark
+    throughput and whole-search NPS separately.
+
+12. **4.11b.12 Decide whether to cache king squares.** Basilisk maintains two
+    king squares; Rarog and Reckless extract them from bitboards. Prototype
+    only if 4.11b.7 still shows a material cost after shared geometry work.
+    Include cache maintenance, layout and every special make/unmake in the
+    measurement. Add the fields to independent consistency reconstruction.
+    Close without a cache if the complete candidate has no robust benefit.
+
+13. **4.11b.13 Make history capacity and mutation contracts explicit.** Preserve
+    arbitrary legal game-history length; do not replace the vector with a
+    silently clamped fixed array. Reserve game history plus maximum search
+    headroom before the hot path, including worker clones; prove no mid-search
+    growth after reservation and exact repetition/history restoration.
+    Current initial capacity is 128 and clone preserves capacity, not a
+    guaranteed search margin. Review public mutable derived fields and APIs
+    such as is_legal versus legal_move: the latter returns canonical flags,
+    whereas a boolean does not canonicalize the caller's original Move.
+    Current TT callers use legal_move correctly; preserve that property.
+    Narrow mutation access where useful without adding hot validation work.
+
+14. **4.11b.14 Decide whether a larger representation change is justified.**
+    Only open an implementation if the preceding profile still identifies
+    substantial representation cost. Compare the current 12 colored-piece
+    bitboards with six type plus two color bitboards, undo-by-inverse-key-work
+    with compact per-ply restoration, and legal versus selectively checked
+    generation where actual search consumers justify it. Reckless uses six
+    type boards plus colors and copies InternalState; Stockfish restores
+    StateInfo through a chain. Neither is automatically faster here.
+    Keep the mailbox, useful auxiliary hashes, compact moves, and supported
+    magic/PEXT portability. Register one bounded architecture comparison,
+    include cache footprint and HCE search consumers, and stop if it fails to
+    beat the optimized current design. Large rewrites require stronger
+    evidence, not an exemption from it. Full NNUE stacks remain Phase 5.
+
+15. **4.11b.15 Record the draw-state policy boundary.** Audit rule-50 clock,
+    null-move boundaries, pre-root versus in-search repetition, and repetition
+    keys versus TT/evaluation keys as separate contracts. Mate at clock 100
+    already correctly outranks the draw: preserve its passing tests.
+    Current null-clock/cross-null/root-aware changes were tried and rejected
+    in historical games; read tests/draw_semantics.rs and the linked history
+    before proposing a retry. Do not bundle them into a speed refactor or
+    treat the earlier combined losses as proof about each independent part.
+    Record keep/change/retry-trigger for each policy. Any newly justified
+    playing change gets its own dependency-complete registration, not an
+    automatic Stockfish/Reckless port. Never put rule-50 buckets into the
+    repetition identity merely because a TT key might use them.
+
+16. **4.11b.16 Qualify the integrated board candidate.** Run debug/release
+    board/SEE/parser/draw tests, independent randomized move/state comparison,
+    both slider backends and supported-target checks for touched code,
+    fmt/Clippy, and feature-off behavior. Rebuild exact production features,
+    record fingerprint and explain all differences from section entry.
+    Run interleaved within-Rarog native A/B with per-position distributions,
+    then revision-matched pooled-PGO whole-search NPS. Record host load,
+    affinity, compiler/ISA, warmup, medians and spread; require an idle enough
+    host and a gain exceeding the predeclared noise/practical floor to bank
+    a small speed claim. Revisit regressions by cohort. Do not infer Elo from
+    a cross-engine throughput ratio or suppress a correctness failure.
+
+17. **4.11b.17 Register and qualify the playing cluster.** The SEE repair and
+    any other deliberate search-affecting behavior require one
+    dependency-complete game verdict before becoming the accepted foundation
+    for 4.12. Register hypothesis, exact baseline/candidate and rebuild
+    recipes, bounds, cap, book, clock, adjudication and stop rule BEFORE
+    games. Size from RAR-M10 at the expected effect: unknown-sign repair
+    uses a justified symmetric bracket, pure simplification permits a small
+    loss, and a justified gain uses the default near-zero bracket. Do not
+    invent a numerical prior or a success threshold after a screen.
+    If the gate rejects or caps, investigate implicated search consumers and
+    re-register a coherent repair; do not relax the oracle or proclaim a
+    known-bug baseline correct. Behavior-neutral speed-only leaves do not
+    each require their own SPRT. Update the accepted fingerprint only with
+    the actual integrated verdict and its evidence.
+
+18. **4.11b.18 Refresh affected endgame evidence and close.** Before 4.12,
+    compare the accepted board head with the exact 4.11 head on the corrected
+    frozen endgame corpus/budgets and existing theory/draw safeguards. SEE
+    changes may change conversion/search occurrence even if HCE coefficients
+    stay fixed. Reuse unchanged reference arms and static-eval artifacts when
+    their dependencies really are unchanged; do not rerun them reflexively.
+    Version changed baselines/floors and rederive the registered 4.12 order if
+    its measured inputs change. Never silently overwrite 4.11 evidence.
+    Close each conditional leaf with an explicit measured no-change result
+    where appropriate, archive the rebuild recipes and source/binary
+    fingerprints, synchronize GUIDE/PLAN, and hand Phase 5 the accepted state
+    contract. The section is done only after the necessary gate and evidence
+    refresh, not after a faster perft number.
+
 ### 4.12 Endgame reference functions (was 4.9a.9-4.9a.28)
 
 Audit, implement where absent, and test each of the twenty reference functions.
@@ -1731,16 +2044,19 @@ comparable dispatcher, so the final pre-NNUE Stockfish table is the reference.
 Reference code supplies cases, failure modes and seed constants; a seed is not a
 result. Rarog's present meaningful coverage is 7/20.
 
-**Five rules govern this list, and each was learned the expensive way.**
+**The following rules govern this list.**
 
 - **Recognizers and scale functions are validated by different instruments.**
-  KRPKR, KRPPKRP, KBPKB, KPKP, KPsK, KBPsK, KQKRPs, KBPPKB and KBPKN are
-  SCALING functions -- they express drawishness -- and are validated by
-  drawn-share bias and SPRT, needing no tablebase truth for that family at all.
-  KXK, KBNK, KPK, KRKP, KRKB, KRKN, KQKP, KQKR, KNNK and KNNKP are VERDICTS and
-  are validated on conversion and theory truth. Reading a scale function's
-  success off a conversion number shows it doing nothing, correctly and
-  uselessly -- which is exactly what 4.9a.7 nearly concluded.
+  Use the Rarog defect kind in the current ranking table, not the historical
+  Stockfish function category: KRKN, KRKB, KRKP and KPK currently own
+  scale/overclaim questions here. A scale candidate requires an independently
+  labelled drawn cohort and the registered family gate; a conversion candidate
+  requires move/conversion truth and its gate. A scale doing nothing on won
+  positions is not a failure. Tablebase labels (or another justified independent
+  truth source) still matter for classifying draws; lack of local 7-man truth
+  is not waived merely because a candidate is called a scaler. The unknown
+  families first establish coverage, defect and deciding instrument at their
+  own leaf. 4.12.1 confirms each classification before implementation.
 - **A term's blast radius is its dispatcher condition's PROMOTION CLOSURE.**
   Promotion manufactures material, so a term keyed on "no pawn, rook or queen
   for the winner" is reachable from any pawn family through under-promotion.
@@ -1771,17 +2087,17 @@ result. Rarog's present meaningful coverage is 7/20.
   `endgame_truth.py` should take a repeatable `--syzygy` so a 7-man directory
   can be added alongside the 3-4-5-6 set.
 
-**The order below is the pre-correction order and 4.11.6 replaces it.** It was
-built from board occurrence times a conversion number the instrument defect
-depressed, and search-tree occurrence already disagrees sharply: KRPPKRP and
-KQKRPs are listed at 0% and deferred to the end while being the two MOST
-frequent in the tree at 5.88% and 4.41%, and KXK is 37.34% of games but 0.22%
-of the tree. **KQKRPs is the actionable disagreement** -- five men, fully
-verifiable, second in the tree, currently near the end of the list. KRPPKRP
-stays deferred for an honest reason rather than a wrong one: at seven men the
-local tables cannot verify it, and it occurred zero times in 3,915 real games,
-so it is reachable neither by sampling play nor by verified construction.
-Record it as a gap; do not close it on unverified positions.
+**The table below is the current v2 order**, registered at 4.11.6 and
+re-derived at 4.11.12 from the 36,400-game occurrence artifact. Its authoritative
+input is `tools/diag/endgame_ranking_v2.json`; preserve the v1 artifact and
+historical derivation above. KRPPKRP is 5.40% of Rarog's games, not absent;
+its blocker is local 7-man truth. KQKRPs is 0.42% of games and 4.41% of the
+measured tree. Ranks 3–8 form an evidence band, not a proven priority separation.
+
+Budget transfer at 4.11.7 and the board cluster at 4.11b may change the inputs.
+4.11b.18 refreshes only affected evidence and registers a new ranking version
+if necessary; 4.12.1 checks the latest artifact rather than blindly rerunning
+or overwriting v2. Rank alone never accepts a family change.
 
 | Step | Function | ref | Kind | Defect | Board | Tree | Owner note |
 |---|---|---:|---|---:|---:|---:|---|
@@ -1806,10 +2122,11 @@ Record it as a gap; do not close it on unverified positions.
 | 4.12.20 | KQKRPs | 12 | - | n/a | 0.0042 | 0.04410 | **MEASURE FIRST** -- 0.42% of games, 4.41% of the TREE |
 | 4.12.21 | KRPPKRP | 15 | - | n/a | 0.0540 | 0.05881 | **5.40% of Rarog's games and UNVERIFIABLE at 7 men.** The fourth most common family in the set cannot be adjudicated by the local tables; record it as a tooling gap, not a rare ending |
 
-1. **4.12.1 Order and classification.** Adopt 4.11.6's ranking, confirm the
+1. **4.12.1 Order and classification.** Adopt the latest registered ranking
+   (v2 at 4.11.12 unless 4.11b.18 supersedes it), confirm the
    recognizer/scale classification above against the code, and register which
    instrument decides each family before any of them is worked.
-2. **4.12.2 through 4.12.14** are one leaf per function, in the registered
+2. **4.12.2 through 4.12.21** are one leaf per function, in the registered
    order. Each records whether coverage is full, partial or absent, adds its
    theory/Syzygy tests, states its measurement layer and node budget, and is
    measured on the cohort its KIND calls for.
@@ -1822,9 +2139,10 @@ Record it as a gap; do not close it on unverified positions.
    and DTZ progress with the whole-match run demoted to a loss-permitting
    `[-1.75, 0.25]` no-regression check, because a change confined to 0.28% of
    games cannot produce a detectable whole-match Elo at any budget this project
-   has. 4.9a.8's residual 95.7% KRP-KB overclaim at mean +347 is owned here: on
-   a family where the reference offers almost nothing, that reads as
-   material-imbalance pricing rather than a missing recognizer.
+   has. The current 4.12.6 baseline is 100% KRP-KB overclaim at mean +328 on
+   4.11.4's drawn cohort; the older 95.7%/+347 result is historical. Establish
+   the cause before choosing scale, imbalance pricing or guidance, and fit
+   the resulting dependency-complete family cluster here.
 4. **4.12.23 Closure.** All twenty present or excluded with a recorded
    theory-backed reason, hard tests passing, aggregate floors materially
    improved against the CORRECTED baseline, and accepted families transferring
@@ -2043,7 +2361,10 @@ that started from existing values, not from a restart.
    registration. Cap the loop at a game budget decided before cycle 1.
 7. **4.14.7 Close.** Record the cycle table -- corpus, test, fit loss, gate
    result, cumulative Elo -- so the diminishing return is visible rather than
-   remembered.
+   remembered. Repeat RAR-E09's residual/cohort audit on the final
+   truth-qualified corpus/HCE, discharging 4.9.2's post-label retry trigger.
+   Record a keep-closed or explicitly justified reopening; do not leave the
+   historical follow-up without a disposition.
 
 A second data cycle beyond this loop requires a prospective changed-data
 hypothesis supported by the preceding fit and game verdict. More games, labels
@@ -2105,6 +2426,12 @@ above.
 
 #### 4.15.3 The SEE value scale: audit
 
+Reuse 4.11b.6's behavior-neutral value interface and normalized benchmark.
+This leaf audits the final HCE's scale and real callers; it does not rebuild
+that interface. The historical vectors and call counts below describe the
+2026-09-05 audit. Refresh them from the accepted source before measuring.
+
+
 **`piece_value()` has not moved since 1.0.0, and the evaluator has been refit
 four times underneath it.** Three vectors sit on consecutive lines in
 `src/eval.rs`:
@@ -2141,13 +2468,14 @@ how often MVV-LVA order changes. A large constant offset that never flips a
 verdict is not worth a gate; a small one that flips ordering constantly is.
 Report the count, not an argument.
 
-#### 4.15.4 Decouple the SEE values and gate, only if 4.15.3 justifies it
+#### 4.15.4 Fit the production SEE value policy and gate, if 4.15.3 justifies it
 
-The design question is not "which numbers", it is **who owns them**. Manta
-parameterises SEE and passes its own fitted `mg_val` in production; Basilisk
-hardcodes a dedicated `SEE_VALUES` table separate from its evaluation. Rarog
-does neither -- it reuses the evaluator's legacy constant. Any of the three is
-defensible; the current state is the one that is not, because nothing chose it.
+4.11b.6 already provides neutral value injection with unchanged playing
+defaults. Choose the production policy through that same interface: a separate
+SEE vector, an explicitly tied HCE scale, or another measured model. Manta's
+parameterized values and Basilisk's dedicated SEE table are design references,
+not evidence of a winning Rarog scale. Unequal SEE and HCE values alone do not
+establish a defect. Do not repeat the board-interface work here.
 
 **The values must not be frozen by accident again.** Whatever owns them, they
 become a named, tunable surface: reachable by `--rset`, listed in the tuning
@@ -2166,32 +2494,25 @@ played every accepted SPRT with these values, so current strength already
 includes them. The question is whether the coupling is leaving Elo on the
 table.
 
-#### 4.15.5 Restore the benchmark's threshold-SEE column
+#### 4.15.5 Revalidate normalized SEE timing after fitting
 
-`benches/board.rs` implements `cross-engine-board-v1`, shared with Basilisk
-(`tests/board_performance.cpp`) and Manta (`tools/board_bench.zig`), contract in
-Manta's `docs/BOARD_BENCHMARK.md`. The contract fixes P/N/B/R/Q/K at
-100/300/300/500/900/20000 for the threshold-SEE column. Basilisk's production
-SEE already uses exactly those; **Manta injects them into the bench while its
-production SEE uses its fitted `mg_val`.** Rarog can do neither today, because
-its SEE reads a constant with no injection point, so that one column is not
-cross-engine comparable -- knight, bishop and king all differ and an exchange
-can settle at a different point.
-
-Once 4.15.4 gives the values an owner, the bench passes the contract values in,
-Manta-style, and the column becomes comparable. **Do it in that order.** The
-current benchmark comment already refuses to "fix" this by changing `see_ge`,
-and it is right: a benchmark must not smuggle a playing-strength change in to
-make its own numbers prettier. Tooling commit, separate from 4.15.4's engine
-change.
+Initial contract-value injection and comparable timing are owned by 4.11b.6.
+After 4.15.4, recheck that the benchmark still uses the versioned contract
+P/N/B/R/Q/K = 100/300/300/500/900/20000 while the playing engine uses its
+accepted policy. Verify peer verdicts/special-move contracts, not merely equal
+call counts. Preserve separately labelled native/default results and prove
+the injection wire live through the harness. Do not change playing values to
+improve the benchmark. If 4.15.4 closes without a change, record a validation
+of the existing interface rather than manufacturing a new implementation.
+Tooling remains separate from engine commits.
 
 ### 4.16 Optional post-HCE search SPSA
 
 Open only if several live cp-valued RFP, null, futility, ProbCut, qsearch,
 correction or LMR coordinates show a displaced interacting optimum. **The SEE
-value vector joins this surface if 4.15.4 gives it an owner** -- that is the
-point of naming it rather than leaving it a `const`, and it is why 4.15.4 comes
-first: SPSA cannot tune a constant nothing exposes. First run
+value vector joins this surface if 4.15.4 justifies a tunable production
+policy**. Reuse 4.11b.6's interface; benchmark injection alone does not justify
+SPSA. First run
 a registered bounded sensitivity pilot, then audit the entire active
 interacting surface. Pilot theta is neither candidate nor seed; the full tune
 starts from accepted defaults and preserves its registered horizon under any
@@ -2298,31 +2619,100 @@ The HCE is mature for this release only when:
 
 ## 5. Phase 5 — NNUE runway
 
-Phase 5 creates the behavior-neutral runway for NNUE. Nothing here may change
-playing behavior: the accepted Phase-4 fingerprint must survive every step.
-Work that 4.7 already completed is reused and extended, not rebuilt. Endgame
-knowledge moved to 4.9a on 2026-09-01, because it is HCE work that must ship
-in 2.4.0 and must precede the 4.14 whole-HCE consolidation.
+Phase 5 creates the behavior-neutral runway for NNUE. HCE stays active and the
+accepted Phase-4 fingerprint must survive every step. Reuse the accepted
+4.11b board, its correctness tests and existing search context. Endgame
+development remains in 4.12 before 4.14's whole-HCE consolidation.
 
 - **5.1 Measurement corpus handoff.** Freeze the accepted 4.7 corpus and
   manifests as the NNUE residual/stage-gate source. Add only NNUE-specific
   labels or scale; preserve untouched splits.
-- **5.2 Per-ply state and dirty pieces.** Define exact deltas for quiets,
-  captures, EP, promotion, castling and null. Randomized make/unmake compares
-  board, keys, attacks and state against full refresh every ply.
-- **5.3 Accumulator scaffolding.** Per-thread/per-ply ownership, refresh
-  markers, debug full-recompute seams and reserved king-bucket refresh cache.
-  HCE remains active and search stays fingerprint-identical.
+- **5.2 Per-ply state and dirty pieces.** Preserve the board's chess contract
+  while exposing the facts an incremental evaluator needs.
+    - **5.2.1 Freeze and interpret the board-cost baseline.** Carry RAR-M20's
+      [three-engine measurements](analysis/board_audit_2026-09-05.md) and
+      [complete recipe](analysis/board_benchmark_recipe_2026-09-05.md) into
+      enablement; preserve the raw rounds, hashes, ISA/build flags and full
+      Reckless adapter patch. First measure the accepted final Phase-4 Rarog
+      using both frozen v1 and 4.11b's extended coverage plus whole-HCE search.
+      Keep the 2026-09-05 result as history, not the denominator for a changed
+      toolchain/board/corpus. Rarog beat Reckless in all five comparable
+      workloads, but Reckless used NullBoardObserver: NNUE arithmetic was
+      absent, while native threats/pins/checking squares, repetition state
+      and scored move lists remained. The gap therefore does NOT measure
+      accumulator or inference cost, and does not isolate the cost of
+      NNUE-related bookkeeping. Treat that explanation as a hypothesis.
+      Start the staged cost ledger described in the audit; retain useful
+      state until a controlled comparison prices its actual consumers.
+    - **5.2.2 Define the factual move delta.** Describe piece removals,
+      additions and relocations, including captured color/type/square,
+      promotion identity change, EP's off-destination victim, both castling
+      pieces and explicit null semantics. This record contains chess facts,
+      not HCE weights or NNUE feature indices. Document whether each callback
+      sees the before, intermediate or final board.
+    - **5.2.3 Implement the update interface and ownership.** Choose a typed
+      returned delta or statically dispatched observer with a no-op HCE path.
+      Reckless BoardObserver/on_piece_change/on_piece_move/on_piece_mutate
+      and Stockfish dirty-piece updates are reference seams. Preserve
+      per-worker board/history ownership, clone/reset and arbitrary setup
+      history; keep large evaluator state outside Board.
+    - **5.2.4 Verify every transition independently.** Reconstruct the
+      delta's final mailbox from its before-state and compare every legal
+      move, including all special moves. Random branching, null roundtrips,
+      complete unwind and cloned workers must reproduce every board/key and
+      attack fact. Add explicit maximum-history/search-depth boundaries.
+    - **5.2.5 Qualify the HCE path and price move events.** Compare the 5.2.1
+      baseline with the same board plus factual events/no-op observation.
+      Retain accepted fingerprint, targeted behavior and supported-ISA
+      identities. Measure bookkeeping in the corrected board suite and
+      pooled-PGO HCE search, with per-cohort costs and layout/allocation counts.
+      Prove the event wire is live with an observing sink outside timing.
+      Do not remove fields with real consumers or tune HCE to conceal a cost.
+- **5.3 Accumulator scaffolding.** HCE remains active; actual inference is 6.3
+  and incremental/SIMD implementation is 6.4.
+    - **5.3.1 Allocate per-thread, per-ply evaluator state.** Keep accumulator
+      arrays in evaluator-owned storage, with stack indices tied explicitly
+      to make/unmake and search abort. Do not embed or copy a network-sized
+      accumulator in every Board or undo record. Follow Reckless
+      Network::push/pop as an ownership example, not its network dimensions.
+    - **5.3.2 Specify validity and refresh.** Track each perspective's valid
+      state, dirty pieces and refresh reason; define king bucket/mirroring and
+      future output-bucket changes. Null changes side to move, not piece
+      placement: handle evaluator perspective/metadata explicitly rather than
+      inventing a piece delta. Reserve a king-bucket refresh cache with a
+      documented invalidation contract.
+    - **5.3.3 Verify the scaffolding against full refresh.** Use deterministic
+      test features/reference vectors to check lazy update, branch reuse,
+      king moves across bucket/mirror boundaries, special moves, reset and
+      worker isolation. Actual trained-network integer parity is still
+      required at 6.3/6.4; scaffold tests cannot discharge it.
+    - **5.3.4 Gate the runway cost and behavior.** Extend 5.2.1's cost ledger
+      with event-only versus event-plus-stack/dirty/validity bookkeeping,
+      still with the same HCE. Record bytes per ply/thread, capacity, touched
+      bytes, allocation events and refresh reasons; prove counters live and
+      measure the uninstrumented builds. Debug/release, randomized unwind,
+      exact HCE fingerprint, targeted cases and revision-matched pooled-PGO
+      HCE NPS must pass. Archive the delta/refresh contract for the trainer and
+      engine implementers. No numerical loss budget is invented after timing.
 - **5.4 Trainer preflight.** Pin `D:/code/net_trainer`, Bullet, toolchain and
   GPU; verify conversion, shuffle, splits, manifests, reference vectors and
   resume semantics.
 - **5.5 Runway gate.** Exact benchmark, debug/release tests, randomized unwind,
-  reproducible pilot corpus and trainer conformance.
-- **5.6 Threat-map hooks, optional.** Reserve only if Phase-7 relation inputs
-  would otherwise require another make/unmake rewrite.
+  reproducible pilot corpus and trainer conformance. Carry the staged board
+  cost ledger into Phase 6; its costs are measured, not presumed zero.
+- **5.6 Threat-map hooks, optional.** Decide from the selected network's actual
+  relation features whether piece events need a before/intermediate/final
+  board view or extra attack-transition data. Preserve an extension seam for
+  discovered attacks and removed blockers. A simple piece-square NNUE does
+  not justify eager full threat tensors. Reckless's threat-accumulator
+  observers are a reference if relation inputs are selected; useful board
+  pin/check caches remain independent. Record a no-change disposition if no
+  additional hook is needed. Attribute any new maintenance cost separately
+  in the 5.2.1 ledger, using semantically valid eager/lazy implementations.
 
 Boundary rule: search consumes an evaluator score and evidence class, never
 evaluator internals.
+
 
 ## 6. Phase 6 — baseline NNUE
 
@@ -2336,8 +2726,34 @@ evaluator internals.
 - **6.3 Scalar integration.** Implement the documented `quantised.bin`
   contract with integer-exact engine/NumPy/reference conformance and clean HCE
   fallback.
-- **6.4 Incremental and SIMD.** Randomized incremental/full parity, integer
-  bounds, portable/x86/ARM bit identity and pooled-PGO NPS gate.
+- **6.4 Incremental and SIMD.** Reuse 5.2/5.3's state contract and staged cost
+  ledger; a network changes the workload, so the 2026-09-05 cross-engine gap
+  cannot be subtracted to claim an NNUE cost.
+    - **6.4.1 Prove actual-network incremental parity.** Compare every
+      incremental result with scalar full refresh on the same trained net.
+      Cover captures, EP, all promotions, castling, null, king bucket/mirror
+      boundaries, reset/abort, cloned workers and branch reuse. Include
+      threat/relation features only when this architecture consumes them.
+    - **6.4.2 Qualify SIMD and supported targets.** Verify integer bounds,
+      portable/x86/ARM bit identity, debug/release and the supported ISA matrix.
+      Keep an independently computed scalar reference; SIMD-versus-SIMD
+      agreement is insufficient.
+    - **6.4.3 Attribute and gate the NNUE board/evaluator cost.** Extend the
+      5.2.1 ledger with scalar full refresh versus lazy incremental versus
+      SIMD on the SAME net and fixed legal move traces. Measure move events,
+      state maintenance, feature updates, bucket refreshes and inference
+      separately, then combined, with refresh rates and memory per worker.
+      Compare HCE/NNUE board work using identical prerecorded transitions;
+      whole-search HCE/NNUE NPS also changes tree/eval behavior and is a system
+      result, not a causal board-cost estimate. Include quiets, captures, EP,
+      promotions, castling, king bucket changes, null and sparse-endgame
+      cohorts. Re-run frozen v1 and extended profiles, optionally Reckless
+      with both no-op and real observers at its recorded network/version.
+      Keep native SEE unranked unless values/contracts are normalized.
+      Require exact same-net score parity and pooled-PGO whole-search NPS;
+      retain the raw stage data for later architecture comparisons. The
+      original RAR-M20 result is a reference, never an acceptance target.
+
 - **6.5 Architecture loop.** Controlled data-versus-capacity experiments,
   progressing from output buckets to mirrored king buckets and then justified
   relation/multilayer inputs.
@@ -2419,6 +2835,9 @@ missing, so that class of drift is caught mechanically rather than by reading.
 | `analysis/basilisk_audit_2026-08-30.md` | Basilisk method/results audit and Rarog consequences |
 | `analysis/manta_tooling_audit_2026-08-25.md` | Manta tool dispositions and imported measurements |
 | `analysis/ablation_results.md` | Search-deficit measurements and corrected interpretation |
+| `analysis/board_audit_2026-09-05.md` | Board defects, comparison, owner map and staged NNUE cost contract |
+| `analysis/board_benchmark_recipe_2026-09-05.md` | Complete benchmark recipe, adapter patch, manifest and raw rounds |
+| `analysis/artifacts/board-audit-20260905/` | Machine-readable native board baseline retained for 5.2.1 and 6.4.3 |
 
 `GUIDE.md` and `PLAN.md` change in the same commit. Source, defaults and
 reproducible artifacts outrank prose whenever documents disagree.
@@ -2430,8 +2849,8 @@ reproducible artifacts outrank prose whenever documents disagree.
 | `tools/sprt.ps1` | Paired pentanomial GSPRT; default 1T `3+0.03`, Hash 64, UHO |
 | `tools/diag/phase4_differential.py` | Same-unit Phase-4 suite aggregation |
 | `tools/diag/bench_counters.py` | Sum all per-position bench counter dumps |
-| `tools/diag/endgame_truth.py` | Per-move Syzygy grading; **termination rule under repair at 4.10.1** |
-| `tools/diag/endgame_floors.py` | Ratcheting aggregate floors; gains a cohort fingerprint at 4.10.2 |
+| `tools/diag/endgame_truth.py` | Per-move Syzygy grading; corrected termination and cohort contract verified at 4.10 |
+| `tools/diag/endgame_floors.py` | Cohort-stamped ratcheting floors; corrected baseline at 4.11.2 |
 | `tools/diag/endgame_drawn.py` | Drawn-cohort overclaim; static, plays nothing, unaffected by 4.10.1 |
 | `tools/diag/endgame_book.py` | Syzygy-verified endgame-start cohort |
 | `tools/diag/endgame_search_occurrence.py` | Family frequency in the search tree; exclude endgame roots (4.11.5) |
@@ -2469,7 +2888,7 @@ evidence.
 | 4.9a.1 - 4.9a.8 | unchanged | completed; five results SUPERSEDED, owners named |
 | 4.9a.7 (KRPKR) | also 4.12.2 | leaf reopened for its conversion half |
 | 4.9a.8 (KRPKB) | also 4.12.6 | leaf reopened for its conversion half |
-| 4.9a.9 - 4.9a.26 | 4.12.17 - 4.12.14 | the twenty reference functions |
+| 4.9a.9 - 4.9a.26, plus 4.9a.7/.8 | 4.12.2 - 4.12.21, by function | twenty function owners; reordered by evidence, never translate by numeric offset |
 | 4.9a.14 (KQKP) | 4.12.13 | owns RAR-E08's KQ-KP debt |
 | 4.9a.26 (KBNK) | 4.12.14 | owns RAR-E12's dtz debt |
 | 4.9a.27 | 4.12.22 | dependency-complete family gates |
@@ -2492,3 +2911,10 @@ placed before two of its own inputs:
 | 4.11.5 budget transfer | 4.11.7 |
 | 4.11.6 occurrence census | 4.11.5 |
 | 4.11.7 drawn-share bias | 4.11.4 |
+
+Board audit integration, 2026-09-05: **4.11b** is new and sits between the
+remaining 4.11 work and 4.12. Existing 4.11/4.12 numbers and v2 rank order are
+preserved. Initial SEE benchmark restoration moves from 4.15.5 to **4.11b.6**;
+4.15.3–4.15.4 retain post-final-HCE scale audit/fitting and 4.15.5 revalidates.
+Phase 5.2 owns the historical board baseline and event-cost attribution;
+5.3 owns scaffold costs; 6.4 owns same-network incremental/SIMD attribution.

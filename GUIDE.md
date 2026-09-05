@@ -17,53 +17,22 @@ and `python tools/diag/check_guide.py` must pass.
 | Measured search deficit | **355.26 +/- 27.03 Elo** equal nodes; **250.77 +/- 13.12** equal time; speed worth **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
-| Instrument state | **The endgame truth harness is defective and under repair.** Every pawn-family conversion number is superseded; bare-king families are provably unaffected |
+| Instrument state | **4.10 repaired; v2 baselines/floors recorded.** Budget transfer and remaining corrections: 4.11.7–4.11.10 |
 | Current step | **4.11.7 — budget transfer at 60k/200k/600k** |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## What you run next
 
-**4.11.7 — budget transfer.** Repeat the decisive family verdicts at
-60k / 200k / 600k nodes with `tools/diag/endgame_budget_bracket.py`. A verdict
-that does not reproduce at a game-representative budget is PROVISIONAL, and the
-60,000-node screen sits below the p25 of deployment
-(`analysis/node_budget_2026-09-04.md`). **This one needs your machine.**
+**4.11.7 — budget transfer at 60k/200k/600k.** Details and run conditions are
+in PLAN 4.11.7. Order: finish 4.11, then 4.11b board work, then 4.12 endgames.
+The v2 endgame order remains registered; 4.11b.18 refreshes affected evidence.
 
-4.12's order is REGISTERED at **v2** (`tools/diag/endgame_ranking_v2.json`)
-and its leaves renumbered to match, so the board runs top to bottom. 4.11.6's
-retry trigger fired: 4.11.12 measured occurrence over the 36,400-game
-tournament and **KRPPKRP, KQKR and KQKRPs are not the zeros RAR-M15 reported**.
-Nine leaves moved; KQKR **15 -> 10** and KRPPKRP is now the fourth most common
-family in the set and still unmeasurable. See
-`analysis/endgame_occurrence_tournament_2026-09-05.md`.
+Run top to bottom: the first unticked **leaf** is next. A completed step with
+invalidated results stays ticked and names its open owner with SUPERSEDED.
+Generate the queue rather than maintaining a second checklist:
 
-**Deployment is 153,466 nodes/move median at 3+0.03** and the endgame screen is
-60,000, below its p25 — so every fixed-node endgame verdict so far is
-PROVISIONAL. Evidence: `analysis/node_budget_2026-09-04.md`.
-
-The standard cohort is frozen by content: seed `6200600`, 19 families, 100
-positions each, overall digest `fe486604...`. Both of 4.11.1's arms must report
-it, and 4.11.1 can now run `--workers N`.
-
-Phase 4's open work was reordered on 2026-09-04 — **instruments (4.10), then
-re-measurement (4.11), then development (4.12 onward)**. PLAN section 13 maps
-the old numbers to the new ones. Nothing in 4.12 may be ordered or gated on a
-number the old instrument produced.
-
-**Run this board strictly top to bottom: the first unticked box is the next
-leaf, always.** A completed step whose RESULT was invalidated stays ticked and
-carries `SUPERSEDED -> <leaf>` naming the open leaf that repairs it — an open
-box that only a later leaf can discharge would make the board unrunnable, which
-is why the five 4.9a entries are marked rather than un-ticked.
-
-Do not read the queue off the board by eye — it is 146 lines. Generate it:
-
-```bash
-python tools/diag/check_guide.py --next 10
-```
-
-```bash
-python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/check_guide.py
+```powershell
+python -B tools/diag/check_guide.py --next 10
 ```
 
 ## Phase 4 — bounded pre-NNUE search and HCE
@@ -135,6 +104,25 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
     - [ ] **4.11.10** Restate RAR-E08, RAR-E11 and RAR-E12's conversion claims as superseded
     - [x] **4.11.11** Panic reported on stdout, where the harness keeps it
     - [x] **4.11.12** Occurrence re-measured over 36,400 rated games; 4.12 re-ranked to **v2**
+- [ ] **4.11b** Board correctness and HCE throughput
+    - [x] **4.11b.1** Freeze the board audit and three-engine comparison
+    - [ ] **4.11b.2** Strengthen benchmark coverage and correctness oracles
+    - [ ] **4.11b.3** Repair move parsing and counter boundaries
+    - [ ] **4.11b.4** Define SEE contracts and independent fixtures
+    - [ ] **4.11b.5** Repair the SEE king-exchange defect
+    - [ ] **4.11b.6** Add neutral value injection; restore comparable SEE timing
+    - [ ] **4.11b.7** Profile board work in HCE search
+    - [ ] **4.11b.8** Optimize legal generation and move-list delivery
+    - [ ] **4.11b.9** Measure fused piece relocation
+    - [ ] **4.11b.10** Share useful pin/check information
+    - [ ] **4.11b.11** Optimize the corrected SEE kernel
+    - [ ] **4.11b.12** Decide whether king-square caching pays
+    - [ ] **4.11b.13** Define history capacity and mutation contracts
+    - [ ] **4.11b.14** Decide whether a larger representation change pays
+    - [ ] **4.11b.15** Review draw/null/repetition policy boundaries
+    - [ ] **4.11b.16** Qualify integrated correctness and throughput
+    - [ ] **4.11b.17** Register and qualify the playing cluster
+    - [ ] **4.11b.18** Refresh affected endgame evidence and close
 - [ ] **4.12** Endgame reference functions — order registered by 4.11.6, re-derived at 4.11.12
     - [ ] **4.12.1** Adopt the order; confirm recognizer-vs-scale classification per family
     - [ ] **4.12.2** KRPKR [ref 13] scale — 30.7% overclaim remains after 4.9a.7
@@ -171,13 +159,13 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
     - [ ] **4.14.4** Regenerate and hash-freeze under a new corpus name
     - [ ] **4.14.5** Cycle 1: full 4.8 schedule, own frozen test, registered gate
     - [ ] **4.14.6** Repeat while a cycle accepts; stop at the first that does not
-    - [ ] **4.14.7** Record the cycle table and close
+    - [ ] **4.14.7** Record cycles, refresh the residual audit and close
 - [ ] **4.15** Re-measure qsearch/TT/eval authority and branching on the accepted HCE
     - [ ] **4.15.1** Observation, baseline and live-wire proof; write the analysis
     - [ ] **4.15.2** One candidate and gate, only if 4.15.1 isolates a unique defect
-    - [ ] **4.15.3** SEE value scale audit — `PIECE_VALUES` untuned since 1.0.0; zero games
-    - [ ] **4.15.4** Give the SEE values an owner and a tunable surface; gate it
-    - [ ] **4.15.5** Restore the benchmark's cross-engine threshold-SEE column
+    - [ ] **4.15.3** Audit the SEE scale after final HCE; zero games
+    - [ ] **4.15.4** Fit justified SEE values through the existing interface; gate
+    - [ ] **4.15.5** Revalidate normalized SEE timing after fitting
 - [ ] **4.16** Optional post-HCE search SPSA; skip without a displaced optimum
 - [ ] **4.17** Time management: review, repair and gate — owns all TM work
     - [ ] **4.17.1** Revalidate accepted clock behavior on the accepted HCE — RAR-R01/R02
@@ -195,8 +183,17 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
 ## Phase 5 — NNUE runway
 
 - [ ] **5.1** Measurement corpus handoff; freeze 4.7 splits and manifests
-- [ ] **5.2** Per-ply state and dirty pieces with randomized make/unmake parity
-- [ ] **5.3** Accumulator scaffolding; HCE active and fingerprint identical
+- [ ] **5.2** Per-ply state and dirty pieces
+    - [ ] **5.2.1** Freeze board baselines, including Reckless; start the cost ledger
+    - [ ] **5.2.2** Define factual move deltas and callback timing
+    - [ ] **5.2.3** Add the update interface and ownership
+    - [ ] **5.2.4** Verify every transition independently
+    - [ ] **5.2.5** Qualify HCE behavior and measure move-event costs
+- [ ] **5.3** Accumulator scaffolding
+    - [ ] **5.3.1** Allocate evaluator-owned per-thread/per-ply state
+    - [ ] **5.3.2** Define validity, refresh and null semantics
+    - [ ] **5.3.3** Verify scaffolding against full refresh
+    - [ ] **5.3.4** Gate HCE behavior and measure scaffold costs
 - [ ] **5.4** Trainer preflight: pin `D:/code/net_trainer`, Bullet, toolchain, GPU
 - [ ] **5.5** Runway gate: fingerprint, debug/release, unwind, pilot corpus
 - [ ] **5.6** Threat-map hooks, optional; reserve only to avoid a second rewrite
@@ -207,7 +204,10 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
 - [ ] **6.1** Controlled data: 30-60M unique positions, by-game splits, manifests
 - [ ] **6.2** Baseline networks: at least two seeds per width/bucket configuration
 - [ ] **6.3** Scalar integration: `quantised.bin` contract, integer-exact conformance
-- [ ] **6.4** Incremental and SIMD parity, bit identity, pooled-PGO NPS gate
+- [ ] **6.4** Incremental and SIMD parity, performance and cost attribution
+    - [ ] **6.4.1** Prove actual-network incremental/full-refresh parity
+    - [ ] **6.4.2** Qualify SIMD, integer bounds and supported targets
+    - [ ] **6.4.3** Measure board/update/inference costs; gate whole-search NPS
 - [ ] **6.5** Architecture loop: output buckets, king buckets, then relation inputs
 - [ ] **6.6** Gross search-scale safety; broad search fitting waits for 7.3
 - [ ] **6.7** Baseline release: beat the pre-NNUE master at STC/LTC and 4T
