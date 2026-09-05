@@ -16,7 +16,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.11.7 — budget transfer at 60k/200k/600k** |
+| Current step | **4.11.8 — datagen label audit**, next independent leaf; 4.11.7 remains held for a maintainer-scheduled compute run |
 | Instrument state | 4.10 repairs are complete; corrected v2 baselines/floors recorded at 4.11.1–4.11.3. Historical v1 pawn-family conversion claims remain superseded; budget transfer and remaining corrections are open at 4.11.7–4.11.10 |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -25,6 +25,35 @@ Phase 4 remains a bounded pre-NNUE programme because the hybrid established
 large search and HCE populations worth investigating. It is not a commitment
 to keep working until the oracle is matched. Each dependency-complete cluster
 must earn its own continuation.
+
+### Execution queue and explicit holds
+
+The nominal order is unchanged. **4.11.7 was never moved forward or ticked**;
+the earlier guide simply did not show the scheduling hold. Claude's handoff
+predates 4.11b and is not the current roadmap: after 4.11 comes **4.11b**, then
+4.12. The active independent leaf is **4.11.8**, not an automatic instruction
+to start a long run or to begin engine implementation during this plan update.
+
+| Leaf | State and reason | Unblock event / owner | Dependency boundary |
+|---|---|---|---|
+| 4.11.7 | HELD for scheduling, not proven hardware unavailability | Maintainer allocates the 60k/200k/600k compute run; agent supplies the command when requested | Required before closing 4.11 or entering 4.11b; budget-dependent conclusions remain provisional |
+| 4.12.21 | Future evidence gap, not a skipped completed step | Obtain independent 7-man truth/verification, or record a justified scope exclusion under 4.12's closure contract | Cannot claim this family verified or close 4.12.23 with unowned missing evidence |
+
+4.11.8 uses stored corpus labels/tablebase truth and is independent of the
+long budget run; it still requires the input files/tables and may involve a
+large scan. Record any missing input as a new explicit hold rather than
+silently selecting another step. 4.11.9/4.11.10 may do their independent
+analysis/corrections, but cannot claim budget transfer succeeded. After them,
+return to 4.11.7; do not quietly pass its dependency boundary.
+
+At each handoff review every held item: state what was done, what is still
+held, its unblock event, and the next executable leaf. Resume the earliest
+eligible held leaf when its prerequisite is satisfied. A conditional future
+audit is not a skip: it closes only on the measured disposition its contract
+requires. Keep one ID/checkbox per obligation; never move a hold out of sight
+or mark missing verification done. GUIDE shows the short status, this register
+holds the reason/dependency, and historical artifacts retain their original
+numbers and dates.
 
 ## 2. Operating and evidence rules
 
@@ -95,6 +124,92 @@ gating. The following rules determine this roadmap's order.
     failing conditions exactly, and hash behaviour through an explicit field
     list rather than whole records. An interim SPRT reading is likewise not
     evidence, in either direction.
+
+### Subsystem audit contract: correctness, composition and cost
+
+**Planning only, added 2026-09-05.** The audits below are required analyses,
+not findings, optimization promises or permission to implement an imagined
+solution. Existing studies are inputs, not proof that the current composition
+is correct. Reference current local Stockfish/Reckless/Basilisk implementations
+when useful; pin source revisions and compare their contracts with Rarog's
+actual consumers rather than porting a feature checklist.
+
+For each audit, before proposing implementation:
+
+1. Inventory current files, entry points and consumers. Trace producer ->
+   stored state -> consumer -> invalidation/undo/reset, including feature
+   flags, thread ownership, score units, bound/evidence class and lifetime.
+   Name missing, duplicated, stale, contradictory or mutually suppressing
+   behavior as hypotheses until demonstrated.
+2. Describe each feature's intended role and alternative implementation
+   contracts. Check that the chosen form is compatible with surrounding
+   features. A feature can pass an isolated test while emitting a score,
+   depth, history update or cache entry its consumer interprets differently.
+   Include both correctness invariants and intended heuristic interactions.
+3. Profile realistic workloads and retained difficult cohorts. Separate cost
+   per operation, invocation frequency, search tree changes, whole-search NPS,
+   time-to-solution and strength. Use exact builds and live observations;
+   record overhead and confounds immediately. A faster node that expands a
+   worse tree is not automatically an improvement.
+4. Test interacting pairs/clusters with bounded ablations or a factorial
+   screen where justified: baseline, A, B, A+B under matched conditions.
+   Explain reinforcement, cancellation and masking using mechanism counters
+   and targeted cases. Do not add component Elo estimates or infer interaction
+   strength from noisy point estimates. Prior rejected work needs new evidence
+   and its original retry condition; no automatic SearchCore rewrite.
+5. Classify each finding as correctness repair, behavior-neutral cost change,
+   heuristic/composition change, fitting issue, intentional tradeoff or
+   no-change. Give evidence, impact, confidence, prerequisites, risk, exact
+   consumer scope and a deciding test. Preserve supported functionality and
+   independently verified correctness even if fixing a defect changes bench.
+6. End the analysis leaf by expanding PLAN/GUIDE with only evidence-backed,
+   dependency-ordered implementation/test/fit/gate leaves. Include done
+   criteria, a no-change disposition where appropriate, and a named future
+   owner for deferred work. Reuse existing leaves first. Add sibling steps
+   within the owning section, or a letter-suffixed section before its next
+   dependent gate; keep one consistent numbering order and map changed open
+   IDs. Do not create deep four-part IDs or duplicate owners. Stop after the
+   analysis handoff; no implementation in that same leaf.
+   If a childless audit section gains children, its first child records the
+   completed audit and the parent stays open until required follow-up children
+   close. For an existing audit leaf such as 4.15.1, add sibling leaves under
+   its existing parent rather than nested four-part numbers. Update the parent
+   title/status to describe the resulting scope; keep completed IDs stable.
+7. Future implementation qualifies the smallest dependency-complete cluster.
+   Behavior-neutral optimizations require targeted parity plus exact immediate
+   accepted fingerprint and controlled whole-search performance. Deliberate
+   heuristic changes require registered strength qualification and retention
+   of correctness/functionality, not NPS alone. Correctness defects cannot be
+   tuned away. Use local fitting when the changed semantics displace an
+   identifiable optimum: Texel for traced HCE terms; conditional SPSA for live
+   nonlinear/search interactions. Keep HCE/search tunes separate, fit relevant
+   covariances, prove the fitting wire live, and register before games. A flat
+   or monotone surface is a reason to skip SPSA, not an invitation to spend it.
+
+### Audit ownership and order
+
+| Part / boundary | Analysis owner | Why here / later integration |
+|---|---|---|
+| Board, legality, make/unmake, SEE mechanics | 4.11b | Existing detailed audit; accepted board before endgame changes |
+| Endgame dispatch, recognizers/scales, rule-50 and generic HCE composition | 4.12.1 and family leaves | Extend current family contracts; respect budget/truth holds |
+| Datagen, labels, extraction, splits and fitting data integrity | 4.13.1 / 4.13.4 | Analyse before publishing the next corpus; reuse 4.11.8 evidence |
+| HCE implementation and interacting terms/caches/search score contract | 4.13a | After family/label evidence, before 4.14's mandatory consolidation fit |
+| Search, qsearch, move ordering, histories, pruning/reductions/extensions | 4.15.1 | Broaden existing authority audit after accepted HCE; reuse 4.15.2–5 |
+| TT, eval/pawn caches, hashing, storage and hot memory layout | 4.15a | Search consumers known; before final search fit |
+| Threading, engine/UCI lifecycle, search control and tablebase integration | 4.15b | Supported behavior now; advanced scaling stays in Phase 8 |
+| Diagnostics, benchmark/game harnesses, feature builds and ISA delivery | 4.15c | Instrument/build trust before final search fitting, TM and release gates |
+| Time management and root-confidence consumers | 4.17.1 | Extend existing owner; recheck fit/search/SMP signals |
+| Final module coverage, dead paths and cross-subsystem closure | 4.18.1 / 4.19 | Every production/tool boundary gets an owner or justified disposition |
+| NNUE board state and evaluator/runtime composition | 5.2 / 5.3 / 5.6 / 6.4 | Retain RAR-M20 cost stages; do not preload NNUE runtime cost into HCE |
+| Trainer/network formats, feature parity and inference scale | 5.4 / 6.0 / 6.3 | Extend existing preflights before training/inference |
+| Post-NNUE search/eval retuning and interaction revalidation | 7.3 | HCE-era compatibility is not proof for a new evaluator |
+| High-thread/NUMA, universal dispatch, TT/net placement and platforms | 8.0–8.2 | Reuse Phase-4 audits; new architectures only when this phase opens |
+
+Audits produce a bounded recommendation and implementation plan, not an
+unlimited mandate to keep optimizing every subsystem. Preserve existing
+cluster/game-budget stop rules. 4.19 cannot close while an identified required
+repair or validation has no disposition; future-only work needs an explicit
+later owner and must not be quietly counted as verified current behavior.
 
 ### Minimum gates
 
@@ -633,7 +748,8 @@ addition against residual signals, while this is defect repair against a
 measured conversion failure and an explicit reference inventory.
 
 The 4.9a sub-steps below are the completed record and are no longer the working
-order; 4.10 through 4.13 are. The GUIDE list is still run top to bottom.
+order. GUIDE and the execution/hold register determine the earliest unblocked
+leaf; 4.11b remains between re-measurement and 4.12 endgame development.
 
 **The order is set by a feedback loop, not by convenience.** Self-play labels
 depend on the engine's own conversion ability, which depends on the evaluator,
@@ -1281,8 +1397,11 @@ Nothing here changes the engine. These are tooling commits.
     may sit only on a TICKED leaf (the step was done; it is its RESULT that is
     superseded), it must name a leaf that EXISTS, and that leaf must be
     UNTICKED. Together those stop an invalidated result from quietly becoming a
-    closed one, and they preserve the property the board depends on -- **the
-    first unticked box is always the next leaf**, with no exemptions.
+    closed one. **Scheduling clarification, 2026-09-05:** the former rule
+    that the first unticked box always runs is superseded by the explicit
+    hold/dependency register. The earliest unblocked leaf is next; held work
+    stays unticked and visible. This checker validates structure, not machine
+    availability or dependency readiness.
 
     The step-set comparison now runs BOTH ways. The old check was one-way, so a
     PLAN item with seven sub-steps listed as five in GUIDE passed -- and did,
@@ -1624,7 +1743,9 @@ which is what exposed the dependency inversion.
    the correction it received is the point. Board occurrence was not merely
    under-sampled -- RAR-M15's classifier capped positions at six men, and its
    three zeros were not zeros.
-7. **4.11.7 Budget transfer.** Repeat the decisive family verdicts at
+7. **4.11.7 Budget transfer -- HELD for a maintainer-scheduled run.** Keep
+   unticked; prepare the command when requested, not a long run by default.
+   Repeat the decisive family verdicts at
    60k / 200k / 600k nodes. A verdict that does not reproduce at a
    game-representative budget is provisional: Basilisk rejected its leading
    candidate at 60,000 nodes on a losing move that a 200,000-node search sees.
@@ -1685,6 +1806,13 @@ which is what exposed the dependency inversion.
     Colosseum's, not Rarog's, and are recorded here because it is the same
     maintainer: its stderr tail reaches no incident report at all, and its
     100 ms reap window never yielded an exit status in six crashes.
+
+    **Disposition:** investigation of that historical tournament crash is
+    closed; it is not a standing request for forensic work or new exception
+    handlers. Reopen only on a new actionable reproducer/evidence or an
+    explicit maintainer request. This does not waive ordinary lifecycle tests
+    or 4.11b.3's independently reproduced parser/counter defects; no connection
+    between those defects and the tournament incident has been established.
 12. **4.11.12 Occurrence re-measured over 36,400 rated games -- DONE, and
     4.12 renumbered to v2.** Discharges 4.11.6's retry trigger.
     `tools/diag/endgame_board_occurrence.py` classifies every position of every
@@ -1730,7 +1858,8 @@ which is what exposed the dependency inversion.
 
 **Integrated 2026-09-05 after reconciling the a0aeb68 roadmap.** Finish the
 remaining 4.11 leaves first, then execute this section before 4.12. The current
-next step remains 4.11.7; this insertion preserves all completed work and
+next independent step is 4.11.8 while 4.11.7 is held; this insertion preserves
+all completed work and
 4.11.12's registered v2 endgame order until changed evidence warrants a rerank.
 The board audit and measurement are complete; the repairs and optimizations
 below are NOT implemented. NNUE-only work belongs to 5.2, 5.3, 5.6 and 6.4.
@@ -2183,7 +2312,13 @@ is ONE-DIRECTIONAL toward draws, concentrated in rook and pawn families, and it
 teaches the evaluator to undervalue exactly what wins endgames. Rarog's own
 share is 4.11.8's output, not an assumption.
 
-1. **4.13.1 Quantify.** From 4.11.8: the share of rows carrying a contradicted
+1. **4.13.1 Data/label pipeline audit and quantification.** Apply section 2's
+   audit contract to game -> sampled position -> label -> extraction -> split ->
+   fit/bake. Cover score perspective/units, WDL/cursed wins, halfmove clocks,
+   deduplication/by-game leakage, sampling bias, manifests/resume and exact
+   parameter-to-feature coverage. Reuse existing tests and 4.11.8; derive
+   additional repair leaves before corpus publication when evidence requires.
+   From 4.11.8: the share of rows carrying a contradicted
    result, by family and by datagen budget, with cursed wins excluded.
 2. **4.13.2 Two arms, registered separately.** Post-hoc relabeling of positions
    and whole-game tablebase adjudication are DIFFERENT changes and must not be
@@ -2201,6 +2336,38 @@ share is 4.11.8's output, not an assumption.
 4. **4.13.4 Freeze the winning contract** under a new corpus name, with the
    audit report embedded in the manifest. Never edit an existing corpus in
    place.
+
+### 4.13a HCE implementation, interaction and throughput audit
+
+**Analysis first; not yet performed.** Apply the section-2 subsystem audit
+contract before 4.14 refits the integrated evaluator. Reuse 4.7/4.9's completed
+maturity/residual work and 4.12's newly accepted family evidence; this is not
+permission to reopen rejected structural expansion without its retry evidence.
+
+Review the complete current evaluation path: material and phase interpolation;
+piece-square/activity/mobility terms; pawn structure/passers and pawn cache;
+king danger/safety; threats; endgame dispatch/scales and mop-up; tempo, score
+normalization, rule-50 damping and saturation; eval caches and search correction.
+Check term activation/units, double counting, mutually cancelled terms, clipping,
+phase-boundary behavior and discontinuities after captures/promotions. Trace
+the final score through qsearch stand-pat, correction, pruning margins and TT
+storage; deeper search score authority remains 4.15.1's owner.
+
+Profile full evaluations, cache hit/miss paths and repeated board/attack work
+on representative and narrow activation cohorts. Compare mathematically
+equivalent implementations before attributing a gain to a changed heuristic.
+Investigate whether redundant maintained state pays for its consumers; do not
+remove it by local appearance alone. Cross-check every production term against
+EvalTrace/extraction/re-evaluation and its fitting inventory, including packed
+score arithmetic, debug/release overflow boundaries and parameter invalidation.
+
+Deliver analysis/phase4_hce_composition_audit.md with the inventory, interaction
+map, profiles, evidence-backed findings and prioritized no-change/repair/
+optimization dispositions. Add only the resulting implementation and test
+leaves here, before 4.14; define local fits/gates for changed clusters and let
+4.14 own final whole-surface consolidation. Do not retune HCE merely to disguise
+a neutral refactor's correctness or speed regression. A new accepted HCE later
+requires 4.15 and 4.17 to revalidate their score/confidence consumers.
 
 ### 4.14 Iterated no-adjudication refit cycles
 
@@ -2370,14 +2537,40 @@ A second data cycle beyond this loop requires a prospective changed-data
 hypothesis supported by the preceding fit and game verdict. More games, labels
 or epochs are not a default response to a failed fit.
 
-### 4.15 Post-HCE qsearch, TT and evaluation authority
+### 4.15 Post-HCE search composition, performance and score authority
 
 HCE fitting can change score scale, qsearch share and pruning populations.
 Basilisk's +12-Elo HCE refit moved qsearch share from 30.8% to 35.1% while most
 ordering/LMR statistics held; which metrics move is engine-specific. Therefore
 the old RAR-S70 counters are priors, not a candidate basis.
 
-#### 4.15.1 Observation and baseline
+#### 4.15.1 Search implementation, interaction and throughput audit
+
+**Analysis first; scope expanded, audit not yet performed.** Apply section 2's
+audit contract to the complete current search, not just qsearch/TT counters.
+Cover iterative deepening/aspiration/PVS, move-picker stages, all histories and
+their update conditions, ordering versus pruning reuse, SEE consumers,
+qsearch checks/evasions/stand-pat/delta policy, pruning, null move, reductions,
+extensions/singular verification, re-search and cutoff semantics. Trace
+node/ply/depth/window/bound units, excluded moves, mate/draw/terminal scores,
+abort handling, TT reuse and root/worker authority through their callers.
+
+Look for incompatible variants and jointly harmful interactions, not merely
+missing named features: e.g. a history update that improves ordering but
+silently increases pruning; correction affecting both evaluation and margins;
+reduction/extension stacks; stale TT evidence driving a pruning decision.
+These are questions to test, not findings. Profile actual search and targeted
+hard cohorts; preserve narrow correctness canaries and accepted retry rules.
+
+The existing six-part authority study below remains required. Expand its
+analysis artifact with the full inventory and interaction results, then add
+evidence-backed sibling work before 4.16. 4.15.2 owns a justified authority
+candidate; 4.15.3–5 own production SEE scale/fit/benchmark validation. Other
+demonstrated search defects need their own named leaves rather than being
+smuggled into that authority candidate. Reuse 4.11b's corrected SEE/board
+baseline; cache mechanics are 4.15a, thread/lifecycle contracts 4.15b.
+
+
 
 1. Compare the accepted HCE head with exact RAR-S70 at fixed nodes/time, then
    re-run the revision-matched oracle differential at sample stride 1.
@@ -2506,6 +2699,70 @@ improve the benchmark. If 4.15.4 closes without a change, record a validation
 of the existing interface rather than manufacturing a new implementation.
 Tooling remains separate from engine commits.
 
+### 4.15a TT, caches and memory implementation audit
+
+**Analysis first; not yet performed.** Apply section 2. Inspect full/pawn/minor/
+non-pawn key semantics and all TT/eval/pawn cache consumers: replacement,
+entry publication/atomicity, generation/aging, collision verification, mate
+distance normalization, score bounds/depth, rule-50/repetition identity,
+parameter/net invalidation, thread sharing and root/new-game resets.
+Reuse 4.11b's board-key review; do not duplicate it or disable caches to obtain
+a falsely clean measurement. Review alignment, entry size, cache-line traffic,
+allocation, prefetching and locality on real hit/miss populations.
+
+Deliver analysis/phase4_cache_memory_audit.md. Compare valid alternatives with
+controlled within-Rarog measurements; deleting validation/state cannot count
+as an optimization if it changes the contract. Expand this owner with derived
+repairs/tests/gates before 4.16. Refresh 4.15's affected search evidence and
+benchmark baselines after accepted changes.
+
+### 4.15b Threading, engine lifecycle, protocol and tablebase audit
+
+**Analysis first; not yet performed.** Inspect current supported 1T/multi-thread
+behavior and producer/consumer ownership: worker startup/stop/join, shared TT
+and root results, cancellation during an iteration, completed-result authority,
+new-game/position/options changes, cloning/reset and resource lifetimes.
+Review UCI parsing/command dispatch/output ordering, go/stop/ponder/infinite/
+nodes/depth/time interactions where supported, malformed-input policy,
+allocation failures and deterministic restart. Explicitly list unsupported
+commands/features; this audit does not authorize adding them.
+
+Review Syzygy FFI ownership and thread safety, availability/failure paths,
+WDL/DTZ and halfmove semantics, root versus interior probing, score/bound
+conversion and castling/EP assumptions. Reconcile KPK/endgame truth with the
+actual board/search contracts and datagen's separate adjudication semantics.
+Price synchronization, polling, cloning, initialization and probe overhead;
+use deterministic interleavings/controlled integration cases where possible,
+not only stress runs that happen to pass.
+
+Deliver analysis/phase4_engine_integration_audit.md and derived leaves before
+4.16/4.17. Current correctness/robustness debt stays in Phase 4; speculative
+high-thread/NUMA strategies remain 8.0. The historical tournament-crash hunt
+closed at 4.11.11 is not reopened by this audit; report only newly demonstrated
+issues with their own evidence.
+
+### 4.15c Instrumentation, harness and build-delivery audit
+
+**Analysis first; not yet performed.** Review diagnostics/counter sampling and
+units; benchmark corpus/anti-optimization barriers and semantic preflight;
+parser completeness and process exit/timeout handling; exact feature/ISA/PGO
+provenance; instrument-off identity; game pairing/seed/clock/adjudication and
+registered-stop handling; reproducible artifacts and statistical interpretation.
+Reuse 4.10's repairs/tests, 4.11b.2 and 4.13's data lineage audit. Verify the
+current end-to-end wiring instead of rerunning calibration without a changed
+contract. Test constructs/behavior, not whether comments mention a safeguard.
+
+Cover build configuration and supported dispatch paths, unsafe/FFI assumptions,
+configuration persistence, option reachability, and shipped-versus-diagnostic
+feature separation. Price instrumentation only in its diagnostic context,
+then measure production with it off. Deliver
+analysis/phase4_instrument_build_audit.md; add demonstrated repair/verification
+leaves here before final search fitting or new strength claims rely on those
+instruments. Earlier gates still owe their existing live-wire/provenance
+checks; this later systematic audit does not waive those prerequisites.
+A discovered invalid measurement suspends its dependent gate and corrects the
+current record in place; historical values remain visibly superseded.
+
 ### 4.16 Optional post-HCE search SPSA
 
 Open only if several live cp-valued RFP, null, futility, ProbCut, qsearch,
@@ -2517,6 +2774,9 @@ a registered bounded sensitivity pilot, then audit the entire active
 interacting surface. Pilot theta is neither candidate nor seed; the full tune
 starts from accepted defaults and preserves its registered horizon under any
 staged `StopAfter`. Never mix HCE and search coordinates.
+Re-evaluate sensitivity after 4.15/4.15a–c's accepted changes; tune the live
+interacting cluster when justified, not each internal leaf separately. If
+SPSA is skipped, record its measured reason and preserve accepted defaults.
 
 ### 4.17 Time management — review, repair and gate
 
@@ -2533,7 +2793,15 @@ the accepted HCE would price a surface that no longer exists. It sits after
 so a clock change cannot arrive after the checkpoint that is supposed to
 describe it.
 
-1. **4.17.1 Revalidate accepted clock behavior.** RAR-R01's +81 Elo and
+1. **4.17.1 Time-management implementation and interaction audit.** Apply
+   section 2 before the existing measurements/changes below. Trace clock units,
+   budget allocation, overhead/reserve, soft/hard stop, node checks, completed
+   root scores, aspiration/re-search instability, worker results and UCI timing.
+   Measure compatibility with the accepted search/HCE and 4.15b's lifecycle,
+   including changing thread counts and cancellation near deadlines. Separate
+   deadline correctness from the strength policy deciding how long to think.
+   Expand derived work here; avoid duplicate TM owners elsewhere.
+   RAR-R01's +81 Elo and
    RAR-R02's `2*MoveOverhead` reserve were measured on the old harness and the
    pre-refit evaluator. The direction is retained; the magnitudes are not
    current priors. Re-measure on the accepted HCE before changing anything.
@@ -2564,7 +2832,15 @@ describe it.
 
 ### 4.18 Search cleanup and checkpoint
 
-- **4.18.1 Dead and unreachable mechanism inventory.** Basilisk-derived. It
+- **4.18.1 Coverage closure and dead-mechanism inventory.** Reconcile the
+  current source/module/feature inventory against section 2's ownership table.
+  Every subsystem and cross-boundary contract must have an audit/disposition;
+  add a named analysis owner for anything omitted, before its dependent gate.
+  Review dead/unreachable paths, retained options and observability, and confirm
+  required audit findings are implemented/verified or explicitly held with a
+  closure boundary. Future-only owners do not waive current correctness.
+  Do not create a new candidate from an old rejected experiment without its
+  retry evidence. Existing inventory: Basilisk-derived. It
   found history pruning nearly unreachable, and `double_ext_max` never binding
   even when cut from 200 to 16. A dead mechanism is an anomaly to explain, not
   automatically headroom: measure the population first, then either remove the
@@ -2696,7 +2972,9 @@ development remains in 4.12 before 4.14's whole-HCE consolidation.
       engine implementers. No numerical loss budget is invented after timing.
 - **5.4 Trainer preflight.** Pin `D:/code/net_trainer`, Bullet, toolchain and
   GPU; verify conversion, shuffle, splits, manifests, reference vectors and
-  resume semantics.
+  resume semantics. Apply the subsystem audit contract to trainer data flow,
+  feature ordering, quantization/export and engine fallback compatibility;
+  6.0/6.3 own derived trainer hardening and actual-network conformance.
 - **5.5 Runway gate.** Exact benchmark, debug/release tests, randomized unwind,
   reproducible pilot corpus and trainer conformance. Carry the staged board
   cost ledger into Phase 6; its costs are measured, not presumed zero.
@@ -2771,8 +3049,11 @@ evaluator internals.
   on-policy data only when a clearly stronger net changes the policy.
 - **7.2** Architecture ladder: king/material/threat/pawn relation inputs,
   width/activation and refresh-friendly variants, one axis at a time.
-- **7.3** One post-NNUE search fit over demonstrably displaced live
-  coordinates, followed by PGO, SPRT, LTC and 4T.
+- **7.3** Re-audit search/evaluator interactions after NNUE: score scale,
+  correction/caches, pruning/margins, qsearch/SEE and root-confidence consumers.
+  Reuse Phase-4 maps but revalidate the new evaluator's actual contracts.
+  Expand demonstrated repairs into leaves before one justified post-NNUE search
+  fit over displaced live coordinates, then PGO, SPRT, LTC and 4T.
 - **7.4** Frontier gate against 2.3.2, the Phase-4 head and target engines.
 
 ## 8. Phase 8 — scaling, platforms and product completeness
@@ -2918,3 +3199,11 @@ preserved. Initial SEE benchmark restoration moves from 4.15.5 to **4.11b.6**;
 4.15.3–4.15.4 retain post-final-HCE scale audit/fitting and 4.15.5 revalidates.
 Phase 5.2 owns the historical board baseline and event-cost attribution;
 5.3 owns scaffold costs; 6.4 owns same-network incremental/SIMD attribution.
+
+Subsystem-audit planning update, 2026-09-05: no existing step was renumbered or
+removed. 4.11.7 remains held in place; 4.11.8 is the independent next leaf.
+New analysis owners are 4.13a (HCE) and 4.15a–c (storage, integration and
+instruments); existing search, data, TM, NNUE and closure owners are expanded.
+Their implementation substeps will be derived from the audits, not invented
+before the evidence. 4.11b remains before 4.12; the older handoff omitting it
+is superseded as a next-work instruction, not a source of roadmap authority.

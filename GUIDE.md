@@ -18,22 +18,23 @@ and `python tools/diag/check_guide.py` must pass.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
 | Instrument state | **4.10 repaired; v2 baselines/floors recorded.** Budget transfer and remaining corrections: 4.11.7–4.11.10 |
-| Current step | **4.11.7 — budget transfer at 60k/200k/600k** |
+| Current step | **4.11.8 — datagen label audit**; 4.11.7 held for scheduled compute |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
-## What you run next
+## Next and held work
 
-**4.11.7 — budget transfer at 60k/200k/600k.** Details and run conditions are
-in PLAN 4.11.7. Order: finish 4.11, then 4.11b board work, then 4.12 endgames.
-The v2 endgame order remains registered; 4.11b.18 refreshes affected evidence.
+**Next: 4.11.8 — audit datagen labels; zero games.** Then 4.11.9 and 4.11.10
+where independent. 4.11.7 has not moved or been completed.
 
-Run top to bottom: the first unticked **leaf** is next. A completed step with
-invalidated results stays ticked and names its open owner with SUPERSEDED.
-Generate the queue rather than maintaining a second checklist:
+| Open hold | Resume when | Must be resolved before |
+|---|---|---|
+| **4.11.7** Budget transfer | Maintainer schedules the 60k/200k/600k run | 4.11 closes and 4.11b starts |
+| **4.12.21** Future 7-man evidence gap | Independent truth/verification becomes available, or a justified exclusion is recorded | 4.12.23 closes |
 
-```powershell
-python -B tools/diag/check_guide.py --next 10
-```
+Follow the earliest **unblocked** leaf. Keep held items unticked in their
+original place; check their return conditions at every handoff. PLAN owns
+dependencies and detail. The agent maintains this overview and reports the
+next step; the maintainer does not need to run a queue script.
 
 ## Phase 4 — bounded pre-NNUE search and HCE
 
@@ -98,7 +99,7 @@ python -B tools/diag/check_guide.py --next 10
     - [x] **4.11.4** Drawn-share census — **KR-KN 1.000, KR-KB 0.996** at +346/+307 cp
     - [x] **4.11.5** Occurrence split by root — **3 of 40 roots give 56%** of the census
     - [x] **4.11.6** 4.12 re-ranked and REGISTERED; leaves renumbered to match
-    - [ ] **4.11.7** Budget transfer: repeat decisive verdicts at 60k/200k/600k
+    - [ ] **4.11.7** HELD — budget transfer; resume on maintainer-scheduled compute
     - [ ] **4.11.8** Datagen label audit on `hce-v2` and `hce-v3-tb`
     - [ ] **4.11.9** Mate-drive blast radius over the dispatcher's promotion closure
     - [ ] **4.11.10** Restate RAR-E08, RAR-E11 and RAR-E12's conversion claims as superseded
@@ -148,10 +149,11 @@ python -B tools/diag/check_guide.py --next 10
     - [ ] **4.12.22** Dependency-complete family refits and gates, tiered by occurrence
     - [ ] **4.12.23** Conversion, theory, STC/LTC and endgame-cohort closure
 - [ ] **4.13** Datagen label truth and corpus contract
-    - [ ] **4.13.1** Quantify contradicted rows by family and datagen budget
+    - [ ] **4.13.1** Audit data/label pipeline; quantify contradictions
     - [ ] **4.13.2** Relabel and whole-game adjudication as separate registered arms
     - [ ] **4.13.3** Record that more datagen nodes is the weak fix; do not buy it
     - [ ] **4.13.4** Freeze the winning contract under a new corpus name
+- [ ] **4.13a** ANALYSIS — HCE correctness, feature interactions and throughput
 - [ ] **4.14** Iterated whole-surface refit cycles — at least one is owed
     - [ ] **4.14.1** Initialization control: neutral start vs accepted start, offline
     - [ ] **4.14.2** Opening supply: reuse is clean; fresh starts are a nice-to-have
@@ -160,21 +162,24 @@ python -B tools/diag/check_guide.py --next 10
     - [ ] **4.14.5** Cycle 1: full 4.8 schedule, own frozen test, registered gate
     - [ ] **4.14.6** Repeat while a cycle accepts; stop at the first that does not
     - [ ] **4.14.7** Record cycles, refresh the residual audit and close
-- [ ] **4.15** Re-measure qsearch/TT/eval authority and branching on the accepted HCE
-    - [ ] **4.15.1** Observation, baseline and live-wire proof; write the analysis
+- [ ] **4.15** Search composition, throughput and score authority
+    - [ ] **4.15.1** ANALYSIS — search/ordering/pruning interactions and throughput
     - [ ] **4.15.2** One candidate and gate, only if 4.15.1 isolates a unique defect
     - [ ] **4.15.3** Audit the SEE scale after final HCE; zero games
     - [ ] **4.15.4** Fit justified SEE values through the existing interface; gate
     - [ ] **4.15.5** Revalidate normalized SEE timing after fitting
+- [ ] **4.15a** ANALYSIS — TT, caches, hashing and memory layout
+- [ ] **4.15b** ANALYSIS — threads, engine/UCI lifecycle and tablebases
+- [ ] **4.15c** ANALYSIS — diagnostics, harnesses and build/ISA delivery
 - [ ] **4.16** Optional post-HCE search SPSA; skip without a displaced optimum
 - [ ] **4.17** Time management: review, repair and gate — owns all TM work
-    - [ ] **4.17.1** Revalidate accepted clock behavior on the accepted HCE — RAR-R01/R02
+    - [ ] **4.17.1** ANALYSIS — clock/search/root interactions; revalidate behavior
     - [ ] **4.17.2** `Move Overhead` vs forfeit rate on a null pair; size it first — RAR-M14
     - [ ] **4.17.3** `RootConfTime`'s six identifiable consumers: tune or remove — RAR-S47
     - [ ] **4.17.4** Root-instability TM from a completed snapshot only — RAR-X06, RAR-R05
     - [ ] **4.17.5** Registered gate; zero forfeits is a precondition, not the verdict
 - [ ] **4.18** Search cleanup and clean checkpoint
-    - [ ] **4.18.1** Dead and unreachable mechanism inventory — Basilisk-derived
+    - [ ] **4.18.1** Audit coverage/interaction closure; dead-path inventory
     - [ ] **4.18.2** Remove unconsumed 4.6 alternatives, plus the 3 terms RAR-E07 left inert
     - [ ] **4.18.3** Re-verify tests, clippy, fingerprint, NPS and deficits
 - [ ] **4.19** Final HCE/search checkpoint, attribution and maturity closure
@@ -217,7 +222,7 @@ python -B tools/diag/check_guide.py --next 10
 - [ ] **7.0** Residual and disagreement analysis by phase, material, king, cohort
 - [ ] **7.1** Data frontier: scale, deduplicate, mine hard positions, refresh on policy
 - [ ] **7.2** Architecture ladder, one axis at a time
-- [ ] **7.3** One post-NNUE search fit over demonstrably displaced coordinates
+- [ ] **7.3** Re-audit NNUE/search interactions; fit justified displaced constants
 - [ ] **7.4** Frontier gate against 2.3.2, the Phase-4 head and target engines
 
 ## Phase 8 — scaling, platforms and product completeness

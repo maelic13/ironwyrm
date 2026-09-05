@@ -193,9 +193,37 @@ did what its name suggests.**
 - When two documents disagree, source, defaults and reproducible artifacts
   outrank prose. Fix the prose in the same change.
 
+## Step sequencing and explicit holds
+
+- Work one executable leaf at a time: verify proportionately, update PLAN and
+  GUIDE in the same documentation commit, report and stop. Engine and
+  tooling/doc changes still go in separate commits; intermediate commits do
+  not falsely mark an unfinished cluster accepted.
+- Read GUIDE's current/held overview and PLAN's dependency register before
+  selecting work. The earliest open leaf may be held. Keep its checkbox/ID,
+  reason, unblock condition and latest required completion point visible.
+  Review holds each handoff; resume the earliest eligible one. Never silently
+  skip, move or tick missing verification.
+- The agent may use check_guide.py internally for structural consistency.
+  Its raw open-item list is not a scheduler and does not resolve holds or
+  dependencies. The maintainer need not run it; always state the next
+  executable step and any held obligation that matters.
+- Report confounds when found. Correct contradicted current claims in
+  PLAN/GUIDE/analysis/EXPERIMENTS where applicable; preserve historical
+  measurements with explicit supersession rather than silently deleting them.
+- Test constructs and behavior, not a word in a comment/disclaimer. Check
+  each command's actual exit status and require every intended check to have
+  run successfully before committing; do not rely on a chained command's
+  final status as proof of earlier checks.
+- The accepted fingerprint is revision-specific. For a neutral change compare
+  to the exact immediate accepted baseline (currently 6,901,489 / EBF 2.458)
+  and targeted cases. A deliberately accepted behavior change updates the
+  fingerprint record; never preserve a known defect to force an obsolete count.
+
 ## Handing work back
 
-- Give runnable commands, in their own fenced block, and restate them rather
-  than referring back.
+- When maintainer action is needed, give runnable commands in their own fenced
+  block and restate them rather than referring back. Routine internal checks
+  need not become user chores. Always name the next executable leaf.
 - Report what was actually measured. If a step was skipped or a result is
   partial, say so plainly.

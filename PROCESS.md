@@ -6,7 +6,19 @@ step-by-step procedures those rules assume.
 
 ## Recurring procedures
 
-### Phase-4 step lifecycle (4.5–4.14)
+### Phase-4 step lifecycle and audit handoff
+
+Before selecting a leaf, review GUIDE's current/held overview and PLAN's
+execution register. Select the earliest unblocked dependency-compatible leaf;
+keep skipped work visible and return when its unblock condition holds.
+After one leaf, record its result/status, commit verified work, report the
+next executable leaf and relevant holds, then stop. The maintainer does not
+need to run the checklist validator.
+
+Analysis-only leaves follow PLAN section 2's subsystem audit contract. They
+deliver findings, an interaction/cost map and derived numbered implementation
+leaves, or a justified no-change result. They do not implement speculative
+improvements during the audit. Required later work stays open under its owner.
 
 For every behavioral Phase-4 step:
 
@@ -51,12 +63,14 @@ games until the end destroys attribution and lets losing structures hide.
    behavior, keep the evidence row and restore the prior fingerprint. Ablate a
    surprising integrated result before crediting a subcomponent.
 9. **Advance** — start the next item only after the preceding one is accepted,
-   rejected or explicitly closed.
+   rejected, explicitly closed, or visibly held with a dependency rule that
+   permits this independent next leaf. A hold never accepts an incomplete
+   candidate or waives a gate; resume it before its recorded boundary.
 
 A separable categorical alternative may have a preliminary SPRT, but that
 never replaces the locally fitted integrated cluster SPRT. **4.8** owns the
-complete existing-HCE refit, **4.10** owns post-structure consolidation and
-**4.14** owns the final combined checkpoint, with separate confirmation SPRTs;
+complete existing-HCE refit, **4.14** owns post-structure consolidation and
+**4.19** owns the final combined checkpoint, with separate confirmation SPRTs;
 none may rescue an earlier losing cluster.
 
 Two failed coherent search clusters trigger a return to evidence. Two failed
@@ -379,4 +393,3 @@ cargo xtask verify-isa --arch pext
 ./tools/build_test.ps1 -Suffix <s>
 ./tools/audit_spsa_coverage.ps1
 ```
-
