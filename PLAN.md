@@ -1831,10 +1831,96 @@ without a strength verdict. That old alternative remains a measured null for
 4.18 removal unless fresh post-HCE evidence selects it under the extension gate
 above.
 
+
+#### 4.15.3 The SEE value scale: audit
+
+**`piece_value()` has not moved since 1.0.0, and the evaluator has been refit
+four times underneath it.** Three vectors sit on consecutive lines in
+`src/eval.rs`:
+
+| Constant | Values | Status |
+|---|---|---|
+| `MG_VAL` | 88, 394, 418, 537, 1131 | Texel-fitted, inside the 1,218-slot surface |
+| `EG_VAL` | 123, 239, 290, 486, 930 | Texel-fitted |
+| `PIECE_VALUES` | 100, 320, 330, 500, 900, `MATE_SCORE` | **`d3f58a2` "Version 1.0.0", 2026-05-22; never tuned** |
+
+`PIECE_VALUES` is the textbook Chess Programming Wiki "simplified evaluation"
+vector. RAR-E05, RAR-E06, RAR-E08 and RAR-E12 each moved the evaluator's own
+material and left it untouched. The evaluator now prices a knight at 394 mg /
+239 eg while the search prices it 320; a queen at 1131/930 against 900; and it
+puts a bishop 24 mg / 51 eg above a knight where the search puts it 10 above.
+
+**This is already owed rather than newly invented.** Operating rule 7 says that
+after an HCE changes, cp-valued search consumers are audited and, if justified,
+fitted separately. These are cp-valued search consumers and the audit was never
+run.
+
+**Measured blast radius**, in `src/search.rs`: **10 executable `see_ge` /
+`see_ge_quiet_aware` call sites**, plus **7 direct `piece_value` uses** in move
+ordering -- MVV-LVA capture scores, promotion ordering bonuses, and a qsearch
+delta-pruning margin at `stand_pat + piece_value(Queen) + 200 < alpha`. That
+last one is the sharpest illustration: the margin is sized on a 900-cp queen
+while the evaluator's queen is worth 1131 in the middlegame, so the guard is
+systematically tighter than the scale it guards.
+
+This leaf is ZERO GAMES. Establish whether the divergence changes decisions
+before proposing a change: over a fixed position set, count how often the two
+scales give a DIFFERENT `see_ge` verdict at each threshold actually used, and
+how often MVV-LVA order changes. A large constant offset that never flips a
+verdict is not worth a gate; a small one that flips ordering constantly is.
+Report the count, not an argument.
+
+#### 4.15.4 Decouple the SEE values and gate, only if 4.15.3 justifies it
+
+The design question is not "which numbers", it is **who owns them**. Manta
+parameterises SEE and passes its own fitted `mg_val` in production; Basilisk
+hardcodes a dedicated `SEE_VALUES` table separate from its evaluation. Rarog
+does neither -- it reuses the evaluator's legacy constant. Any of the three is
+defensible; the current state is the one that is not, because nothing chose it.
+
+**The values must not be frozen by accident again.** Whatever owns them, they
+become a named, tunable surface: reachable by `--rset`, listed in the tuning
+inventory, and eligible for 4.16's SPSA rather than sitting as a `const` nobody
+revisits. Whether they should be tied to `MG_VAL`, tapered with phase, or fitted
+independently is open -- SEE is a search heuristic answering "is this exchange
+losing", which is not obviously the same question as "what is this piece worth
+to the evaluation".
+
+Prove switch-off identity against the current constants, then a registered
+SPRT. A repair of unknown sign wants a symmetric bracket that can detect harm,
+not `[0,3]`.
+
+**This is not a regression and must not be gated as one.** The engine has
+played every accepted SPRT with these values, so current strength already
+includes them. The question is whether the coupling is leaving Elo on the
+table.
+
+#### 4.15.5 Restore the benchmark's threshold-SEE column
+
+`benches/board.rs` implements `cross-engine-board-v1`, shared with Basilisk
+(`tests/board_performance.cpp`) and Manta (`tools/board_bench.zig`), contract in
+Manta's `docs/BOARD_BENCHMARK.md`. The contract fixes P/N/B/R/Q/K at
+100/300/300/500/900/20000 for the threshold-SEE column. Basilisk's production
+SEE already uses exactly those; **Manta injects them into the bench while its
+production SEE uses its fitted `mg_val`.** Rarog can do neither today, because
+its SEE reads a constant with no injection point, so that one column is not
+cross-engine comparable -- knight, bishop and king all differ and an exchange
+can settle at a different point.
+
+Once 4.15.4 gives the values an owner, the bench passes the contract values in,
+Manta-style, and the column becomes comparable. **Do it in that order.** The
+current benchmark comment already refuses to "fix" this by changing `see_ge`,
+and it is right: a benchmark must not smuggle a playing-strength change in to
+make its own numbers prettier. Tooling commit, separate from 4.15.4's engine
+change.
+
 ### 4.16 Optional post-HCE search SPSA
 
 Open only if several live cp-valued RFP, null, futility, ProbCut, qsearch,
-correction or LMR coordinates show a displaced interacting optimum. First run
+correction or LMR coordinates show a displaced interacting optimum. **The SEE
+value vector joins this surface if 4.15.4 gives it an owner** -- that is the
+point of naming it rather than leaving it a `const`, and it is why 4.15.4 comes
+first: SPSA cannot tune a constant nothing exposes. First run
 a registered bounded sensitivity pilot, then audit the entire active
 interacting surface. Pilot theta is neither candidate nor seed; the full tune
 starts from accepted defaults and preserves its registered horizon under any

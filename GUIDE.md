@@ -169,6 +169,9 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
 - [ ] **4.15** Re-measure qsearch/TT/eval authority and branching on the accepted HCE
     - [ ] **4.15.1** Observation, baseline and live-wire proof; write the analysis
     - [ ] **4.15.2** One candidate and gate, only if 4.15.1 isolates a unique defect
+    - [ ] **4.15.3** SEE value scale audit — `PIECE_VALUES` untuned since 1.0.0; zero games
+    - [ ] **4.15.4** Give the SEE values an owner and a tunable surface; gate it
+    - [ ] **4.15.5** Restore the benchmark's cross-engine threshold-SEE column
 - [ ] **4.16** Optional post-HCE search SPSA; skip without a displaced optimum
 - [ ] **4.17** Time management: review, repair and gate — owns all TM work
     - [ ] **4.17.1** Revalidate accepted clock behavior on the accepted HCE — RAR-R01/R02
