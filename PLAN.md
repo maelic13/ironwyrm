@@ -16,7 +16,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.11.6 — re-rank the 4.12 reference-function list** |
+| Current step | **4.11.7 — budget transfer at 60k/200k/600k** |
 | Instrument state | The endgame truth harness is **defective and under repair**; every pawn-family conversion number is superseded. See `analysis/endgame_truth_instrument_audit_2026-09-04.md` and "Reopened work, 2026-09-04" |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -773,7 +773,7 @@ so nothing is lost when the two are compared.
 
   Conversion cost, resolved at n=400: KBN-K's -5.1 pp at n=100 was noise
   (+0.5 pp, SE 1.5), and the one real regression is **KQ-KP -3.8 pp at 2.9 SE**
-  -- owner **4.12.9**, retry at **4.12.22**. Aggregate weighted conversion is
+  -- owner **4.12.11**, retry at **4.12.22**. Aggregate weighted conversion is
   flat, 83.24% -> 83.45%.
 
   **SUPERSEDED, 2026-09-04.** Every conversion figure in this paragraph came
@@ -1099,7 +1099,7 @@ Nothing here changes the engine. These are tooling commits.
 
    Remaining thinness, recorded rather than papered over: the `kbnk-mate` set
    is 4 positions and the `tb-win`/`tb-draw` sets are 30 and 25. Widening the
-   KBNK set belongs to **4.12.21**, which owns that family.
+   KBNK set belongs to **4.12.14**, which owns that family.
 5. **4.10.5 Measurement-layer contract -- DONE.**
    `analysis/endgame_measurement_layers.md` states the four layers -- **theory
    truth** (per move, tablebase WDL), **move quality** (per move, DTZ progress
@@ -1420,7 +1420,7 @@ stable.
    vetoes in `tests/endgames.rs` are per position and do not care about sample
    size. This is why the aggregate denominator is 1371 and not 1372.
 
-   **4.12.21's KBN-K target is re-derived and confirmed on a real artifact.**
+   **4.12.14's KBN-K target is re-derived and confirmed on a real artifact.**
    `tools/results/truth-v2-e08/` gives the RAR-E08 head **dtz 0.7260 over
    n=2989** and conversion **0.9184 (90/98)** -- matching the pre-`b711d4d`
    floors to the digit -- while the current head gives **0.6753 over n=3178**
@@ -1575,12 +1575,49 @@ renumbered to put the inputs first: drawn-share becomes 4.11.4, occurrence
 mapping. Prompted by the maintainer asking for the drawn-share census first,
 which is what exposed the dependency inversion.
 
-6. **4.11.6 Re-rank the reference-function list.** Order 4.12 by expected value
-   on CORRECTED inputs: conversion deficit against the attained reference
-   result, drawn-share bias, and occurrence. The current order is by board
-   occurrence times a defective conversion number, and
-   `analysis/endgame_search_occurrence_2026-09-03.md` already disagrees with it
-   sharply. Register the resulting order before working the list.
+6. **4.11.6 Re-rank the reference-function list -- DONE and REGISTERED.**
+   `tools/diag/endgame_ranking.py` freezes `tools/diag/endgame_ranking_v1.json`
+   and 4.12's leaves are renumbered into that order, so the board runs top to
+   bottom. Rules were fixed before the output was looked at, and are in the
+   tool's header.
+
+   **Registered order:** KRPKR, KRPKB, KXK, KRKP, KRKN, KBPKB, KRKB, KBPKN,
+   KPK, KQKP, KPKP, KNNKP, KBNK, KQKR, KNNK, then MEASURE FIRST (KPsK, KBPsK,
+   KBPPKB, KQKRPs), then KRPPKRP as unverifiable.
+
+   **Ranked by DEFECT SHAPE, not the donor's taxonomy.** The larger of a
+   family's conversion defect and its drawn-share defect decides its kind, so a
+   family cannot be promoted by being mediocre twice and cannot be called
+   healthy because the wrong instrument was read. That reclassifies **KRKP,
+   KRKN, KRKB, KBPKN, KPK, KPKP, KNNKP and KNNK from verdict to scale** -- five
+   of them sit in the top nine.
+
+   **Three method corrections were made after seeing the first output and before
+   registering anything.** A measured zero is not a certain zero: RAR-M15 found
+   KQKR in 0 of 3,915 games, which by the rule of three bounds the rate at
+   ~0.077%, so board occurrence is floored there rather than annihilating the
+   family. Unmeasured is not unimportant: five functions have no cohort family
+   at all and are grouped as **MEASURE FIRST** ordered by occurrence, not
+   dumped at the bottom -- KPsK is 4.19% of games and has never been measured.
+   And a family measured at zero defect is labelled "close it" rather than
+   ranked as merely low.
+
+   **Tree occurrence is a flag, not the multiplier.** In principle it is the
+   more direct gate -- a scoring defect misguides the search wherever the
+   evaluator is called. But 4.11.5 measured that instrument as weak (three of
+   forty roots produce 56% of the census), so using it as a multiplier would
+   grant it more authority than that finding allows. The two contradictions are
+   named rather than averaged: **KRKN has 100% drawn-share bias and ZERO tree
+   occurrence**, and **KQKRPs is 4.41% of the tree and 0 of 3,915 games**.
+
+   **RETRY TRIGGER, registered now.** This order rests on board occurrence
+   measured over 3,915 games and tree occurrence over 40 bench positions. A
+   36,400-game rated tournament exists on disk. If family occurrence is
+   re-measured over real games at real time control, **this ranking is
+   re-derived and 4.12 renumbered again** -- the tool takes the artifacts as
+   inputs precisely so that is a re-run rather than a rewrite. No leaf below
+   4.12.1 should be worked without checking whether that measurement has
+   landed.
 7. **4.11.7 Budget transfer.** Repeat the decisive family verdicts at
    60k / 200k / 600k nodes. A verdict that does not reproduce at a
    game-representative budget is provisional: Basilisk rejected its leading
@@ -1664,33 +1701,33 @@ local tables cannot verify it, and it occurred zero times in 3,915 real games,
 so it is reachable neither by sampling play nor by verified construction.
 Record it as a gap; do not close it on unverified positions.
 
-| Step | Function | ref | Kind | Coverage | Owner note |
-|---|---|---:|---|---|---|
-| 4.12.2 | KRPKR | 13 | scale | ported, draw branches only | owns 4.9a.7's conversion half |
-| 4.12.3 | KRPKB | 14 | scale | ported, rook pawns only | owns 4.9a.8's conversion half |
-| 4.12.4 | KPsK | 16 | scale | absent | |
-| 4.12.5 | KPK | 5 | verdict | present bitbase | |
-| 4.12.6 | KRKP | 6 | verdict | partial | |
-| 4.12.7 | KBPsK | 11 | scale | partial wrong-corner subset | |
-| 4.12.8 | KPKP | 20 | scale | absent | |
-| 4.12.9 | KQKP | 9 | verdict | partial fortress | owns RAR-E08's KQ-KP debt |
-| 4.12.10 | KBPKB | 17 | scale | absent | |
-| 4.12.11 | KBPPKB | 18 | scale | absent | |
-| 4.12.12 | KRKN | 8 | verdict | absent | |
-| 4.12.13 | KRKB | 7 | verdict | absent | |
-| 4.12.14 | KBPKN | 19 | scale | absent | mate-drive debt, 4.11.9 |
-| 4.12.15 | KNNKP | 2 | verdict | absent | |
-| 4.12.16 | KNNK | 1 | verdict | present | drawn-subset cohort only |
-| 4.12.17 | KQKR | 10 | verdict | absent | |
-| 4.12.18 | KQKRPs | 12 | scale | absent | 2nd in the tree; verifiable |
-| 4.12.19 | KRPPKRP | 15 | scale | absent | 7 men: UNVERIFIABLE, record as a gap |
-| 4.12.20 | KXK | 3 | verdict | present | mechanism at 4.9a.4 |
-| 4.12.21 | KBNK | 4 | verdict | present | owns RAR-E12's dtz debt; rule-50 damping unresolved |
+| Step | Function | ref | Kind | Defect | Board | Tree | Owner note |
+|---|---|---:|---|---:|---:|---:|---|
+| 4.12.2 | KRPKR | 13 | scale | 0.307 | 0.1004 | 0.03462 | 4.9a.7 ported the draw branches; 30.7% overclaim remains |
+| 4.12.3 | KRPKB | 14 | scale | 1.000 | 0.0123 | 0.00041 | 4.9a.8 covered rook pawns; **100%** overclaim at +328 remains |
+| 4.12.4 | KXK | 3 | verdict | 0.020 | 0.3734 | 0.00222 | largest occurrence in the set; mechanism at 4.9a.4 |
+| 4.12.5 | KRKP | 6 | scale | 0.264 | 0.0240 | 0.00241 | 26.4% overclaim at +72 |
+| 4.12.6 | KRKN | 8 | scale | 1.000 | 0.0061 | 0.00000 | **100%** overclaim at +346; tree occurrence ZERO |
+| 4.12.7 | KBPKB | 17 | scale | 0.609 | 0.0089 | 0.00016 | 60.9% overclaim at +142 |
+| 4.12.8 | KRKB | 7 | scale | 0.996 | 0.0051 | 0.00022 | **99.6%** overclaim at +307 |
+| 4.12.9 | KBPKN | 19 | scale | 0.507 | 0.0028 | 0.00019 | 50.7% overclaim; mate-drive debt from 4.11.9 |
+| 4.12.10 | KPK | 5 | scale | 0.046 | 0.0284 | 0.00231 | 4.6% overclaim; present bitbase |
+| 4.12.11 | KQKP | 9 | verdict | 0.041 | 0.0117 | 0.00687 | owns RAR-E08's KQ-KP debt; drawn subset thin |
+| 4.12.12 | KPKP | 20 | scale | 0.038 | 0.0123 | 0.00230 | 3.8% overclaim, nearly clean |
+| 4.12.13 | KNNKP | 2 | scale | 0.577 | 0.0005 | 0.00000 | 57.7% overclaim; holds 7 of the 8 hard residue positions |
+| 4.12.14 | KBNK | 4 | verdict | 0.102 | 0.0028 | 0.00000 | owns RAR-E12's dtz debt (target 0.7260); tree occurrence ZERO |
+| 4.12.15 | KQKR | 10 | verdict | 0.230 | 0.0000 | 0.00048 | largest conversion deficit (23) but 0 of 3,915 games |
+| 4.12.16 | KNNK | 1 | scale | 0.000 | 0.0003 | 0.00000 | **no defect measured** -- 1,499 drawn, zero claimed; close it |
+| 4.12.17 | KPsK | 16 | - | n/a | 0.0419 | 0.00893 | **MEASURE FIRST** -- 4.19% of games, never measured |
+| 4.12.18 | KBPsK | 11 | - | n/a | 0.0192 | 0.00034 | **MEASURE FIRST** -- 1.92% of games, never measured |
+| 4.12.19 | KBPPKB | 18 | - | n/a | 0.0066 | 0.00015 | **MEASURE FIRST** -- 0.66% of games, never measured |
+| 4.12.20 | KQKRPs | 12 | - | n/a | 0.0000 | 0.04410 | **MEASURE FIRST** -- 4.41% of the TREE, 0 of 3,915 games |
+| 4.12.21 | KRPPKRP | 15 | - | n/a | 0.0000 | 0.05881 | 7 men, **UNVERIFIABLE**; record as a gap |
 
 1. **4.12.1 Order and classification.** Adopt 4.11.6's ranking, confirm the
    recognizer/scale classification above against the code, and register which
    instrument decides each family before any of them is worked.
-2. **4.12.2 through 4.12.21** are one leaf per function, in the registered
+2. **4.12.2 through 4.12.14** are one leaf per function, in the registered
    order. Each records whether coverage is full, partial or absent, adds its
    theory/Syzygy tests, states its measurement layer and node budget, and is
    measured on the cohort its KIND calls for.
@@ -1713,7 +1750,7 @@ Record it as a gap; do not close it on unverified positions.
    harness and defects so the NNUE path does not erase classical fallback
    knowledge.
 
-**Rule-50 damping is an open question at 4.12.21, not a known defect.**
+**Rule-50 damping is an open question at 4.12.14, not a known defect.**
 `eval.rs` applies `score -= score * rule50 / 199` after `apply_mop_up`, so the
 mate-drive override band is damped along with everything else, and the obvious
 hypothesis is that this erodes the gradient below the pruning margin exactly
@@ -2350,9 +2387,9 @@ evidence.
 | 4.9a.1 - 4.9a.8 | unchanged | completed; five results SUPERSEDED, owners named |
 | 4.9a.7 (KRPKR) | also 4.12.2 | leaf reopened for its conversion half |
 | 4.9a.8 (KRPKB) | also 4.12.3 | leaf reopened for its conversion half |
-| 4.9a.9 - 4.9a.26 | 4.12.4 - 4.12.21 | the twenty reference functions |
-| 4.9a.14 (KQKP) | 4.12.9 | owns RAR-E08's KQ-KP debt |
-| 4.9a.26 (KBNK) | 4.12.21 | owns RAR-E12's dtz debt |
+| 4.9a.9 - 4.9a.26 | 4.12.17 - 4.12.14 | the twenty reference functions |
+| 4.9a.14 (KQKP) | 4.12.11 | owns RAR-E08's KQ-KP debt |
+| 4.9a.26 (KBNK) | 4.12.14 | owns RAR-E12's dtz debt |
 | 4.9a.27 | 4.12.22 | dependency-complete family gates |
 | 4.9a.28 | 4.12.23 | endgame closure |
 | 4.10 (refit cycles) | 4.14 | sub-steps 4.10.0-4.10.6 become 4.14.1-4.14.7 |

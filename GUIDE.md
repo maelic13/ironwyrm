@@ -18,23 +18,22 @@ and `python tools/diag/check_guide.py` must pass.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
 | Instrument state | **The endgame truth harness is defective and under repair.** Every pawn-family conversion number is superseded; bare-king families are provably unaffected |
-| Current step | **4.11.6 — re-rank the 4.12 reference-function list** |
+| Current step | **4.11.7 — budget transfer at 60k/200k/600k** |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## What you run next
 
-**4.11.6 — re-rank the 4.12 reference-function list** on corrected inputs and
-register the order before working the list. All three inputs are now in hand:
+**4.11.7 — budget transfer.** Repeat the decisive family verdicts at
+60k / 200k / 600k nodes with `tools/diag/endgame_budget_bracket.py`. A verdict
+that does not reproduce at a game-representative budget is PROVISIONAL, and the
+60,000-node screen sits below the p25 of deployment
+(`analysis/node_budget_2026-09-04.md`). **This one needs your machine.**
 
-- conversion deficit — `tools/diag/endgame_reference_results_v1.json`
-- drawn-share bias — `analysis/drawn_share_census_2026-09-05.md`
-- occurrence, split by root — `analysis/endgame_occurrence_split_2026-09-05.md`
-
-They disagree sharply and the disagreement is the finding. **KR-KN has the
-worst drawn-share bias in the cohort (796/796 at +346), a conversion deficit of
-3, and ZERO tree occurrence.** KQ-KR has the largest conversion deficit (23) and
-only 2 drawn positions in 1,500. Reconcile these explicitly rather than
-averaging them.
+4.12's order is now REGISTERED (`tools/diag/endgame_ranking_v1.json`) and its
+leaves renumbered to match, so the board runs top to bottom. Retry trigger: if
+family occurrence is ever measured over the 36,400-game tournament rather than
+3,915 games and 40 bench positions, the ranking is re-derived and 4.12
+renumbered again.
 
 **Deployment is 153,466 nodes/move median at 3+0.03** and the endgame screen is
 60,000, below its p25 — so every fixed-node endgame verdict so far is
@@ -127,33 +126,33 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
     - [x] **4.11.3** Attained reference results frozen — **1361/1372**, hard residue **8**
     - [x] **4.11.4** Drawn-share census — **KR-KN 1.000, KR-KB 0.996** at +346/+307 cp
     - [x] **4.11.5** Occurrence split by root — **3 of 40 roots give 56%** of the census
-    - [ ] **4.11.6** Re-rank 4.12 on corrected conversion, drawn-share bias and occurrence
+    - [x] **4.11.6** 4.12 re-ranked and REGISTERED; leaves renumbered to match
     - [ ] **4.11.7** Budget transfer: repeat decisive verdicts at 60k/200k/600k
     - [ ] **4.11.8** Datagen label audit on `hce-v2` and `hce-v3-tb`
     - [ ] **4.11.9** Mate-drive blast radius over the dispatcher's promotion closure
     - [ ] **4.11.10** Restate RAR-E08, RAR-E11 and RAR-E12's conversion claims as superseded
 - [ ] **4.12** Endgame reference functions — order registered by 4.11.6
     - [ ] **4.12.1** Adopt the order; confirm recognizer-vs-scale classification per family
-    - [ ] **4.12.2** KRPKR [ref 13] scale — reopened conversion half
-    - [ ] **4.12.3** KRPKB [ref 14] scale — reopened conversion half
-    - [ ] **4.12.4** KPsK [ref 16] scale — absent
-    - [ ] **4.12.5** KPK [ref 5] verdict — present bitbase
-    - [ ] **4.12.6** KRKP [ref 6] verdict — partial
-    - [ ] **4.12.7** KBPsK [ref 11] scale — partial wrong-corner subset
-    - [ ] **4.12.8** KPKP [ref 20] scale — absent
-    - [ ] **4.12.9** KQKP [ref 9] verdict — partial fortress; owns RAR-E08's KQ-KP debt
-    - [ ] **4.12.10** KBPKB [ref 17] scale — absent
-    - [ ] **4.12.11** KBPPKB [ref 18] scale — absent
-    - [ ] **4.12.12** KRKN [ref 8] verdict — absent
-    - [ ] **4.12.13** KRKB [ref 7] verdict — absent
-    - [ ] **4.12.14** KBPKN [ref 19] scale — absent; carries a mate-drive debt from 4.11.9
-    - [ ] **4.12.15** KNNKP [ref 2] verdict — absent
-    - [ ] **4.12.16** KNNK [ref 1] verdict — present; drawn-subset cohort only
-    - [ ] **4.12.17** KQKR [ref 10] verdict — absent
-    - [ ] **4.12.18** KQKRPs [ref 12] scale — absent; 2nd in the search tree and verifiable
-    - [ ] **4.12.19** KRPPKRP [ref 15] scale — 7 men, UNVERIFIABLE; record as a gap
-    - [ ] **4.12.20** KXK [ref 3] verdict — present; mechanism at 4.9a.4
-    - [ ] **4.12.21** KBNK [ref 4] verdict — present; owns RAR-E12's dtz debt
+    - [ ] **4.12.2** KRPKR [ref 13] scale — 30.7% overclaim remains after 4.9a.7
+    - [ ] **4.12.3** KRPKB [ref 14] scale — **100%** overclaim at +328 after 4.9a.8's rook pawns
+    - [ ] **4.12.4** KXK [ref 3] verdict — largest occurrence in the set; mechanism at 4.9a.4
+    - [ ] **4.12.5** KRKP [ref 6] scale — 26.4% overclaim at +72
+    - [ ] **4.12.6** KRKN [ref 8] scale — **100%** overclaim at +346; tree occurrence ZERO
+    - [ ] **4.12.7** KBPKB [ref 17] scale — 60.9% overclaim at +142
+    - [ ] **4.12.8** KRKB [ref 7] scale — **99.6%** overclaim at +307
+    - [ ] **4.12.9** KBPKN [ref 19] scale — 50.7% overclaim; mate-drive debt from 4.11.9
+    - [ ] **4.12.10** KPK [ref 5] scale — 4.6% overclaim; present bitbase
+    - [ ] **4.12.11** KQKP [ref 9] verdict — owns RAR-E08's KQ-KP debt
+    - [ ] **4.12.12** KPKP [ref 20] scale — 3.8% overclaim, nearly clean
+    - [ ] **4.12.13** KNNKP [ref 2] scale — 57.7% overclaim; holds 7 of the 8 hard residue
+    - [ ] **4.12.14** KBNK [ref 4] verdict — owns RAR-E12's dtz debt, target 0.7260
+    - [ ] **4.12.15** KQKR [ref 10] verdict — conversion deficit 23, but 0 of 3,915 games
+    - [ ] **4.12.16** KNNK [ref 1] scale — **no defect measured** — close it
+    - [ ] **4.12.17** KPsK [ref 16] ? — **MEASURE FIRST** — 4.19% of games, never measured
+    - [ ] **4.12.18** KBPsK [ref 11] ? — **MEASURE FIRST** — 1.92% of games, never measured
+    - [ ] **4.12.19** KBPPKB [ref 18] ? — **MEASURE FIRST** — 0.66% of games, never measured
+    - [ ] **4.12.20** KQKRPs [ref 12] ? — **MEASURE FIRST** — 4.41% of the TREE, 0 of games
+    - [ ] **4.12.21** KRPPKRP [ref 15] ? — 7 men, **UNVERIFIABLE** — record as a gap
     - [ ] **4.12.22** Dependency-complete family refits and gates, tiered by occurrence
     - [ ] **4.12.23** Conversion, theory, STC/LTC and endgame-cohort closure
 - [ ] **4.13** Datagen label truth and corpus contract
