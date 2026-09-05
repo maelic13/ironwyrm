@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::thread;
 
+use rarog::crash_report;
 use rarog::engine::Engine;
 use rarog::engine_command::{EngineCommandQueue, EngineControl};
 use rarog::infra::capitalize_first_letter;
@@ -42,6 +43,11 @@ const ENGINE_THREAD_STACK_SIZE: usize = 16 * 1024 * 1024;
 // requirement exactly. `README` now lists the measured CPU requirement per
 // asset, and `cargo xtask verify-isa` proves each asset matches it.
 fn main() {
+    // 4.11.11: FIRST, before any thread exists. A panic on the engine thread
+    // is otherwise reported only on stderr, which the tournament harness
+    // drains asynchronously and loses to a fast abort -- the reason the
+    // 2026-09-04 EngineCrash could not be diagnosed. See `crash_report`.
+    crash_report::install_stdout_reporter();
     request_fine_grained_scheduling();
 
     println!(
