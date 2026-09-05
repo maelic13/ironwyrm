@@ -171,8 +171,14 @@ right yardstick is achievable conversion at the budget, not perfection:
 - **The recoverable value is in the elementary mates.** KR-K at -7.0 pp and
   KQ-K at -3.0 pp sit in the 37.34% KXK bucket, which dominates everything
   else by expected value even at small per-position gaps.
-- **KQ-KR's -25.0 pp is the largest gap and worth nothing**, because RAR-M15
-  measured it occurring zero times in 3,915 real games.
+- ~~**KQ-KR's -25.0 pp is the largest gap and worth nothing**, because RAR-M15
+  measured it occurring zero times in 3,915 real games.~~ **WRONG, corrected
+  2026-09-05 by PLAN 4.11.12.** RAR-M15's zero was an artifact of its
+  classifier, not an observation: KQ-KR occurs in **45 of those same 3,915
+  games** (an example is `8/8/R6K/8/8/7k/8/5q2 w - - 0 79`, taken from RAR-M15's
+  own PGN) and in **63 of Rarog's 10,000 games** in the 36,400-game rating
+  tournament. The largest conversion gap in the set is worth SOMETHING, and
+  4.12.10 owns it. See `analysis/endgame_occurrence_tournament_2026-09-05.md`.
 - Where Stockfish is itself limited -- KPP-K 75.5%, KRP-KR 47.9%, KRP-KB 58.3%,
   KNN-KP 60.9% -- 60,000 nodes is the binding constraint, not evaluation.
 

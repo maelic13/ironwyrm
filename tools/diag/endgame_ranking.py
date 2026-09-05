@@ -17,10 +17,12 @@ RULES, fixed before the output was looked at:
    the same way.
 2. **Occurrence gates, it does not score.** It cannot rescue a family with no
    defect and it cannot condemn one with a large defect -- it decides how much a
-   given defect is worth fixing. Board occurrence (RAR-M15, 3,915 real games) is
-   the primary gate because it is far better sampled than tree occurrence
-   (40 bench positions, PLAN 4.11.5); tree occurrence is carried alongside and
-   flagged where the two contradict.
+   given defect is worth fixing. Board occurrence is the primary gate because
+   it is far better sampled than tree occurrence (40 bench positions, PLAN
+   4.11.5); tree occurrence is carried alongside and flagged where the two
+   contradict. Since 4.11.12 board occurrence is measured over the 36,400-game
+   rating tournament -- 10,000 of them Rarog's own, against thirteen other
+   engines -- instead of 3,915 self-play games of one engine pair.
 3. **Layers are never aggregated.** Conversion deficit and drawn-share bias are
    NOT summed into one number. Each family gets both, normalised within its own
    measurement, and the rank uses the larger -- so a family cannot be promoted by
@@ -29,15 +31,20 @@ RULES, fixed before the output was looked at:
    ranked last whatever it scores, because its evidence cannot be produced.
 5. **Thin measurements do not rank.** A family whose drawn subset was too small
    to report is ranked on conversion alone, and says so.
-6. **A measured zero is not a certain zero.** RAR-M15 found KQKR, KQKRPs and
-   KRPPKRP in zero of 3,915 games, which by the rule of three bounds their rate
-   at about 0.077%, not at nothing. Board occurrence is floored there so a
-   family cannot be annihilated by a sample that merely failed to contain it.
+6. **A measured zero is not a certain zero -- and two of these were never
+   zero.** RAR-M15 reported KQKR, KQKRPs and KRPPKRP in zero of 3,915 games and
+   this ranking floored all three by the rule of three, treating the problem as
+   sample size. PLAN 4.11.12 re-measured occurrence over 36,400 rated games and
+   found **all three occur**: KRPPKRP in 4.97% of games, KQKR in 0.55%,
+   KQKRPs in 0.39%. The floor stays -- it is still right that a sample which
+   fails to contain something bounds rather than annihilates it -- but it is no
+   longer load-bearing for any family here.
 7. **Unmeasured is not unimportant.** Five reference functions have no cohort
    family in the six-man corpus at all. They are grouped as MEASURE FIRST and
    ordered by occurrence, between the ranked families and the unverifiable tail
    -- not at the bottom, which would confuse "we have no evidence" with "there
-   is nothing here". KPsK is 4.19% of games and has never been measured.
+   is nothing here". KPsK is 4.5% of Rarog's games and has never been
+   measured.
 
 WHY TREE OCCURRENCE IS NOT THE MULTIPLIER. It is the more direct gate in
 principle -- a scoring defect misguides the search wherever the evaluator is
@@ -45,14 +52,21 @@ called, whether or not the game reaches that ending. But PLAN 4.11.5 measured
 that Rarog's tree-occurrence instrument is weak: three of forty bench roots
 produce 56% of the whole census, and four families read zero over all forty.
 Using it as a multiplier would give it more authority than that finding allows.
-It is carried as a flag, the contradictions are named in the registration, and
-the retry trigger is a better occurrence corpus.
+It is carried as a flag and the contradictions are named in the registration.
+The retry trigger that asked for a better occurrence corpus has since been
+DISCHARGED by 4.11.12; what remains open is tree occurrence itself.
 
 The output is a PRIORITISER. It is not an Elo estimate and not an acceptance
 target (`analysis/endgame_measurement_layers.md`).
 
 Example:
 
+  # the REGISTERED order (v2, PLAN 4.11.12)
+  python tools/diag/endgame_ranking.py \\
+      --board-occurrence tools/diag/endgame_board_occurrence_v1.json \\
+      --occurrence-scope engine --output tools/diag/endgame_ranking_v2.json
+
+  # v1, on RAR-M15's constants -- kept reproducible so the correction stays visible
   python tools/diag/endgame_ranking.py --output tools/diag/endgame_ranking_v1.json
 """
 
@@ -64,13 +78,19 @@ import sys
 from pathlib import Path
 
 DIAG = Path(__file__).resolve().parent
-RESULTS = DIAG.parents[1] / "tools" / "results"
 
-# Board occurrence, RAR-M15: share of 3,915 real games in which the family
-# appears on the board. Copied here with its provenance because the measurement
-# predates any artifact this repo stores; it is an INPUT to the ranking and is
-# not re-derived by it.
-BOARD_OCCURRENCE = {
+# Board occurrence is an INPUT, and since PLAN 4.11.12 it arrives as an
+# artifact (`--board-occurrence`, schema `rarog-board-occurrence-v1`) rather
+# than as constants. What remains here is RAR-M15's original table, kept as the
+# fallback so `endgame_ranking_v1.json` still reproduces exactly -- a frozen
+# artifact whose inputs cannot be reconstructed is not evidence.
+#
+# ⚠ RAR-M15's own numbers, not a replay of them. Four are known wrong: it
+# capped positions at six men, so KRPPKRP (seven men) could not be seen at all
+# and read zero, and KRPKR/KRPKB/KBPsK were counted with a plural strong side.
+# `tools/diag/endgame_board_occurrence.py` documents each difference with the
+# measurement that establishes it.
+M15_BOARD_OCCURRENCE = {
     "KXK": 0.3734, "KRPKR": 0.1004, "KPsK": 0.0419, "KPK": 0.0284,
     "KRKP": 0.0240, "KBPsK": 0.0192, "KRPKB": 0.0123, "KPKP": 0.0123,
     "KQKP": 0.0117, "KBPKB": 0.0089, "KBPPKB": 0.0066, "KRKN": 0.0061,
@@ -90,14 +110,47 @@ COHORT_FAMILY = {
     "KNNK": "KNN-K", "KQKR": "KQ-KR", "KQKRPs": None, "KRPPKRP": None,
 }
 
-# Seven men; the local tables stop at six, and RAR-M15 found it in zero of
-# 3,915 games. Reachable neither by sampling play nor by verified construction.
+# Seven men, and the local tables stop at six -- so its conversion and its
+# drawn share cannot be adjudicated, and it is ranked last on that alone.
+#
+# ⚠ The OTHER half of the old reason is gone. This set used to read "reachable
+# neither by sampling play nor by verified construction", on RAR-M15's zero.
+# PLAN 4.11.12 measured KRPPKRP in **1,808 of 36,400 rated games (4.97%)**, the
+# fourth most common family in the set, and exhibited a position from RAR-M15's
+# OWN corpus (`8/1r3p2/8/7P/8/4kPK1/1R6/8 b - - 0 66`). It is reached constantly
+# and cannot be measured, which is a far worse gap than a rare ending and must
+# be recorded as one rather than filed at the bottom of a list.
 UNVERIFIABLE = {"KRPPKRP"}
 
-# Rule of three: zero events in 3,915 games bounds the rate at ~3/3915 at 95%.
-# Flooring here is what stops a multiply-by-zero from asserting certainty the
-# sample cannot support.
-OCCURRENCE_FLOOR = 3 / 3915
+# Rule of three: zero events in n games bounds the rate at ~3/n at 95%, so a
+# family the corpus merely failed to contain is floored rather than annihilated
+# by a multiply-by-zero. Scaled to the corpus actually used.
+DEFAULT_CORPUS_GAMES = 3915
+
+
+def board_occurrence(path: Path | None, scope: str) -> tuple[dict, str, int]:
+    """Occurrence shares, their provenance, and the corpus size behind them.
+
+    Without `--board-occurrence` this returns RAR-M15's constants, so the v1
+    artifact reproduces. With one, it reads a `rarog-board-occurrence-v1`
+    document and takes either the whole pool (`all`) or only the games one
+    engine played (`engine`).
+    """
+    if path is None:
+        return dict(M15_BOARD_OCCURRENCE), "RAR-M15, 3,915 games", DEFAULT_CORPUS_GAMES
+    doc = load(path)
+    schema = doc.get("schema")
+    if schema != "rarog-board-occurrence-v1":
+        raise SystemExit(f"{path}: unexpected schema {schema!r}")
+    block, games = ((doc["all"], doc["games"]) if scope == "all"
+                    else (doc["engine"], doc["engine_games"]))
+    if not block or not games:
+        raise SystemExit(f"{path}: no games in the {scope!r} block")
+    missing = set(M15_BOARD_OCCURRENCE) - set(block)
+    if missing:
+        raise SystemExit(f"{path}: missing families {sorted(missing)}")
+    return ({name: block[name]["share"] for name in M15_BOARD_OCCURRENCE},
+            f"{doc.get('source', path)} [{scope}], {games:,} games", games)
 
 
 def load(path: Path) -> dict:
@@ -106,13 +159,15 @@ def load(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def build(reference: dict, drawn: dict, occurrence: dict) -> list[dict]:
+def build(reference: dict, drawn: dict, occurrence: dict,
+          board_shares: dict, corpus_games: int) -> list[dict]:
     drawn_fams = drawn.get("families", drawn)
     tree = occurrence["families"]
     tree_total = occurrence["evaluations"]["all_roots"]
 
+    floor = 3 / corpus_games
     rows = []
-    for name, board in BOARD_OCCURRENCE.items():
+    for name, board in board_shares.items():
         cohort = COHORT_FAMILY[name]
         row = {
             "function": name,
@@ -155,7 +210,7 @@ def build(reference: dict, drawn: dict, occurrence: dict) -> list[dict]:
             else "scale" if row["defect"] == row.get("scale_defect")
             else "verdict"
         )
-        gate = max(board, OCCURRENCE_FLOOR)
+        gate = max(board, floor)
         row["occurrence_gate"] = round(gate, 6)
         row["priority"] = (
             None if row["defect"] is None else round(row["defect"] * gate, 6)
@@ -165,7 +220,7 @@ def build(reference: dict, drawn: dict, occurrence: dict) -> list[dict]:
         # the disagreement belongs in the registration prose.
         row["occurrence_conflict"] = bool(
             row["tree_share"] is not None and (
-                (board <= OCCURRENCE_FLOOR and row["tree_share"] > 0.01)
+                (board <= floor and row["tree_share"] > 0.01)
                 or (board > 0.005 and row["tree_share"] == 0.0)
             )
         )
@@ -194,13 +249,22 @@ def main() -> int:
     ap.add_argument("--reference",
                     default=DIAG / "endgame_reference_results_v1.json", type=Path)
     ap.add_argument("--drawn",
-                    default=RESULTS / "drawn-census" / "drawn-v1.json", type=Path)
+                    default=DIAG / "endgame_drawn_census_v1.json", type=Path)
     ap.add_argument("--occurrence",
-                    default=RESULTS / "occurrence" / "occurrence-v1.json", type=Path)
+                    default=DIAG / "endgame_tree_occurrence_v1.json", type=Path)
+    ap.add_argument("--board-occurrence", type=Path,
+                    help="a rarog-board-occurrence-v1 artifact; without it the "
+                         "RAR-M15 constants are used and v1 reproduces")
+    ap.add_argument("--occurrence-scope", choices=("all", "engine"), default="all",
+                    help="whole pool, or only the games one engine played")
     ap.add_argument("--output", type=Path)
     args = ap.parse_args()
 
-    rows = build(load(args.reference), load(args.drawn), load(args.occurrence))
+    shares, provenance, corpus_games = board_occurrence(
+        args.board_occurrence, args.occurrence_scope)
+    rows = build(load(args.reference), load(args.drawn), load(args.occurrence),
+                 shares, corpus_games)
+    print(f"board occurrence: {provenance}\n")
 
     print(f"{'#':>3} {'function':<9}{'kind':<9}{'defect':>8}{'board':>8}"
           f"{'priority':>10}{'tree':>9}  notes")
@@ -239,7 +303,7 @@ def main() -> int:
                 "reference_results": str(args.reference),
                 "drawn_census": str(args.drawn),
                 "occurrence": str(args.occurrence),
-                "board_occurrence": "RAR-M15, 3,915 real games",
+                "board_occurrence": provenance,
             },
             "order": [r["function"] for r in rows],
             "families": rows,

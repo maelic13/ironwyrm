@@ -773,7 +773,7 @@ so nothing is lost when the two are compared.
 
   Conversion cost, resolved at n=400: KBN-K's -5.1 pp at n=100 was noise
   (+0.5 pp, SE 1.5), and the one real regression is **KQ-KP -3.8 pp at 2.9 SE**
-  -- owner **4.12.11**, retry at **4.12.22**. Aggregate weighted conversion is
+  -- owner **4.12.13**, retry at **4.12.22**. Aggregate weighted conversion is
   flat, 83.24% -> 83.45%.
 
   **SUPERSEDED, 2026-09-04.** Every conversion figure in this paragraph came
@@ -861,7 +861,7 @@ so nothing is lost when the two are compared.
   100 KRP-KR games on correct rook-for-rook technique. The same-set pair is
   49.3% against 47.9%. Re-derived at 4.11.3.
 
-- **4.9a.8 KRPKB scale -- DONE; conversion framing SUPERSEDED -> 4.12.3.** Same
+- **4.9a.8 KRPKB scale -- DONE; conversion framing SUPERSEDED -> 4.12.6.** Same
   disposition. The drawn cohort's overclaim was 0.9574 before and after and only
   the mean moved, +347.2 -> +324.4; the reference addresses only ROOK pawns and
   returns partial scales, so a +350 evaluation scaled by 24/64 is still +131.
@@ -936,7 +936,7 @@ discharges it.
   material. A term's blast radius is its dispatcher condition's **promotion
   closure**, not the condition. Re-accounted at 4.11.9.
 - **4.9a.7 and 4.9a.8 -- SUPERSEDED, conversion half only, owners 4.12.2 and
-  4.12.3.** As above.
+  4.12.6.** As above.
 
 Deliberately NOT superseded, with reasons, so this is not relitigated later:
 
@@ -1618,6 +1618,13 @@ which is what exposed the dependency inversion.
    inputs precisely so that is a re-run rather than a rewrite. No leaf below
    4.12.1 should be worked without checking whether that measurement has
    landed.
+
+   **TRIGGER FIRED, 2026-09-05 -- see 4.11.12.** The order above is SUPERSEDED
+   by `tools/diag/endgame_ranking_v2.json`; it is kept here because a frozen
+   artifact whose inputs cannot be reconstructed is not evidence, and because
+   the correction it received is the point. Board occurrence was not merely
+   under-sampled -- RAR-M15's classifier capped positions at six men, and its
+   three zeros were not zeros.
 7. **4.11.7 Budget transfer.** Repeat the decisive family verdicts at
    60k / 200k / 600k nodes. A verdict that does not reproduce at a
    game-representative budget is provisional: Basilisk rejected its leading
@@ -1639,6 +1646,81 @@ which is what exposed the dependency inversion.
     and the KQ-KP -3.8 pp debt, against the corrected instrument. Mark the
     originals superseded; do not delete them and do not renumber the
     experiments.
+11. **4.11.11 A panic must be reported where the harness keeps it -- DONE.**
+    Rarog 2.3.2 lost one game in ~5,200 to `EngineCrash` in the 2026-09-04
+    rating tournament (Colosseum incident `20260904-230039-002`: black to move,
+    first search of the game, ~20 ms in at depth 10, then stdout EOF). **The
+    cause cannot be established, and that is the finding.** The incident
+    retains the full UCI transcript, the clocks and the position, and retains
+    no exit status and no stderr -- and neither does any other incident in that
+    run, including five for a different engine, so the silence is a property of
+    the pipeline rather than evidence about the death.
+
+    Ruled out by measurement rather than by reading: **Threads=1**, so the
+    worker pool is empty and no SMP race is available; `SyzygyPath` was never
+    set, so the tablebase FFI never ran; the TT allocates through
+    `try_reserve_exact` with a 1 MiB fallback, so allocation failure is handled;
+    400 replays of the incident's exact UCI session produced no failure.
+
+    What was fixed is Rarog's half of the instrument gap. Release sets
+    `panic = "abort"` and the default hook writes only to stderr;
+    `src/crash_report.rs` now mirrors every panic to **stdout** as one
+    `info string` line and then chains to the previous hook, so stderr and
+    `RUST_BACKTRACE` are unchanged. Proved live rather than assumed: a real
+    `catch_unwind` panic produces exactly one report naming thread, location and
+    message; the string is present in the built binary and absent from released
+    2.3.2; and `bench 13` reproduces **6,901,489 / EBF 2.458** exactly.
+
+    **Scope, stated honestly.** This makes a PANIC diagnosable. It cannot see a
+    death that never reaches the Rust runtime -- an access violation, an illegal
+    instruction, an external kill. Telling those two classes apart is the whole
+    value: a report on stdout names the line, and no report narrows the next
+    search. A structured-exception handler would close the rest and is a new FFI
+    site against the frozen unsafe floor (principle #8), so it stays an option
+    to take deliberately, exactly like 4.8a's CPUID guard. Two gaps are
+    Colosseum's, not Rarog's, and are recorded here because it is the same
+    maintainer: its stderr tail reaches no incident report at all, and its
+    100 ms reap window never yielded an exit status in six crashes.
+12. **4.11.12 Occurrence re-measured over 36,400 rated games -- DONE, and
+    4.12 renumbered to v2.** Discharges 4.11.6's retry trigger.
+    `tools/diag/endgame_board_occurrence.py` classifies every position of every
+    mainline; `endgame_ranking.py` now takes board occurrence as an ARTIFACT
+    (`--board-occurrence`), so the constants it used to carry are a fallback and
+    `endgame_ranking_v1.json` still reproduces exactly.
+
+    **Calibrated before it was applied.** Run first over RAR-M15's own retained
+    corpus, 13 of 20 families agree to four decimals -- including KBN-K's
+    published count of exactly 11 games, and both aggregate figures (52.69%
+    against 52.7% reaching six men, 60.87% against 60.9% reaching seven). The
+    seven differences were each then measured rather than argued: RAR-M15
+    capped positions at **six men** and counted a plural strong side, which
+    reproduces its KRPKR (0.1004), KRPKB (0.0123) and KBPsK (0.0192) figures
+    exactly. The gate FOUND the KBPsK difference; it was not anticipated.
+
+    **Two of RAR-M15's three zeros were never zero.** KRPPKRP occurs in 5.40% of
+    Rarog's games, KQKR in 0.63%, KQKRPs in 0.42% -- and both of the first two
+    can be exhibited from RAR-M15's OWN games. The rule-of-three floor was
+    applied to the wrong problem: these were not thin samples but positions that
+    were there and were not looked at. `analysis/endgame_conversion_audit`'s
+    "KQ-KR's -25.0 pp is the largest gap and worth nothing" is corrected in
+    place; KQKR moves from 4.12.15 to **4.12.10**.
+
+    **The fourth most common family in the set cannot be measured at all.**
+    KRPPKRP is seven men, so the local tables adjudicate none of it. It stays
+    last because its evidence cannot be produced, but 4.12.21 now records a
+    TOOLING GAP rather than a rare ending.
+
+    **Rarog reaches rook-against-a-lone-minor at ~1.6x the pool rate** (KR-KN
+    0.51% against 0.32%, KR-KB 0.46% against 0.32%) -- the two families 4.11.4
+    measured at 100% and 99.6% drawn-share overclaim. Stated as a HYPOTHESIS:
+    an engine that prices a dead draw at +346 may be steering into it, which
+    also makes engine-scope occurrence endogenous. 4.12.4 owns testing it.
+
+    **Ranks 3-8 are a band, not an order.** The whole-pool derivation
+    (`--occurrence-scope all`) orders them differently
+    while agreeing on ranks 1-2 and on all of 16-20. No leaf may be argued on
+    its position inside that band. Full derivation:
+    `analysis/endgame_occurrence_tournament_2026-09-05.md`.
 
 ### 4.12 Endgame reference functions (was 4.9a.9-4.9a.28)
 
@@ -1703,26 +1785,26 @@ Record it as a gap; do not close it on unverified positions.
 
 | Step | Function | ref | Kind | Defect | Board | Tree | Owner note |
 |---|---|---:|---|---:|---:|---:|---|
-| 4.12.2 | KRPKR | 13 | scale | 0.307 | 0.1004 | 0.03462 | 4.9a.7 ported the draw branches; 30.7% overclaim remains |
-| 4.12.3 | KRPKB | 14 | scale | 1.000 | 0.0123 | 0.00041 | 4.9a.8 covered rook pawns; **100%** overclaim at +328 remains |
-| 4.12.4 | KXK | 3 | verdict | 0.020 | 0.3734 | 0.00222 | largest occurrence in the set; mechanism at 4.9a.4 |
-| 4.12.5 | KRKP | 6 | scale | 0.264 | 0.0240 | 0.00241 | 26.4% overclaim at +72 |
-| 4.12.6 | KRKN | 8 | scale | 1.000 | 0.0061 | 0.00000 | **100%** overclaim at +346; tree occurrence ZERO |
-| 4.12.7 | KBPKB | 17 | scale | 0.609 | 0.0089 | 0.00016 | 60.9% overclaim at +142 |
-| 4.12.8 | KRKB | 7 | scale | 0.996 | 0.0051 | 0.00022 | **99.6%** overclaim at +307 |
-| 4.12.9 | KBPKN | 19 | scale | 0.507 | 0.0028 | 0.00019 | 50.7% overclaim; mate-drive debt from 4.11.9 |
-| 4.12.10 | KPK | 5 | scale | 0.046 | 0.0284 | 0.00231 | 4.6% overclaim; present bitbase |
-| 4.12.11 | KQKP | 9 | verdict | 0.041 | 0.0117 | 0.00687 | owns RAR-E08's KQ-KP debt; drawn subset thin |
-| 4.12.12 | KPKP | 20 | scale | 0.038 | 0.0123 | 0.00230 | 3.8% overclaim, nearly clean |
-| 4.12.13 | KNNKP | 2 | scale | 0.577 | 0.0005 | 0.00000 | 57.7% overclaim; holds 7 of the 8 hard residue positions |
-| 4.12.14 | KBNK | 4 | verdict | 0.102 | 0.0028 | 0.00000 | owns RAR-E12's dtz debt (target 0.7260); tree occurrence ZERO |
-| 4.12.15 | KQKR | 10 | verdict | 0.230 | 0.0000 | 0.00048 | largest conversion deficit (23) but 0 of 3,915 games |
-| 4.12.16 | KNNK | 1 | scale | 0.000 | 0.0003 | 0.00000 | **no defect measured** -- 1,499 drawn, zero claimed; close it |
-| 4.12.17 | KPsK | 16 | - | n/a | 0.0419 | 0.00893 | **MEASURE FIRST** -- 4.19% of games, never measured |
-| 4.12.18 | KBPsK | 11 | - | n/a | 0.0192 | 0.00034 | **MEASURE FIRST** -- 1.92% of games, never measured |
-| 4.12.19 | KBPPKB | 18 | - | n/a | 0.0066 | 0.00015 | **MEASURE FIRST** -- 0.66% of games, never measured |
-| 4.12.20 | KQKRPs | 12 | - | n/a | 0.0000 | 0.04410 | **MEASURE FIRST** -- 4.41% of the TREE, 0 of 3,915 games |
-| 4.12.21 | KRPPKRP | 15 | - | n/a | 0.0000 | 0.05881 | 7 men, **UNVERIFIABLE**; record as a gap |
+| 4.12.2 | KRPKR | 13 | scale | 0.307 | 0.0403 | 0.03462 | 4.9a.7 ported the draw branches; 30.7% overclaim remains |
+| 4.12.3 | KXK | 3 | verdict | 0.020 | 0.3778 | 0.00222 | largest occurrence in the set; mechanism at 4.9a.4 |
+| 4.12.4 | KRKN | 8 | scale | 1.000 | 0.0051 | 0.00000 | **100%** overclaim at +346; tree occurrence ZERO, and Rarog reaches it at 1.6x the pool rate -- 4.12.1 asks whether the defect is causing the occurrence |
+| 4.12.5 | KRKB | 7 | scale | 0.996 | 0.0046 | 0.00022 | **99.6%** overclaim at +307; same over-representation as KR-KN |
+| 4.12.6 | KRPKB | 14 | scale | 1.000 | 0.0045 | 0.00041 | 4.9a.8 covered rook pawns; **100%** overclaim at +328 remains |
+| 4.12.7 | KBPKB | 17 | scale | 0.609 | 0.0067 | 0.00016 | 60.9% overclaim at +142 |
+| 4.12.8 | KRKP | 6 | scale | 0.264 | 0.0125 | 0.00241 | 26.4% overclaim at +72 |
+| 4.12.9 | KBPKN | 19 | scale | 0.507 | 0.0029 | 0.00019 | 50.7% overclaim; mate-drive debt from 4.11.9 |
+| 4.12.10 | KQKR | 10 | verdict | 0.230 | 0.0063 | 0.00048 | largest conversion deficit (23). RAR-M15 read it as 0 of 3,915 games and PLAN called it 'worth nothing'; 4.11.12 measured **63 of Rarog's 10,000 tournament games** |
+| 4.12.11 | KPK | 5 | scale | 0.046 | 0.0241 | 0.00231 | 4.6% overclaim; present bitbase |
+| 4.12.12 | KPKP | 20 | scale | 0.038 | 0.0128 | 0.00230 | 3.8% overclaim, nearly clean |
+| 4.12.13 | KQKP | 9 | verdict | 0.041 | 0.0117 | 0.00687 | owns RAR-E08's KQ-KP debt; drawn subset thin |
+| 4.12.14 | KBNK | 4 | verdict | 0.102 | 0.0030 | 0.00000 | owns RAR-E12's dtz debt (target 0.7260); tree occurrence ZERO |
+| 4.12.15 | KNNKP | 2 | scale | 0.577 | 0.0000 | 0.00000 | 57.7% overclaim; holds 7 of the 8 hard residue positions |
+| 4.12.16 | KNNK | 1 | scale | 0.000 | 0.0001 | 0.00000 | **no defect measured** -- 1,499 drawn, zero claimed; close it |
+| 4.12.17 | KPsK | 16 | - | n/a | 0.0452 | 0.00893 | **MEASURE FIRST** -- 4.52% of Rarog's games, never measured |
+| 4.12.18 | KBPsK | 11 | - | n/a | 0.0259 | 0.00034 | **MEASURE FIRST** -- 2.59% of Rarog's games, never measured |
+| 4.12.19 | KBPPKB | 18 | - | n/a | 0.0050 | 0.00015 | **MEASURE FIRST** -- 0.50% of Rarog's games, never measured |
+| 4.12.20 | KQKRPs | 12 | - | n/a | 0.0042 | 0.04410 | **MEASURE FIRST** -- 0.42% of games, 4.41% of the TREE |
+| 4.12.21 | KRPPKRP | 15 | - | n/a | 0.0540 | 0.05881 | **5.40% of Rarog's games and UNVERIFIABLE at 7 men.** The fourth most common family in the set cannot be adjudicated by the local tables; record it as a tooling gap, not a rare ending |
 
 1. **4.12.1 Order and classification.** Adopt 4.11.6's ranking, confirm the
    recognizer/scale classification above against the code, and register which
@@ -2386,9 +2468,9 @@ evidence.
 |---|---|---|
 | 4.9a.1 - 4.9a.8 | unchanged | completed; five results SUPERSEDED, owners named |
 | 4.9a.7 (KRPKR) | also 4.12.2 | leaf reopened for its conversion half |
-| 4.9a.8 (KRPKB) | also 4.12.3 | leaf reopened for its conversion half |
+| 4.9a.8 (KRPKB) | also 4.12.6 | leaf reopened for its conversion half |
 | 4.9a.9 - 4.9a.26 | 4.12.17 - 4.12.14 | the twenty reference functions |
-| 4.9a.14 (KQKP) | 4.12.11 | owns RAR-E08's KQ-KP debt |
+| 4.9a.14 (KQKP) | 4.12.13 | owns RAR-E08's KQ-KP debt |
 | 4.9a.26 (KBNK) | 4.12.14 | owns RAR-E12's dtz debt |
 | 4.9a.27 | 4.12.22 | dependency-complete family gates |
 | 4.9a.28 | 4.12.23 | endgame closure |

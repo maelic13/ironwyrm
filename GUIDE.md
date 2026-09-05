@@ -29,11 +29,13 @@ that does not reproduce at a game-representative budget is PROVISIONAL, and the
 60,000-node screen sits below the p25 of deployment
 (`analysis/node_budget_2026-09-04.md`). **This one needs your machine.**
 
-4.12's order is now REGISTERED (`tools/diag/endgame_ranking_v1.json`) and its
-leaves renumbered to match, so the board runs top to bottom. Retry trigger: if
-family occurrence is ever measured over the 36,400-game tournament rather than
-3,915 games and 40 bench positions, the ranking is re-derived and 4.12
-renumbered again.
+4.12's order is REGISTERED at **v2** (`tools/diag/endgame_ranking_v2.json`)
+and its leaves renumbered to match, so the board runs top to bottom. 4.11.6's
+retry trigger fired: 4.11.12 measured occurrence over the 36,400-game
+tournament and **KRPPKRP, KQKR and KQKRPs are not the zeros RAR-M15 reported**.
+Nine leaves moved; KQKR **15 -> 10** and KRPPKRP is now the fourth most common
+family in the set and still unmeasurable. See
+`analysis/endgame_occurrence_tournament_2026-09-05.md`.
 
 **Deployment is 153,466 nodes/move median at 3+0.03** and the endgame screen is
 60,000, below its p25 — so every fixed-node endgame verdict so far is
@@ -106,7 +108,7 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
     - [x] **4.9a.5** RAR-E08 **ACCEPTED** +6.73 +/- 3.82 Elo — TB-corrected labels win
     - [x] **4.9a.6** `hce-v3-tb` fitted and gated — RAR-E12 **+11.81 +/- 5.33 Elo**
     - [x] **4.9a.7** SUPERSEDED -> 4.12.2 — KRPKR drawn overclaim **37.1% -> 25.8%** stands; conversion half does not
-    - [x] **4.9a.8** SUPERSEDED -> 4.12.3 — KRPKB drawn-cohort null stands; conversion half does not
+    - [x] **4.9a.8** SUPERSEDED -> 4.12.6 — KRPKB drawn-cohort null stands; conversion half does not
 - [x] **4.10** Instrument integrity and tooling upgrade — 12 leaves, complete
     - [x] **4.10.1** Tablebase-truth termination; material shed becomes a diagnostic
     - [x] **4.10.2** Cohort fingerprint; refuse any comparison across position sets
@@ -131,28 +133,30 @@ python -m unittest discover -s tools/diag -p "test_*.py" && python tools/diag/ch
     - [ ] **4.11.8** Datagen label audit on `hce-v2` and `hce-v3-tb`
     - [ ] **4.11.9** Mate-drive blast radius over the dispatcher's promotion closure
     - [ ] **4.11.10** Restate RAR-E08, RAR-E11 and RAR-E12's conversion claims as superseded
-- [ ] **4.12** Endgame reference functions — order registered by 4.11.6
+    - [x] **4.11.11** Panic reported on stdout, where the harness keeps it
+    - [x] **4.11.12** Occurrence re-measured over 36,400 rated games; 4.12 re-ranked to **v2**
+- [ ] **4.12** Endgame reference functions — order registered by 4.11.6, re-derived at 4.11.12
     - [ ] **4.12.1** Adopt the order; confirm recognizer-vs-scale classification per family
     - [ ] **4.12.2** KRPKR [ref 13] scale — 30.7% overclaim remains after 4.9a.7
-    - [ ] **4.12.3** KRPKB [ref 14] scale — **100%** overclaim at +328 after 4.9a.8's rook pawns
-    - [ ] **4.12.4** KXK [ref 3] verdict — largest occurrence in the set; mechanism at 4.9a.4
-    - [ ] **4.12.5** KRKP [ref 6] scale — 26.4% overclaim at +72
-    - [ ] **4.12.6** KRKN [ref 8] scale — **100%** overclaim at +346; tree occurrence ZERO
+    - [ ] **4.12.3** KXK [ref 3] verdict — largest occurrence in the set (37.8%); mechanism at 4.9a.4
+    - [ ] **4.12.4** KRKN [ref 8] scale — **100%** overclaim at +346; Rarog reaches it 1.6x the pool rate
+    - [ ] **4.12.5** KRKB [ref 7] scale — **99.6%** overclaim at +307; same 1.6x over-representation
+    - [ ] **4.12.6** KRPKB [ref 14] scale — **100%** overclaim at +328 after 4.9a.8's rook pawns
     - [ ] **4.12.7** KBPKB [ref 17] scale — 60.9% overclaim at +142
-    - [ ] **4.12.8** KRKB [ref 7] scale — **99.6%** overclaim at +307
+    - [ ] **4.12.8** KRKP [ref 6] scale — 26.4% overclaim at +72
     - [ ] **4.12.9** KBPKN [ref 19] scale — 50.7% overclaim; mate-drive debt from 4.11.9
-    - [ ] **4.12.10** KPK [ref 5] scale — 4.6% overclaim; present bitbase
-    - [ ] **4.12.11** KQKP [ref 9] verdict — owns RAR-E08's KQ-KP debt
+    - [ ] **4.12.10** KQKR [ref 10] verdict — deficit 23 — **0.63% of Rarog's games, not zero**
+    - [ ] **4.12.11** KPK [ref 5] scale — 4.6% overclaim; present bitbase
     - [ ] **4.12.12** KPKP [ref 20] scale — 3.8% overclaim, nearly clean
-    - [ ] **4.12.13** KNNKP [ref 2] scale — 57.7% overclaim; holds 7 of the 8 hard residue
+    - [ ] **4.12.13** KQKP [ref 9] verdict — owns RAR-E08's KQ-KP debt
     - [ ] **4.12.14** KBNK [ref 4] verdict — owns RAR-E12's dtz debt, target 0.7260
-    - [ ] **4.12.15** KQKR [ref 10] verdict — conversion deficit 23, but 0 of 3,915 games
+    - [ ] **4.12.15** KNNKP [ref 2] scale — 57.7% overclaim; holds 7 of the 8 hard residue
     - [ ] **4.12.16** KNNK [ref 1] scale — **no defect measured** — close it
-    - [ ] **4.12.17** KPsK [ref 16] ? — **MEASURE FIRST** — 4.19% of games, never measured
-    - [ ] **4.12.18** KBPsK [ref 11] ? — **MEASURE FIRST** — 1.92% of games, never measured
-    - [ ] **4.12.19** KBPPKB [ref 18] ? — **MEASURE FIRST** — 0.66% of games, never measured
-    - [ ] **4.12.20** KQKRPs [ref 12] ? — **MEASURE FIRST** — 4.41% of the TREE, 0 of games
-    - [ ] **4.12.21** KRPPKRP [ref 15] ? — 7 men, **UNVERIFIABLE** — record as a gap
+    - [ ] **4.12.17** KPsK [ref 16] ? — **MEASURE FIRST** — 4.52% of Rarog's games, never measured
+    - [ ] **4.12.18** KBPsK [ref 11] ? — **MEASURE FIRST** — 2.59% of Rarog's games, never measured
+    - [ ] **4.12.19** KBPPKB [ref 18] ? — **MEASURE FIRST** — 0.50%, never measured
+    - [ ] **4.12.20** KQKRPs [ref 12] ? — **MEASURE FIRST** — 0.42% of games and 4.41% of the TREE
+    - [ ] **4.12.21** KRPPKRP [ref 15] ? — **5.40% of games and UNVERIFIABLE** — 7 men; record the gap
     - [ ] **4.12.22** Dependency-complete family refits and gates, tiered by occurrence
     - [ ] **4.12.23** Conversion, theory, STC/LTC and endgame-cohort closure
 - [ ] **4.13** Datagen label truth and corpus contract
