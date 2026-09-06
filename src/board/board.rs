@@ -8,7 +8,7 @@ use std::fmt;
 
 use super::attacks::ATTACKS;
 use super::bitboard::Bitboard;
-use super::movegen::{between, generate_legal_moves, ray_through};
+use super::movegen::generate_legal_moves;
 use super::moves::{
     CAPTURE, CASTLE_KINGSIDE, CASTLE_QUEENSIDE, DOUBLE_PUSH, EN_PASSANT, Move, MoveList,
     PROMO_BISHOP, PROMO_CAPTURE_BISHOP, PROMO_CAPTURE_KNIGHT, PROMO_CAPTURE_QUEEN,
@@ -37,53 +37,6 @@ struct UnmakeInfo {
     fullmove: u16,
     hash: u64,
     checkers: Bitboard,
-}
-
-/// Absolute pins on one king, captured for SEE recapture filtering (Phase
-/// 7.2). At most 8 simultaneous pins (one per direction). A pinned blocker may
-/// not recapture on the exchange square unless its pinner has left the board or
-/// the square lies on its pin line.
-struct SeePins {
-    king: Square,
-    len: usize,
-    blockers: [Square; 8],
-    pinners: [Square; 8],
-}
-
-impl SeePins {
-    #[inline]
-    fn new(king: Square) -> Self {
-        Self {
-            king,
-            len: 0,
-            blockers: [Square(0); 8],
-            pinners: [Square(0); 8],
-        }
-    }
-
-    #[inline]
-    fn push(&mut self, blocker: Square, pinner: Square) {
-        // At most one blocker per direction, so `len` cannot exceed 8.
-        self.blockers[self.len] = blocker;
-        self.pinners[self.len] = pinner;
-        self.len += 1;
-    }
-
-    /// Squares of attackers that may NOT capture on `target` under `occ`:
-    /// pinned, pinner still present, and `target` off the pin line.
-    #[inline]
-    fn forbidden(&self, target: Square, occ: Bitboard) -> Bitboard {
-        let mut forbidden = Bitboard::EMPTY;
-        let target_bb = Bitboard::from(target);
-        for i in 0..self.len {
-            if (occ & Bitboard::from(self.pinners[i])).any()
-                && (ray_through(self.king, self.blockers[i]) & target_bb).is_empty()
-            {
-                forbidden |= Bitboard::from(self.blockers[i]);
-            }
-        }
-        forbidden
-    }
 }
 
 const NO_PIECE: u8 = 255;
@@ -1207,43 +1160,58 @@ FEN: {}",
         (atk.rook(sq, occ) & (self.pieces(color, Piece::Rook) | queens) & occ).any()
     }
 
-    /// Absolute pins on `color`'s king, for SEE recapture filtering (Phase
-    /// 7.2). Same x-ray technique as `movegen::compute_pinned`, but keeps each
-    /// (blocker, pinner) pair so the exchange loop can tell when a pinned piece
-    /// becomes a legal recapturer — its pinner leaves the board, or the
-    /// exchange square lies on its pin line.
-    fn see_pins(&self, color: Color) -> SeePins {
-        let king_sq = self.king_sq(color);
-        let them = !color;
-        let our_occ = self.color_occ(color);
-        let atk = &*ATTACKS;
-        let mut pins = SeePins::new(king_sq);
-
-        let bishop_vision = atk.bishop(king_sq, self.all_occ);
-        let xray_bishop = atk.bishop(king_sq, self.all_occ ^ (bishop_vision & our_occ));
-        let mut diag =
-            (self.pieces(them, Piece::Bishop) | self.pieces(them, Piece::Queen)) & xray_bishop;
-        while diag.any() {
-            let pinner_sq = diag.pop_lsb();
-            let blockers = between(king_sq, pinner_sq) & our_occ;
-            if blockers.any() && !blockers.more_than_one() {
-                pins.push(blockers.lsb(), pinner_sq);
+    /// Select the least-valued LEGAL recapturer under the evolving exchange
+    /// occupancy. Original piece sets remain valid off `target`: every piece
+    /// that moved there has had its source removed from `occ`. Keep target
+    /// occupied as a ray blocker, but exclude its original (captured) occupant
+    /// from enemy attacks when checking the recapturer's king.
+    fn see_recapturer(
+        &self,
+        target: Square,
+        occ: Bitboard,
+        side: Color,
+    ) -> Option<(Square, Piece)> {
+        let mut attackers = self.attackers_to_color(target, occ, side);
+        while attackers.any() {
+            let (from, piece) = self.least_valuable_attacker(attackers, side);
+            let after = occ ^ Bitboard::from(from);
+            let king = if piece == Piece::King {
+                target
+            } else {
+                self.king_sq(side)
+            };
+            if (self.attackers_to_color(king, after, !side) & !Bitboard::from(target)).is_empty() {
+                return Some((from, piece));
             }
+            attackers ^= Bitboard::from(from);
         }
+        None
+    }
 
-        let rook_vision = atk.rook(king_sq, self.all_occ);
-        let xray_rook = atk.rook(king_sq, self.all_occ ^ (rook_vision & our_occ));
-        let mut ortho =
-            (self.pieces(them, Piece::Rook) | self.pieces(them, Piece::Queen)) & xray_rook;
-        while ortho.any() {
-            let pinner_sq = ortho.pop_lsb();
-            let blockers = between(king_sq, pinner_sq) & our_occ;
-            if blockers.any() && !blockers.more_than_one() {
-                pins.push(blockers.lsb(), pinner_sq);
-            }
+    /// Queen promotion is optimal in this material-only exchange: if the
+    /// promoted piece is recaptured, the extra gain and loss cancel; otherwise
+    /// its larger gain wins. Every recapture removes it, so the choice cannot
+    /// change the legality of that recapture. This is not a tactical claim.
+    fn see_recapture_piece(piece: Piece, target: Square) -> Piece {
+        if piece == Piece::Pawn && matches!(target.rank(), Rank::R1 | Rank::R8) {
+            Piece::Queen
+        } else {
+            piece
         }
+    }
 
-        pins
+    fn see_occupancy(&self, mv: Move) -> Bitboard {
+        let target = mv.to_sq();
+        let mut occ = self.all_occ ^ Bitboard::from(mv.from_sq());
+        if mv.is_en_passant() {
+            let captured = if self.side_to_move == Color::White {
+                Square(target.0 - 8)
+            } else {
+                Square(target.0 + 8)
+            };
+            occ ^= Bitboard::from(captured);
+        }
+        occ | Bitboard::from(target)
     }
 
     #[inline(always)]
@@ -1257,66 +1225,29 @@ FEN: {}",
         };
 
         let target = mv.to_sq();
-        let mut occ = self.all_occ;
+        let mut occ = self.see_occupancy(mv);
         let mut side = self.side_to_move;
         let mut gains = [0i32; 32];
         let mut depth = 0usize;
-
         gains[0] = piece_value(victim);
+        let mut occupant = self.moving_piece(mv);
         if mv.is_promo() {
-            gains[0] += piece_value(mv.promo_piece()) - piece_value(Piece::Pawn);
+            occupant = mv.promo_piece();
+            gains[0] += piece_value(occupant) - piece_value(Piece::Pawn);
         }
 
-        let from = mv.from_sq();
-        let mut attacker_piece = if mv.is_promo() {
-            mv.promo_piece()
-        } else {
-            self.moving_piece(mv)
-        };
-        occ ^= Bitboard::from(from);
-        if mv.is_en_passant() {
-            let cap_sq = if side == Color::White {
-                Square(target.0 - 8)
-            } else {
-                Square(target.0 + 8)
-            };
-            occ ^= Bitboard::from(cap_sq);
-        } else {
-            occ ^= Bitboard::from(target);
-        }
-        occ |= Bitboard::from(target);
-
-        // Absolute-pin masks, computed lazily per side on first recapture and
-        // reused (Phase 7.2). Most exchanges never touch a pinned piece, so the
-        // x-ray work is skipped entirely on the common path.
-        let mut pins: [Option<SeePins>; 2] = [None, None];
-
-        loop {
+        // A legal king capture ends the exchange; kings are never victims.
+        while occupant != Piece::King {
             side = !side;
-            let mut attackers = self.attackers_to_color(target, occ, side);
-            if attackers.is_empty() {
+            let Some((from, piece)) = self.see_recapturer(target, occ, side) else {
                 break;
-            }
-            let pin_set = pins[side as usize].get_or_insert_with(|| self.see_pins(side));
-            attackers &= !pin_set.forbidden(target, occ);
-            if attackers.is_empty() {
-                break;
-            }
-
-            let (sq, piece) = self.least_valuable_attacker(attackers, side);
+            };
+            let promoted = Self::see_recapture_piece(piece, target);
+            let gain = piece_value(occupant) + piece_value(promoted) - piece_value(piece);
             depth += 1;
-            gains[depth] = piece_value(attacker_piece) - gains[depth - 1];
-
-            if gains[depth].max(-gains[depth - 1]) < 0 {
-                break;
-            }
-
-            attacker_piece = piece;
-            occ ^= Bitboard::from(sq);
-            attackers = self.attackers_to_color(target, occ, !side);
-            if (attackers & self.pieces(!side, Piece::King)).any() {
-                break;
-            }
+            gains[depth] = gain - gains[depth - 1];
+            occupant = promoted;
+            occ ^= Bitboard::from(from);
         }
 
         while depth > 0 {
@@ -1358,72 +1289,40 @@ FEN: {}",
             return gain >= threshold;
         }
 
-        let mut balance = self.captured_piece(mv).map_or(0, piece_value);
+        let mut gain = self.captured_piece(mv).map_or(0, piece_value);
+        let mut occupant = self.moving_piece(mv);
         if mv.is_promo() {
-            balance += piece_value(mv.promo_piece()) - piece_value(Piece::Pawn);
+            occupant = mv.promo_piece();
+            gain += piece_value(occupant) - piece_value(Piece::Pawn);
         }
-        balance -= threshold;
-        if balance < 0 {
+        if gain < threshold {
             return false;
         }
 
         let target = mv.to_sq();
-        let from = mv.from_sq();
-        let mut attacker_piece = if mv.is_promo() {
-            mv.promo_piece()
-        } else {
-            self.moving_piece(mv)
-        };
-
-        balance = piece_value(attacker_piece) - balance;
-        if balance <= 0 {
-            return true;
-        }
-
-        let mut occ = self.all_occ ^ Bitboard::from(from);
-        if mv.is_en_passant() {
-            let cap_sq = if self.side_to_move == Color::White {
-                Square(target.0 - 8)
-            } else {
-                Square(target.0 + 8)
-            };
-            occ ^= Bitboard::from(cap_sq);
-        } else if mv.is_capture() {
-            occ ^= Bitboard::from(target);
-        }
-        occ |= Bitboard::from(target);
-
+        let mut occ = self.see_occupancy(mv);
         let mut side = self.side_to_move;
         let mut result = true;
-        let mut pins: [Option<SeePins>; 2] = [None, None];
-        loop {
+        // We pass iff the opponent cannot gain >= gain - threshold + 1.
+        // At each optional recapture V = max(0, capture_gain - next_V).
+        // For positive `limit`, V >= limit iff next_V < capture_gain-limit+1.
+        // Toggling result expresses that negation; +1 preserves equality.
+        let mut limit = gain - threshold + 1;
+        while occupant != Piece::King {
             side = !side;
-            let mut attackers = self.attackers_to_color(target, occ, side);
-            if attackers.is_empty() {
+            let Some((from, piece)) = self.see_recapturer(target, occ, side) else {
+                break;
+            };
+            let promoted = Self::see_recapture_piece(piece, target);
+            let capture_gain = piece_value(occupant) + piece_value(promoted) - piece_value(piece);
+            if capture_gain < limit {
                 break;
             }
-            let pin_set = pins[side as usize].get_or_insert_with(|| self.see_pins(side));
-            attackers &= !pin_set.forbidden(target, occ);
-            if attackers.is_empty() {
-                break;
-            }
-
-            let (sq, piece) = self.least_valuable_attacker(attackers, side);
-            attacker_piece = piece;
-            occ ^= Bitboard::from(sq);
-
-            let next_attackers = self.attackers_to_color(target, occ, !side);
-            if (next_attackers & self.pieces(!side, Piece::King)).any() {
-                break;
-            }
-
-            balance = piece_value(attacker_piece) - balance;
+            limit = capture_gain - limit + 1;
             result = !result;
-            if result == (balance >= 0) {
-                break;
-            }
+            occupant = promoted;
+            occ ^= Bitboard::from(from);
         }
-
         result
     }
 

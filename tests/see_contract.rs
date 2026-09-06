@@ -1,15 +1,22 @@
 //! External legal-exchange truth and explicit production policy boundaries.
 //! Regenerate with tools/diag/see_contract_oracle.py (python-chess).
-//! Debt rows are enforced by the ignored acceptance test at 4.11b.5, not
-//! redefined as correct just to make the current engine pass.
+//! Historical debt rows have active acceptance tests after the 4.11b.5 repair.
 
 use rarog::board::Board;
 
 const FIXTURES: &str = include_str!("data/see-contract-v1.tsv");
+const REPAIR_FIXTURES: &str = include_str!("data/see-repair-v1.tsv");
+
+fn fixture_lines() -> impl Iterator<Item = &'static str> {
+    FIXTURES
+        .lines()
+        .chain(REPAIR_FIXTURES.lines())
+        .filter(|line| !line.starts_with('#'))
+}
 
 #[test]
 fn report_see_contract_observations() {
-    for line in FIXTURES.lines().filter(|line| !line.starts_with('#')) {
+    for line in fixture_lines() {
         let f: Vec<_> = line.split('|').collect();
         assert_eq!(f.len(), 6);
         let board = Board::from_fen(f[2]).expect("independent FEN is legal");
@@ -29,11 +36,10 @@ fn report_see_contract_observations() {
 
 fn verify(selected_debt: Option<&str>) {
     let mut checked = 0;
-    for line in FIXTURES.lines().filter(|line| !line.starts_with('#')) {
+    for line in fixture_lines() {
         let f: Vec<_> = line.split('|').collect();
         assert_eq!(f.len(), 6);
-        let debt = f[1] == "debt";
-        if selected_debt.map_or(debt, |name| name != f[0]) {
+        if selected_debt.is_some_and(|name| name != f[0]) {
             continue;
         }
         checked += 1;
@@ -83,7 +89,7 @@ fn verify(selected_debt: Option<&str>) {
             .check_consistency()
             .expect("SEE must leave keys/state consistent");
     }
-    assert_eq!(checked, if selected_debt.is_some() { 1 } else { 15 });
+    assert_eq!(checked, if selected_debt.is_some() { 1 } else { 41 });
 }
 
 #[test]
@@ -92,19 +98,52 @@ fn independent_exchange_and_explicit_shortcut_contracts() {
 }
 
 #[test]
-#[ignore = "4.11b.5: unresolved exchange defects; remove ignore when repaired"]
-fn pending_king_exchange_repair() {
+fn repaired_king_exchange_repair() {
     verify(Some("king-after-pawn"));
 }
 
 #[test]
-#[ignore = "4.11b.5: pin created during exchange; remove ignore when repaired"]
-fn pending_created_pin_repair() {
+fn repaired_created_pin_repair() {
     verify(Some("pin-created"));
 }
 
 #[test]
-#[ignore = "4.11b.5: recapture promotion gain; remove ignore when repaired"]
-fn pending_recapture_promotion_repair() {
+fn repaired_recapture_promotion_repair() {
     verify(Some("promotion-recapture"));
+}
+
+#[test]
+fn threshold_parity_on_deterministic_legal_walks() {
+    // A parity check complements external truth; it does not define truth.
+    let mut checked = 0;
+    for seed in [17u64, 83, 211, 997] {
+        let mut rng = seed;
+        let mut board = Board::from_fen(rarog::board::STARTING_FEN).unwrap();
+        for _ in 0..128 {
+            let moves = board.generate_legal_moves();
+            if moves.is_empty() {
+                break;
+            }
+            for mv in moves.iter().filter(|mv| mv.is_capture()) {
+                let value = board.see(*mv);
+                for threshold in [value - 1, value, value + 1, -300, 0, 100] {
+                    assert_eq!(
+                        board.see_ge(*mv, threshold),
+                        value >= threshold,
+                        "{} {mv} at {threshold}, full={value}",
+                        board.to_fen()
+                    );
+                    assert_eq!(board.see_ge_quiet_aware(*mv, threshold), value >= threshold);
+                }
+                checked += 1;
+            }
+            rng ^= rng << 13;
+            rng ^= rng >> 7;
+            rng ^= rng << 17;
+            let index = usize::try_from(rng % u64::try_from(moves.len()).unwrap()).unwrap();
+            board.make_move(moves[index]);
+        }
+    }
+    assert!(checked >= 1000, "insufficient capture coverage: {checked}");
+    println!("SEE parity: {checked} legal captures across four deterministic walks");
 }
