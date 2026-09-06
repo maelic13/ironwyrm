@@ -17,14 +17,14 @@ and `python tools/diag/check_guide.py` must pass.
 | Measured search deficit | **355.26 +/- 27.03 Elo** equal nodes; **250.77 +/- 13.12** equal time; speed worth **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
-| Instrument state | **4.10 repaired; v2 baselines/floors, budget transfer, label audit and mate-drive closure recorded.** Remaining correction: 4.11.10 |
-| Current step | **4.11.10 — restate contaminated conversion claims**, not started |
+| Instrument state | **4.10 repaired; v2 baselines/floors, budget transfer, label audit, mate-drive closure and conversion corrections recorded.** |
+| Current step | **4.11b.2 — strengthen board benchmark coverage and correctness oracles**, not started |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## Next and held work
 
-**Next: 4.11.10 — restate RAR-E08, RAR-E11 and RAR-E12 conversion claims.**
-4.11.7–4.11.9 are complete; their scheduling holds/evidence gaps are resolved.
+**Next: 4.11b.2 — strengthen board benchmark coverage and correctness oracles.**
+4.11.7–4.11.10 are complete; their scheduling holds/evidence gaps are resolved.
 
 | Open hold | Resume when | Must be resolved before |
 |---|---|---|
@@ -91,7 +91,7 @@ next step; the maintainer does not need to run a queue script.
     - [x] **4.10.10** `check_guide.py` enforces SUPERSEDED owners and compares step sets
     - [x] **4.10.11** Compile-time bound on the shipped mop-up constants, every build type
     - [x] **4.10.12** Feature-matrix build audit; `--all-features` is not the shipped config
-- [ ] **4.11** Re-measurement and re-derivation — corrections recorded in place
+- [x] **4.11** Re-measurement and re-derivation — corrections recorded in place
     - [x] **4.11.1** Re-run both truth arms — head **0.9300**, reference **0.9920**
     - [x] **4.11.2** Floors re-derived — **0.9300** over n=1371, 18 families, cohort-stamped
     - [x] **4.11.3** Attained reference results frozen — **1361/1372**, hard residue **8**
@@ -101,7 +101,7 @@ next step; the maintainer does not need to run a queue script.
     - [x] **4.11.7** Budget transfer — net reference deficit 85/27/16 at 60k/200k/600k; RAR-M21
     - [x] **4.11.8** Label audit — raw game-result contradiction: `hce-v2` 4.39%, `hce-v3` source 8.99%; RAR-M22
     - [x] **4.11.9** Mate-drive promotion closure — 6 families; KBP-KB/KBP-KN each net −1 conversion debt; RAR-M23
-    - [ ] **4.11.10** Restate RAR-E08, RAR-E11 and RAR-E12's conversion claims as superseded
+    - [x] **4.11.10** Conversion claims corrected — E08 aggregate superseded; KQ-KP -3.79 pp confirmed; RAR-M24
     - [x] **4.11.11** Panic reported on stdout, where the harness keeps it
     - [x] **4.11.12** Occurrence re-measured over 36,400 rated games; 4.12 re-ranked to **v2**
 - [ ] **4.11b** Board correctness and HCE throughput
@@ -136,8 +136,8 @@ next step; the maintainer does not need to run a queue script.
     - [ ] **4.12.10** KQKR [ref 10] verdict — deficit 23/13/3 at 60k/200k/600k; 0.63% of Rarog's games
     - [ ] **4.12.11** KPK [ref 5] scale — 4.6% overclaim; present bitbase
     - [ ] **4.12.12** KPKP [ref 20] scale — 3.8% overclaim, nearly clean
-    - [ ] **4.12.13** KQKP [ref 9] verdict — owns RAR-E08's KQ-KP debt
-    - [ ] **4.12.14** KBNK [ref 4] verdict — owns RAR-E12's dtz debt, target 0.7260
+    - [ ] **4.12.13** KQKP [ref 9] verdict — historical E08 -3.79 pp; current 60k deficit closes at 200k/600k
+    - [ ] **4.12.14** KBNK [ref 4] verdict — corrected refit DTZ 0.7260 -> 0.6753; attribution unisolated
     - [ ] **4.12.15** KNNKP [ref 2] scale — 57.7% overclaim; holds 7 of the 8 hard residue
     - [ ] **4.12.16** KNNK [ref 1] scale — **no defect measured** — close it
     - [ ] **4.12.17** KPsK [ref 16] ? — **MEASURE FIRST** — 4.52% of Rarog's games, never measured

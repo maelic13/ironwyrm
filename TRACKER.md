@@ -15,6 +15,17 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
+- **2026-09-06 — PLAN 4.11.10, RAR-M24:** reran preserved RAR-E08
+  baseline/head and RAR-E08/E12-candidate binaries through the repaired v2
+  truth runner. RAR-E08 aggregate conversion is corrected from its invalid v1
+  value to 1255/1372 -> 1254/1372; the KQ-KP 400-position regression survives
+  exactly at -3.79 pp. RAR-E12 aggregate conversion is 1254/1372 ->
+  1278/1372, but its KQ-KP conversion is 96/98 -> 94/98 despite improved DTZ
+  progress. RAR-E11 is superseded in full: reference 1361/1372, current head
+  1276/1372, reference worse in no family. The archive is self-reproducing at
+  `analysis/artifacts/conversion-claims-correction-20260906.zip`; no engine
+  change or strength claim. Next is board work at 4.11b.2.
+
 - **2026-09-06 — PLAN 4.11.9, RAR-M23:** paired the archived 4.9a.4 reports
   over their identical 19-family cohort and established the mate drive's
   promotion closure. Six families change; KBP-KB and KBP-KN each fall one net
@@ -22,7 +33,8 @@ two numbering schemes do not correspond and are not meant to.
   instrument makes this a historical causal matrix, not current conversion
   floors. Preserved reports, derivation and matrix in
   `analysis/artifacts/mate-drive-promotion-closure-20260906.zip`. No engine
-  change, game or strength claim; 4.11.10 is next.
+  change, game or strength claim; its remaining conversion correction completed
+  later as RAR-M24.
 
 - **2026-09-06 — PLAN 4.11.8, RAR-M22:** audited all 1,202,619 source games
   for `hce-v2` and the `hce-v3` source of `hce-v3-tb`, at the hash-pinned

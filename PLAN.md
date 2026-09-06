@@ -16,8 +16,8 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.11.10 — restate contaminated conversion claims**, not started |
-| Instrument state | 4.10 repairs, 4.11.7 budget transfer, 4.11.8 label audit and 4.11.9 mate-drive closure are complete; corrected v2 baselines/floors recorded at 4.11.1–4.11.3. Historical v1 pawn-family conversion claims remain superseded; the remaining correction is 4.11.10 |
+| Current step | **4.11b.2 — strengthen board benchmark coverage and correctness oracles**, not started |
+| Instrument state | 4.10 repairs; v2 baselines/floors, budget transfer, label audit, mate-drive closure and conversion-claim correction are complete. Historical v1 pawn-family conversion claims are retained but superseded in place by RAR-M24 |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
 
@@ -893,12 +893,15 @@ so nothing is lost when the two are compared.
   -- owner **4.12.13**, retry at **4.12.22**. Aggregate weighted conversion is
   flat, 83.24% -> 83.45%.
 
-  **SUPERSEDED, 2026-09-04.** Every conversion figure in this paragraph came
-  from the defective truth instrument; 83.45% is the arm whose corrected upper
-  bound is 92.35%. The Elo verdict is unaffected -- fastchess played those
-  games, not this harness -- and so is the adoption. The conversion numbers are
-  re-derived at 4.11.10, including whether the KQ-KP regression survives at
-  all. Text left in place as the historical record.
+  **SUPERSEDED and corrected, RAR-M24, 2026-09-06.** The v1 aggregate is
+  invalid. The full matched v2 pair is **1255/1372 = 0.9147 -> 1254/1372 =
+  0.9140**, not 83.24% -> 83.45%. The matched v2 400-position focus pair
+  reproduces KQ-KP **390/396 -> 375/396, -15, -3.79 pp** exactly, so its
+  historical causal debt remains with 4.12.13. RAR-M21 also shows the current
+  head's 60k KQ-KP deficit closes at 200k and 600k; it is not a persistent
+  deployment deficit. The Elo verdict is unaffected -- fastchess played those
+  games, not this harness -- and so is the adoption. Text above remains as the
+  historical record; evidence is `analysis/conversion_claims_correction_2026-09-06.md`.
 
 - **4.9a.6 Regenerate on the winning contract.** Only after RAR-E08 reports.
   Hash-freeze under a new name; never edit `hce-v2` in place, since it is the
@@ -992,10 +995,11 @@ so nothing is lost when the two are compared.
 **The rest of 4.9a moved.** The twenty reference functions, their gates and
 their closure were 4.9a.9-4.9a.28; they are now **4.12**, behind the instrument
 repair (4.10) and the re-measurement (4.11) that decide their order. The two
-regressions owned inside that list travel with it: RAR-E08's **KQ-KP -3.8 pp**
-and RAR-E12's **KBN-K dtz 0.7260 -> 0.6753**. Both were quoted from the
-defective instrument and are re-derived at 4.11.2 and 4.11.10 before their
-owning leaves act on them.
+regressions owned inside that list travel with it: RAR-E08's **KQ-KP -3.79 pp**
+and RAR-E12's **KBN-K dtz 0.7260 -> 0.6753**. RAR-M24 re-measured both with
+the corrected instrument. KQ-KP remains a historical causal debt but closes
+at 200k/600k in the current head; KBN-K remains a corrected matched-arm
+regression whose individual-term attribution is unisolated.
 
 ### Superseded results, 2026-09-04
 
@@ -1802,11 +1806,20 @@ which is what exposed the dependency inversion.
    and byte-preserved reports: `analysis/mate_drive_promotion_closure_2026-09-06.md`.
    The required family-template closure rule is recorded under 4.12 below;
    KBP-KB and KBP-KN are owned by 4.12.7 and 4.12.9. No engine change or games.
-10. **4.11.10 Corrections in place.** Restate RAR-E08's "aggregate weighted
-    conversion 83.24% -> 83.45%", RAR-E12's "0.8345 -> 0.8477", RAR-E11 in full,
-    and the KQ-KP -3.8 pp debt, against the corrected instrument. Mark the
-    originals superseded; do not delete them and do not renumber the
-    experiments.
+10. **4.11.10 Corrections in place -- DONE, RAR-M24, 2026-09-06.** Reran the
+    preserved RAR-E08 baseline/head and RAR-E08/E12-candidate pairs with the
+    repaired v2 instrument and identical per-position cohorts. RAR-E08's v1
+    aggregate **83.24% -> 83.45%** is superseded by **1255/1372 = 0.9147 ->
+    1254/1372 = 0.9140**. Its KQ-KP focus result survives exactly:
+    **390/396 -> 375/396, -3.79 pp**, so it remains a historical causal debt
+    for 4.12.13, qualified by RAR-M21's closure at 200k/600k. RAR-E12's v1
+    **0.8345 -> 0.8477** is superseded by **1254/1372 = 0.9140 ->
+    1278/1372 = 0.9315**, +24; KQ-KP DTZ progress improves but conversion is
+    **96/98 -> 94/98**, so “debt repaid” was overbroad. RAR-E11 remains
+    superseded in full: reference **1361/1372 = 0.9920**, current head
+    **1276/1372 = 0.9300**, reference worse in no family. Originals remain in
+    `EXPERIMENTS.md` as superseded history. Evidence and byte-preserved inputs:
+    `analysis/conversion_claims_correction_2026-09-06.md`.
 11. **4.11.11 A panic must be reported where the harness keeps it -- DONE.**
     Rarog 2.3.2 lost one game in ~5,200 to `EngineCrash` in the 2026-09-04
     rating tournament (Colosseum incident `20260904-230039-002`: black to move,
@@ -2293,8 +2306,8 @@ or overwriting v2. Rank alone never accepts a family change.
 | 4.12.10 | KQKR | 10 | verdict | 0.230 | 0.0063 | 0.00048 | largest conversion deficit (23). RAR-M15 read it as 0 of 3,915 games and PLAN called it 'worth nothing'; 4.11.12 measured **63 of Rarog's 10,000 tournament games** |
 | 4.12.11 | KPK | 5 | scale | 0.046 | 0.0241 | 0.00231 | 4.6% overclaim; present bitbase |
 | 4.12.12 | KPKP | 20 | scale | 0.038 | 0.0128 | 0.00230 | 3.8% overclaim, nearly clean |
-| 4.12.13 | KQKP | 9 | verdict | 0.041 | 0.0117 | 0.00687 | owns RAR-E08's KQ-KP debt; drawn subset thin |
-| 4.12.14 | KBNK | 4 | verdict | 0.102 | 0.0030 | 0.00000 | owns RAR-E12's dtz debt (target 0.7260); tree occurrence ZERO |
+| 4.12.13 | KQKP | 9 | verdict | 0.041 | 0.0117 | 0.00687 | RAR-E08's corrected historical -3.79 pp debt; current 60k gap closes at 200k/600k; drawn subset thin |
+| 4.12.14 | KBNK | 4 | verdict | 0.102 | 0.0030 | 0.00000 | corrected complete-refit dtz 0.7260 -> 0.6753; individual-term attribution unisolated; tree occurrence ZERO |
 | 4.12.15 | KNNKP | 2 | scale | 0.577 | 0.0000 | 0.00000 | 57.7% overclaim; holds 7 of the 8 hard residue positions |
 | 4.12.16 | KNNK | 1 | scale | 0.000 | 0.0001 | 0.00000 | **no defect measured** -- 1,499 drawn, zero claimed; close it |
 | 4.12.17 | KPsK | 16 | - | n/a | 0.0452 | 0.00893 | **MEASURE FIRST** -- 4.52% of Rarog's games, never measured |
@@ -3292,8 +3305,8 @@ evidence.
 | 4.9a.7 (KRPKR) | also 4.12.2 | leaf reopened for its conversion half |
 | 4.9a.8 (KRPKB) | also 4.12.6 | leaf reopened for its conversion half |
 | 4.9a.9 - 4.9a.26, plus 4.9a.7/.8 | 4.12.2 - 4.12.21, by function | twenty function owners; reordered by evidence, never translate by numeric offset |
-| 4.9a.14 (KQKP) | 4.12.13 | owns RAR-E08's KQ-KP debt |
-| 4.9a.26 (KBNK) | 4.12.14 | owns RAR-E12's dtz debt |
+| 4.9a.14 (KQKP) | 4.12.13 | owns RAR-E08's corrected historical KQ-KP debt; not persistent at 200k/600k |
+| 4.9a.26 (KBNK) | 4.12.14 | owns corrected complete-refit DTZ regression; individual-term attribution unisolated |
 | 4.9a.27 | 4.12.22 | dependency-complete family gates |
 | 4.9a.28 | 4.12.23 | endgame closure |
 | 4.10 (refit cycles) | 4.14 | sub-steps 4.10.0-4.10.6 become 4.14.1-4.14.7 |
