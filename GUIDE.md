@@ -37,6 +37,10 @@ next step; the maintainer does not need to run a queue script.
 
 ## Phase 4 — bounded pre-NNUE search and HCE
 
+Model tags below are GPT / Claude: Terra/Sol = GPT-5.6, Astra = GPT-6;
+Sonnet/Opus = Claude 5. M/H/XH = Medium/High/Extra High.
+Assignments and effort-setting caveats are recorded in PLAN 4.11b and 4.12.
+
 - [x] **4.0** Evidence, baseline and oracle freeze — RAR-M12
 - [x] **4.1** Instrumented oracle — `hybrid-diag` `de568b3`
 - [x] **4.2** Differential observation harness — RAR-S55
@@ -109,44 +113,44 @@ next step; the maintainer does not need to run a queue script.
     - [x] **4.11b.2** Strengthen benchmark coverage and correctness oracles; RAR-M25
     - [x] **4.11b.3** Repair move parsing and counter boundaries; RAR-M26
     - [x] **4.11b.4** Define SEE contracts and independent fixtures; RAR-M27
-    - [ ] **4.11b.5** Repair SEE king legality, created pins and recapture promotions
-    - [ ] **4.11b.6** Add neutral value injection; restore comparable SEE timing
-    - [ ] **4.11b.7** Profile board work in HCE search
-    - [ ] **4.11b.8** Optimize legal generation and move-list delivery
-    - [ ] **4.11b.9** Measure fused piece relocation
-    - [ ] **4.11b.10** Share useful pin/check information
-    - [ ] **4.11b.11** Optimize the corrected SEE kernel
-    - [ ] **4.11b.12** Decide whether king-square caching pays
-    - [ ] **4.11b.13** Define history capacity and mutation contracts
-    - [ ] **4.11b.14** Decide whether a larger representation change pays
-    - [ ] **4.11b.15** Review draw/null/repetition policy boundaries
-    - [ ] **4.11b.16** Qualify integrated correctness and throughput
-    - [ ] **4.11b.17** Register and qualify the playing cluster
-    - [ ] **4.11b.18** Refresh affected endgame evidence and close
+    - [ ] **4.11b.5** Repair SEE king legality, created pins and recapture promotions — Astra XH / Opus H
+    - [ ] **4.11b.6** Add neutral value injection; restore comparable SEE timing — Sol H / Opus M
+    - [ ] **4.11b.7** Profile board work in HCE search — Sol H / Opus M
+    - [ ] **4.11b.8** Optimize legal generation and move-list delivery — Astra XH / Opus H
+    - [ ] **4.11b.9** Measure fused piece relocation — Sol H / Sonnet H
+    - [ ] **4.11b.10** Share useful pin/check information — Astra XH / Opus H
+    - [ ] **4.11b.11** Optimize the corrected SEE kernel — Astra H / Opus H
+    - [ ] **4.11b.12** Decide whether king-square caching pays — Sol H / Sonnet H
+    - [ ] **4.11b.13** Define history capacity and mutation contracts — Sol H / Opus H
+    - [ ] **4.11b.14** Decide whether a larger representation change pays — Astra XH / Opus H
+    - [ ] **4.11b.15** Review draw/null/repetition policy boundaries — Astra XH / Opus H
+    - [ ] **4.11b.16** Qualify integrated correctness and throughput — Sol H / Opus H
+    - [ ] **4.11b.17** Register and qualify the playing cluster — Astra H / Opus H
+    - [ ] **4.11b.18** Refresh affected endgame evidence and close — Astra H / Opus H
 - [ ] **4.12** Endgame reference functions — order registered by 4.11.6, re-derived at 4.11.12
-    - [ ] **4.12.1** Adopt the order; confirm recognizer-vs-scale classification per family
-    - [ ] **4.12.2** KRPKR [ref 13] scale — 30.7% overclaim remains after 4.9a.7
-    - [ ] **4.12.3** KXK [ref 3] verdict — largest occurrence in the set (37.8%); mechanism at 4.9a.4
-    - [ ] **4.12.4** KRKN [ref 8] scale — **100%** overclaim at +346; Rarog reaches it 1.6x the pool rate
-    - [ ] **4.12.5** KRKB [ref 7] scale — **99.6%** overclaim at +307; same 1.6x over-representation
-    - [ ] **4.12.6** KRPKB [ref 14] scale — **100%** overclaim at +328 after 4.9a.8's rook pawns
-    - [ ] **4.12.7** KBPKB [ref 17] scale — 60.9% overclaim; mate-drive debt from 4.11.9
-    - [ ] **4.12.8** KRKP [ref 6] scale — 26.4% overclaim at +72
-    - [ ] **4.12.9** KBPKN [ref 19] scale — 50.7% overclaim; mate-drive debt from 4.11.9
-    - [ ] **4.12.10** KQKR [ref 10] verdict — deficit 23/13/3 at 60k/200k/600k; 0.63% of Rarog's games
-    - [ ] **4.12.11** KPK [ref 5] scale — 4.6% overclaim; present bitbase
-    - [ ] **4.12.12** KPKP [ref 20] scale — 3.8% overclaim, nearly clean
-    - [ ] **4.12.13** KQKP [ref 9] verdict — historical E08 -3.79 pp; current 60k deficit closes at 200k/600k
-    - [ ] **4.12.14** KBNK [ref 4] verdict — corrected refit DTZ 0.7260 -> 0.6753; attribution unisolated
-    - [ ] **4.12.15** KNNKP [ref 2] scale — 57.7% overclaim; holds 7 of the 8 hard residue
-    - [ ] **4.12.16** KNNK [ref 1] scale — **no defect measured** — close it
-    - [ ] **4.12.17** KPsK [ref 16] ? — **MEASURE FIRST** — 4.52% of Rarog's games, never measured
-    - [ ] **4.12.18** KBPsK [ref 11] ? — **MEASURE FIRST** — 2.59% of Rarog's games, never measured
-    - [ ] **4.12.19** KBPPKB [ref 18] ? — **MEASURE FIRST** — 0.50%, never measured
-    - [ ] **4.12.20** KQKRPs [ref 12] ? — **MEASURE FIRST** — 0.42% of games and 4.41% of the TREE
-    - [ ] **4.12.21** KRPPKRP [ref 15] ? — **5.40% of games and UNVERIFIABLE** — 7 men; record the gap
-    - [ ] **4.12.22** Dependency-complete family refits and gates, tiered by occurrence
-    - [ ] **4.12.23** Conversion, theory, STC/LTC and endgame-cohort closure
+    - [ ] **4.12.1** Adopt the order; confirm recognizer-vs-scale classification per family — Astra H / Opus H
+    - [ ] **4.12.2** KRPKR [ref 13] scale — 30.7% overclaim remains after 4.9a.7 — Astra H / Opus H
+    - [ ] **4.12.3** KXK [ref 3] verdict — largest occurrence in the set (37.8%); mechanism at 4.9a.4 — Astra XH / Opus H
+    - [ ] **4.12.4** KRKN [ref 8] scale — **100%** overclaim at +346; Rarog reaches it 1.6x the pool rate — Astra H / Opus H
+    - [ ] **4.12.5** KRKB [ref 7] scale — **99.6%** overclaim at +307; same 1.6x over-representation — Astra H / Opus H
+    - [ ] **4.12.6** KRPKB [ref 14] scale — **100%** overclaim at +328 after 4.9a.8's rook pawns — Astra H / Opus H
+    - [ ] **4.12.7** KBPKB [ref 17] scale — 60.9% overclaim; mate-drive debt from 4.11.9 — Astra XH / Opus H
+    - [ ] **4.12.8** KRKP [ref 6] scale — 26.4% overclaim at +72 — Sol H / Opus H
+    - [ ] **4.12.9** KBPKN [ref 19] scale — 50.7% overclaim; mate-drive debt from 4.11.9 — Astra XH / Opus H
+    - [ ] **4.12.10** KQKR [ref 10] verdict — deficit 23/13/3 at 60k/200k/600k; 0.63% of Rarog's games — Astra H / Opus H
+    - [ ] **4.12.11** KPK [ref 5] scale — 4.6% overclaim; present bitbase — Sol H / Opus M
+    - [ ] **4.12.12** KPKP [ref 20] scale — 3.8% overclaim, nearly clean — Sol H / Opus H
+    - [ ] **4.12.13** KQKP [ref 9] verdict — historical E08 -3.79 pp; current 60k deficit closes at 200k/600k — Astra XH / Opus H
+    - [ ] **4.12.14** KBNK [ref 4] verdict — corrected refit DTZ 0.7260 -> 0.6753; attribution unisolated — Astra XH / Opus H
+    - [ ] **4.12.15** KNNKP [ref 2] scale — 57.7% overclaim; holds 7 of the 8 hard residue — Astra XH / Opus H
+    - [ ] **4.12.16** KNNK [ref 1] scale — **no defect measured** — close it — Terra H / Sonnet M
+    - [ ] **4.12.17** KPsK [ref 16] ? — **MEASURE FIRST** — 4.52% of Rarog's games, never measured — Astra H / Opus H
+    - [ ] **4.12.18** KBPsK [ref 11] ? — **MEASURE FIRST** — 2.59% of Rarog's games, never measured — Astra H / Opus H
+    - [ ] **4.12.19** KBPPKB [ref 18] ? — **MEASURE FIRST** — 0.50%, never measured — Astra H / Opus H
+    - [ ] **4.12.20** KQKRPs [ref 12] ? — **MEASURE FIRST** — 0.42% of games and 4.41% of the TREE — Astra XH / Opus H
+    - [ ] **4.12.21** KRPPKRP [ref 15] ? — **5.40% of games and UNVERIFIABLE** — 7 men; record the gap — Astra XH / Opus H
+    - [ ] **4.12.22** Dependency-complete family refits and gates, tiered by occurrence — Astra XH / Opus H
+    - [ ] **4.12.23** Conversion, theory, STC/LTC and endgame-cohort closure — Astra H / Opus H
 - [ ] **4.13** Datagen label truth and corpus contract
     - [ ] **4.13.1** Audit data/label pipeline; quantify contradictions
     - [ ] **4.13.2** Relabel and whole-game adjudication as separate registered arms

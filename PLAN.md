@@ -1985,6 +1985,47 @@ remains after the final HCE in 4.15.3-4.15.4.
   dependency-complete playing change is qualified at 4.11b.17. Bench counts
   and cross-engine microbenchmarks never substitute for that verdict.
 
+**Recorded model and thinking assignments (2026-09-06).** Use the rows
+below when handing off these leaves; do not have each successor reselect a
+cheaper model from the step title. These are task-specific recommendations,
+not model benchmarks or a guarantee of correctness. They reflect unresolved
+design/interaction work, not the duration of a run. Bounded instrumentation and
+qualification use Sol; coupled board semantics use Astra. A no-change decision
+can still require difficult analysis. Existing acceptance checks remain mandatory.
+
+GUIDE abbreviates the pinned versions from AGENTS: Terra/Sol = GPT-5.6,
+Astra = GPT-6; Sonnet/Opus = Claude Sonnet 5/Opus 5. H = High, XH = Extra
+High, M = Medium. GPT Extra High corresponds to `xhigh`. Claude effort names
+use the maintainer's requested UI vocabulary; availability/mapping for these
+pinned Claude releases is unverified, so verify the displayed setting rather
+than inventing a provider API flag. Efforts are selected independently per
+model, not assumed equivalent. The broad GPT capability positioning is described
+in the [official model comparison](https://developers.openai.com/api/docs/models/compare);
+the leaf assignments and Claude choices here are engineering judgments.
+
+Read the leaf's complete requirements and dependencies before execution.
+If new evidence invalidates its scope, report the reason for escalation and
+update the assignment explicitly; never silently downgrade it. These rows do
+not change active settings, lift holds, authorize extra work or alter gates.
+Keep each assignment attached to its task if future evidence changes ordering.
+
+| Step | GPT / thinking | Claude / thinking | Why this assignment |
+|---|---|---|---|
+| 4.11b.5 | GPT-6 Astra / Extra High | Claude Opus 5 / High | Repair three interacting exchange defects; reconcile full/threshold SEE, evolving legality and promoted occupants. |
+| 4.11b.6 | GPT-5.6 Sol / High | Claude Opus 5 / Medium | Bounded value-injection seam; prove default parity and that benchmark inputs reach the kernel. |
+| 4.11b.7 | GPT-5.6 Sol / High | Claude Opus 5 / Medium | Attribute measured search cost with existing tools; distinguish calls, nodes, allocation and cache effects. |
+| 4.11b.8 | GPT-6 Astra / Extra High | Claude Opus 5 / High | Legal generation, order and delivery interact with search; optimize without silently changing chess or move-order semantics. |
+| 4.11b.9 | GPT-5.6 Sol / High | Claude Sonnet 5 / High | Bounded relocation experiment with explicit mailbox, bitboard, hash, PST and special-move invariants. |
+| 4.11b.10 | GPT-6 Astra / Extra High | Claude Opus 5 / High | Sharing pin/check data needs a precise state lifetime, ownership and invalidation contract across consumers. |
+| 4.11b.11 | GPT-6 Astra / High | Claude Opus 5 / High | Optimize only the repaired SEE contract; preserve threshold boundaries, pins, kings and promotions. |
+| 4.11b.12 | GPT-5.6 Sol / High | Claude Sonnet 5 / High | Small conditional king-cache experiment with measurable benefit and straightforward state-restoration checks. |
+| 4.11b.13 | GPT-5.6 Sol / High | Claude Opus 5 / High | Specify history capacity, clone/root ownership and null/real mutation boundaries before changing reservation behavior. |
+| 4.11b.14 | GPT-6 Astra / Extra High | Claude Opus 5 / High | Architecture decision across representation, copying, cache locality and future NNUE seams; a rewrite is not presumed. |
+| 4.11b.15 | GPT-6 Astra / Extra High | Claude Opus 5 / High | Draw identity, null moves and repetition semantics interact with search; separate correctness from rejected policy experiments. |
+| 4.11b.16 | GPT-5.6 Sol / High | Claude Opus 5 / High | Execute the defined integrated qualification matrix; distinguish neutral optimization baselines from correctness changes. |
+| 4.11b.17 | GPT-6 Astra / High | Claude Opus 5 / High | Prospective cluster gate design must distinguish correctness, unknown-sign strength effects and speed attribution. |
+| 4.11b.18 | GPT-6 Astra / High | Claude Opus 5 / High | Identify affected endgame evidence and causal dependencies; refresh only what changed and preserve historical claims correctly. |
+
 1. **4.11b.1 Freeze the audit and comparison -- DONE.** RAR-M20 and its committed evidence preserve the
    three-engine results, limitations, raw output, binary/source hashes, exact
    build commands and full Reckless adapter patch. Original Rarog audit:
@@ -2367,6 +2408,40 @@ or overwriting v2. Rank alone never accepts a family change.
 | 4.12.19 | KBPPKB | 18 | - | n/a | 0.0050 | 0.00015 | **MEASURE FIRST** -- 0.50% of Rarog's games, never measured |
 | 4.12.20 | KQKRPs | 12 | - | n/a | 0.0042 | 0.04410 | **MEASURE FIRST** -- 0.42% of games, 4.41% of the TREE |
 | 4.12.21 | KRPPKRP | 15 | - | n/a | 0.0540 | 0.05881 | **5.40% of Rarog's games and UNVERIFIABLE at 7 men.** The fourth most common family in the set cannot be adjudicated by the local tables; record it as a tooling gap, not a rare ending |
+
+**Recorded model and thinking assignments.** The version/effort legend and
+handoff rules in 4.11b apply here too. Most family leaves still require deciding
+what defect exists and which interacting mechanism causes it, not merely
+translating a reference function. Sol is assigned bounded existing-family audits;
+Terra is assigned the established no-defect KNNK closure only. Unknown coverage,
+causal debt and coupled fitting retain Astra. Model assignments are not evidence
+that any proposed engine change is needed. The seven-man hold remains in force.
+
+| Step | GPT / thinking | Claude / thinking | Why this assignment |
+|---|---|---|---|
+| 4.12.1 | GPT-6 Astra / High | Claude Opus 5 / High | Confirm current ranking, causal owners and recognizer-versus-scale instruments after board changes. |
+| 4.12.2 | GPT-6 Astra / High | Claude Opus 5 / High | KRPKR: distinguish remaining theoretical coverage from score scaling; protect winning rook endings. |
+| 4.12.3 | GPT-6 Astra / Extra High | Claude Opus 5 / High | KXK: broad dispatcher and promotion closure couple generic guidance to several family regressions. |
+| 4.12.4 | GPT-6 Astra / High | Claude Opus 5 / High | KRKN: repair drawn overclaim and test the steering hypothesis without treating occurrence correlation as causation. |
+| 4.12.5 | GPT-6 Astra / High | Claude Opus 5 / High | KRKB: separate drawn scaling, actual conversions and the shared over-representation hypothesis. |
+| 4.12.6 | GPT-6 Astra / High | Claude Opus 5 / High | KRPKB: determine coverage beyond the existing rook-pawn branches and preserve independent truth. |
+| 4.12.7 | GPT-6 Astra / Extra High | Claude Opus 5 / High | KBPKB: scaling and promotion-closure conversion debt require a joint causal explanation. |
+| 4.12.8 | GPT-5.6 Sol / High | Claude Opus 5 / High | KRKP: bounded existing-family scale audit, with independent draw/win cases and the standard closure contract. |
+| 4.12.9 | GPT-6 Astra / Extra High | Claude Opus 5 / High | KBPKN: promotion-closure debt interacts with scaling and generic mate guidance. |
+| 4.12.10 | GPT-6 Astra / High | Claude Opus 5 / High | KQKR: separate search-budget sensitivity from persistent guidance defects and conversion debt. |
+| 4.12.11 | GPT-5.6 Sol / High | Claude Opus 5 / Medium | KPK: use the existing bitbase to bound the remaining scale/integration audit; escalate if bitbase correctness is disputed. |
+| 4.12.12 | GPT-5.6 Sol / High | Claude Opus 5 / High | KPKP: modest measured scale defect, but pawn races and theoretical draws still require independent checks. |
+| 4.12.13 | GPT-6 Astra / Extra High | Claude Opus 5 / High | KQKP: reconcile historical causal debt, thin drawn cohorts and deficits that disappear at larger budgets. |
+| 4.12.14 | GPT-6 Astra / Extra High | Claude Opus 5 / High | KBNK: isolate mate-gradient, rule-50 and parameter-covariance effects; do not assume the damping hypothesis is true. |
+| 4.12.15 | GPT-6 Astra / Extra High | Claude Opus 5 / High | KNNKP: difficult theoretical residue and non-monotone budget response demand careful mechanism attribution. |
+| 4.12.16 | GPT-5.6 Terra / High | Claude Sonnet 5 / Medium | KNNK: bounded no-change closure using established draw evidence and current-source checks; any new defect escalates to Astra High / Opus High. |
+| 4.12.17 | GPT-6 Astra / High | Claude Opus 5 / High | KPsK: unmeasured coverage; choose the deciding instrument before implementing pawn-ending rules. |
+| 4.12.18 | GPT-6 Astra / High | Claude Opus 5 / High | KBPsK: establish fortress and promotion coverage, then separate scale from conversion obligations. |
+| 4.12.19 | GPT-6 Astra / High | Claude Opus 5 / High | KBPPKB: establish bishop/pawn fortress boundaries and an independent cohort before choosing implementation. |
+| 4.12.20 | GPT-6 Astra / Extra High | Claude Opus 5 / High | KQKRPs: unmeasured family with substantial tree exposure; broad coverage and dispatcher interactions are unresolved. |
+| 4.12.21 | GPT-6 Astra / Extra High | Claude Opus 5 / High | KRPPKRP: resolve the seven-man evidence contract or justify exclusion; this assignment does not lift the hold. |
+| 4.12.22 | GPT-6 Astra / Extra High | Claude Opus 5 / High | Jointly fit dependency-complete families and select prospective occurrence-appropriate gates without post-hoc acceptance rules. |
+| 4.12.23 | GPT-6 Astra / High | Claude Opus 5 / High | Reconcile all twenty dispositions, held evidence, corrected floors and transfer gates; do not close on aggregate results alone. |
 
 1. **4.12.1 Order and classification.** Adopt the latest registered ranking
    (v2 at 4.11.12 unless 4.11b.18 supersedes it), confirm the

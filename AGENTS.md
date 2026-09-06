@@ -269,6 +269,12 @@ did what its name suggests.**
   reserve deeper review for unresolved design, interaction or correctness
   questions. Recommendations are task judgments, not guarantees or claims of
   measured model superiority. Do not change the active model automatically.
+- **Use recorded PLAN model/effort assignments when they exist.** Report
+  those choices at handoff instead of reselecting from the title or the model
+  currently running. Do not silently downgrade them. If a changed scope or
+  new correctness/design uncertainty calls for escalation, state why and
+  update PLAN and GUIDE together. For unassigned steps, use the judgment rule
+  above. Recorded assignments are recommendations, not automatic model changes.
 - **Pair EACH recommended model with its own thinking mode**: Medium, High,
   Extra High, or a stronger mode using that model's actual supported name.
   Choose effort independently for each model and the specific next leaf;
