@@ -183,6 +183,13 @@ next step; the maintainer does not need to run a queue script.
     - [ ] **4.18.3** Re-verify tests, clippy, fingerprint, NPS and deficits
 - [ ] **4.19** Final HCE/search checkpoint, attribution and maturity closure
 - [ ] **4.20** STC/LTC/4T, NPS, portability, ISA and release gate
+- [ ] **4.21** Universal binaries — investigate and test automatic CPU selection
+    - [ ] **4.21.1** Freeze Stockfish reference and Rarog build constraints
+    - [ ] **4.21.2** Compare designs; specify safe dispatch and overrides
+    - [ ] **4.21.3** Build an isolated HCE prototype
+    - [ ] **4.21.4** Verify compatibility, ISA and chess identity
+    - [ ] **4.21.5** Measure performance, startup, size and memory
+    - [ ] **4.21.6** Decide adoption; assign implementation and release gates
 
 ## Phase 5 — NNUE runway
 
@@ -227,7 +234,7 @@ next step; the maintainer does not need to run a queue script.
 ## Phase 8 — scaling, platforms and product completeness
 
 - [ ] **8.0** High-thread and NUMA: price depth diversity at 4/8/16T
-- [ ] **8.1** Runtime dispatch, TT/net placement and large pages
+- [ ] **8.1** Extend/defer dispatch from 4.21; TT/net placement and large pages
 - [ ] **8.2** Product/platform: demand-led Chess960, distributed testing
 - [ ] **8.3** Scaling release: topology, clock, net, ISA and user-doc gate
 

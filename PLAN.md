@@ -2914,6 +2914,72 @@ The HCE is mature for this release only when:
 - Below the bar, ship 2.3.x only by explicit decision or close Phase 4 without
   a release. NNUE follows either way.
 
+### 4.21 Universal binary investigation and qualification
+
+**Investigation and testing, not automatic production adoption.** This is the
+last Phase-4 step, after 4.20, with existing numbers preserved. It does not
+retroactively block the 4.20 HCE release or change its accepted artifact.
+Any later adoption changes the delivered executable and must repeat affected
+4.20 release checks; an experimental binary cannot inherit that qualification.
+No implementation or benchmark has been performed for this step yet.
+
+Goal: determine whether one release executable per supported OS/processor
+family can select the appropriate implementation at startup, removing normal
+users' need to choose `base`/`avx2`/`pext`. Preserve explicit tier selection
+internally for reproducible tests, diagnosis and native builds. OS/target
+triples are distinct from CPU-feature tiers; do not promise one file for every
+OS and processor family. Do not add NNUE-only runtime costs to the HCE board.
+
+1. **4.21.1 Freeze reference behavior and Rarog constraints.** Pin the examined
+   Stockfish source and inspect `src/universal/entry_x86.cpp`, its universal
+   build/link rules, initialization and shared network embedding. Reference:
+   [Stockfish 19 announcement](https://stockfishchess.org/blog/2026/stockfish-19/).
+   Map Rarog's `xtask/src/main.rs` tiers, `rarog_pext` attack-table layouts,
+   `src/main.rs`'s failed historical CPU guard, `build.rs`/Fathom, PGO, linking
+   and `verify-isa`. Reuse 4.15c's evidence; investigate only changed contracts.
+2. **4.21.2 Compare designs and specify dispatch.** Compare baseline startup
+   selecting complete optimized engine variants with function-level dispatch
+   for selected kernels. Explain symbol/global-state/FFI isolation, startup
+   initialization, table layout, inlining and future NNUE ownership. Do not
+   assume `target_feature` on an entry function specializes its callees.
+   Define required CPU AND OS feature checks, slow-PEXT CPU policy, baseline
+   fallback, selected-tier reporting and a test override that rejects unsupported
+   tiers. The dispatcher and anything executed before selection must be built
+   for the baseline; global native/AVX flags invalidate that safety argument.
+3. **4.21.3 Build a bounded prototype.** Implement only the shortlisted design
+   in an isolated experiment using existing build/measurement tools. Keep
+   production defaults and normal release artifacts unchanged. Start with
+   current HCE tiers; do not invent AVX-512/NNUE variants without useful work
+   for them. Record exact source, compiler, features, PGO recipe and binary
+   hashes. Derive implementation sub-leaves if the design needs substantial
+   work rather than hiding a broad rewrite inside this prototype.
+4. **4.21.4 Verify compatibility and chess identity.** Test each forced tier
+   on a supporting CPU and automatic selection against the explicit policy;
+   include baseline-only, fast-PEXT, slow-PEXT and OS-disabled-vector cases.
+   Synthetic detector tests do not prove executable compatibility: use suitable
+   hardware or ISA-constrained execution and label untested cells as gaps.
+   Cover startup/static initialization, vendored Fathom, UCI/stop/thread lifecycle,
+   debug/release tests, perft and targeted board/SEE transitions. Require exact
+   accepted production bench identity per tier plus targeted parity. Adapt ISA
+   verification to baseline entry paths and specialized code regions: a whole-
+   binary prohibition on optional instructions is wrong for a universal binary.
+5. **4.21.5 Measure cost against separate binaries.** Before running, freeze a
+   minimal representative CPU/workload matrix and performance acceptance bounds.
+   Compare equivalent PGO/features, fixed-node whole-search NPS, relevant board
+   workloads, startup, binary size and memory. Alternate paired runs and record
+   scatter; CPU feature availability alone does not identify the fastest tier.
+   Use target-native performance evidence, not emulator timing. Preserve missing
+   hardware tests as explicit holds; no blanket portability/performance claim.
+6. **4.21.6 Decide adoption and own remaining work.** Deliver
+   `analysis/universal_binary_feasibility.md` with the design, raw evidence,
+   acceptance matrix, costs and an adopt/defer/reject recommendation. Retire
+   user-facing architecture selection only after compatibility, parity and
+   performance qualification; retain diagnostic overrides and rollback assets.
+   Adoption must receive numbered implementation/release leaves and the affected
+   4.20 checks before shipping. Hand future NNUE kernel qualification to 6.4.2
+   and remaining dispatch/platform work to 8.1. Neither future owner repeats
+   completed HCE investigation without a changed dependency.
+
 ## 5. Phase 5 — NNUE runway
 
 Phase 5 creates the behavior-neutral runway for NNUE. HCE stays active and the
@@ -3081,8 +3147,10 @@ evaluator internals.
 
 - **8.0 High-thread and NUMA.** Price the measured depth-diversity deficit at
   4/8/16T; test helper depth/ordering/TT ownership and retained SMP switches.
-- **8.1 Runtime dispatch and memory.** Universal dispatch, TT/net placement and
-  large pages only as complete architectures with target-native evidence.
+- **8.1 Runtime dispatch and memory.** Reuse 4.21's universal-binary decision
+  and evidence; own deferred adoption and later platform/NNUE dispatch extensions,
+  alongside TT/net placement and large pages. Qualify changed architectures with
+  target-native evidence; do not repeat the completed HCE investigation by default.
 - **8.2 Product/platform.** Demand-led Chess960 and platform work; consider
   OpenBench-style distributed testing when typical gains reach 1–3 Elo.
 - **8.3 Scaling release.** Full topology, clock, net, ISA and user-doc gate.
