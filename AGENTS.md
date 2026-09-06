@@ -1,8 +1,7 @@
 # Agent operating rules for Rarog
 
-Read `GUIDE.md` for what to work on and `PLAN.md` for why. This file is only
-about **not producing wrong results**. Every rule below exists because it was
-violated and cost real work — none of them are precautionary.
+Read `GUIDE.md` for what to work on and the relevant part of `PLAN.md` for why.
+These rules protect correctness and the maintainer's time and token budget.
 
 ## The one failure mode
 
@@ -14,6 +13,43 @@ came from the wrong end of a pipe. The engine was never the problem.
 So: **verify mechanically, never by eyeballing, and never by assuming the tool
 did what its name suggests.**
 
+## Token-efficient execution
+
+- **One orientation per session, not per tool call or leaf.** Read operating
+  rules once, GUIDE's current/held overview, and the selected PLAN section.
+  Use `rg` and bounded excerpts for follow-up. Re-read only changed regions
+  or to answer a concrete unresolved question; do not repeatedly dump documents.
+- Batch independent reads/checks. Send verbose output to logs and return exit
+  status plus a short result; read full output only to investigate a failure.
+- Keep a compact working record: leaf, accepted source/binary identity,
+  evidence paths, completed checks, live process/session ID, blocker and next
+  action. After interruption, inspect that record and existing outputs before
+  restarting work. A usage interruption does not imply the process stopped.
+- **Define the smallest sufficient measurement before launching it.** Follow
+  the leaf's registered scope; do not expand decisive cases to every family,
+  feature or engine by default. Record why any expansion is necessary before
+  collecting results. Never shrink a registered run after seeing its results.
+- **Reuse the harness.** Prefer its existing runner, parser and archive format.
+  A one-off invocation does not need a new orchestration framework. Add a
+  durable helper only for a missing correctness check or repeated workflow;
+  keep it small. Do not create separate run/summary/archive tools by default.
+- Run long jobs in a durable process with logs, output paths and exit status.
+  Prefer completion notifications or bounded completion waits. After confirming
+  startup, back off unchanged polls within host/tool limits; inspect logs at
+  milestones, completion, errors or a credible stall. Do not repeatedly query
+  both process lists and unchanged log tails. CPU waiting is not useful reasoning.
+- Give milestone updates and report confounds immediately. If the host requires
+  more frequent updates, keep them brief; do not perform extra inspections or
+  repeat the analysis merely to manufacture something to say.
+- **Write documentation once results are ready.** Prospective registration,
+  newly discovered blockers and corrections to false claims cannot wait;
+  routine "running" prose and partial result tables can. Keep raw progress in
+  the job log, then update final status and evidence together.
+- Before repeating a read, check, run or helper implementation, identify what
+  changed or what unanswered question it resolves. If neither exists, skip it.
+  Once the leaf's acceptance checks pass, commit and follow the authorized
+  sequence; do not invent extra audits to fill elapsed compute time.
+
 ## Measurement
 
 - **`--all-features` enables `texel`, which must never be measured.** The
@@ -22,11 +58,14 @@ did what its name suggests.**
   depth sweep run on it produced a confident, wrong conclusion — reversed
   once rebuilt. The tell was that the BASELINE moved between two sweeps; if a
   number you are not changing changes, stop and check the binary.
-- **Rebuild immediately before measuring, with the exact feature set.**
+- **Rebuild before measuring, with the exact feature set.**
   `cargo test`, `cargo clippy` and `cargo bench` all build the `rarog` binary
   too, with *their* features, and leave it in `target/release/rarog.exe`. A
   differential run was voided this way. There is no such thing as "the binary
-  is probably still right".
+  is probably still right". For a multi-run study, build once, verify its
+  fingerprint, archive/hash that executable and measure that immutable copy.
+  Rebuild if source, features, toolchain or build settings change; a hash-verified
+  copy does not need rebuilding for every budget. Keep test builds separate.
 - `bench` dumps diagnostic counters **once per position** — 40 lines per name
   for `bench 13`, 47 for the oracle. They must be **summed**. Reading the last
   one gives a single position's numbers that look plausible and are wrong.
@@ -44,10 +83,20 @@ did what its name suggests.**
 
 ## Verification
 
-- Run tests in **debug and release**. CI is a matrix; `--release` alone has
-  missed real bugs, and a debug-only failure appeared again in 4.7c.
-- `cargo fmt --check` and `cargo clippy --all-features --all-targets` must be
-  clean. Zero warnings.
+- **Scope checks to the change.** Rust engine/test/build/dependency changes
+  require debug AND release tests, `cargo fmt --check`, and
+  `cargo clippy --all-features --all-targets`, with zero warnings. Debug-only
+  failures have occurred; release alone is insufficient.
+- Documentation-only changes need diff/link/status consistency checks, not
+  Cargo builds, engine tests or bench. Run `check_guide.py` when GUIDE/PLAN
+  structure or status changes. Python/tooling changes need affected tooling
+  tests and a meaningful smoke/negative check of changed measurement paths;
+  they do not automatically require rebuilding an unchanged engine.
+- **Run each required check once on the final relevant state.** Record its
+  command, exit status and covered source/configuration. Reuse that pass while
+  those inputs are unchanged, including across a following docs-only commit.
+  Rerun affected checks after edits, failures or new evidence of a gap; do not
+  rerun the whole suite after prose edits. Never call a prior pass newly run.
 - **Suppress lints with `#[expect(...)]`, not `#[allow(...)]`.** An
   expectation warns when it stops being needed, so the suppression list
   cleans itself; an `allow` sits there forever. Converting the crate's 25
@@ -70,19 +119,14 @@ did what its name suggests.**
   moved oracle agreement 66% -> 78%. Verifying the ENGINE responds is not the
   same check -- a standalone probe confirmed the option worked while the
   instrument reporting on it did not.
-- Before claiming a behavior-neutral change, prove it: `bench 13` must
-  reproduce the accepted fingerprint **6,901,489 / EBF 2.458** exactly
-  (RAR-E08; it was 7,226,051 / EBF 2.460 under RAR-E06 plus the 4.9a.4 mate
-  drive, 6,977,070 / EBF 2.466 under RAR-S70, and 7,467,143 / EBF 2.477 before
-  that). A fingerprint identifies the SEARCH, so it cannot see
-  a change confined to positions the bench suite never reaches: the accepted
-  head carries a 4.9a.4 mate drive that moves KBN-K conversion from 19.4% to
-  96.9% and leaves this number byte-identical. Never read "bench unchanged" as
-  "behaviour unchanged" for an evaluation term with a narrow activation. The
-  fingerprint is
-  platform-INDEPENDENT: RAR-P14 recorded three platforms agreeing exactly,
-  and `aaa715a` rebuilds to 6,519,711 on x86 which is the number RAR-P16
-  recorded on ARM64. A differing number means differing CODE.
+- A behavior-neutral **engine change** must reproduce the immediate accepted
+  production `bench 13` fingerprint (currently **6,901,489 / EBF 2.458**),
+  plus targeted checks for changed behavior the suite does not reach. The
+  4.9a.4 mate drive changed KBN-K conversion 19.4% -> 96.9% with an identical
+  bench: fingerprint equality alone is not proof of narrow-feature neutrality.
+  RAR-P14/P16 establish cross-platform fingerprint agreement; investigate a
+  mismatch, do not dismiss it as platform noise. For docs-only work, verify
+  the diff contains no engine inputs rather than running a neutrality bench.
 
 ## Changes
 
@@ -104,12 +148,9 @@ did what its name suggests.**
 - Before deleting any branch or tag, check what the ledger cites on it. A SHA
   with no output from `git branch -a --contains <sha>` is **dangling** and will
   disappear at the next `gc`.
-- This is not hypothetical. RAR-S54 — the +4.06 result the whole 4.7 cluster's
-  prior rests on — cited a commit that turned out to be docs-only; its real
-  source sat on a deleted branch, dangling, and the archive tag that was
-  supposed to protect it covered the other arm of the experiment. The probe was
-  twelve parameter values and now lives in `EXPERIMENTS.md`, where it should
-  have been from the start.
+- RAR-S54 cited a docs-only commit while its real source was dangling on a
+  deleted branch. Its twelve parameter values now live in `EXPERIMENTS.md`;
+  retain such recipes with the evidence, not only in branch history.
 
 ## Gating
 
@@ -134,22 +175,12 @@ did what its name suggests.**
   so it is the pentanomial GSPRT — the same mathematics fishtest uses, with
   nuisance parameters replaced by maximum-likelihood estimates. The gap between
   this project and fishtest is bounds and budget, never the test.
-- **Wide bounds anchored high REJECT small gains — size them from RAR-M10
-  before registering.** Fishtest uses `[0, 2]` STC and `[0, 1]` LTC in
-  normalized Elo — narrow, near zero — with large budgets. Wide brackets do not
-  merely resolve slowly on a small gain, they **reject it**: `[0,10]` drives a
-  true +4 nElo to H0 in ~35k games and `[3,10]` does it in ~20k. Three gates
-  were registered at those bounds against candidates measuring 4–7 nElo, so
-  they were configured to reject what they were measuring. `[0,3]` is the
-  bracket to prefer here — RAR-M10 was fitted on `[0,3]` gates, so it is the
-  in-regime choice rather than an extrapolation — and it accepts a true +4 in
-  ~47k games.
-- **A real gate is now an overnight run, and that is the honest price.** At
-  ~98 games/min, `[0,3]` needs roughly 8 hours for a true +4 and 13 for a
-  true +3, and about the same to reject a dud. Zero-game bench and counter
-  screening is what decides WHICH candidates earn that budget; it never
-  decides whether one works (RAR-S64: a mechanism with a clean bench signal
-  measured exactly zero in games).
+- **High bounds reject small gains, not merely slowly resolve them.** RAR-M10
+  estimates a true +4 nElo reaches H0 under `[0,10]` in ~35k games and `[3,10]`
+  in ~20k; `[0,3]` accepts it in ~47k. At the measured ~98 games/min this is
+  overnight compute, not an excuse to widen bounds or consume tokens polling.
+  Bench/counter screening chooses which candidates earn a gate; it never
+  accepts strength (RAR-S64's clean bench signal measured zero in games).
 - **Do not invent an acceptance rule after seeing a result.** A threshold like
   "accept if the CI excludes zero at 20,000 games" is arbitrary and is the same
   act as moving the bounds. If small gains need to be bankable, register the
@@ -168,7 +199,9 @@ did what its name suggests.**
 - **`GUIDE.md` and `PLAN.md` are updated in the SAME commit.** GUIDE is the
   overview of PLAN — current state and the ordered steps, nothing else. A
   GUIDE that disagrees with PLAN is worse than no GUIDE, because it is the
-  file that says what to do next and it will be believed.
+  file that says what to do next and it will be believed. This applies when
+  roadmap status or requirements change; an AGENTS-only operating-rule edit
+  does not require unrelated PLAN/GUIDE churn.
 - **GUIDE carries STATUS, not just a list.** Its Phase-4 checkboxes are how
   the maintainer sees what is done. Tick one only when the step is finished
   AND verified, in the commit that finishes it — never in advance.
@@ -196,7 +229,9 @@ did what its name suggests.**
 ## Step sequencing and explicit holds
 
 - Work one executable leaf at a time: verify proportionately, update PLAN and
-  GUIDE in the same documentation commit, report and stop. Engine and
+  GUIDE in the same documentation commit, and report. If the maintainer
+  authorized a multi-step session, continue to the next eligible leaf without
+  asking again; otherwise stop at the requested scope. Engine and
   tooling/doc changes still go in separate commits; intermediate commits do
   not falsely mark an unfinished cluster accepted.
 - Read GUIDE's current/held overview and PLAN's dependency register before
@@ -227,3 +262,6 @@ did what its name suggests.**
   need not become user chores. Always name the next executable leaf.
 - Report what was actually measured. If a step was skipped or a result is
   partial, say so plainly.
+- For a multi-step session, give a short summary per completed leaf: ID,
+  result/change, verification, commit. Name unfinished work separately. Do not
+  recount every tool call or imply planned work was implemented.
