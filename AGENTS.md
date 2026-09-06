@@ -260,6 +260,15 @@ did what its name suggests.**
 - When maintainer action is needed, give runnable commands in their own fenced
   block and restate them rather than referring back. Routine internal checks
   need not become user chores. Always name the next executable leaf.
+- **Whenever reporting the next step, recommend one GPT model AND one Claude
+  model**, with a brief task-specific reason. Use this maintainer-pinned list:
+  GPT-5.6 Terra, GPT-5.6 Sol, GPT-6 Astra; Claude Sonnet 5, Claude Opus 5,
+  Claude Fable 5.1. Change these names/versions only when the maintainer
+  explicitly requests an update; do not automatically substitute newer models.
+  Prefer the least costly model judged sufficient for the defined task;
+  reserve deeper review for unresolved design, interaction or correctness
+  questions. Recommendations are task judgments, not guarantees or claims of
+  measured model superiority. Do not change the active model automatically.
 - Report what was actually measured. If a step was skipped or a result is
   partial, say so plainly.
 - For a multi-step session, give a short summary per completed leaf: ID,
