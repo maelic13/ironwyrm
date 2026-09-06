@@ -15,13 +15,22 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
+- **2026-09-06 — PLAN 4.11.8, RAR-M22:** audited all 1,202,619 source games
+  for `hce-v2` and the `hce-v3` source of `hce-v3-tb`, at the hash-pinned
+  8,000-node datagen budget with 3–6-man Syzygy. Raw game-result contradiction:
+  hce-v2 26,316/134,948 clean wins (4.39% of all games); hce-v3 source
+  54,186/266,490 (8.99%). `hce-v3-tb`'s 125,643 corrected ≤6-man rows remain
+  distinct from this game-level instrument. Preserved reports/provenance in
+  `analysis/artifacts/datagen-label-audit-20260906.zip`; 19 audit-tool tests
+  passed. No engine change or strength claim. 4.13.1 owns row-level lineage.
+
 - **2026-09-06 — PLAN 4.11.7, RAR-M21:** completed the authorized
   60k/200k/600k conversion bracket, all 19 families and both engines.
   Net reference deficit 85/27/16 of 1372 initially won starts. Both historical
   60k reports reproduced exactly. Preserved six reports, paired FEN changes,
   provenance and validation in `analysis/artifacts/budget-transfer-20260905.zip`.
   Debug/release tests, fmt, Clippy and 156 tooling tests passed. No engine
-  change. Stopped at the maintainer's request; 4.11.8 was not started.
+  change. 4.11.8 later completed as RAR-M22.
 
 ## Closed work through 2.3.2
 

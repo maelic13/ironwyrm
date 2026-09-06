@@ -129,6 +129,22 @@ overclaims and historical matched-arm refit/mate-drive debts are not cancelled.
 No engine implementation or strength gate. Debug/release tests, fmt, Clippy,
 156 tooling tests and report/byte-level archive validation passed.
 
+**RAR-M22 — 4.11.8 datagen label audit, COMPLETE 2026-09-06.** Hash-verified
+the two 8,000-node `hce-v2` PGN segments (600,000 games total) and the
+8,000-node `hce-v3` source PGN of `hce-v3-tb` (602,619 games), then audited
+each game's first 3–6-man Syzygy clean win against its final PGN result. Cursed
+wins excluded; only the first clean win per game counted. **Result:** hce-v2
+has 26,316 not won / 134,948 clean wins (**19.50%**, **4.39% of all games**);
+hce-v3 source 54,186 / 266,490 (**20.33%**, **8.99% of all games**). Both
+budgets are 8,000, so no budget comparison is available. This is game-level
+raw-label evidence, not a remaining row-error count: `hce-v3-tb` already
+Syzygy-corrected 125,643 ≤6-man CSV rows and still leaves >6-man rows unchanged.
+**Disposition:** the raw-game labels are materially biased toward draws;
+4.13.1 owns row-level lineage and separate post-hoc/whole-game contracts. No
+refit, engine change or strength claim. Full analysis and byte-preserved output:
+`analysis/datagen_label_audit_2026-09-06.md`,
+`analysis/artifacts/datagen-label-audit-20260906.zip`.
+
 **RAR-M19 ownership update, 2026-09-05:** its historical result above is
 unchanged. Behavior-neutral value injection and initial normalized SEE
 benchmark restoration now belong to **4.11b.6**. Post-final-HCE scale audit

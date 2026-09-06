@@ -16,8 +16,8 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.11.8 — datagen label audit**, not started; maintainer requested a stop after completed 4.11.7 |
-| Instrument state | 4.10 repairs and 4.11.7 budget transfer are complete; corrected v2 baselines/floors recorded at 4.11.1–4.11.3. Historical v1 pawn-family conversion claims remain superseded; remaining audits/corrections are open at 4.11.8–4.11.10 |
+| Current step | **4.11.9 — mate-drive promotion-closure accounting**, not started |
+| Instrument state | 4.10 repairs, 4.11.7 budget transfer and 4.11.8 label audit are complete; corrected v2 baselines/floors recorded at 4.11.1–4.11.3. Historical v1 pawn-family conversion claims remain superseded; remaining corrections are open at 4.11.9–4.11.10 |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
 
@@ -32,18 +32,18 @@ The nominal order is unchanged. **4.11.7 was held in its original place**;
 the earlier guide simply did not show the scheduling hold. Claude's handoff
 predates 4.11b and is not the current roadmap: after 4.11 comes **4.11b**, then
 4.12. The maintainer authorized heavy computation, and **4.11.7 is now complete**
-(RAR-M21, 2026-09-06). Stop here as subsequently requested; the next leaf is
-**4.11.8**, which has not started.
+(RAR-M21, 2026-09-06). RAR-M22 subsequently completed 4.11.8. The next leaf
+is **4.11.9**, which has not started.
 
 | Leaf | State and reason | Unblock event / owner | Dependency boundary |
 |---|---|---|---|
 | 4.12.21 | Future evidence gap, not a skipped completed step | Obtain independent 7-man truth/verification, or record a justified scope exclusion under 4.12's closure contract | Cannot claim this family verified or close 4.12.23 with unowned missing evidence |
 
-4.11.8 uses stored corpus labels/tablebase truth; it requires the input
-files/tables and may involve a large scan. Record any missing input as a new explicit hold rather than
-silently selecting another step. 4.11.9/4.11.10 may do their independent
-analysis/corrections using the completed RAR-M21 bracket. All three remain
-open; do not quietly pass their dependency boundary before 4.11b.
+RAR-M22 completed 4.11.8 from hash-verified source PGNs and local 3–6-man
+truth. Its raw game-result audit is an input to 4.13.1, not a row-level audit
+of the already corrected `hce-v3-tb` CSVs. 4.11.9/4.11.10 remain open and may
+use completed RAR-M21/RAR-M22 evidence; do not quietly pass their dependency
+boundary before 4.11b.
 
 At each handoff review every held item: state what was done, what is still
 held, its unblock event, and the next executable leaf. Resume the earliest
@@ -1769,10 +1769,20 @@ which is what exposed the dependency inversion.
    and remain owned. Full report and byte-preserving evidence ZIP:
    `analysis/artifacts/budget-transfer-20260905.zip`. No engine changes or
    strength games; debug/release tests, fmt, Clippy and 156 tooling tests pass.
-8. **4.11.8 Datagen label audit on the existing corpora.** Run 4.10.8 against
-   `hce-v2` and `hce-v3-tb`. If two corpora exist at different node budgets the
-   budget comparison is free. This is the input 4.13 needs and it costs no
-   games.
+8. **4.11.8 Datagen label audit -- DONE, RAR-M22, 2026-09-06.** Audited the
+   hash-verified source-game PGNs of `hce-v2` and `hce-v3-tb` (the latter is
+   derived from `hce-v3`) with 3–6-man Syzygy and the existing 4.10.8 tool.
+   Both corpora used 8,000 nodes; no budget comparison exists. First clean wins
+   not won: `hce-v2` **26,316/134,948 = 19.50%**, **4.39% of 600,000 games**;
+   `hce-v3` source **54,186/266,490 = 20.33%**, **8.99% of 602,619 games**.
+   The latter reaches clean wins nearly twice as often, so the all-game shares
+   are not directly a technique comparison. `hce-v3-tb` separately corrected
+   125,643 ≤6-man CSV rows; this game-level audit neither calls 8.99% its
+   remaining row-error rate nor proves whole-game correction. Full method,
+   families, raw evidence and disposition:
+   `analysis/datagen_label_audit_2026-09-06.md`. 4.13.1 owns row-level
+   game-to-extraction lineage and separate relabel/whole-game-adjudication
+   choices. No games, HCE change or strength claim.
 9. **4.11.9 Mate-drive blast radius.** Re-run 4.9a.4's non-regression accounting
    over the PROMOTION CLOSURE of its dispatcher condition rather than over
    families the safety argument had already excluded. The measurement is done
@@ -1873,7 +1883,7 @@ which is what exposed the dependency inversion.
 
 **Integrated 2026-09-05 after reconciling the a0aeb68 roadmap.** Finish the
 remaining 4.11 leaves first, then execute this section before 4.12. The current
-next step is 4.11.8 after completed 4.11.7; this insertion preserves
+next step is 4.11.9 after completed 4.11.7 and 4.11.8; this insertion preserves
 all completed work and
 4.11.12's registered v2 endgame order until changed evidence warrants a rerank.
 The board audit and measurement are complete; the repairs and optimizations
@@ -2339,8 +2349,10 @@ share is 4.11.8's output, not an assumption.
    deduplication/by-game leakage, sampling bias, manifests/resume and exact
    parameter-to-feature coverage. Reuse existing tests and 4.11.8; derive
    additional repair leaves before corpus publication when evidence requires.
-   From 4.11.8: the share of rows carrying a contradicted
-   result, by family and by datagen budget, with cursed wins excluded.
+   From 4.11.8: game-level first-clean-win contradiction by family, with cursed
+   wins excluded. This is **not** a row count: measure the share of extracted
+   rows carrying a contradiction through game-to-row lineage here, separately
+   for raw and post-hoc-TB-corrected labels.
 2. **4.13.2 Two arms, registered separately.** Post-hoc relabeling of positions
    and whole-game tablebase adjudication are DIFFERENT changes and must not be
    pooled: adjudication ends the game and so changes the recorded result of
@@ -3291,7 +3303,8 @@ Phase 5.2 owns the historical board baseline and event-cost attribution;
 
 Subsystem-audit planning update, 2026-09-05: no existing step was renumbered or
 removed. 4.11.7 was held in place at that update; the maintainer subsequently
-authorized its compute run, completed as RAR-M21 on 2026-09-06. 4.11.8 is next.
+authorized its compute run, completed as RAR-M21 on 2026-09-06. 4.11.8 later
+completed as RAR-M22 on 2026-09-06. 4.11.9 is next.
 New analysis owners are 4.13a (HCE) and 4.15a–c (storage, integration and
 instruments); existing search, data, TM, NNUE and closure owners are expanded.
 Their implementation substeps will be derived from the audits, not invented

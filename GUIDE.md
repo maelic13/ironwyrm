@@ -17,14 +17,14 @@ and `python tools/diag/check_guide.py` must pass.
 | Measured search deficit | **355.26 +/- 27.03 Elo** equal nodes; **250.77 +/- 13.12** equal time; speed worth **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
-| Instrument state | **4.10 repaired; v2 baselines/floors and budget transfer recorded.** Remaining audits/corrections: 4.11.8–4.11.10 |
-| Current step | **4.11.8 — datagen label audit**, not started; stopped after completing 4.11.7 as requested |
+| Instrument state | **4.10 repaired; v2 baselines/floors, budget transfer and label audit recorded.** Remaining corrections: 4.11.9–4.11.10 |
+| Current step | **4.11.9 — mate-drive promotion-closure accounting**, not started |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## Next and held work
 
-**Next: 4.11.8 — datagen label audit.** Then 4.11.9 and 4.11.10.
-4.11.7 is complete; its scheduling hold is resolved.
+**Next: 4.11.9 — mate-drive promotion-closure accounting.** Then 4.11.10.
+4.11.7 and 4.11.8 are complete; their scheduling holds/evidence gaps are resolved.
 
 | Open hold | Resume when | Must be resolved before |
 |---|---|---|
@@ -99,7 +99,7 @@ next step; the maintainer does not need to run a queue script.
     - [x] **4.11.5** Occurrence split by root — **3 of 40 roots give 56%** of the census
     - [x] **4.11.6** 4.12 re-ranked and REGISTERED; leaves renumbered to match
     - [x] **4.11.7** Budget transfer — net reference deficit 85/27/16 at 60k/200k/600k; RAR-M21
-    - [ ] **4.11.8** Datagen label audit on `hce-v2` and `hce-v3-tb`
+    - [x] **4.11.8** Label audit — raw game-result contradiction: `hce-v2` 4.39%, `hce-v3` source 8.99%; RAR-M22
     - [ ] **4.11.9** Mate-drive blast radius over the dispatcher's promotion closure
     - [ ] **4.11.10** Restate RAR-E08, RAR-E11 and RAR-E12's conversion claims as superseded
     - [x] **4.11.11** Panic reported on stdout, where the harness keeps it
