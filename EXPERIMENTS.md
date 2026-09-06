@@ -179,6 +179,24 @@ remain valid. Full derivation and byte-preserved reports:
 `analysis/conversion_claims_correction_2026-09-06.md`,
 `analysis/artifacts/conversion-claims-correction-20260906.zip`.
 
+**RAR-M25 — 4.11b.2 board-v2 instrument and correctness corpus, COMPLETE
+2026-09-06.** Added a versioned ten-position profile generated and checked by
+`python-chess` 1.11.2. It mechanically requires real single/double checks and
+evasions, legal/pinned-illegal EP, quiet/capture underpromotions, all four
+castles, and sparse long-history material. Rarog now checks exact canonical
+FEN, sorted legal/capture UCI identities, perft/divides, keys, occupancy,
+pieces and full restoration through normal/hinted/staged/null/clone/unwind
+paths. A negative-control test corrupts a legal move, perft count and board
+state and requires the preflight to reject each. Coordinate-ray coverage
+passes every relevant slider occupancy on magic and PEXT, debug and release.
+The independent `rarog-board-v2` benchmark is not the frozen cross-engine-v1
+benchmark: it reports separately precomputed generation, mutation and SEE
+workloads, raw samples, a portable `black_box` output checksum, and a warmed
+allocation guard that observed zero allocations. The archived magic run has
+the compiler, host, flags, input hashes and raw samples at
+`analysis/artifacts/board-v2-20260906/`. **No engine change, cross-engine
+comparison, NPS conclusion or strength claim.**
+
 **RAR-M19 ownership update, 2026-09-05:** its historical result above is
 unchanged. Behavior-neutral value injection and initial normalized SEE
 benchmark restoration now belong to **4.11b.6**. Post-final-HCE scale audit

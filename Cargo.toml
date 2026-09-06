@@ -108,3 +108,7 @@ panic = "abort"
 [[bench]]
 name = "board"
 harness = false
+
+[[bench]]
+name = "board_v2"
+harness = false

@@ -1992,7 +1992,8 @@ remains after the final HCE in 4.15.3-4.15.4.
    python-chess positions, 48,462 hinted make/unmakes and 107,648 magic-slider
    occupancies passed. None of that disproves the focused failures below.
 
-2. **4.11b.2 Strengthen the instrument and regression corpus.** Keep
+2. **4.11b.2 Strengthen the instrument and regression corpus -- DONE
+   (RAR-M25, 2026-09-06).** Kept
    cross-engine-board-v1 immutable for historical comparison. Add a versioned
    coverage profile containing real single/double checks, evasions, legal and
    illegal EP, promotions/underpromotions, both castlings, sparse endgames and
@@ -2013,6 +2014,21 @@ remains after the final HCE in 4.15.3-4.15.4.
    manifest. Do not relabel the old tests/board_performance.rs as v1: it uses
    the legacy corpus/estimator. Done when preflight fails on deliberately
    wrong moves, work counts or state, and the corrected corpus passes.
+   `board-v2` now supplies ten externally generated profiles with all required
+   categories. `tests/board_v2.rs` compares canonical FEN, sorted legal and
+   capture identities, perft/divides and incremental-state restoration; its
+   structural negative controls reject a wrong EP move, wrong perft total and
+   a mutated board. It also covers normal/hinted make, staged paths, null
+   roundtrips, a 600-ply unwind and independent cloning. Every relevant
+   slider occupancy agrees with coordinate rays on magic and PEXT. The separate
+   `rarog-board-v2` benchmark precomputes its inputs and reports seven raw
+   samples for legal generation, capture generation, staged generation,
+   make/unmake and threshold SEE. Its warmed-primitives allocation guard
+   reports zero allocations; `black_box` plus a printed checksum supplies the
+   portable live-output barrier. RAR-M25's archived run and manifest are at
+   `analysis/artifacts/board-v2-20260906/`; recipe and limits are in
+   `analysis/board_v2_instrument_2026-09-06.md`. These are instrument and
+   correctness results, not an HCE-speed or strength comparison.
 
 3. **4.11b.3 Repair parser and counter boundaries.** Move::from_uci("aé1")
    currently panics because a four-byte string is sliced through a UTF-8

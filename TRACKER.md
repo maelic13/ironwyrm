@@ -15,6 +15,16 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
+- **2026-09-06 — PLAN 4.11b.2, RAR-M25:** added the versioned board-v2
+  external-oracle corpus and isolated benchmark without changing the frozen
+  cross-engine v1 benchmark. The ten cases cover checks/evasions, EP,
+  promotions, all castles, sparse material and long histories. Rarog's
+  identity/perft/divide/state paths, magic/PEXT coordinate rays and a
+  zero-allocation guard pass; the structural preflight negative controls reject
+  wrong moves, work and state. Raw samples and a full local manifest are at
+  `analysis/artifacts/board-v2-20260906/`. No engine or strength claim. Next
+  is 4.11b.3.
+
 - **2026-09-06 — PLAN 4.11.10, RAR-M24:** reran preserved RAR-E08
   baseline/head and RAR-E08/E12-candidate binaries through the repaired v2
   truth runner. RAR-E08 aggregate conversion is corrected from its invalid v1
