@@ -16,8 +16,8 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.11.9 — mate-drive promotion-closure accounting**, not started |
-| Instrument state | 4.10 repairs, 4.11.7 budget transfer and 4.11.8 label audit are complete; corrected v2 baselines/floors recorded at 4.11.1–4.11.3. Historical v1 pawn-family conversion claims remain superseded; remaining corrections are open at 4.11.9–4.11.10 |
+| Current step | **4.11.10 — restate contaminated conversion claims**, not started |
+| Instrument state | 4.10 repairs, 4.11.7 budget transfer, 4.11.8 label audit and 4.11.9 mate-drive closure are complete; corrected v2 baselines/floors recorded at 4.11.1–4.11.3. Historical v1 pawn-family conversion claims remain superseded; the remaining correction is 4.11.10 |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
 
@@ -32,8 +32,8 @@ The nominal order is unchanged. **4.11.7 was held in its original place**;
 the earlier guide simply did not show the scheduling hold. Claude's handoff
 predates 4.11b and is not the current roadmap: after 4.11 comes **4.11b**, then
 4.12. The maintainer authorized heavy computation, and **4.11.7 is now complete**
-(RAR-M21, 2026-09-06). RAR-M22 subsequently completed 4.11.8. The next leaf
-is **4.11.9**, which has not started.
+(RAR-M21, 2026-09-06). RAR-M22 and RAR-M23 subsequently completed 4.11.8 and
+4.11.9. The next leaf is **4.11.10**, which has not started.
 
 | Leaf | State and reason | Unblock event / owner | Dependency boundary |
 |---|---|---|---|
@@ -41,8 +41,9 @@ is **4.11.9**, which has not started.
 
 RAR-M22 completed 4.11.8 from hash-verified source PGNs and local 3–6-man
 truth. Its raw game-result audit is an input to 4.13.1, not a row-level audit
-of the already corrected `hce-v3-tb` CSVs. 4.11.9/4.11.10 remain open and may
-use completed RAR-M21/RAR-M22 evidence; do not quietly pass their dependency
+of the already corrected `hce-v3-tb` CSVs. RAR-M23 closed 4.11.9's promotion
+closure and recorded two family debts. 4.11.10 remains open and may use
+completed RAR-M21/RAR-M22/RAR-M23 evidence; do not quietly pass its dependency
 boundary before 4.11b.
 
 At each handoff review every held item: state what was done, what is still
@@ -835,7 +836,8 @@ so nothing is lost when the two are compared.
   movement, accept or reject in context, and never require every position to
   keep the same PV or mate length.
 
-- **4.9a.4 Mate-drive cluster -- DONE; isolation accounting SUPERSEDED -> 4.11.9.** RAR-E10.
+- **4.9a.4 Mate-drive cluster -- DONE; isolation accounting SUPERSEDED and
+  re-accounted by RAR-M23; debts -> 4.12.7/4.12.9.** RAR-E10.
   KBN-K **19.4% -> 96.9%**, KBB-K **78.0% -> 100.0%**, `bench 13` unchanged at
   7,226,051 / 2.460, floors ratcheted. Three axes were needed -- resolution,
   magnitude and ratio -- and the ratio was nearly missed: the diagonal shape
@@ -852,10 +854,11 @@ so nothing is lost when the two are compared.
   departs from the stated rule that only a registered SPRT accepts a candidate,
   and is recorded as a judgement call rather than a gate. What justified it:
   bench byte-identical, activation triply gated (`|eval| > 200` AND a bare
-  losing king AND no pawn, rook or queen for the winner), 15 of 19 families
-  measured exactly unchanged, theory vetoes and floors passing, and a tier-3
-  occurrence of 0.28% at which a `[0,3]` gate cannot resolve anything at any
-  budget this project has.
+  losing king AND no pawn, rook or queen for the winner), the then-recorded
+  isolation argument, theory vetoes and floors passing, and a tier-3 occurrence
+  of 0.28% at which a `[0,3]` gate cannot resolve anything at any budget this
+  project has. RAR-M23 supersedes that isolation argument: six families change
+  through the promotion closure, including net debt in KBP-KB and KBP-KN.
 
   What that does not establish: bench-identical proves only that the 40 bench
   positions' trees never reach a minor-piece bare-king mate within depth 13,
@@ -1783,14 +1786,22 @@ which is what exposed the dependency inversion.
    `analysis/datagen_label_audit_2026-09-06.md`. 4.13.1 owns row-level
    game-to-extraction lineage and separate relabel/whole-game-adjudication
    choices. No games, HCE change or strength claim.
-9. **4.11.9 Mate-drive blast radius.** Re-run 4.9a.4's non-regression accounting
-   over the PROMOTION CLOSURE of its dispatcher condition rather than over
-   families the safety argument had already excluded. The measurement is done
-   and is recorded above: six families change, not two, and KBP-KB and KBP-KN
-   each lost one conversion. What remains is to decide whether those two count
-   as debt, and to write the closure rule into the family template so the next
-   recognizer states which families reach it by promotion -- or tests all of
-   them and lets the data name them.
+9. **4.11.9 Mate-drive blast radius -- DONE, RAR-M23, 2026-09-06.** Re-read
+   the paired 4.9a.4 pre/post reports over their identical 19-family,
+   60,000-node, seed-6200600 cohort and verified every FEN/index/theory field
+   before differencing. The promotion closure changes six families: direct
+   KBB-K **78/100 -> 100/100** and KBN-K **19/98 -> 95/98**; promotion-reached
+   KPP-K **75/98 -> 75/98**, KBP-K **90/94 -> 92/94**, KBP-KB
+   **18/26 -> 17/26**, and KBP-KN **45/57 -> 44/57**. KBP-KB and KBP-KN each
+   therefore carry a **net one-conversion causal debt**: same cohort, shipped
+   mechanism, family result worse. Their offsetting paired gains do not erase
+   the debt; KBP-K's +2 net result and KPP-K's zero net result remain closure
+   regression guards, not debt. The source reports predate 4.10's material-shed
+   repair, so this matrix establishes the historical mechanism and debt
+   ownership, **not** current conversion rates or floors. Full matrix, hashes
+   and byte-preserved reports: `analysis/mate_drive_promotion_closure_2026-09-06.md`.
+   The required family-template closure rule is recorded under 4.12 below;
+   KBP-KB and KBP-KN are owned by 4.12.7 and 4.12.9. No engine change or games.
 10. **4.11.10 Corrections in place.** Restate RAR-E08's "aggregate weighted
     conversion 83.24% -> 83.45%", RAR-E12's "0.8345 -> 0.8477", RAR-E11 in full,
     and the KQ-KP -3.8 pp debt, against the corrected instrument. Mark the
@@ -1883,7 +1894,7 @@ which is what exposed the dependency inversion.
 
 **Integrated 2026-09-05 after reconciling the a0aeb68 roadmap.** Finish the
 remaining 4.11 leaves first, then execute this section before 4.12. The current
-next step is 4.11.9 after completed 4.11.7 and 4.11.8; this insertion preserves
+next step is 4.11.10 after completed 4.11.7–4.11.9; this insertion preserves
 all completed work and
 4.11.12's registered v2 endgame order until changed evidence warrants a rerank.
 The board audit and measurement are complete; the repairs and optimizations
@@ -2215,8 +2226,18 @@ result. Rarog's present meaningful coverage is 7/20.
   Promotion manufactures material, so a term keyed on "no pawn, rook or queen
   for the winner" is reachable from any pawn family through under-promotion.
   State which families reach a term by promotion and include them, or test all
-  twenty-one and let the data name them. Rarog's own mate drive reaches six
+  twenty-one and let the data name them. Rarog's own mate drive changes six
   families this way (4.11.9).
+- **Every family leaf records the same closure block.** Name the dispatcher's
+  complete runtime condition, its direct root-material matches, and its
+  promotion closure: either prove which families can reach the condition on a
+  legal truth-preserving path, including under-promotions and material sheds,
+  or test all twenty-one families. Report paired gained and lost conversions,
+  not only the net. A same-cohort net conversion loss from a shipped mechanism
+  is debt even when other families gain; a nonnegative-net family remains a
+  regression guard. Do not turn a historical, instrument-contaminated matrix
+  into a current floor: re-measure it on the current corrected instrument when
+  a family leaf needs a current rate.
 - **A guidance gradient has a FLAT MAXIMUM in whatever it does not
   reference.** Rarog's mate drive scores the two kings and the bishop's colour
   and nothing else, so among moves that leave the losing king on the same
@@ -2266,9 +2287,9 @@ or overwriting v2. Rank alone never accepts a family change.
 | 4.12.4 | KRKN | 8 | scale | 1.000 | 0.0051 | 0.00000 | **100%** overclaim at +346; tree occurrence ZERO, and Rarog reaches it at 1.6x the pool rate -- 4.12.1 asks whether the defect is causing the occurrence |
 | 4.12.5 | KRKB | 7 | scale | 0.996 | 0.0046 | 0.00022 | **99.6%** overclaim at +307; same over-representation as KR-KN |
 | 4.12.6 | KRPKB | 14 | scale | 1.000 | 0.0045 | 0.00041 | 4.9a.8 covered rook pawns; **100%** overclaim at +328 remains |
-| 4.12.7 | KBPKB | 17 | scale | 0.609 | 0.0067 | 0.00016 | 60.9% overclaim at +142 |
+| 4.12.7 | KBPKB | 17 | scale | 0.609 | 0.0067 | 0.00016 | 60.9% overclaim at +142; owns 4.11.9 promotion-closure debt |
 | 4.12.8 | KRKP | 6 | scale | 0.264 | 0.0125 | 0.00241 | 26.4% overclaim at +72 |
-| 4.12.9 | KBPKN | 19 | scale | 0.507 | 0.0029 | 0.00019 | 50.7% overclaim; mate-drive debt from 4.11.9 |
+| 4.12.9 | KBPKN | 19 | scale | 0.507 | 0.0029 | 0.00019 | 50.7% overclaim; owns 4.11.9 promotion-closure debt |
 | 4.12.10 | KQKR | 10 | verdict | 0.230 | 0.0063 | 0.00048 | largest conversion deficit (23). RAR-M15 read it as 0 of 3,915 games and PLAN called it 'worth nothing'; 4.11.12 measured **63 of Rarog's 10,000 tournament games** |
 | 4.12.11 | KPK | 5 | scale | 0.046 | 0.0241 | 0.00231 | 4.6% overclaim; present bitbase |
 | 4.12.12 | KPKP | 20 | scale | 0.038 | 0.0128 | 0.00230 | 3.8% overclaim, nearly clean |
@@ -3304,7 +3325,7 @@ Phase 5.2 owns the historical board baseline and event-cost attribution;
 Subsystem-audit planning update, 2026-09-05: no existing step was renumbered or
 removed. 4.11.7 was held in place at that update; the maintainer subsequently
 authorized its compute run, completed as RAR-M21 on 2026-09-06. 4.11.8 later
-completed as RAR-M22 on 2026-09-06. 4.11.9 is next.
+completed as RAR-M22 and 4.11.9 as RAR-M23 on 2026-09-06. 4.11.10 is next.
 New analysis owners are 4.13a (HCE) and 4.15a–c (storage, integration and
 instruments); existing search, data, TM, NNUE and closure owners are expanded.
 Their implementation substeps will be derived from the audits, not invented

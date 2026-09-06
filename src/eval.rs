@@ -2337,13 +2337,15 @@ impl Evaluator {
             // losing king to a corner matching the winning bishop's colour
             // instead; keep the generic drive for every other won ending.
             // 4.9a.4. The finer drive applies ONLY when the losing side is a
-            // bare king -- the actual KXK/KBNK mating families. The enclosing
+            // bare king at the point of evaluation. KXK/KBNK match directly,
+            // but a pawn-root family can enter this material shape after an
+            // under-promotion and exchange; its real scope is the dispatcher's
+            // promotion closure (4.11.9), never root material alone. The enclosing
             // gate is `|approximate| > 200`, which is "up two pawns" and fires
             // in plenty of middlegames; scaling the drive there moved `bench 13`
             // by +7.9% (7,226,051 -> 7,800,345) purely by perturbing positions
             // this term was never meant to steer. Everything else keeps the old
-            // mild edge push, so the blast radius is exactly the families 4.9a
-            // is about.
+            // mild edge push, avoiding a broad middlegame blast radius.
             // Scoped to MINOR-PIECE mates, following Basilisk BAS-E34. Their
             // first version drove every bare-king mate, queen and rook
             // included, and cost +20.5% bench nodes; restricting it to

@@ -15,6 +15,15 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
+- **2026-09-06 — PLAN 4.11.9, RAR-M23:** paired the archived 4.9a.4 reports
+  over their identical 19-family cohort and established the mate drive's
+  promotion closure. Six families change; KBP-KB and KBP-KN each fall one net
+  conversion and now carry debt at 4.12.7/4.12.9. The old material-shed
+  instrument makes this a historical causal matrix, not current conversion
+  floors. Preserved reports, derivation and matrix in
+  `analysis/artifacts/mate-drive-promotion-closure-20260906.zip`. No engine
+  change, game or strength claim; 4.11.10 is next.
+
 - **2026-09-06 — PLAN 4.11.8, RAR-M22:** audited all 1,202,619 source games
   for `hce-v2` and the `hce-v3` source of `hce-v3-tb`, at the hash-pinned
   8,000-node datagen budget with 3–6-man Syzygy. Raw game-result contradiction:

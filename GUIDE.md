@@ -17,14 +17,14 @@ and `python tools/diag/check_guide.py` must pass.
 | Measured search deficit | **355.26 +/- 27.03 Elo** equal nodes; **250.77 +/- 13.12** equal time; speed worth **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
-| Instrument state | **4.10 repaired; v2 baselines/floors, budget transfer and label audit recorded.** Remaining corrections: 4.11.9–4.11.10 |
-| Current step | **4.11.9 — mate-drive promotion-closure accounting**, not started |
+| Instrument state | **4.10 repaired; v2 baselines/floors, budget transfer, label audit and mate-drive closure recorded.** Remaining correction: 4.11.10 |
+| Current step | **4.11.10 — restate contaminated conversion claims**, not started |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## Next and held work
 
-**Next: 4.11.9 — mate-drive promotion-closure accounting.** Then 4.11.10.
-4.11.7 and 4.11.8 are complete; their scheduling holds/evidence gaps are resolved.
+**Next: 4.11.10 — restate RAR-E08, RAR-E11 and RAR-E12 conversion claims.**
+4.11.7–4.11.9 are complete; their scheduling holds/evidence gaps are resolved.
 
 | Open hold | Resume when | Must be resolved before |
 |---|---|---|
@@ -73,7 +73,7 @@ next step; the maintainer does not need to run a queue script.
     - [x] **4.9a.1** Truth corpus — result was invalid, REPLACED by the 4.11.1 baseline
     - [x] **4.9a.2** Endgame-start cohort book — 788 verified positions, 21 families
     - [x] **4.9a.3** Regression contract — floors REPLACED by 4.11.2; the 64 theory vetoes always stood
-    - [x] **4.9a.4** SUPERSEDED -> 4.11.9 — gain stands (KBN-K **19.4% -> 96.9%**); isolation reaches 6 families
+    - [x] **4.9a.4** SUPERSEDED -> 4.12.7 and 4.12.9 — gain stands (KBN-K **19.4% -> 96.9%**); promotion closure reaches 6 families
     - [x] **4.9a.5** RAR-E08 **ACCEPTED** +6.73 +/- 3.82 Elo — TB-corrected labels win
     - [x] **4.9a.6** `hce-v3-tb` fitted and gated — RAR-E12 **+11.81 +/- 5.33 Elo**
     - [x] **4.9a.7** SUPERSEDED -> 4.12.2 — KRPKR drawn overclaim **37.1% -> 25.8%** stands; conversion half does not
@@ -100,7 +100,7 @@ next step; the maintainer does not need to run a queue script.
     - [x] **4.11.6** 4.12 re-ranked and REGISTERED; leaves renumbered to match
     - [x] **4.11.7** Budget transfer — net reference deficit 85/27/16 at 60k/200k/600k; RAR-M21
     - [x] **4.11.8** Label audit — raw game-result contradiction: `hce-v2` 4.39%, `hce-v3` source 8.99%; RAR-M22
-    - [ ] **4.11.9** Mate-drive blast radius over the dispatcher's promotion closure
+    - [x] **4.11.9** Mate-drive promotion closure — 6 families; KBP-KB/KBP-KN each net −1 conversion debt; RAR-M23
     - [ ] **4.11.10** Restate RAR-E08, RAR-E11 and RAR-E12's conversion claims as superseded
     - [x] **4.11.11** Panic reported on stdout, where the harness keeps it
     - [x] **4.11.12** Occurrence re-measured over 36,400 rated games; 4.12 re-ranked to **v2**
@@ -130,7 +130,7 @@ next step; the maintainer does not need to run a queue script.
     - [ ] **4.12.4** KRKN [ref 8] scale — **100%** overclaim at +346; Rarog reaches it 1.6x the pool rate
     - [ ] **4.12.5** KRKB [ref 7] scale — **99.6%** overclaim at +307; same 1.6x over-representation
     - [ ] **4.12.6** KRPKB [ref 14] scale — **100%** overclaim at +328 after 4.9a.8's rook pawns
-    - [ ] **4.12.7** KBPKB [ref 17] scale — 60.9% overclaim at +142
+    - [ ] **4.12.7** KBPKB [ref 17] scale — 60.9% overclaim; mate-drive debt from 4.11.9
     - [ ] **4.12.8** KRKP [ref 6] scale — 26.4% overclaim at +72
     - [ ] **4.12.9** KBPKN [ref 19] scale — 50.7% overclaim; mate-drive debt from 4.11.9
     - [ ] **4.12.10** KQKR [ref 10] verdict — deficit 23/13/3 at 60k/200k/600k; 0.63% of Rarog's games
