@@ -13,6 +13,16 @@ current step and `PLAN.md` for what it involves. The old numbers are kept
 because commits, `EXPERIMENTS.md` rows and analysis documents cite them; the
 two numbering schemes do not correspond and are not meant to.
 
+## Completed current-roadmap work (dated records; PLAN owns IDs)
+
+- **2026-09-06 — PLAN 4.11.7, RAR-M21:** completed the authorized
+  60k/200k/600k conversion bracket, all 19 families and both engines.
+  Net reference deficit 85/27/16 of 1372 initially won starts. Both historical
+  60k reports reproduced exactly. Preserved six reports, paired FEN changes,
+  provenance and validation in `analysis/artifacts/budget-transfer-20260905.zip`.
+  Debug/release tests, fmt, Clippy and 156 tooling tests passed. No engine
+  change. Stopped at the maintainer's request; 4.11.8 was not started.
+
 ## Closed work through 2.3.2
 
 Phases 0–3 built the engine, the harness, the correctness programme, the

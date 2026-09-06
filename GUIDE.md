@@ -17,18 +17,17 @@ and `python tools/diag/check_guide.py` must pass.
 | Measured search deficit | **355.26 +/- 27.03 Elo** equal nodes; **250.77 +/- 13.12** equal time; speed worth **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
-| Instrument state | **4.10 repaired; v2 baselines/floors recorded.** Budget transfer and remaining corrections: 4.11.7–4.11.10 |
-| Current step | **4.11.8 — datagen label audit**; 4.11.7 held for scheduled compute |
+| Instrument state | **4.10 repaired; v2 baselines/floors and budget transfer recorded.** Remaining audits/corrections: 4.11.8–4.11.10 |
+| Current step | **4.11.8 — datagen label audit**, not started; stopped after completing 4.11.7 as requested |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## Next and held work
 
-**Next: 4.11.8 — audit datagen labels; zero games.** Then 4.11.9 and 4.11.10
-where independent. 4.11.7 has not moved or been completed.
+**Next: 4.11.8 — datagen label audit.** Then 4.11.9 and 4.11.10.
+4.11.7 is complete; its scheduling hold is resolved.
 
 | Open hold | Resume when | Must be resolved before |
 |---|---|---|
-| **4.11.7** Budget transfer | Maintainer schedules the 60k/200k/600k run | 4.11 closes and 4.11b starts |
 | **4.12.21** Future 7-man evidence gap | Independent truth/verification becomes available, or a justified exclusion is recorded | 4.12.23 closes |
 
 Follow the earliest **unblocked** leaf. Keep held items unticked in their
@@ -99,7 +98,7 @@ next step; the maintainer does not need to run a queue script.
     - [x] **4.11.4** Drawn-share census — **KR-KN 1.000, KR-KB 0.996** at +346/+307 cp
     - [x] **4.11.5** Occurrence split by root — **3 of 40 roots give 56%** of the census
     - [x] **4.11.6** 4.12 re-ranked and REGISTERED; leaves renumbered to match
-    - [ ] **4.11.7** HELD — budget transfer; resume on maintainer-scheduled compute
+    - [x] **4.11.7** Budget transfer — net reference deficit 85/27/16 at 60k/200k/600k; RAR-M21
     - [ ] **4.11.8** Datagen label audit on `hce-v2` and `hce-v3-tb`
     - [ ] **4.11.9** Mate-drive blast radius over the dispatcher's promotion closure
     - [ ] **4.11.10** Restate RAR-E08, RAR-E11 and RAR-E12's conversion claims as superseded
@@ -134,7 +133,7 @@ next step; the maintainer does not need to run a queue script.
     - [ ] **4.12.7** KBPKB [ref 17] scale — 60.9% overclaim at +142
     - [ ] **4.12.8** KRKP [ref 6] scale — 26.4% overclaim at +72
     - [ ] **4.12.9** KBPKN [ref 19] scale — 50.7% overclaim; mate-drive debt from 4.11.9
-    - [ ] **4.12.10** KQKR [ref 10] verdict — deficit 23 — **0.63% of Rarog's games, not zero**
+    - [ ] **4.12.10** KQKR [ref 10] verdict — deficit 23/13/3 at 60k/200k/600k; 0.63% of Rarog's games
     - [ ] **4.12.11** KPK [ref 5] scale — 4.6% overclaim; present bitbase
     - [ ] **4.12.12** KPKP [ref 20] scale — 3.8% overclaim, nearly clean
     - [ ] **4.12.13** KQKP [ref 9] verdict — owns RAR-E08's KQ-KP debt

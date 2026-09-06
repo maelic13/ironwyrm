@@ -99,6 +99,36 @@ X is good/bad”. If conditions or artifacts are unknown, say so.
 
 | RAR-M20 | **Board audit and native three-engine comparison, 2026-09-05.** Rarog ca03a46; Basilisk d734766; Reckless 91b56c2 plus the complete benchmark-only adapter. Native optimized non-PGO builds, Ryzen 9 5950X, affinity mask 4; three cyclic rounds, 150ms warmup + 11x150ms per workload. | **Basilisk faster in all five comparable workloads.** Median M ops/s Rarog/Basilisk/Reckless: legal moves **447.131/642.646/339.844**; captures **98.204/120.138/61.597**; generation+make/unmake **42.521/55.031/23.494**; perft **273.741/382.726/177.944**; two-ply simulation **351.809/513.537/246.626**. Native SEE **46.676/58.814/39.722** is NOT comparable: value vectors/contracts differ. Confirmed SEE king-exchange defect (-400/true instead of -300/false at zero), Unicode move parser panic, fullmove debug overflow/release wrap; no Rarog fix or games in this audit. | Owner **4.11b**, correctness then HCE profile and bounded optimization. Every Basilisk round beat every Rarog round, which beat every Reckless round, in the five comparable columns; active desktop load 6.25–9.17%, substantial scatter in some cells, no small-gain or Elo inference. Reckless uses **NullBoardObserver**, so this excludes NNUE arithmetic and does not isolate NNUE-related board cost. Preserve raw data for **5.2.1**, measure move-event/scaffold costs at **5.2.5/5.3.4**, actual-network update/inference at **6.4.3**. Keep 4.15 production fitting separate from 4.11b.6's neutral value injection. | `analysis/board_audit_2026-09-05.md`; `analysis/board_benchmark_recipe_2026-09-05.md` embeds exact builds, complete adapter patch, source/binary hashes, runner and nine raw outputs; machine-readable `analysis/artifacts/board-audit-20260905/manifest.json`. Archived binaries remain at `D:/chess/results/board-audit-20260905/binaries/`; recipes and results do not depend on a candidate branch. |
 
+**RAR-M21 — 4.11.7 budget transfer, registered 2026-09-05; COMPLETE 2026-09-06.**
+Baseline `6e8044a`, exact production features (empty), bench 13
+6,901,489 / EBF 2.458. Frozen Stockfish 18 reference; full corrected 19-family
+cohort, 100 positions/family, seed 6200600, 60k/200k/600k nodes/move,
+100-ply cap, Hash 16, Threads 1, engine TB disabled, 30 workers.
+Hypothesis: the existing per-family conversion deficits persist at deployment-
+representative budgets. This is a diagnostic, not an SPRT or an acceptance
+gate; no engine change is proposed. Stop on failed commands, changed cohort,
+or failure to reproduce either historical 60k family report; investigate
+before advancing. Complete all registered budgets otherwise. Protocol and
+decisive cases: `analysis/endgame_budget_transfer_2026-09-05.md`.
+Exact commands, binary/harness hashes and exit statuses:
+`tools/results/budget-transfer-20260905/manifest.json`, preserved with all raw
+reports in `analysis/artifacts/budget-transfer-20260905.zip`;
+reproduction driver: `python tools/diag/run_4117_registered.py` (build/input
+prerequisites and protected output paths are documented in the analysis).
+**Result:** both fresh 60k reports reproduce exactly; all six commands succeed.
+Rarog converts **1276/1336/1346 of 1372** at 60k/200k/600k, Stockfish
+**1361/1363/1362**: net deficit **85/27/16**. KBN-K and KQ-KP reach full
+conversion at both higher budgets; a persistent conversion-defect claim from
+their 60k result is not supported. KQ-KR remains behind **23/13/3**;
+KNN-KP **9/6/8**, non-monotone. KRP-KR, KRP-KB, KBP-KN and KP-KP also
+retain deficits across the bracket. Paired Rarog gains/losses are **70/10**
+then **19/9**, so aggregate improvement does not imply per-position dominance.
+**Disposition:** close 4.11.7; preserve v2's frozen 60k ranking, attach this
+budget qualification to 4.11b.18/4.12.1 and the family owners. Static-draw
+overclaims and historical matched-arm refit/mate-drive debts are not cancelled.
+No engine implementation or strength gate. Debug/release tests, fmt, Clippy,
+156 tooling tests and report/byte-level archive validation passed.
+
 **RAR-M19 ownership update, 2026-09-05:** its historical result above is
 unchanged. Behavior-neutral value injection and initial normalized SEE
 benchmark restoration now belong to **4.11b.6**. Post-final-HCE scale audit

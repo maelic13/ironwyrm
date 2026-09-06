@@ -109,10 +109,11 @@ reference arm rather than re-analysing it.
    nearly always convertible -- not a hard family where both engines struggle.
    The step's accepted mechanism still stands; it was measured on the drawn
    cohort, which plays nothing.
-3. **The largest single deficit is now KQ-KR at 77/100 against 100/100.** In the
+3. **At 60k, the largest single deficit is KQ-KR at 77/100 against 100/100.** In the
    pre-correction ordering that family sits at **4.12.17**, near the END of the
-   list, on a 0% board occurrence. 4.11.4 owns the re-ranking; this is its
-   sharpest input.
+   list, on a 0% board occurrence. That ordering is historical: 4.11.6 owned
+   the first re-ranking, and 4.11.12 superseded it with ranking v2 after the
+   occurrence-classifier correction. KQ-KR now belongs to **4.12.10**.
 4. **Defect C is closed by reproduction.** The floors recorded KBN-K conversion
    0.8980 (n=98) and dtz progress 0.6753 (n=3178) from a run that existed
    nowhere. The current-head arm reproduces **both to four decimals with
@@ -127,4 +128,10 @@ None of these numbers is a strength claim. This is layers 1-3
 strength, and the 85-position deficit is a priority signal for 4.12, not an Elo
 estimate. The budget is also 60,000 nodes, below the p25 of deployment
 (`analysis/node_budget_2026-09-04.md`), so every family verdict taken here is
-PROVISIONAL until 4.11.5 brackets it.
+budget-specific. **4.11.7 is now complete (RAR-M21, 2026-09-06)**; the former
+4.11.5 budget-transfer owner was renumbered. The completed follow-up,
+`analysis/endgame_budget_transfer_2026-09-05.md`, finds net deficits of
+85/27/16 at 60k/200k/600k. KBN-K and KQ-KP reach full conversion at both
+higher budgets; KQ-KR's gap narrows from 23 to 13 to 3. Thus those original
+60k magnitudes do not transfer unchanged to deployment-representative search.
+Preserve this report as the 60k baseline, not a budget-independent verdict.

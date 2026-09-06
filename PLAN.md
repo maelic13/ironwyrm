@@ -1,6 +1,6 @@
 # Rarog development plan
 
-Updated 2026-09-05. This is the current roadmap. Historical evidence belongs
+Updated 2026-09-06. This is the current roadmap. Historical evidence belongs
 in `EXPERIMENTS.md`; current status and commands belong in `GUIDE.md`.
 Phase 4's open work was reordered and renumbered on 2026-09-04 after an
 instrument audit; section 13 maps the old numbers to the new ones.
@@ -16,8 +16,8 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.11.8 — datagen label audit**, next independent leaf; 4.11.7 remains held for a maintainer-scheduled compute run |
-| Instrument state | 4.10 repairs are complete; corrected v2 baselines/floors recorded at 4.11.1–4.11.3. Historical v1 pawn-family conversion claims remain superseded; budget transfer and remaining corrections are open at 4.11.7–4.11.10 |
+| Current step | **4.11.8 — datagen label audit**, not started; maintainer requested a stop after completed 4.11.7 |
+| Instrument state | 4.10 repairs and 4.11.7 budget transfer are complete; corrected v2 baselines/floors recorded at 4.11.1–4.11.3. Historical v1 pawn-family conversion claims remain superseded; remaining audits/corrections are open at 4.11.8–4.11.10 |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
 
@@ -28,23 +28,22 @@ must earn its own continuation.
 
 ### Execution queue and explicit holds
 
-The nominal order is unchanged. **4.11.7 was never moved forward or ticked**;
+The nominal order is unchanged. **4.11.7 was held in its original place**;
 the earlier guide simply did not show the scheduling hold. Claude's handoff
 predates 4.11b and is not the current roadmap: after 4.11 comes **4.11b**, then
-4.12. The active independent leaf is **4.11.8**, not an automatic instruction
-to start a long run or to begin engine implementation during this plan update.
+4.12. The maintainer authorized heavy computation, and **4.11.7 is now complete**
+(RAR-M21, 2026-09-06). Stop here as subsequently requested; the next leaf is
+**4.11.8**, which has not started.
 
 | Leaf | State and reason | Unblock event / owner | Dependency boundary |
 |---|---|---|---|
-| 4.11.7 | HELD for scheduling, not proven hardware unavailability | Maintainer allocates the 60k/200k/600k compute run; agent supplies the command when requested | Required before closing 4.11 or entering 4.11b; budget-dependent conclusions remain provisional |
 | 4.12.21 | Future evidence gap, not a skipped completed step | Obtain independent 7-man truth/verification, or record a justified scope exclusion under 4.12's closure contract | Cannot claim this family verified or close 4.12.23 with unowned missing evidence |
 
-4.11.8 uses stored corpus labels/tablebase truth and is independent of the
-long budget run; it still requires the input files/tables and may involve a
-large scan. Record any missing input as a new explicit hold rather than
+4.11.8 uses stored corpus labels/tablebase truth; it requires the input
+files/tables and may involve a large scan. Record any missing input as a new explicit hold rather than
 silently selecting another step. 4.11.9/4.11.10 may do their independent
-analysis/corrections, but cannot claim budget transfer succeeded. After them,
-return to 4.11.7; do not quietly pass its dependency boundary.
+analysis/corrections using the completed RAR-M21 bracket. All three remain
+open; do not quietly pass their dependency boundary before 4.11b.
 
 At each handoff review every held item: state what was done, what is still
 held, its unblock event, and the next executable leaf. Resume the earliest
@@ -1743,9 +1742,11 @@ which is what exposed the dependency inversion.
    the correction it received is the point. Board occurrence was not merely
    under-sampled -- RAR-M15's classifier capped positions at six men, and its
    three zeros were not zeros.
-7. **4.11.7 Budget transfer -- HELD for a maintainer-scheduled run.** Keep
-   unticked; prepare the command when requested, not a long run by default.
-   Repeat the decisive family verdicts at
+7. **4.11.7 Budget transfer -- DONE, RAR-M21, 2026-09-06.** Protocol,
+   per-family results, limitations and decisive cases are recorded in
+   `analysis/endgame_budget_transfer_2026-09-05.md`; reproduction driver:
+   `python tools/diag/run_4117_registered.py`.
+   Repeated the decisive family verdicts at
    60k / 200k / 600k nodes. A verdict that does not reproduce at a
    game-representative budget is provisional: Basilisk rejected its leading
    candidate at 60,000 nodes on a losing move that a 200,000-node search sees.
@@ -1754,6 +1755,20 @@ which is what exposed the dependency inversion.
    60k is below p25 (`analysis/node_budget_2026-09-04.md`). Keep the corrected
    cohort and arm fingerprints fixed, name decisive cases before running,
    and record which conclusions transfer before 4.11b changes the board.
+   **Measured:** all 19 families, 100 positions each, both engine arms and
+   all three budgets; both 60k reports reproduced exactly. Rarog converted
+   **1276/1336/1346 of 1372**, Stockfish **1361/1363/1362**; net deficits
+   **85/27/16**. KBN-K and KQ-KP reach full conversion at 200k and 600k;
+   their 60k shortfalls are not persistent higher-budget defects. KQ-KR's
+   deficit persists at **23/13/3**, KNN-KP at **9/6/8**, KRP-KR at **5/2/1**,
+   KRP-KB at **5/1/1**, KBP-KN at **2/2/2**, KP-KP at **1/1/1**. KR-KP
+   closes at 600k. Gains hide losses: Rarog gains/loses **70/10** then **19/9**
+   positions across successive budgets. Preserve paired FENs in each family
+   review; causal search follow-up belongs to 4.15.1 only when demonstrated.
+   Static drawn-share evidence and historical matched-arm debts are separate
+   and remain owned. Full report and byte-preserving evidence ZIP:
+   `analysis/artifacts/budget-transfer-20260905.zip`. No engine changes or
+   strength games; debug/release tests, fmt, Clippy and 156 tooling tests pass.
 8. **4.11.8 Datagen label audit on the existing corpora.** Run 4.10.8 against
    `hce-v2` and `hce-v3-tb`. If two corpora exist at different node budgets the
    budget comparison is free. This is the input 4.13 needs and it costs no
@@ -1858,7 +1873,7 @@ which is what exposed the dependency inversion.
 
 **Integrated 2026-09-05 after reconciling the a0aeb68 roadmap.** Finish the
 remaining 4.11 leaves first, then execute this section before 4.12. The current
-next independent step is 4.11.8 while 4.11.7 is held; this insertion preserves
+next step is 4.11.8 after completed 4.11.7; this insertion preserves
 all completed work and
 4.11.12's registered v2 endgame order until changed evidence warrants a rerank.
 The board audit and measurement are complete; the repairs and optimizations
@@ -2223,7 +2238,13 @@ historical derivation above. KRPPKRP is 5.40% of Rarog's games, not absent;
 its blocker is local 7-man truth. KQKRPs is 0.42% of games and 4.41% of the
 measured tree. Ranks 3–8 form an evidence band, not a proven priority separation.
 
-Budget transfer at 4.11.7 and the board cluster at 4.11b may change the inputs.
+RAR-M21 at 4.11.7 now qualifies the conversion inputs by budget: KBN-K and
+KQ-KP reach full conversion at 200k/600k; KQ-KR's deficit falls 23/13/3,
+while KNN-KP remains non-monotone and behind. The table's numerical defect
+inputs remain the frozen v2 inputs, not newly measured higher-budget values.
+Do not use a vanished 60k conversion shortfall as a persistent defect, or
+cancel a separate static-draw/causal debt because conversion improved.
+The board cluster at 4.11b may change these inputs further.
 4.11b.18 refreshes only affected evidence and registers a new ranking version
 if necessary; 4.12.1 checks the latest artifact rather than blindly rerunning
 or overwriting v2. Rank alone never accepts a family change.
@@ -3201,7 +3222,8 @@ Phase 5.2 owns the historical board baseline and event-cost attribution;
 5.3 owns scaffold costs; 6.4 owns same-network incremental/SIMD attribution.
 
 Subsystem-audit planning update, 2026-09-05: no existing step was renumbered or
-removed. 4.11.7 remains held in place; 4.11.8 is the independent next leaf.
+removed. 4.11.7 was held in place at that update; the maintainer subsequently
+authorized its compute run, completed as RAR-M21 on 2026-09-06. 4.11.8 is next.
 New analysis owners are 4.13a (HCE) and 4.15a–c (storage, integration and
 instruments); existing search, data, TM, NNUE and closure owners are expanded.
 Their implementation substeps will be derived from the audits, not invented
