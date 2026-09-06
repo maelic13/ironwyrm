@@ -975,6 +975,55 @@ fn fullmove_counter_tracking() {
     );
 }
 
+#[test]
+fn fullmove_boundary_saturates_and_unmakes_for_real_and_null_moves() {
+    const MAX: u16 = u16::MAX;
+    let cases = [
+        ("white", "4k3/8/8/8/8/8/8/4K3 w - - 0 65535", "e1d1"),
+        ("black", "4k3/8/8/8/8/8/8/4K3 b - - 0 65535", "e8d8"),
+    ];
+
+    for (color, fen, uci) in cases {
+        let mut board = Board::from_fen(fen).expect("maximum fullmove FEN is valid");
+        let original = board.to_fen();
+        let mv = board.parse_move(uci).expect("boundary move is legal");
+        board.make_move(mv);
+        assert_eq!(board.fullmove, MAX, "real {color} move must saturate");
+        board
+            .check_consistency()
+            .expect("real move stays consistent");
+        board.unmake_move(mv);
+        assert_eq!(board.to_fen(), original, "real {color} move must unmake");
+
+        board.make_null_move();
+        assert_eq!(board.fullmove, MAX, "null {color} move must saturate");
+        board
+            .check_consistency()
+            .expect("null move stays consistent");
+        board.unmake_null_move();
+        assert_eq!(board.to_fen(), original, "null {color} move must unmake");
+    }
+
+    for color in ["w", "b"] {
+        let fen = format!("4k3/8/8/8/8/8/8/4K3 {color} - - 0 65536");
+        assert!(
+            Board::from_fen(&fen).is_err(),
+            "first fullmove value beyond u16 must be rejected for {color}"
+        );
+    }
+}
+
+#[test]
+fn malformed_uci_move_tokens_are_rejected_without_panicking() {
+    let board = Board::starting_position();
+    for input in ["aé1", "é2e4", "e2é4", "e2e4é", "e2e4qé"] {
+        let parsed = std::panic::catch_unwind(|| Move::from_uci(input));
+        assert!(parsed.is_ok(), "{input:?} must not panic");
+        assert_eq!(parsed.expect("panic already checked"), None, "{input:?}");
+        assert_eq!(board.parse_move(input), None, "{input:?}");
+    }
+}
+
 // -----------------------------------------------------------------------
 // Castling rights
 // -----------------------------------------------------------------------

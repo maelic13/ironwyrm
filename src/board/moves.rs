@@ -194,7 +194,9 @@ impl Move {
     }
 
     pub fn from_uci(input: &str) -> Option<Move> {
-        if input.len() != 4 && input.len() != 5 {
+        // UCI moves are ASCII. Check that before byte-indexing: a four-byte
+        // UTF-8 token such as `aé1` has no valid [0..2] character boundary.
+        if !input.is_ascii() || (input.len() != 4 && input.len() != 5) {
             return None;
         }
         let input = input.to_ascii_lowercase();

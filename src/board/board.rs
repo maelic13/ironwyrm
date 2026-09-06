@@ -18,6 +18,11 @@ use super::piece::{CastlingRights, Color, Piece};
 use super::square::{Rank, Square};
 use super::zobrist::ZOBRIST;
 
+/// FEN fullmove storage is deliberately bounded to `u16`. Zero is normalized
+/// to one on input; a black real or null move at the maximum saturates so the
+/// public counter is defined identically in debug and release.
+const MAX_FULLMOVE: u16 = u16::MAX;
+
 // -----------------------------------------------------------------------
 // Unmake info — everything needed to undo a move
 // -----------------------------------------------------------------------
@@ -1664,7 +1669,7 @@ FEN: {}",
 
         // Fullmove counter
         if us == Color::Black {
-            self.fullmove += 1;
+            self.fullmove = self.fullmove.checked_add(1).unwrap_or(MAX_FULLMOVE);
         }
         self.history.push(UnmakeInfo {
             captured,
@@ -1708,7 +1713,7 @@ FEN: {}",
             self.ep_sq = 255;
         }
         if self.side_to_move == Color::Black {
-            self.fullmove += 1;
+            self.fullmove = self.fullmove.checked_add(1).unwrap_or(MAX_FULLMOVE);
         }
         self.halfmove_clock = self.halfmove_clock.saturating_add(1);
         self.side_to_move = !self.side_to_move;
