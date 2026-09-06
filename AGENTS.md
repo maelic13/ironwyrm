@@ -269,6 +269,15 @@ did what its name suggests.**
   reserve deeper review for unresolved design, interaction or correctness
   questions. Recommendations are task judgments, not guarantees or claims of
   measured model superiority. Do not change the active model automatically.
+- **Pair EACH recommended model with its own thinking mode**: Medium, High,
+  Extra High, or a stronger mode using that model's actual supported name.
+  Choose effort independently for each model and the specific next leaf;
+  do not automatically give both models the same mode or assume their effort
+  labels are equivalent. Recommend the lowest effort judged sufficient for
+  the task's ambiguity and verification demands, not its compute duration.
+  Use `GPT: <model> — <mode>; Claude: <model> — <mode>` plus a brief reason.
+  If support or the exact mode name is unknown, say so rather than inventing
+  a setting. A recommendation does not authorize changing active settings.
 - Report what was actually measured. If a step was skipped or a result is
   partial, say so plainly.
 - For a multi-step session, give a short summary per completed leaf: ID,
