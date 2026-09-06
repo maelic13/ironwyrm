@@ -197,6 +197,21 @@ the compiler, host, flags, input hashes and raw samples at
 `analysis/artifacts/board-v2-20260906/`. **No engine change, cross-engine
 comparison, NPS conclusion or strength claim.**
 
+**RAR-M26 — 4.11b.3 parser and fullmove boundaries, COMPLETE 2026-09-06.**
+The previous `Move::from_uci("aé1")` passed its four-byte length check and
+panicked when slicing through UTF-8. It now refuses every non-ASCII token
+before indexing; an actual release UCI `position startpos moves aé1` exits 1
+with the existing `CRITICAL ERROR` diagnostic, rather than aborting. Fullmove
+is intentionally bounded to `u16`: FEN `0` remains compatible and normalizes
+to 1, `65535` is accepted and `65536` is rejected. At the maximum, real and
+null black moves saturate, white moves retain the counter, and both undo paths
+restore the original FEN/state. The new tests failed first on the debug
+overflow and UTF-8 panic, then passed in debug and release; full suites,
+fmt and all-feature/all-target clippy pass. A rebuilt default-feature
+production `bench 13` is exactly **6,901,489 / EBF 2.458**. This is a
+correctness repair for malformed and extreme input, not an NPS or strength
+claim.
+
 **RAR-M19 ownership update, 2026-09-05:** its historical result above is
 unchanged. Behavior-neutral value injection and initial normalized SEE
 benchmark restoration now belong to **4.11b.6**. Post-final-HCE scale audit

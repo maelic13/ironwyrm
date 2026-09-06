@@ -15,6 +15,13 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
+- **2026-09-06 — PLAN 4.11b.3, RAR-M26:** made malformed non-ASCII UCI move
+  tokens reject before byte indexing, retaining the controlled fatal UCI
+  position policy instead of panicking. Defined `u16` fullmove saturation at
+  65,535 for real/null black moves, with both colors and undo paths tested;
+  65,536 is rejected. Debug/release suites, fmt and clippy pass; exact
+  default-feature `bench 13` remains 6,901,489 / EBF 2.458. Next is 4.11b.4.
+
 - **2026-09-06 — PLAN 4.11b.2, RAR-M25:** added the versioned board-v2
   external-oracle corpus and isolated benchmark without changing the frozen
   cross-engine v1 benchmark. The ten cases cover checks/evasions, EP,

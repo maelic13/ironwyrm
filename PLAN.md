@@ -2030,7 +2030,8 @@ remains after the final HCE in 4.15.3-4.15.4.
    `analysis/board_v2_instrument_2026-09-06.md`. These are instrument and
    correctness results, not an HCE-speed or strength comparison.
 
-3. **4.11b.3 Repair parser and counter boundaries.** Move::from_uci("aé1")
+3. **4.11b.3 Repair parser and counter boundaries -- DONE (RAR-M26,
+   2026-09-06).** Move::from_uci("aé1")
    currently panics because a four-byte string is sliced through a UTF-8
    character. Validate the ASCII move grammar before indexing; retain the
    documented controlled UCI error policy rather than silently accepting bad
@@ -2041,6 +2042,17 @@ remains after the final HCE in 4.15.3-4.15.4.
    value, for both colors and both profiles. The new crash-report hook reports
    a panic; it does not repair either cause. Done when malformed moves take the
    intended error path and all accepted counter states remain well-defined.
+   `Move::from_uci` now rejects non-ASCII input before byte indexing, so the
+   documented fatal `position ... moves <bad-token>` path reports a controlled
+   UCI error instead of aborting at a UTF-8 boundary. Fullmove remains a
+   deliberately bounded `u16`: FEN zero still normalizes to one, 65,535 is
+   accepted, and 65,536 is rejected. Real and null black moves saturate at the
+   accepted maximum; white moves preserve it, and undo restores the original
+   state in all four cases. The targeted tests first failed on the old panic
+   and overflow, then passed in debug and release. An exact default-feature
+   rebuild reproduced `bench 13` at **6,901,489 / EBF 2.458**. This confirms
+   the ordinary benchmark tree is unchanged; the targeted boundary tests are
+   the evidence for the corrected malformed/high-counter behavior.
 
 4. **4.11b.4 Define SEE contracts and independent fixtures.** Inventory every
    full-SEE, threshold-SEE and quiet-aware caller in search/move ordering.
