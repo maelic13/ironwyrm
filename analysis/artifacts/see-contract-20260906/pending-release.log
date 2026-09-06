@@ -1,0 +1,41 @@
+    Finished `release` profile [optimized] target(s) in 0.02s
+     Running tests\see_contract.rs (target\release\deps\see_contract-0dd2f86ade982b66.exe)
+
+running 3 tests
+test pending_created_pin_repair ... FAILED
+test pending_king_exchange_repair ... FAILED
+test pending_recapture_promotion_repair ... FAILED
+
+failures:
+
+---- pending_created_pin_repair stdout ----
+
+thread 'pending_created_pin_repair' (11016) panicked at tests\see_contract.rs:50:9:
+assertion `left == right` failed: pin-created full SEE
+  left: -230
+ right: 100
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- pending_king_exchange_repair stdout ----
+
+thread 'pending_king_exchange_repair' (8952) panicked at tests\see_contract.rs:50:9:
+assertion `left == right` failed: king-after-pawn full SEE
+  left: -400
+ right: -300
+
+---- pending_recapture_promotion_repair stdout ----
+
+thread 'pending_recapture_promotion_repair' (21288) panicked at tests\see_contract.rs:50:9:
+assertion `left == right` failed: promotion-recapture full SEE
+  left: 0
+ right: -800
+
+
+failures:
+    pending_created_pin_repair
+    pending_king_exchange_repair
+    pending_recapture_promotion_repair
+
+test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--test see_contract`

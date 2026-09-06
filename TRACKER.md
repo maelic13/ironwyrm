@@ -15,6 +15,14 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
+- **2026-09-06 — PLAN 4.11b.4, RAR-M27:** inventoried every SEE caller and
+  special-move policy; added 18 external legal capture-tree fixtures. Confirmed
+  king parity debt and found newly created pin/recapture-promotion defects;
+  all three have failing acceptance tests owned by 4.11b.5. Eight Rust tests
+  pass per profile (three explicit debt ignores), five Python checks and
+  fmt/clippy pass. No engine code changed. Contract/evidence:
+  `analysis/see_contract_2026-09-06.md`. Next is 4.11b.5.
+
 - **2026-09-06 — PLAN 4.11b.3, RAR-M26:** made malformed non-ASCII UCI move
   tokens reject before byte indexing, retaining the controlled fatal UCI
   position policy instead of panicking. Defined `u16` fullmove saturation at

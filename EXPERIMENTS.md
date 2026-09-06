@@ -219,6 +219,23 @@ and fitted production policy remain **4.15.3–4.15.4**; **4.15.5** revalidates
 the normalized benchmark after fitting. Exposing a benchmark input does not
 itself authorize production tuning or SPSA.
 
+**RAR-M27 — 4.11b.4 SEE contracts and independent fixtures, COMPLETE
+2026-09-06.** Baseline `6d1a670`, engine `a170f8c`; no production changes.
+Ten threshold calls (two diag-only) and one full-SEE call inventoried with
+their ordering/pruning/LMR/history consumers. Eighteen python-chess legal
+same-square capture-tree fixtures, independently hand-scored, expose three
+debts: king-after-pawn -300 vs current -400/true, newly created pin +100 vs
+-230/false, recapture promotion -800 vs 0/true (booleans at threshold zero).
+All three named pending acceptance tests fail in debug and release; repair
+owner 4.11b.5. Ordinary quiet/quiet-promotion immediate-gain policies remain
+explicit, with quiet-aware handling only for ordinary quiets; quiet promotions
+have no current production SEE caller. Scoped Rust checks pass 8 tests per
+profile, with the 3 debt tests intentionally ignored; five Python oracle
+checks, fmt and all-feature/all-target clippy pass. No games or speed claim.
+Exact FENs, arithmetic, caller contracts, raw observations and reproduction:
+`analysis/see_contract_2026-09-06.md`, `tests/data/see-contract-v1.tsv`,
+`analysis/artifacts/see-contract-20260906/`.
+
 ### Phase-4 registration (RAR-M12, 2026-08-12)
 
 Registered at 4.0, before any Phase-4 code moves. Caps are prospective, derived

@@ -2054,7 +2054,8 @@ remains after the final HCE in 4.15.3-4.15.4.
    the ordinary benchmark tree is unchanged; the targeted boundary tests are
    the evidence for the corrected malformed/high-counter behavior.
 
-4. **4.11b.4 Define SEE contracts and independent fixtures.** Inventory every
+4. **4.11b.4 Define SEE contracts and independent fixtures -- DONE
+   (RAR-M27, 2026-09-06).** Inventory every
    full-SEE, threshold-SEE and quiet-aware caller in search/move ordering.
    Specify captures, ordinary quiets, capture/quiet promotions, EP and castling
    separately: distinguish a true exchange verdict from a deliberate
@@ -2068,8 +2069,19 @@ remains after the final HCE in 4.15.3-4.15.4.
    -100. This is an existing explicit shortcut: decide its caller contract
    before changing it. Done when every special-move policy has a named
    consumer and an independent test or a documented heuristic disposition.
+   Completed inventory: ten threshold calls (two diagnostic-only) and one
+   full-SEE call, including downstream ordering, pruning, LMR and history
+   consumers. [Contract and evidence](analysis/see_contract_2026-09-06.md)
+   defines each move class and the optional-stop material oracle's limits.
+   Eighteen python-chess fixtures supply independent truth; two Rust contract
+   tests and six existing pin tests pass in both profiles. Three explicitly
+   ignored acceptance tests fail in both profiles and are owned by 4.11b.5.
+   Five Python tests prove arithmetic rejection, legality, all promotion replies,
+   color symmetry and actual pin creation/release. No production code changed.
+   Quiet-promotion immediate-gain policy is retained: production ordering uses
+   a separate promotion tier and currently has no SEE caller for that class.
 
-5. **4.11b.5 Repair the confirmed SEE king-exchange defect.** On
+5. **4.11b.5 Repair the confirmed SEE exchange defects.** On
    "7k/8/2p5/3pK3/8/8/3R4/8 w - - 0 1", d2d5 gives
    Rxd5 cxd5 Kxd5 = 100 - 500 + 100 = -300. Current full see returns -400,
    and see_ge(move, 0) incorrectly returns true in debug and release.
@@ -2081,6 +2093,18 @@ remains after the final HCE in 4.15.3-4.15.4.
    do not copy their value scales or their special-move exemptions.
    Keep the production value vector fixed. Extend the same narrowly stated
    contract to any further demonstrated exchange defects from 4.11b.4.
+   RAR-M27 adds two mandatory independent cases: in
+   `2k5/2n5/2B5/3p4/8/8/8/2R1K3 w - - 0 1`, c6d5 creates a pin on
+   Nc7, so +100 is correct (current -230/false). In
+   `7k/8/8/8/8/7K/pR6/1r6 w - - 0 1`, b2b1 permits a2b1q:
+   500-500-800=-800 (current 0/true). Repair evolving pin geometry and
+   recapture-promotion accounting in BOTH kernels, including the promoted
+   occupant's value on further recapture. The external oracle explores all
+   promotion choices; never accept its first generated reply as optimal.
+   Remove the three named ignores in `tests/see_contract.rs` once repaired;
+   retain explicit quiet/promotion/castling shortcut policies. Do not require
+   general tactical minimax or erase a failing fixture as an LVA approximation
+   without a concrete branch-choice explanation. No new SEE scale tuning.
    Record the search-fingerprint change and affected pruning/ordering sites.
    Done when independent fixtures pass; playing qualification remains open.
 
