@@ -1152,6 +1152,20 @@ impl Searcher {
         age_tt: bool,
         age_history: bool,
     ) {
+        // LazyMargin changes the raw evaluation function. The evaluator owns
+        // its whole-eval cache, while the main searcher owns TT lifecycle and
+        // must also discard stored raw evals and bounds from the old function.
+        // Helpers receive the already-cleared shared TT, so they clear only
+        // their private evaluator cache; clearing shared storage here would
+        // race with helpers or main already searching.
+        let lazy_margin_changed = self
+            .evaluator
+            .set_lazy_margin(engine_options.search_params.lazy_margin);
+        if lazy_margin_changed && age_tt {
+            self.tt.clear();
+        }
+
+        // Configuration invalidation is setup work, not search time.
         self.start = Instant::now();
         self.nodes = 0;
         self.tb_hits = 0;
@@ -1167,9 +1181,6 @@ impl Searcher {
         self.syzygy_probe_limit = engine_options.syzygy.probe_limit;
         self.syzygy_50_move_rule = engine_options.syzygy.fifty_move_rule;
         self.params = engine_options.search_params.clone();
-        // Push the (UCI-settable) lazy-eval margin into the evaluator. At the
-        // default 600 this is a no-op and the eval — hence `bench` — is unchanged.
-        self.evaluator.set_lazy_margin(self.params.lazy_margin);
         let table_key = (self.params.lmr_table_base, self.params.lmr_table_div);
         if table_key != self.lmr_table_key {
             self.lmr_table = build_lmr_table(table_key.0, table_key.1);
@@ -5278,6 +5289,95 @@ mod tests {
     use super::*;
     use crate::board::Square;
     use std::time::{Duration, Instant};
+
+    const LAZY_MARGIN_REGRESSION_FEN: &str = "5k2/5p1p/p3B1p1/Pp6/1P6/5P1P/4K1P1/8 b - - 0 1";
+
+    fn store_static_eval(searcher: &mut Searcher, board: &Board, static_eval: i32) {
+        let mv = board
+            .generate_legal_moves()
+            .into_iter()
+            .next()
+            .expect("regression position has a legal move");
+        searcher.tt.store(TtStore {
+            key: board.hash,
+            depth: 1,
+            score: static_eval,
+            bound: Bound::Exact,
+            mv,
+            ply: 0,
+            static_eval,
+            is_pv: false,
+            kind: OutcomeKind::Full,
+        });
+    }
+
+    #[test]
+    fn lazy_margin_change_invalidates_local_and_shared_tt_evals() {
+        const LOW_MARGIN: i32 = 200;
+        const HIGH_MARGIN: i32 = 2_000;
+        let board =
+            Board::from_fen(LAZY_MARGIN_REGRESSION_FEN).expect("valid lazy-eval regression FEN");
+        let limits = SearchLimits::default();
+
+        for shared in [false, true] {
+            let mut searcher = Searcher::default();
+            let mut options = EngineOptions::default();
+            options.search_params.lazy_margin = LOW_MARGIN;
+            searcher.reset_search_state(&limits, &options, board.side_to_move(), 0, true, false);
+            let low_margin_score = searcher.raw_eval(&board);
+
+            if shared {
+                searcher.tt.make_shared(searcher.hash_mb);
+            }
+            store_static_eval(&mut searcher, &board, low_margin_score);
+            assert_eq!(
+                i32::from(
+                    searcher
+                        .tt
+                        .probe(board.hash)
+                        .expect("stored TT entry")
+                        .static_eval
+                ),
+                low_margin_score
+            );
+
+            options.search_params.lazy_margin = HIGH_MARGIN;
+            searcher.reset_search_state(&limits, &options, board.side_to_move(), 0, true, false);
+            assert!(
+                searcher.tt.probe(board.hash).is_none(),
+                "LazyMargin change retained a {} TT evaluation",
+                if shared { "shared" } else { "local" }
+            );
+            assert_ne!(searcher.raw_eval(&board), low_margin_score);
+        }
+    }
+
+    #[test]
+    fn helper_lazy_margin_sync_does_not_clear_live_shared_tt() {
+        let board =
+            Board::from_fen(LAZY_MARGIN_REGRESSION_FEN).expect("valid lazy-eval regression FEN");
+        let mut main = Searcher::default();
+        main.tt.make_shared(main.hash_mb);
+        store_static_eval(&mut main, &board, 123);
+
+        let mut helper = Searcher::worker_default();
+        helper.tt = main.tt.clone();
+        let mut options = EngineOptions::default();
+        options.search_params.lazy_margin = 2_000;
+        helper.reset_search_state(
+            &SearchLimits::default(),
+            &options,
+            board.side_to_move(),
+            0,
+            false,
+            false,
+        );
+
+        assert!(
+            main.tt.probe(board.hash).is_some(),
+            "helper startup cleared the shared TT after another thread made it live"
+        );
+    }
 
     #[test]
     fn lmr_reduction_allows_strong_late_moves_to_reach_zero() {

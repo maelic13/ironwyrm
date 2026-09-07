@@ -1195,14 +1195,16 @@ impl Evaluator {
 }
 
 impl Evaluator {
-    /// Override the lazy-eval margin (Phase 5.1b `LazyMargin` UCI option). Pushed
-    /// in at every search start; at the default 600 the eval is unchanged. A
-    /// changed margin alters whether the expensive evaluation terms run, so
-    /// cached whole-evaluation scores from the previous margin are invalid.
-    pub fn set_lazy_margin(&mut self, margin: i32) {
+    /// Override the lazy-eval margin (Phase 5.1b `LazyMargin` UCI option).
+    /// Returns whether the evaluation semantics changed, so the search owner
+    /// can invalidate cached raw evaluations outside this evaluator as well.
+    pub fn set_lazy_margin(&mut self, margin: i32) -> bool {
         if self.lazy_margin != margin {
             self.lazy_margin = margin;
             self.eval_table.fill(EvalEntry::default());
+            true
+        } else {
+            false
         }
     }
 
