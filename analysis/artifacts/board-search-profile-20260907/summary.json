@@ -1,0 +1,140 @@
+{
+  "schema": "rarog-board-search-profile-result-v1",
+  "source_git_sha": "02420dcdecf5baff5c33859832c09e3e7f581828",
+  "archive_sha256": "2beb0f272df7eca6d89f800e1f663378395ce9ecaffad19335901159331e81cb",
+  "suite_sha256": "0c8cefdfb4917295a2dfc26ad4acbde8fcd1c4e6e2c8760f11f57c01e6b153e3",
+  "production_exe_sha256": "3c81ef95f3c1d4ab0f063eb814ed5f51b8ef57da7e3b5a579500cbb1d904dfd0",
+  "production_pdb_sha256": "e495b018fed1dc6f4d0ebaa70d681dc6eccc0d6059f8e093bcfdf9ae1f7aa3f2",
+  "diagnostic_exe_sha256": "aaeda61886789333503ab0984fb54a44ffea44758449995a84f07218425d42e1",
+  "protocol": {
+    "cohorts": 5,
+    "positions_per_cohort": 4,
+    "nodes_per_search": 600000,
+    "counter_repeats": 3,
+    "etw_repeats": 5,
+    "etw_sample_interval_100ns": 1221,
+    "instrumentation_off_identity_searches": 60,
+    "instrumentation_off_identity": true
+  },
+  "etw": {
+    "attribution": "exclusive CPU samples classified from complete LLVM inline context",
+    "process_samples": 161989,
+    "engine_samples": 151142,
+    "resolved_engine_samples": 151142,
+    "aggregate_counts": {
+      "generation_and_legality": 10936,
+      "make_unmake": 11571,
+      "check_queries": 8386,
+      "see": 8592,
+      "other_board": 21053,
+      "other_engine": 90604
+    },
+    "aggregate_process_shares_percent": {
+      "generation_and_legality": 6.751,
+      "make_unmake": 7.143,
+      "check_queries": 5.177,
+      "see": 5.304,
+      "other_board": 12.997,
+      "other_engine": 55.932
+    },
+    "overlapping_mechanism_process_shares_percent": {
+      "piece_relocation_helpers": 2.998,
+      "compute_pinned": 1.003,
+      "check_info": 0.912,
+      "gives_check": 1.785,
+      "king_square_lookup": 0.544
+    },
+    "cohorts": {
+      "opening": {
+        "process_samples": 47326,
+        "engine_samples": 44958,
+        "shares_percent": {
+          "generation_and_legality": 5.900,
+          "make_unmake": 5.401,
+          "check_queries": 2.688,
+          "see": 6.863,
+          "other_board": 16.915,
+          "other_engine": 57.231
+        }
+      },
+      "middlegame": {
+        "process_samples": 31291,
+        "engine_samples": 29138,
+        "shares_percent": {
+          "generation_and_legality": 7.184,
+          "make_unmake": 7.980,
+          "check_queries": 5.430,
+          "see": 6.206,
+          "other_board": 11.767,
+          "other_engine": 54.552
+        }
+      },
+      "check-heavy": {
+        "process_samples": 37174,
+        "engine_samples": 34989,
+        "shares_percent": {
+          "generation_and_legality": 6.776,
+          "make_unmake": 7.002,
+          "check_queries": 4.425,
+          "see": 6.706,
+          "other_board": 13.830,
+          "other_engine": 55.383
+        }
+      },
+      "promotion": {
+        "process_samples": 23823,
+        "engine_samples": 21715,
+        "shares_percent": {
+          "generation_and_legality": 7.921,
+          "make_unmake": 8.366,
+          "check_queries": 8.080,
+          "see": 2.972,
+          "other_board": 8.786,
+          "other_engine": 55.027
+        }
+      },
+      "sparse-endgame": {
+        "process_samples": 22375,
+        "engine_samples": 20342,
+        "shares_percent": {
+          "generation_and_legality": 6.659,
+          "make_unmake": 8.590,
+          "check_queries": 8.246,
+          "see": 0.898,
+          "other_board": 9.528,
+          "other_engine": 56.992
+        }
+      }
+    }
+  },
+  "diagnostic_totals": {
+    "reported_nodes": 30604224,
+    "generation": {
+      "full_calls": 3395724,
+      "standalone_capture_calls": 3818253,
+      "staged_capture_calls": 3547548,
+      "staged_quiet_calls": 2083335,
+      "compute_pinned_calls": 9474168
+    },
+    "checks": {
+      "calculate_checkers_calls": 6483588,
+      "check_info_calls": 11660631,
+      "gives_check_fast_calls": 120463353,
+      "gives_check_full_calls": 754812
+    },
+    "see": {
+      "full_calls": 1882485,
+      "threshold_calls": 24161913
+    },
+    "moves": {
+      "plain_make_calls": 2688294,
+      "make_with_check_calls": 21787521,
+      "null_make_calls": 1242339,
+      "real_unmake_calls": 24475815
+    },
+    "history": {
+      "pushes": 25718154,
+      "growth_events": 0
+    }
+  }
+}

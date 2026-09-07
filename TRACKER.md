@@ -15,6 +15,14 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
+- **2026-09-07 — PLAN 4.11b.7, RAR-M30:** profiled 20 frozen roots in five
+  actual-search cohorts. Native samples put generation/legality at **6.751%**,
+  make/unmake at **7.143%**, check queries at **5.177%**, and SEE at **5.304%**
+  of full process time. Sixty instrumentation-off searches match exactly;
+  30.6M diagnostic nodes show checked make dominates plain make and history
+  grows zero times. Evidence: `analysis/board_search_profile_2026-09-07.md`.
+  Next is 4.11b.8.
+
 - **2026-09-07 — PLAN 4.11b.6, RAR-M29:** added neutral board-owned SEE
   values, proved production identity and the benchmark wire, and restored the
   normalized three-engine SEE comparison. All adapters agree on values and ten

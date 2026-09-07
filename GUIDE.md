@@ -19,12 +19,12 @@ and `python tools/diag/check_guide.py` must pass.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
 | Instrument state | **4.10 repaired; v2 baselines/floors, budget transfer, label audit, mate-drive closure and conversion corrections recorded.** |
-| Current step | **4.11b.7 — profile board work in actual HCE search**, not started |
+| Current step | **4.11b.8 — optimize legal generation and move-list delivery**, not started |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## Next and held work
 
-**Next: 4.11b.7 — profile board work in actual HCE search.**
+**Next: 4.11b.8 — optimize legal generation and move-list delivery.**
 4.11.7–4.11.10 are complete; their scheduling holds/evidence gaps are resolved.
 
 | Open hold | Resume when | Must be resolved before |
@@ -116,7 +116,7 @@ Assignments and effort-setting caveats are recorded in PLAN 4.11b and 4.12.
     - [x] **4.11b.4** Define SEE contracts and independent fixtures; RAR-M27
     - [x] **4.11b.5** Repair SEE king legality, created pins and recapture promotions; RAR-M28
     - [x] **4.11b.6** Add neutral value injection; restore comparable SEE timing; RAR-M29
-    - [ ] **4.11b.7** Profile board work in HCE search — Sol H / Opus M
+    - [x] **4.11b.7** Profile board work in HCE search; RAR-M30
     - [ ] **4.11b.8** Optimize legal generation and move-list delivery — Astra XH / Opus H
     - [ ] **4.11b.9** Measure fused piece relocation — Sol H / Sonnet H
     - [ ] **4.11b.10** Share useful pin/check information — Astra XH / Opus H

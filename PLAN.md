@@ -1,6 +1,6 @@
 # Rarog development plan
 
-Updated 2026-09-06. This is the current roadmap. Historical evidence belongs
+Updated 2026-09-07. This is the current roadmap. Historical evidence belongs
 in `EXPERIMENTS.md`; current status and commands belong in `GUIDE.md`.
 Phase 4's open work was reordered and renumbered on 2026-09-04 after an
 instrument audit; section 13 maps the old numbers to the new ones.
@@ -10,13 +10,13 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Item | State |
 |---|---|
 | Released baseline | **2.3.2** at `f931722` on `master` |
-| Accepted head | RAR-E12 + 4.9a.7 on `dev`; `bench 13` = **6,901,489 nodes / EBF 2.458**, 1T. Includes the 4.9a.4 mate drive, which is bench-INVISIBLE |
+| Accepted head | RAR-E12 + 4.9a.7 on `dev`; development `bench 13` = **7,601,220 nodes / EBF 2.474** after the behavior-neutral SEE repair. Includes the 4.9a.4 mate drive, which is bench-INVISIBLE |
 | Integration state | The failed SearchCore rewrite is reverted by `c5e451d`; `d2c7788`/`e4f10ca` upgrade search evidence and `8d8f507` supplies the audited complete HCE fitting pipeline without changing accepted behavior |
 | Frozen search/HCE oracle | `hybrid` at `75d0d43`, Stockfish `9587eeeb` driving the exact Rarog 2.3.2 HCE |
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.11b.2 — strengthen board benchmark coverage and correctness oracles**, not started |
+| Current step | **4.11b.8 — optimize legal generation and move-list delivery**, not started |
 | Instrument state | 4.10 repairs; v2 baselines/floors, budget transfer, label audit, mate-drive closure and conversion-claim correction are complete. Historical v1 pawn-family conversion claims are retained but superseded in place by RAR-M24 |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -34,9 +34,10 @@ predates 4.11b and is not the current roadmap: after 4.11 comes **4.11b**, then
 4.12. The maintainer authorized heavy computation, and **4.11.7 is now complete**
 (RAR-M21, 2026-09-06). RAR-M22 and RAR-M23 subsequently completed 4.11.8 and
 4.11.9. RAR-M24 completed 4.11.10; its scheduling dependency is resolved.
-Board leaves 4.11b.1–4.11b.6 are complete. The next leaf is **4.11b.7**.
-SEE is correctness-verified and normalized timing is restored; cluster playing
-qualification remains at 4.11b.17.
+Board leaves 4.11b.1–4.11b.7 are complete. The next leaf is **4.11b.8**.
+Actual full-search board cost is profiled; SEE is correctness-verified and
+normalized timing is restored. Cluster playing qualification remains at
+4.11b.17.
 
 | Leaf | State and reason | Unblock event / owner | Dependency boundary |
 |---|---|---|---|
@@ -1910,7 +1911,7 @@ which is what exposed the dependency inversion.
 
 **Integrated 2026-09-05 after reconciling the a0aeb68 roadmap.** Finish the
 remaining 4.11 leaves first, then execute this section before 4.12. Those
-4.11 leaves and board leaves 4.11b.1–4.11b.6 are now complete; **4.11b.7 is
+4.11 leaves and board leaves 4.11b.1–4.11b.7 are now complete; **4.11b.8 is
 next**. The insertion preserves 4.11.12's registered v2 endgame order until
 changed evidence warrants a rerank. Repairs at 4.11b.3/4.11b.5 are implemented;
 the remaining optimizations and cluster qualification are still open. NNUE-only work belongs to 5.2, 5.3, 5.6 and 6.4.
@@ -2211,7 +2212,8 @@ Keep each assignment attached to its task if future evidence changes ordering.
    `analysis/see_value_injection_2026-09-07.md` and
    `analysis/artifacts/see-normalized-20260907/`.
 
-7. **4.11b.7 Profile board work in actual HCE search.** Freeze representative
+7. **4.11b.7 Profile board work in actual HCE search -- DONE (RAR-M30,
+   2026-09-07).** Freeze representative
    opening, middlegame, check-heavy, promotion and sparse-endgame cohorts at
    realistic search budgets. Measure generation, legality, check queries,
    SEE, make/unmake and history allocation as shares of full-search time.
@@ -2222,6 +2224,20 @@ Keep each assignment attached to its task if future evidence changes ordering.
    instrumentation proven live, with instrumentation-off identity. Set the
    following leaves' priorities from actual search cost and a written time
    budget; a 40% microbench gain in a 2% search component is not 40% NPS.
+
+   The frozen 20-root suite used four opening, middlegame, check-heavy,
+   promotion and sparse-endgame positions at 600,000 nodes. Sixty
+   instrumentation-off comparisons matched exactly. Across 161,989 native
+   samples, generation/legality is **6.751%**, make/unmake **7.143%**, checks
+   **5.177%** and SEE **5.304%** of process time. Add/remove relocation is a
+   2.998% overlapping subregion; pin computation 1.003%, check-info 0.912%,
+   and king lookup 0.544%. Counters over 30,604,224 nodes show 89.02% of real
+   makes use the check-hinted path, threshold SEE is 92.77% of SEE calls, and
+   25,718,154 history pushes cause **zero** growth events. Therefore perft make
+   and standalone captures are rejected as search proxies, history allocation
+   has no speed budget in this state, and 4.11b.8 remains first. No games or
+   strength claim. Evidence: `analysis/board_search_profile_2026-09-07.md` and
+   `analysis/artifacts/board-search-profile-20260907/summary.json`.
 
 8. **4.11b.8 Optimize legal generation and move-list delivery.** This is the
    first speed candidate because the measured Basilisk gap is 43.7% in legal

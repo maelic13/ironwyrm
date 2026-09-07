@@ -280,7 +280,22 @@ piece-value vector. Kings are never legal SEE victims, so no exchange result
 changes. No value fit, games, NPS or Elo claim. Evidence:
 `analysis/see_value_injection_2026-09-07.md` and
 `analysis/artifacts/see-normalized-20260907/`. Production fitting remains
-4.15.3–4.15.4; 4.11b.7 next measures actual HCE search share.
+4.15.3–4.15.4. At this closure point, 4.11b.7 was the next leaf.
+
+**RAR-M30 — 4.11b.7 full-search board profile, COMPLETE 2026-09-07.** Source
+`02420dc`, 20 frozen roots in five cohorts, 600,000 nodes, three counter and
+five ETW repeats. Production SHA-256 `3c81ef95...bf1d904dfd0`; diagnostic
+`aaeda618...25d42e1`; all **60/60** instrumentation-off searches match nodes,
+score, PV and moves. All 151,142 engine samples resolve from the archived
+PE/PDB. Weighted process shares are generation/legality **6.751%**,
+make/unmake **7.143%**, check queries **5.177%**, SEE **5.304%**; relocation
+helpers are an overlapping **2.998%**, king lookup **0.544%**. Over 30,604,224
+diagnostic nodes, checked makes are 89.02% of real makes, threshold SEE is
+92.77% of SEE calls, and 25,718,154 history pushes cause **zero growth**.
+No games, NPS acceptance, or strength claim. 4.11b.8 remains next; evidence,
+full hashes, time budget and reproduction:
+`analysis/board_search_profile_2026-09-07.md` and
+`analysis/artifacts/board-search-profile-20260907/summary.json`.
 
 ### Phase-4 registration (RAR-M12, 2026-08-12)
 
