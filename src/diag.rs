@@ -606,6 +606,34 @@ pub mod counters {
         // the classifier looks at. Without it an occurrence count cannot be
         // read as a rate.
         eg_classified,
+        // 4.11b.7 board cost census. These are exact call/work counters from
+        // real search paths. They observe only and compile away completely
+        // without `--features diag`.
+        board_gen_vec_calls,
+        board_gen_vec_moves,
+        board_gen_full_calls,
+        board_gen_full_moves,
+        board_gen_capture_calls,
+        board_gen_capture_moves,
+        board_gen_staged_capture_calls,
+        board_gen_staged_capture_moves,
+        board_gen_staged_quiet_calls,
+        board_gen_staged_quiet_moves,
+        board_compute_pinned_calls,
+        board_check_info_calls,
+        board_gives_check_fast_calls,
+        board_gives_check_full_calls,
+        board_calculate_checkers_calls,
+        board_see_full_calls,
+        board_see_threshold_calls,
+        board_see_quiet_threshold_calls,
+        board_make_plain_calls,
+        board_make_with_check_calls,
+        board_unmake_calls,
+        board_make_null_calls,
+        board_unmake_null_calls,
+        board_history_pushes,
+        board_history_growths,
     );
 }
 
@@ -1172,7 +1200,11 @@ pub fn reset() {
 
 #[cfg(all(test, feature = "diag"))]
 mod tests {
-    use super::{SAMPLE_MAIN, SAMPLE_QSEARCH, sampled};
+    use std::sync::atomic::Ordering;
+
+    use crate::board::Board;
+
+    use super::{SAMPLE_MAIN, SAMPLE_QSEARCH, counters, sampled};
 
     #[test]
     fn sampler_is_stable_sparse_and_domain_separated() {
@@ -1193,6 +1225,61 @@ mod tests {
             first.len()
         );
         assert_ne!(first, qsearch);
+    }
+
+    #[test]
+    fn board_profile_counters_are_live() {
+        counters::reset();
+        let mut board = Board::starting_position();
+        let (captures, pinned) = board.generate_legal_captures_pinned();
+        let quiets = board.generate_legal_quiets_pinned(pinned);
+        assert!(captures.is_empty());
+        assert_eq!(quiets.len(), 20);
+
+        let check_info = board.check_info();
+        let mv = board.parse_move("e2e4").expect("legal test move");
+        let gives_check = board.gives_check_with(mv, &check_info);
+        assert!(!gives_check);
+        assert!(board.see_ge(mv, 0));
+        board.make_move_with_check(mv, gives_check);
+        board.unmake_move(mv);
+
+        assert_eq!(
+            counters::board_gen_staged_capture_calls.load(Ordering::Relaxed),
+            1
+        );
+        assert_eq!(
+            counters::board_gen_staged_quiet_moves.load(Ordering::Relaxed),
+            20
+        );
+        assert_eq!(
+            counters::board_compute_pinned_calls.load(Ordering::Relaxed),
+            1
+        );
+        assert_eq!(counters::board_check_info_calls.load(Ordering::Relaxed), 1);
+        assert_eq!(
+            counters::board_gives_check_fast_calls.load(Ordering::Relaxed),
+            1
+        );
+        assert_eq!(
+            counters::board_see_threshold_calls.load(Ordering::Relaxed),
+            1
+        );
+        assert_eq!(
+            counters::board_make_with_check_calls.load(Ordering::Relaxed),
+            1
+        );
+        assert_eq!(counters::board_unmake_calls.load(Ordering::Relaxed), 1);
+        assert_eq!(counters::board_history_pushes.load(Ordering::Relaxed), 1);
+        assert_eq!(counters::board_history_growths.load(Ordering::Relaxed), 0);
+
+        counters::reset();
+        let mut growth = Board::starting_position();
+        for _ in 0..129 {
+            growth.make_null_move();
+        }
+        assert_eq!(counters::board_history_pushes.load(Ordering::Relaxed), 129);
+        assert_eq!(counters::board_history_growths.load(Ordering::Relaxed), 1);
     }
 }
 

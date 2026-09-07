@@ -697,6 +697,7 @@ impl Board {
     /// check test then collapses to two bitboard membership tests
     /// ([`Board::gives_check_with`]).
     pub fn check_info(&self) -> CheckInfo {
+        crate::diag_count!(board_check_info_calls);
         let us = self.side_to_move;
         let them = !us;
         let ksq = self.king_sq(them);
@@ -752,6 +753,7 @@ impl Board {
     /// move. (Promotions break this argument, which is one reason they fall
     /// back.)
     pub fn gives_check_with(&self, mv: Move, ci: &CheckInfo) -> bool {
+        crate::diag_count!(board_gives_check_fast_calls);
         if mv.is_promo() || mv.is_en_passant() || mv.is_castling() {
             return self.gives_check(mv);
         }
@@ -770,6 +772,7 @@ impl Board {
     }
 
     pub fn gives_check(&self, mv: Move) -> bool {
+        crate::diag_count!(board_gives_check_full_calls);
         if mv.is_castling() {
             // After castling, the only piece that can give check is the rook
             // from its post-castle square. The king never gives check (kings
@@ -1257,6 +1260,7 @@ FEN: {}",
 
     #[inline(always)]
     pub fn see(&self, mv: Move) -> i32 {
+        crate::diag_count!(board_see_full_calls);
         self.see_with_values(mv, PRODUCTION_SEE_VALUES)
     }
 
@@ -1305,6 +1309,7 @@ FEN: {}",
 
     #[inline(always)]
     pub fn see_ge(&self, mv: Move, threshold: i32) -> bool {
+        crate::diag_count!(board_see_threshold_calls);
         self.see_ge_impl(mv, threshold, false, PRODUCTION_SEE_VALUES)
     }
 
@@ -1327,6 +1332,7 @@ FEN: {}",
     /// a quiet move, so the immediate balance starts at 0, which is exactly
     /// right — nothing was won, and the moved piece is now the thing at risk.
     pub fn see_ge_quiet_aware(&self, mv: Move, threshold: i32) -> bool {
+        crate::diag_count!(board_see_quiet_threshold_calls);
         self.see_ge_impl(mv, threshold, true, PRODUCTION_SEE_VALUES)
     }
 
@@ -1495,6 +1501,7 @@ FEN: {}",
     #[inline(always)]
     /// Play `mv`, computing the new checker set from scratch.
     pub fn make_move(&mut self, mv: Move) {
+        crate::diag_count!(board_make_plain_calls);
         self.make_move_inner(mv, None);
     }
 
@@ -1514,6 +1521,7 @@ FEN: {}",
     /// every make and unmake — a wrong hint fails loudly rather than
     /// producing illegal moves.
     pub fn make_move_with_check(&mut self, mv: Move, gives_check: bool) {
+        crate::diag_count!(board_make_with_check_calls);
         self.make_move_inner(mv, Some(gives_check));
     }
 
@@ -1639,6 +1647,13 @@ FEN: {}",
         if us == Color::Black {
             self.fullmove = self.fullmove.checked_add(1).unwrap_or(MAX_FULLMOVE);
         }
+        #[cfg(feature = "diag")]
+        {
+            crate::diag_count!(board_history_pushes);
+            if self.history.len() == self.history.capacity() {
+                crate::diag_count!(board_history_growths);
+            }
+        }
         self.history.push(UnmakeInfo {
             captured,
             castling: old_castling,
@@ -1668,6 +1683,7 @@ FEN: {}",
     }
 
     pub fn make_null_move(&mut self) {
+        crate::diag_count!(board_make_null_calls);
         debug_assert!(!self.is_in_check(), "null move while in check");
         let old_castling = self.castling;
         let old_ep_sq = self.ep_sq;
@@ -1686,6 +1702,13 @@ FEN: {}",
         self.halfmove_clock = self.halfmove_clock.saturating_add(1);
         self.side_to_move = !self.side_to_move;
         self.hash ^= ZOBRIST.side();
+        #[cfg(feature = "diag")]
+        {
+            crate::diag_count!(board_history_pushes);
+            if self.history.len() == self.history.capacity() {
+                crate::diag_count!(board_history_growths);
+            }
+        }
         self.history.push(UnmakeInfo {
             captured: NO_PIECE,
             castling: old_castling,
@@ -1699,6 +1722,7 @@ FEN: {}",
     }
 
     pub fn unmake_null_move(&mut self) {
+        crate::diag_count!(board_unmake_null_calls);
         let info = self
             .history
             .pop()
@@ -1716,6 +1740,7 @@ FEN: {}",
     /// Undo the last move.
     #[inline(always)]
     pub fn unmake_move(&mut self, mv: Move) {
+        crate::diag_count!(board_unmake_calls);
         let info = self.history.pop().expect("unmake_move with empty history");
 
         let from = mv.from_sq();
@@ -1863,6 +1888,7 @@ FEN: {}",
 
     #[inline(always)]
     fn calculate_checkers(&self) -> Bitboard {
+        crate::diag_count!(board_calculate_checkers_calls);
         let attacker = !self.side_to_move;
         let king_sq = self.king_sq(self.side_to_move);
         let atk = &*ATTACKS;

@@ -29,6 +29,8 @@ use crate::infra;
 pub fn generate_legal_moves(board: &Board) -> Vec<Move> {
     let mut moves = Vec::with_capacity(48);
     gen_moves::<true, true, _>(board, &mut moves);
+    crate::diag_count!(board_gen_vec_calls);
+    crate::diag_add!(board_gen_vec_moves, moves.len() as u64);
     moves
 }
 
@@ -36,6 +38,8 @@ pub fn generate_legal_moves(board: &Board) -> Vec<Move> {
 pub fn generate_legal_movelist(board: &Board) -> MoveList {
     let mut moves = MoveList::new();
     gen_moves::<true, true, _>(board, &mut moves);
+    crate::diag_count!(board_gen_full_calls);
+    crate::diag_add!(board_gen_full_moves, moves.len() as u64);
     moves
 }
 
@@ -51,6 +55,8 @@ pub fn generate_quiets(board: &Board) -> MoveList {
 pub fn generate_quiets_pinned(board: &Board, pinned: Bitboard) -> MoveList {
     let mut moves = MoveList::new();
     gen_moves_pinned::<false, true, _>(board, pinned, &mut moves);
+    crate::diag_count!(board_gen_staged_quiet_calls);
+    crate::diag_add!(board_gen_staged_quiet_moves, moves.len() as u64);
     moves
 }
 
@@ -69,12 +75,15 @@ pub fn generate_captures(board: &mut Board) -> MoveList {
     let them = !us;
 
     if !has_pseudo_capture(board, us, them) {
+        crate::diag_count!(board_gen_capture_calls);
         return moves;
     }
 
     let king_sq = board.king_sq(us);
     let pinned = compute_pinned(board, king_sq, us, them);
     gen_captures_with_pin(board, us, them, king_sq, pinned, &mut moves);
+    crate::diag_count!(board_gen_capture_calls);
+    crate::diag_add!(board_gen_capture_moves, moves.len() as u64);
     moves
 }
 
@@ -98,6 +107,8 @@ pub fn generate_captures_pinned(board: &mut Board) -> (MoveList, Bitboard) {
     let pinned = compute_pinned(board, king_sq, us, them);
 
     gen_captures_with_pin(board, us, them, king_sq, pinned, &mut moves);
+    crate::diag_count!(board_gen_staged_capture_calls);
+    crate::diag_add!(board_gen_staged_capture_moves, moves.len() as u64);
     (moves, pinned)
 }
 
@@ -787,6 +798,7 @@ fn gen_castling<S: MoveSink>(
 
 /// Compute the bitboard of our pieces that are pinned to our king.
 fn compute_pinned(board: &Board, king_sq: Square, us: Color, them: Color) -> Bitboard {
+    crate::diag_count!(board_compute_pinned_calls);
     let our_occ = board.color_occ(us);
     let atk = &*ATTACKS;
     let mut pinned = Bitboard::EMPTY;
