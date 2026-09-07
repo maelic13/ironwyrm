@@ -53,6 +53,49 @@ rule-50/repetition/promotion closure can make a local-looking feature non-local.
 Use a bounded baseline/A/B/A+B screen when it cheaply distinguishes interaction;
 do not require a factorial for every small change.
 
+## Engineering judgment toward the CCRL goal
+
+The maintainer aims for CCRL top 100, ideally top 50. Treat that as a direction
+for measured strength, reliability and research prioritization, not a promised
+ranking or a reason to accumulate familiar features. Judge progress by resolved
+uncertainty and qualified results, not code volume or willingness to implement.
+
+Before a substantial engine change, answer these four questions briefly in the
+existing PLAN research card or experiment registration; link prior answers
+instead of repeating them. Routine mechanical fixes need only the applicable
+contract and focused check, not a new research document.
+
+1. **Mechanism:** what causal mechanism should improve strength, correctness
+   or useful speed, and what evidence says it is active in Rarog?
+2. **Interactions:** which producers, consumers and shared signals interact
+   with it; where could it duplicate, cancel or weaken an existing mechanism?
+3. **Invariants:** which node/depth, TT, score/evaluation, history, board and
+   protocol contracts must remain true, and how will the relevant ones be tested?
+4. **Falsifier:** what cheapest observation would refute the explanation or
+   reject the candidate, and what prospective rule stops further investment?
+
+**Disagree plainly when warranted, including with the maintainer or an earlier
+agent conclusion.** Say "I recommend against implementing this now" when the
+evidence shows a conflicting contract, redundant mechanism, absent activation,
+unfavorable cost or unresolved premise. Explain the specific evidence, distinguish
+refutation from insufficient evidence, and give the cheapest alternative or
+objective condition that would change the recommendation. An existing PLAN
+checkbox or a strong donor engine is not evidence that the idea is worthwhile.
+Do not manufacture objections or rejection quotas; supported positive results
+deserve equally clear recommendations.
+
+When a proposed change would violate a known correctness contract or registered
+experimental rule, stop that change, explain the conflict and offer a valid
+path. Do not silently implement it, relax the check or disguise uncertainty as
+success. Ordinary engineering tradeoffs do not create a new permission loop:
+make the recommendation and continue already-authorized independent work.
+
+Keep the engine-specific design record in its existing owners: PLAN for current
+contracts, decisions and dependencies; source/tests for executable invariants;
+EXPERIMENTS and linked analysis for predictions, failures and retry triggers;
+PROCESS for repeatable methods. Extend a missing contract there. Do not create
+a parallel design summary that can drift, or reread the entire history per leaf.
+
 ## Expensive jobs and interruptions
 
 Long tournaments/SPRTs, large datagen, expensive tuning, large PGO campaigns,
