@@ -93,18 +93,19 @@ pub fn generate_captures(board: &mut Board) -> MoveList {
 ///
 /// Deliberately does NOT run the [`has_pseudo_capture`] pre-scan, unlike its
 /// captures-only sibling (10.3(7)). A staged node usually goes on to generate
-/// quiets, and the pre-scan's saving is then illusory: `compute_pinned` is two
-/// empty-board slider lookups plus a short sniper walk, while a *failing* pre-scan is a
+/// quiets, and the pre-scan's saving is then illusory: `compute_pinned` is four
+/// slider lookups plus a short sniper walk, while a *failing* pre-scan is a
 /// full attack pass over every one of our pieces — and 78.5% of the nodes where
 /// it fired then paid for the pins anyway in `generate_quiets`. Computing pins
 /// unconditionally is therefore less work in the common case and lets every
 /// stage at this node share one pinned set.
 pub fn generate_captures_pinned(board: &mut Board) -> (MoveList, Bitboard) {
+    let mut moves = MoveList::new();
     let us = board.side_to_move;
     let them = !us;
     let king_sq = board.king_sq(us);
     let pinned = compute_pinned(board, king_sq, us, them);
-    let mut moves = MoveList::new();
+
     gen_captures_with_pin(board, us, them, king_sq, pinned, &mut moves);
     crate::diag_count!(board_gen_staged_capture_calls);
     crate::diag_add!(board_gen_staged_capture_moves, moves.len() as u64);
@@ -236,9 +237,8 @@ fn gen_moves<const CAPTURES: bool, const QUIETS: bool, S: MoveSink>(board: &Boar
 /// [`gen_moves`] for callers that already hold the pinned set for this
 /// position (10.3 speed pass).
 ///
-/// `compute_pinned` uses two empty-board slider lookups and a per-sniper
-/// occupied-between scan. Before sharing, pin discovery
-/// was being repeated: `generate_captures` computed it and then handed off
+/// `compute_pinned` is four slider lookups plus a per-sniper `between` scan, and
+/// it was being repeated: `generate_captures` computed it and then handed off
 /// to `gen_moves`, which computed the very same thing again; and a staged node
 /// paid for it once more when quiets were finally generated. Pins are a pure
 /// function of the position, so one computation per node serves every stage.
@@ -803,16 +803,33 @@ fn compute_pinned(board: &Board, king_sq: Square, us: Color, them: Color) -> Bit
     let atk = &*ATTACKS;
     let mut pinned = Bitboard::EMPTY;
 
-    // Only aligned enemy sliders can pin. Test every occupied square between
-    // king and slider, not just our pieces: an enemy blocker also breaks a pin.
-    let diagonal = board.pieces(them, Piece::Bishop) | board.pieces(them, Piece::Queen);
-    let orthogonal = board.pieces(them, Piece::Rook) | board.pieces(them, Piece::Queen);
-    let mut snipers = (atk.bishop(king_sq, Bitboard::EMPTY) & diagonal)
-        | (atk.rook(king_sq, Bitboard::EMPTY) & orthogonal);
-    while snipers.any() {
-        let blockers = between(king_sq, snipers.pop_lsb()) & board.all_occ;
-        if !blockers.more_than_one() {
-            pinned |= blockers & our_occ;
+    // X-ray diagonal: see through our own pieces to find diagonal pinners
+    let bishop_vision = atk.bishop(king_sq, board.all_occ);
+    let xray_bishop = atk.bishop(king_sq, board.all_occ ^ (bishop_vision & our_occ));
+    let diag_pinners =
+        (board.pieces(them, Piece::Bishop) | board.pieces(them, Piece::Queen)) & xray_bishop;
+    let mut diag_pinners = diag_pinners;
+    while diag_pinners.any() {
+        let pinner_sq = diag_pinners.pop_lsb();
+        let ray = between(king_sq, pinner_sq);
+        let blockers = ray & our_occ;
+        if blockers.any() && !blockers.more_than_one() {
+            pinned |= blockers;
+        }
+    }
+
+    // X-ray orthogonal: see through our own pieces to find orthogonal pinners
+    let rook_vision = atk.rook(king_sq, board.all_occ);
+    let xray_rook = atk.rook(king_sq, board.all_occ ^ (rook_vision & our_occ));
+    let ortho_pinners =
+        (board.pieces(them, Piece::Rook) | board.pieces(them, Piece::Queen)) & xray_rook;
+    let mut ortho_pinners = ortho_pinners;
+    while ortho_pinners.any() {
+        let pinner_sq = ortho_pinners.pop_lsb();
+        let ray = between(king_sq, pinner_sq);
+        let blockers = ray & our_occ;
+        if blockers.any() && !blockers.more_than_one() {
+            pinned |= blockers;
         }
     }
 
