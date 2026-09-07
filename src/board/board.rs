@@ -1554,43 +1554,56 @@ FEN: {}",
         debug_assert!(self.mailbox[from.index()] < 12);
         let moving_piece = self.piece_type_at_unchecked(from);
 
-        // Remove moving piece from origin
-        self.remove_piece(us, moving_piece, from);
-        self.hash ^= zob.piece(us, moving_piece, from);
-
-        // Handle en passant capture
-        if flags == EN_PASSANT {
-            let ep_cap_sq = if us == Color::White {
-                Square(to.0 - 8)
+        if flags == QUIET {
+            // 4.11b.9 fused ordinary relocation. `to` is empty and the piece
+            // keeps its identity, so one from/to mask and one paired key
+            // reproduce remove_piece(from) + add_piece(to) exactly.
+            self.move_piece(us, moving_piece, from, to);
+            self.hash ^= zob.piece(us, moving_piece, from) ^ zob.piece(us, moving_piece, to);
+            if moving_piece == Piece::Pawn {
+                self.halfmove_clock = 0;
             } else {
-                Square(to.0 + 8)
-            };
-            captured = encode_piece(them, Piece::Pawn);
-            self.remove_piece(them, Piece::Pawn, ep_cap_sq);
-            self.hash ^= zob.piece(them, Piece::Pawn, ep_cap_sq);
-            self.halfmove_clock = 0;
-        } else if flags == CAPTURE || flags >= PROMO_CAPTURE_KNIGHT {
-            // Regular capture (including promo-captures)
-            debug_assert!(self.mailbox[to.index()] < 12);
-            let captured_piece = self.piece_type_at_unchecked(to);
-            captured = encode_piece(them, captured_piece);
-            self.remove_piece(them, captured_piece, to);
-            self.hash ^= zob.piece(them, captured_piece, to);
-            self.halfmove_clock = 0;
-        } else if moving_piece == Piece::Pawn {
-            self.halfmove_clock = 0;
+                self.halfmove_clock = self.halfmove_clock.saturating_add(1);
+            }
         } else {
-            self.halfmove_clock = self.halfmove_clock.saturating_add(1);
-        }
+            // Remove moving piece from origin
+            self.remove_piece(us, moving_piece, from);
+            self.hash ^= zob.piece(us, moving_piece, from);
 
-        // Place moving piece on destination (or promotion piece)
-        if flags >= PROMO_KNIGHT {
-            let promo = mv.promo_piece();
-            self.add_piece(us, promo, to);
-            self.hash ^= zob.piece(us, promo, to);
-        } else {
-            self.add_piece(us, moving_piece, to);
-            self.hash ^= zob.piece(us, moving_piece, to);
+            // Handle en passant capture
+            if flags == EN_PASSANT {
+                let ep_cap_sq = if us == Color::White {
+                    Square(to.0 - 8)
+                } else {
+                    Square(to.0 + 8)
+                };
+                captured = encode_piece(them, Piece::Pawn);
+                self.remove_piece(them, Piece::Pawn, ep_cap_sq);
+                self.hash ^= zob.piece(them, Piece::Pawn, ep_cap_sq);
+                self.halfmove_clock = 0;
+            } else if flags == CAPTURE || flags >= PROMO_CAPTURE_KNIGHT {
+                // Regular capture (including promo-captures)
+                debug_assert!(self.mailbox[to.index()] < 12);
+                let captured_piece = self.piece_type_at_unchecked(to);
+                captured = encode_piece(them, captured_piece);
+                self.remove_piece(them, captured_piece, to);
+                self.hash ^= zob.piece(them, captured_piece, to);
+                self.halfmove_clock = 0;
+            } else if moving_piece == Piece::Pawn {
+                self.halfmove_clock = 0;
+            } else {
+                self.halfmove_clock = self.halfmove_clock.saturating_add(1);
+            }
+
+            // Place moving piece on destination (or promotion piece)
+            if flags >= PROMO_KNIGHT {
+                let promo = mv.promo_piece();
+                self.add_piece(us, promo, to);
+                self.hash ^= zob.piece(us, promo, to);
+            } else {
+                self.add_piece(us, moving_piece, to);
+                self.hash ^= zob.piece(us, moving_piece, to);
+            }
         }
 
         // Castling: move the rook as well
@@ -1761,19 +1774,26 @@ FEN: {}",
         self.checkers = info.checkers;
 
         // Move the piece back from `to` to `from`
-        let moved_piece = if flags >= PROMO_KNIGHT {
-            // Promotion: remove the promo piece, restore a pawn
-            let promo = mv.promo_piece();
-            self.remove_piece(us, promo, to);
-            Piece::Pawn
-        } else {
+        if flags == QUIET {
+            // 4.11b.9 fused ordinary relocation; mirrors the make-side path.
             debug_assert!(self.mailbox[to.index()] < 12);
             let p = self.piece_type_at_unchecked(to);
-            self.remove_piece(us, p, to);
-            p
-        };
+            self.move_piece(us, p, to, from);
+        } else {
+            let moved_piece = if flags >= PROMO_KNIGHT {
+                // Promotion: remove the promo piece, restore a pawn
+                let promo = mv.promo_piece();
+                self.remove_piece(us, promo, to);
+                Piece::Pawn
+            } else {
+                debug_assert!(self.mailbox[to.index()] < 12);
+                let p = self.piece_type_at_unchecked(to);
+                self.remove_piece(us, p, to);
+                p
+            };
 
-        self.add_piece(us, moved_piece, from);
+            self.add_piece(us, moved_piece, from);
+        }
 
         // Restore captured piece
         if info.captured != 255 {
@@ -1838,6 +1858,33 @@ FEN: {}",
                 self.non_pawn_hash[color as usize] ^= piece_key;
             }
             Piece::Rook | Piece::Queen => self.non_pawn_hash[color as usize] ^= piece_key,
+            Piece::King => {}
+        }
+    }
+
+    /// Fused ordinary relocation of `piece` from `from` to `to`.
+    ///
+    /// Only valid when `to` is empty and the piece keeps its identity, i.e. for
+    /// `QUIET` moves. The combined from/to mask and paired key are exactly the
+    /// XOR of [`Board::remove_piece`] and [`Board::add_piece`].
+    #[inline(always)]
+    fn move_piece(&mut self, color: Color, piece: Piece, from: Square, to: Square) {
+        debug_assert!(self.mailbox[to.index()] == NO_PIECE);
+        debug_assert!(from != to);
+        let mask = Bitboard::from(from) | Bitboard::from(to);
+        self.mailbox[from.index()] = NO_PIECE;
+        self.mailbox[to.index()] = encode_piece(color, piece);
+        self.pieces[color as usize * 6 + piece as usize] ^= mask;
+        self.occupancy[color as usize] ^= mask;
+        self.all_occ ^= mask;
+        let key = ZOBRIST.piece(color, piece, from) ^ ZOBRIST.piece(color, piece, to);
+        match piece {
+            Piece::Pawn => self.pawn_hash ^= key,
+            Piece::Knight | Piece::Bishop => {
+                self.minor_hash ^= key;
+                self.non_pawn_hash[color as usize] ^= key;
+            }
+            Piece::Rook | Piece::Queen => self.non_pawn_hash[color as usize] ^= key,
             Piece::King => {}
         }
     }
