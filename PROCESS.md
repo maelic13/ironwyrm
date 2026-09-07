@@ -6,6 +6,47 @@ step-by-step procedures those rules assume.
 
 ## Recurring procedures
 
+### Research packet and implementation handoff
+
+Use a packet under `analysis/` only when the decision would make PLAN
+unwieldy; trivial work stays in PLAN. A packet is a live decision record, not
+a second roadmap. PLAN owns its state and links it.
+
+```markdown
+# <leaf> — <research question>
+
+## Decision needed
+## Known evidence
+<!-- Concrete IDs, measurements and conditions; distinguish fact from inference. -->
+## Unknowns
+## Hypotheses
+<!-- H1 plus credible competitors; do not add decorative alternatives. -->
+## Interaction map
+<!-- Producer -> stored state -> consumers; duplicated signals and lifetimes. -->
+## Cheapest discriminating tests
+## Prospective prediction
+<!-- Expected diagnostic/Elo movement if defensible, confidence, likely failure. Freeze before exposure. -->
+## Falsifiers and stop conditions
+## Decision
+<!-- READY_FOR_IMPLEMENTATION / MORE_RESEARCH / NO_CHANGE. -->
+## Implementation handoff
+<!-- Fill only when READY_FOR_IMPLEMENTATION. -->
+```
+
+The handoff fixes the goal, exact intended semantics, why local evidence says
+it should work here, producer/state/consumer map where relevant, files and
+subsystems, interactions, invariants, instrumentation, deterministic tests,
+cheap qualification, maintainer-owned expensive gate, acceptance/rejection
+rule, explicit non-goals and adjacent mechanisms not to change. If any central
+field is still a design choice, the leaf remains `RESEARCH`.
+
+During research, inspect PLAN, EXPERIMENTS, the retry map, linked analyses and
+relevant source. Prefer the cheapest test that separates causal explanations.
+For important interactions, use a bounded baseline/A/B/A+B screen when it can
+distinguish independence from masking; do not require it for every small change.
+Freeze predictions in EXPERIMENTS before exposure. A later explanation is
+calibration, never proof that the outcome was predicted.
+
 ### Phase-4 step lifecycle and audit handoff
 
 Before selecting a leaf, review GUIDE's current/held overview and PLAN's
@@ -56,9 +97,11 @@ games until the end destroys attribution and lets losing structures hide.
    them. Fit the complete identifiable/covariant surface with the correct
    linear or nonlinear instrument. Targeted SPSA is residue only. Complete
    theta; do not select a checkpoint retrospectively.
-7. **Gate** — bake the fitted candidate and revision-matched baseline through
-   clean final PGO, then run the registered paired UHO SPRT. Do not change the
-   candidate, bounds, cap, book or adjudication after observing games.
+7. **Gate** — prepare and verify the fitted candidate, revision-matched
+   baseline, clean final-PGO recipes, manifests and registered paired UHO SPRT
+   command. The maintainer starts the expensive build/game job unless
+   explicitly delegated. Do not change the candidate, bounds, cap, book or
+   adjudication after observing games.
 8. **Close** — accept and commit only a passing result. Otherwise revert the
    behavior, keep the evidence row and restore the prior fingerprint. Ablate a
    surprising integrated result before crediting a subcomponent.
@@ -90,8 +133,10 @@ table; the working rules are:
   all, which mechanisms interact and in what order, which populations are
   worth measuring, and known failure modes.
 - What may not cross: source code in any language or amount, line-by-line or
-  structure-for-structure transcription, tuned constants and margins, copied
-  identifiers or file layout, and behavioral equivalence as a goal.
+  structure-for-structure transcription, copied identifiers or file layout,
+  and behavioral equivalence as a goal. A donor constant may cross only as an
+  explicitly labelled seed under PLAN's current independence rule; it is on
+  the donor's scale and must be locally fitted and gated before acceptance.
 - Read, understand, close the file, then design from Rarog's own code and 4.2
   evidence. If a change cannot be justified without pointing at the reference,
   it is not understood well enough to ship.

@@ -2,8 +2,8 @@
 """Check GUIDE.md's status board mechanically.
 
 GUIDE is the file that says what to do next, so a wrong checkbox sends the next
-session at finished work or hides unfinished work. Three failures are possible
-and none is visible by reading:
+session at finished work or hides unfinished work. The guarded failures below
+are not reliably visible by reading:
 
 1. **Sub-item indentation.** A sub-item under a `- ` parent must be indented
    **4** spaces. The parent's content column is 2, and an indented code block
@@ -34,13 +34,18 @@ and none is visible by reading:
    GUIDE's titles also off by one against PLAN's. Both directions are compared
    now.
 
+6. **Invalid or drifting active workflow metadata.** Open 4.11b/4.12 leaves
+   must have one PLAN row using a canonical state/capability class, and GUIDE's
+   compact suffix must agree. Vendor/model tags do not belong on those active
+   checklist lines; GUIDE's model mapping owns them.
+
 The child pattern is checked against the format GUIDE actually uses --
 `- [ ] **4.9a.1** ...`, bold and optionally letter-suffixed. The first version
 of this checker required a bare `4.9.1`, matched no line in the file, and so
 passed vacuously for every edit it existed to guard. The step count in the
 success line is there to make that failure mode visible.
 
-There is a fourth thing that is not a failure but is just as invisible: WHICH
+There is also an output that is not a failure but is just as invisible: WHICH
 LEAF IS NEXT. The board is 146 lines with 42 ticked, so reading the next few
 open items off it by eye is exactly the sort of manual step this file exists to
 replace. `--next N` prints them, generated from the board rather than copied
@@ -53,6 +58,7 @@ or a step that has no sub-steps. A parent with children is a heading, not work.
 Usage:
   python tools/diag/check_guide.py
   python tools/diag/check_guide.py --next 8
+  python tools/diag/check_guide.py --self-test
 
 Exit status is 0 when clean, 1 otherwise, so it can gate a commit. `--next`
 does not change it.
@@ -95,6 +101,69 @@ SUPERSEDED = re.compile(
 # separates them, and without it every owner pointer in the prose would be
 # read as a step this file does not define.
 PLAN_DEFINITION = re.compile(r"\*\*(\d+\.\d+[a-z]?\.\d+)\s+\S")
+WORKFLOW_ROW = re.compile(
+    r"^\|\s*(\d+\.\d+[a-z]?\.\d+)\s*\|\s*([A-Z_]+)\s*\|\s*([A-Z]\d?)\s*\|"
+)
+GUIDE_WORKFLOW = re.compile(
+    r"\*\*(\d+\.\d+[a-z]?\.\d+)\*\*.*?\*\*"
+    r"([A-Z_]+)\s*/\s*([A-Z]\d?)\*\*"
+)
+MODEL_TAG = re.compile(r"\b(?:Astra|Terra|Sol|Opus|Sonnet|Fable)\b")
+VALID_STATES = {
+    "RESEARCH",
+    "READY_FOR_IMPLEMENTATION",
+    "IMPLEMENTED",
+    "LOCAL_QUALIFIED",
+    "GAME_GATE",
+    "CLOSED",
+}
+VALID_CLASSES = {"R3", "R2", "I2", "I1", "M", "V"}
+ACTIVE_PREFIXES = ("4.11b.", "4.12.")
+
+
+def parse_workflow_rows(lines):
+    """Return active PLAN metadata and structural problems."""
+    rows = {}
+    problems = []
+    for n, line in enumerate(lines, 1):
+        match = WORKFLOW_ROW.match(line)
+        if not match:
+            continue
+        leaf, state, capability = match.groups()
+        if not leaf.startswith(ACTIVE_PREFIXES):
+            continue
+        if leaf in rows:
+            problems.append(
+                "PLAN.md:%d: duplicate workflow metadata for %s" % (n, leaf)
+            )
+        rows[leaf] = (state, capability)
+        if state not in VALID_STATES:
+            problems.append(
+                "PLAN.md:%d: %s has invalid workflow state %s"
+                % (n, leaf, state)
+            )
+        if capability not in VALID_CLASSES:
+            problems.append(
+                "PLAN.md:%d: %s has invalid capability class %s"
+                % (n, leaf, capability)
+            )
+    return rows, problems
+
+
+def self_test():
+    """Prove the workflow guard rejects intentionally malformed input."""
+    sample = [
+        "| 4.11b.8 | WRONG_STATE | R3 | synthetic |",
+        "| 4.11b.8 | RESEARCH | Z9 | duplicate and invalid |",
+    ]
+    _, problems = parse_workflow_rows(sample)
+    expected = ("invalid workflow state", "duplicate workflow", "invalid capability")
+    missing = [term for term in expected if not any(term in p for p in problems)]
+    if missing:
+        sys.stdout.write("FAIL: workflow self-test missed: %s\n" % ", ".join(missing))
+        return 1
+    sys.stdout.write("workflow metadata negative self-test: PASS (3 failures detected)\n")
+    return 0
 
 
 def actionable(lines):
@@ -130,7 +199,12 @@ def main():
     ap.add_argument("--next", type=int, default=0, metavar="N",
                     help="also print the next N actionable leaves, in board "
                          "order, generated from the checkboxes")
+    ap.add_argument("--self-test", action="store_true",
+                    help="run an intentionally bad workflow-metadata input")
     args = ap.parse_args()
+
+    if args.self_test:
+        return self_test()
 
     sys.stdout.reconfigure(encoding="utf-8")
     lines = GUIDE.read_text(encoding="utf-8").splitlines()
@@ -230,6 +304,56 @@ def main():
                 "sub-step(s) PLAN defines that GUIDE does not list: %s -- the "
                 "board is the file that says what to do next, so work missing "
                 "from it does not get done" % ", ".join(unlisted)
+            )
+
+        metadata, metadata_problems = parse_workflow_rows(plan_text.splitlines())
+        problems.extend(metadata_problems)
+        active_open = {
+            step for step, is_ticked in ticked.items()
+            if not is_ticked and step.startswith(ACTIVE_PREFIXES)
+        }
+        missing_metadata = sorted(active_open - set(metadata))
+        if missing_metadata:
+            problems.append(
+                "open active leaf/leaves missing PLAN workflow metadata: %s"
+                % ", ".join(missing_metadata)
+            )
+        extra_metadata = sorted(set(metadata) - active_open)
+        if extra_metadata:
+            problems.append(
+                "PLAN workflow row(s) are not open active GUIDE leaves: %s"
+                % ", ".join(extra_metadata)
+            )
+
+        guide_metadata = {}
+        for n, line in enumerate(lines, 1):
+            item = CHILD.match(line)
+            if not item or item.group(2) == "x":
+                continue
+            leaf = item.group(3)
+            if not leaf.startswith(ACTIVE_PREFIXES):
+                continue
+            match = GUIDE_WORKFLOW.search(line)
+            if not match:
+                problems.append(
+                    "GUIDE.md:%d: open active leaf %s lacks state/class suffix"
+                    % (n, leaf)
+                )
+                continue
+            guide_metadata[leaf] = (match.group(2), match.group(3))
+            if MODEL_TAG.search(line):
+                problems.append(
+                    "GUIDE.md:%d: active leaf %s carries a model tag; use its "
+                    "capability class and GUIDE's mapping" % (n, leaf)
+                )
+        drift = sorted(
+            leaf for leaf in active_open
+            if leaf in metadata and guide_metadata.get(leaf) != metadata[leaf]
+        )
+        if drift:
+            problems.append(
+                "GUIDE/PLAN workflow metadata differs for: %s"
+                % ", ".join(drift)
             )
 
     missing = sorted(REQUIRED_PHASES - phases)

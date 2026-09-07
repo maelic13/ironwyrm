@@ -1,10 +1,80 @@
 # Rarog development guide
 
-**Status board only: every phase, step and sub-step with a checkbox.**
-Nothing else belongs here. Rationale and design live in `PLAN.md`; durable
-evidence in `EXPERIMENTS.md`; repeatable procedures in `PROCESS.md`; finished
-history in `TRACKER.md`. `GUIDE.md` and `PLAN.md` change in the same commit,
-and `python tools/diag/check_guide.py` must pass.
+## How to work with the engine agent
+
+1. Ask **“what measured defect are we fixing?”** before asking which feature to
+   add. Keep unresolved chess or architecture reasoning in `RESEARCH`.
+2. Use the cheapest useful falsifier before expensive coding or games. Search
+   prior negative results and do not retry one unless its recorded trigger fired.
+3. Promote to `READY_FOR_IMPLEMENTATION` only when the mechanism and semantics
+   are explicit, local evidence supports it, interactions and falsifiers are
+   known, and acceptance/rejection is fixed.
+4. Let implementation act like a colleague on ordinary code structure,
+   builds, tests and cheap qualification. Do not let it silently redesign or
+   broaden the experiment. A false premise returns the leaf to `RESEARCH`.
+5. The agent prepares and verifies long tournaments, SPRTs, datagen, tuning,
+   PGO and profiling jobs; the maintainer starts them unless explicitly agreed
+   otherwise.
+6. Freeze the prediction before exposure. Keep it beside the result and judge
+   the postmortem against it; retrospective certainty is not prediction.
+7. A clean negative result is progress. Do not chase donor features, invent an
+   evidence-layer exchange rate, or increase implementation volume when the
+   hypothesis is weak. Return to evidence, alternatives and a discriminating
+   test.
+
+| State | Boundary / control |
+|---|---|
+| `RESEARCH` | Research owner states evidence, alternatives, interactions, prediction, falsifier and stop rule. |
+| `READY_FOR_IMPLEMENTATION` | Research decision is frozen; implementation may make ordinary local engineering choices. |
+| `IMPLEMENTED` | Intended semantics exist, but no qualification claim is implied. |
+| `LOCAL_QUALIFIED` | Cheap correctness/performance checks passed; agent prepares any expensive gate. |
+| `GAME_GATE` | Registered playing gate is running or resolved under maintainer control. |
+| `CLOSED` | Accepted, rejected, no-change or deferred disposition and calibration are recorded. |
+
+### Current model mapping
+
+PLAN records only stable capability classes. Edit this table when model
+generations change; do not rewrite the roadmap. Effort is selected per model.
+
+| Class | Capability | GPT | Claude |
+|---|---|---|---|
+| `R3` | Frontier causal/architecture research | GPT-6 Astra — Extra High | Claude Opus 5 — High |
+| `R2` | Bounded correctness-sensitive reasoning | GPT-5.6 Sol — High | Claude Opus 5 — High |
+| `I2` | Difficult implementation | GPT-5.6 Sol — High | Claude Opus 5 — High |
+| `I1` | Well-specified implementation | GPT-5.6 Terra — Medium | Claude Sonnet 5 — Medium |
+| `M` | Mechanical/docs/provenance | GPT-5.6 Terra — Medium | Claude Fable 5.1 — Medium |
+| `V` | Verification/measurement | GPT-5.6 Sol — High | Claude Sonnet 5 — High |
+
+### Reusable research prompt
+
+> Investigate `<PLAN leaf>` as research, not implementation. Read PLAN,
+> EXPERIMENTS, linked analysis and relevant source; measured evidence outranks
+> roadmap assumptions. Search negative results and retry triggers. State the
+> precise question, leading and competing hypotheses, interactions/duplicated
+> signals, and whether search, evaluation, tooling or instrument effects could
+> explain it. Design the cheapest discriminating test first; freeze its
+> prediction and confidence, falsifiers and stop rule before exposure. Avoid
+> substantial engine implementation. Finish `READY_FOR_IMPLEMENTATION`,
+> `MORE_RESEARCH` or `NO_CHANGE`, with the evidence for that verdict.
+
+### Reusable implementation prompt
+
+> Implement `<PLAN leaf>` from its registered handoff. Treat the research
+> decision, semantics, invariants and experiment design as fixed. Use normal
+> engineering judgment for code, focused builds/debugging/tests and cheap
+> qualification. Do not broaden the mechanism, tune unrelated behavior or
+> continue other roadmap work. If a research premise is false, preserve useful
+> instrumentation, document the contradiction and return the leaf to
+> `RESEARCH`. Prepare but do not start maintainer-owned expensive jobs. Report
+> changes, interactions, validation, remaining gate and false assumptions;
+> update roadmap/evidence documents under their ownership rules.
+
+## Status board
+
+Every phase, step and sub-step remains visible here. Rationale and design live
+in `PLAN.md`; durable evidence in `EXPERIMENTS.md`; repeatable procedures in
+`PROCESS.md`; finished history in `TRACKER.md`. `GUIDE.md` and `PLAN.md` change
+together, and `python tools/diag/check_guide.py` must pass.
 
 ## Current checkpoint
 
@@ -19,12 +89,12 @@ and `python tools/diag/check_guide.py` must pass.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
 | Instrument state | **4.10 repaired; v2 baselines/floors, budget transfer, label audit, mate-drive closure and conversion corrections recorded.** |
-| Current step | **4.11b.8 — optimize legal generation and move-list delivery**, not started |
+| Current step | **4.11b.8 — legal generation and move-list delivery**, `RESEARCH / R3` |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## Next and held work
 
-**Next: 4.11b.8 — optimize legal generation and move-list delivery.**
+**Next: 4.11b.8 — research legal generation and move-list delivery.**
 4.11.7–4.11.10 are complete; their scheduling holds/evidence gaps are resolved.
 
 | Open hold | Resume when | Must be resolved before |
@@ -38,9 +108,8 @@ next step; the maintainer does not need to run a queue script.
 
 ## Phase 4 — bounded pre-NNUE search and HCE
 
-Model tags below are GPT / Claude: Terra/Sol = GPT-5.6, Astra = GPT-6;
-Sonnet/Opus = Claude 5. M/H/XH = Medium/High/Extra High.
-Assignments and effort-setting caveats are recorded in PLAN 4.11b and 4.12.
+Open active-horizon leaves show `workflow state / capability class`. Dependency
+holds still come from PLAN; a readiness label never lifts one.
 
 - [x] **4.0** Evidence, baseline and oracle freeze — RAR-M12
 - [x] **4.1** Instrumented oracle — `hybrid-diag` `de568b3`
@@ -117,41 +186,41 @@ Assignments and effort-setting caveats are recorded in PLAN 4.11b and 4.12.
     - [x] **4.11b.5** Repair SEE king legality, created pins and recapture promotions; RAR-M28
     - [x] **4.11b.6** Add neutral value injection; restore comparable SEE timing; RAR-M29
     - [x] **4.11b.7** Profile board work in HCE search; RAR-M30
-    - [ ] **4.11b.8** Optimize legal generation and move-list delivery — Astra XH / Opus H
-    - [ ] **4.11b.9** Measure fused piece relocation — Sol H / Sonnet H
-    - [ ] **4.11b.10** Share useful pin/check information — Astra XH / Opus H
-    - [ ] **4.11b.11** Optimize the corrected SEE kernel — Astra H / Opus H
-    - [ ] **4.11b.12** Decide whether king-square caching pays — Sol H / Sonnet H
-    - [ ] **4.11b.13** Define history capacity and mutation contracts — Sol H / Opus H
-    - [ ] **4.11b.14** Decide whether a larger representation change pays — Astra XH / Opus H
-    - [ ] **4.11b.15** Review draw/null/repetition policy boundaries — Astra XH / Opus H
-    - [ ] **4.11b.16** Qualify integrated correctness and throughput — Sol H / Opus H
-    - [ ] **4.11b.17** Register and qualify the playing cluster — Astra H / Opus H
-    - [ ] **4.11b.18** Refresh affected endgame evidence and close — Astra H / Opus H
+    - [ ] **4.11b.8** Research legal generation and move-list delivery — **RESEARCH / R3**
+    - [ ] **4.11b.9** Measure fused piece relocation — **READY_FOR_IMPLEMENTATION / I2**
+    - [ ] **4.11b.10** Research shared pin/check information — **RESEARCH / R3**
+    - [ ] **4.11b.11** Optimize the corrected SEE kernel — **READY_FOR_IMPLEMENTATION / I2**
+    - [ ] **4.11b.12** Decide whether king-square caching pays — **RESEARCH / R2**
+    - [ ] **4.11b.13** Define history capacity and mutation contracts — **RESEARCH / R2**
+    - [ ] **4.11b.14** Decide whether a larger representation change pays — **RESEARCH / R3**
+    - [ ] **4.11b.15** Review draw/null/repetition policy boundaries — **RESEARCH / R3**
+    - [ ] **4.11b.16** Qualify integrated correctness and throughput — **READY_FOR_IMPLEMENTATION / V**, dependency-held
+    - [ ] **4.11b.17** Register and qualify the playing cluster — **RESEARCH / V**, candidate not yet defined
+    - [ ] **4.11b.18** Refresh affected endgame evidence and close — **READY_FOR_IMPLEMENTATION / V**, dependency-held
 - [ ] **4.12** Endgame reference functions — order registered by 4.11.6, re-derived at 4.11.12
-    - [ ] **4.12.1** Adopt the order; confirm recognizer-vs-scale classification per family — Astra H / Opus H
-    - [ ] **4.12.2** KRPKR [ref 13] scale — 30.7% overclaim remains after 4.9a.7 — Astra H / Opus H
-    - [ ] **4.12.3** KXK [ref 3] verdict — largest occurrence in the set (37.8%); mechanism at 4.9a.4 — Astra XH / Opus H
-    - [ ] **4.12.4** KRKN [ref 8] scale — **100%** overclaim at +346; Rarog reaches it 1.6x the pool rate — Astra H / Opus H
-    - [ ] **4.12.5** KRKB [ref 7] scale — **99.6%** overclaim at +307; same 1.6x over-representation — Astra H / Opus H
-    - [ ] **4.12.6** KRPKB [ref 14] scale — **100%** overclaim at +328 after 4.9a.8's rook pawns — Astra H / Opus H
-    - [ ] **4.12.7** KBPKB [ref 17] scale — 60.9% overclaim; mate-drive debt from 4.11.9 — Astra XH / Opus H
-    - [ ] **4.12.8** KRKP [ref 6] scale — 26.4% overclaim at +72 — Sol H / Opus H
-    - [ ] **4.12.9** KBPKN [ref 19] scale — 50.7% overclaim; mate-drive debt from 4.11.9 — Astra XH / Opus H
-    - [ ] **4.12.10** KQKR [ref 10] verdict — deficit 23/13/3 at 60k/200k/600k; 0.63% of Rarog's games — Astra H / Opus H
-    - [ ] **4.12.11** KPK [ref 5] scale — 4.6% overclaim; present bitbase — Sol H / Opus M
-    - [ ] **4.12.12** KPKP [ref 20] scale — 3.8% overclaim, nearly clean — Sol H / Opus H
-    - [ ] **4.12.13** KQKP [ref 9] verdict — historical E08 -3.79 pp; current 60k deficit closes at 200k/600k — Astra XH / Opus H
-    - [ ] **4.12.14** KBNK [ref 4] verdict — corrected refit DTZ 0.7260 -> 0.6753; attribution unisolated — Astra XH / Opus H
-    - [ ] **4.12.15** KNNKP [ref 2] scale — 57.7% overclaim; holds 7 of the 8 hard residue — Astra XH / Opus H
-    - [ ] **4.12.16** KNNK [ref 1] scale — **no defect measured** — close it — Terra H / Sonnet M
-    - [ ] **4.12.17** KPsK [ref 16] ? — **MEASURE FIRST** — 4.52% of Rarog's games, never measured — Astra H / Opus H
-    - [ ] **4.12.18** KBPsK [ref 11] ? — **MEASURE FIRST** — 2.59% of Rarog's games, never measured — Astra H / Opus H
-    - [ ] **4.12.19** KBPPKB [ref 18] ? — **MEASURE FIRST** — 0.50%, never measured — Astra H / Opus H
-    - [ ] **4.12.20** KQKRPs [ref 12] ? — **MEASURE FIRST** — 0.42% of games and 4.41% of the TREE — Astra XH / Opus H
-    - [ ] **4.12.21** KRPPKRP [ref 15] ? — **5.40% of games and UNVERIFIABLE** — 7 men; record the gap — Astra XH / Opus H
-    - [ ] **4.12.22** Dependency-complete family refits and gates, tiered by occurrence — Astra XH / Opus H
-    - [ ] **4.12.23** Conversion, theory, STC/LTC and endgame-cohort closure — Astra H / Opus H
+    - [ ] **4.12.1** Adopt the order; confirm recognizer-vs-scale classification — **RESEARCH / R3**
+    - [ ] **4.12.2** KRPKR [ref 13] scale — 30.7% overclaim remains after 4.9a.7 — **RESEARCH / R3**
+    - [ ] **4.12.3** KXK [ref 3] verdict — largest occurrence in the set (37.8%); mechanism at 4.9a.4 — **RESEARCH / R3**
+    - [ ] **4.12.4** KRKN [ref 8] scale — **100%** overclaim at +346; Rarog reaches it 1.6x the pool rate — **RESEARCH / R3**
+    - [ ] **4.12.5** KRKB [ref 7] scale — **99.6%** overclaim at +307; same 1.6x over-representation — **RESEARCH / R3**
+    - [ ] **4.12.6** KRPKB [ref 14] scale — **100%** overclaim at +328 after 4.9a.8's rook pawns — **RESEARCH / R3**
+    - [ ] **4.12.7** KBPKB [ref 17] scale — 60.9% overclaim; mate-drive debt from 4.11.9 — **RESEARCH / R3**
+    - [ ] **4.12.8** KRKP [ref 6] scale — 26.4% overclaim at +72 — **RESEARCH / R2**
+    - [ ] **4.12.9** KBPKN [ref 19] scale — 50.7% overclaim; mate-drive debt from 4.11.9 — **RESEARCH / R3**
+    - [ ] **4.12.10** KQKR [ref 10] verdict — deficit 23/13/3 at 60k/200k/600k; 0.63% of games — **RESEARCH / R3**
+    - [ ] **4.12.11** KPK [ref 5] scale — 4.6% overclaim; present bitbase — **RESEARCH / R2**
+    - [ ] **4.12.12** KPKP [ref 20] scale — 3.8% overclaim, nearly clean — **RESEARCH / R2**
+    - [ ] **4.12.13** KQKP [ref 9] verdict — historical E08 -3.79 pp; current 60k deficit closes at 200k/600k — **RESEARCH / R3**
+    - [ ] **4.12.14** KBNK [ref 4] verdict — corrected refit DTZ 0.7260 -> 0.6753; attribution unisolated — **RESEARCH / R3**
+    - [ ] **4.12.15** KNNKP [ref 2] scale — 57.7% overclaim; holds 7 of the 8 hard residue — **RESEARCH / R3**
+    - [ ] **4.12.16** KNNK [ref 1] scale — **no defect measured**; no-change closure expected — **RESEARCH / R2**
+    - [ ] **4.12.17** KPsK [ref 16] ? — **MEASURE FIRST** — 4.52% of Rarog's games — **RESEARCH / R3**
+    - [ ] **4.12.18** KBPsK [ref 11] ? — **MEASURE FIRST** — 2.59% of Rarog's games — **RESEARCH / R3**
+    - [ ] **4.12.19** KBPPKB [ref 18] ? — **MEASURE FIRST** — 0.50% of games — **RESEARCH / R3**
+    - [ ] **4.12.20** KQKRPs [ref 12] ? — **MEASURE FIRST** — 0.42% of games and 4.41% of the TREE — **RESEARCH / R3**
+    - [ ] **4.12.21** KRPPKRP [ref 15] ? — **5.40% and UNVERIFIABLE**; 7-man hold — **RESEARCH / R3**
+    - [ ] **4.12.22** Dependency-complete family refits and gates — **RESEARCH / R3**, families not ready
+    - [ ] **4.12.23** Conversion, theory, STC/LTC and cohort closure — **READY_FOR_IMPLEMENTATION / V**, dependency-held
 - [ ] **4.13** Datagen label truth and corpus contract
     - [ ] **4.13.1** Audit data/label pipeline; quantify contradictions
     - [ ] **4.13.2** Relabel and whole-game adjudication as separate registered arms

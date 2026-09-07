@@ -3,6 +3,83 @@
 Read `GUIDE.md` for what to work on and the relevant part of `PLAN.md` for why.
 These rules protect correctness and the maintainer's time and token budget.
 
+## Classify the work before starting
+
+Before substantial work, name its primary kind: research/diagnosis, experiment
+design, implementation, deterministic qualification, performance
+qualification, playing-strength gate, or documentation/provenance. Do not read
+every roadmap leaf as an instruction to write code. `PLAN.md` owns the workflow
+state and capability class; `GUIDE.md` owns the maintainer-editable mapping from
+capability classes to current models.
+
+The prospective workflow is `RESEARCH -> READY_FOR_IMPLEMENTATION ->
+IMPLEMENTED -> LOCAL_QUALIFIED -> GAME_GATE -> CLOSED`. Not every task needs
+every state. Documentation can close without games; research can close with a
+justified `NO_CHANGE`; neutral performance work uses deterministic/performance
+qualification. A playing-strength change normally cannot bypass `GAME_GATE`.
+
+`READY_FOR_IMPLEMENTATION` is a hard semantic boundary. Before promoting a
+substantial playing change, establish the measured defect or opportunity, the
+evidence for it in this engine, credible competing explanations, interacting
+mechanisms, the cheapest test that can kill the hypothesis, its falsifier and
+stop rule, and the exact condition that makes implementation justified. A
+plausible chess-programming idea or donor-engine feature is not enough.
+
+## Research and implementation ownership
+
+- Research owns the causal question, competing hypotheses, interaction map,
+  prospective prediction, falsifiers, experiment meaning and readiness
+  decision. It should prefer cheap discriminating evidence over a sophisticated
+  implementation of an uncertain idea.
+- Implementation owns normal local engineering: idiomatic Rust structure,
+  necessary local refactoring, focused instrumentation/tests, compilation,
+  debugging and cheap deterministic qualification. The maintainer should not
+  need to prescribe those ordinary steps.
+- Implementation must not silently replace the hypothesis, broaden the chess
+  mechanism, add adjacent heuristics, tune unrelated constants, port extra
+  donor behavior, change the experiment after exposure or rescue a weak
+  candidate by modifying neighbouring mechanisms. If a material premise is
+  false, preserve useful instrumentation, record the contradiction and return
+  the leaf to `RESEARCH`.
+- Reference engines teach mechanisms, contracts, dependencies, failure modes
+  and experimental methods. Their constants may be labelled seed values under
+  PLAN's independence boundary; neither similarity nor a copied value is
+  acceptance evidence.
+
+For nontrivial playing work, explicitly check for shared signals and feedback:
+search changes alter evaluation populations, evaluation changes alter pruning,
+ordering evidence may also prune, TT semantics can mask a candidate, and
+rule-50/repetition/promotion closure can make a local-looking feature non-local.
+Use a bounded baseline/A/B/A+B screen when it cheaply distinguishes interaction;
+do not require a factorial for every small change.
+
+## Expensive jobs and interruptions
+
+Long tournaments/SPRTs, large datagen, expensive tuning, large PGO campaigns,
+lengthy profiling and other machine-occupying jobs belong to the maintainer
+unless the repository or user explicitly delegates them. The agent prepares
+and verifies the command, inputs, configuration, artifacts and live wire, then
+hands off the runnable job. Cheap local qualification remains the agent's job.
+
+If the user interrupts work for a correction or scope change, finish and
+qualify that requested correction, report it and return control. Do not resume
+the interrupted objective unless the user explicitly asks.
+
+## Predictions, negative results and research calibration
+
+Freeze prospective predictions before result exposure. Afterwards append a
+calibration/postmortem; never rewrite the prediction into retrospective
+certainty. A persuasive after-the-fact explanation does not prove it was
+predicted. Record which original assumption failed and whether the miss was in
+sign, magnitude, mechanism, interaction, confidence or instrument.
+
+`NO_CHANGE`, refuted, too sparse, low expected value, inappropriate interaction
+and retry-trigger-not-fired are successful research outcomes. Do not create
+implementation work to make the roadmap move, and do not retry a rejected idea
+until its objective trigger fires. State the evidence layer: better loss,
+nodes, NPS, depth, conversion, tactics or reference agreement is not
+automatically Elo and has no implicit exchange rate to it.
+
 ## The one failure mode
 
 Almost every mistake made in this repo by an agent has the same shape: *the
@@ -198,7 +275,8 @@ did what its name suggests.**
 ## Documents
 
 - **`GUIDE.md` and `PLAN.md` are updated in the SAME commit.** GUIDE is the
-  overview of PLAN — current state and the ordered steps, nothing else. A
+  short operator contract/current-model mapping plus the overview of PLAN's
+  current state and ordered steps. A
   GUIDE that disagrees with PLAN is worse than no GUIDE, because it is the
   file that says what to do next and it will be believed. This applies when
   roadmap status or requirements change; an AGENTS-only operating-rule edit
@@ -216,8 +294,9 @@ did what its name suggests.**
   ```bash
   python tools/diag/check_guide.py
   ```
-- **Keep GUIDE short.** If a change to GUIDE runs past a few lines, it belongs
-  somewhere else: what a step INVOLVES goes in `PLAN.md`; a completed step's
+- **Keep GUIDE short.** Outside its operator contract, model mapping and two
+  reusable prompts, a change that runs past a few lines belongs somewhere
+  else: what a step INVOLVES goes in `PLAN.md`; a completed step's
   record goes in `TRACKER.md`; a repeatable procedure goes in `PROCESS.md`;
   durable evidence goes in `EXPERIMENTS.md`; a measurement's derivation goes in
   `analysis/`. GUIDE grew to 898 lines by absorbing all five and stopped being
@@ -261,21 +340,19 @@ did what its name suggests.**
 - When maintainer action is needed, give runnable commands in their own fenced
   block and restate them rather than referring back. Routine internal checks
   need not become user chores. Always name the next executable leaf.
-- **Whenever reporting the next step, recommend one GPT model AND one Claude
-  model**, with a brief task-specific reason. Use this maintainer-pinned list:
-  GPT-5.6 Terra, GPT-5.6 Sol, GPT-6 Astra; Claude Sonnet 5, Claude Opus 5,
-  Claude Fable 5.1. Change these names/versions only when the maintainer
-  explicitly requests an update; do not automatically substitute newer models.
+- **Whenever reporting the next step, use its PLAN capability class and the
+  current GUIDE mapping to recommend one GPT model AND one Claude model**, with
+  a brief task-specific reason. GUIDE's table is the single maintainer-edited
+  source for names and versions; do not automatically substitute newer models.
   Prefer the least costly model judged sufficient for the defined task;
   reserve deeper review for unresolved design, interaction or correctness
   questions. Recommendations are task judgments, not guarantees or claims of
   measured model superiority. Do not change the active model automatically.
-- **Use recorded PLAN model/effort assignments when they exist.** Report
-  those choices at handoff instead of reselecting from the title or the model
-  currently running. Do not silently downgrade them. If a changed scope or
-  new correctness/design uncertainty calls for escalation, state why and
-  update PLAN and GUIDE together. For unassigned steps, use the judgment rule
-  above. Recorded assignments are recommendations, not automatic model changes.
+- **PLAN records stable capability classes, not vendor generations.** Do not
+  silently downgrade a recorded class. If changed scope or new
+  correctness/design uncertainty calls for escalation, state why and update
+  PLAN and GUIDE together. The current mapping is a recommendation, not an
+  automatic model change.
 - **Pair EACH recommended model with its own thinking mode**: Medium, High,
   Extra High, or a stronger mode using that model's actual supported name.
   Choose effort independently for each model and the specific next leaf;

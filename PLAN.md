@@ -1,7 +1,8 @@
 # Rarog development plan
 
 Updated 2026-09-07. This is the current roadmap. Historical evidence belongs
-in `EXPERIMENTS.md`; current status and commands belong in `GUIDE.md`.
+in `EXPERIMENTS.md`; the short operator contract, current status and model
+mapping belong in `GUIDE.md`.
 Phase 4's open work was reordered and renumbered on 2026-09-04 after an
 instrument audit; section 13 maps the old numbers to the new ones.
 
@@ -16,7 +17,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.11b.8 — optimize legal generation and move-list delivery**, not started |
+| Current step | **4.11b.8 — legal generation and move-list delivery**, `RESEARCH / R3` |
 | Instrument state | 4.10 repairs; v2 baselines/floors, budget transfer, label audit, mate-drive closure and conversion-claim correction are complete. Historical v1 pawn-family conversion claims are retained but superseded in place by RAR-M24 |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -34,7 +35,8 @@ predates 4.11b and is not the current roadmap: after 4.11 comes **4.11b**, then
 4.12. The maintainer authorized heavy computation, and **4.11.7 is now complete**
 (RAR-M21, 2026-09-06). RAR-M22 and RAR-M23 subsequently completed 4.11.8 and
 4.11.9. RAR-M24 completed 4.11.10; its scheduling dependency is resolved.
-Board leaves 4.11b.1–4.11b.7 are complete. The next leaf is **4.11b.8**.
+Board leaves 4.11b.1–4.11b.7 are complete. The next leaf is **4.11b.8**, in
+`RESEARCH`; it is not yet a request to implement one of its candidate designs.
 Actual full-search board cost is profiled; SEE is correctness-verified and
 normalized timing is restored. Cluster playing qualification remains at
 4.11b.17.
@@ -128,6 +130,51 @@ gating. The following rules determine this roadmap's order.
     failing conditions exactly, and hash behaviour through an explicit field
     list rather than whole records. An interim SPRT reading is likewise not
     evidence, in either direction.
+
+### Prospective workflow and ownership
+
+Open nontrivial work uses this conceptual state machine:
+
+`RESEARCH -> READY_FOR_IMPLEMENTATION -> IMPLEMENTED -> LOCAL_QUALIFIED -> GAME_GATE -> CLOSED`
+
+States describe evidence maturity, not checkbox progress. A dependency can
+hold a ready verification leaf without returning it to research. Tasks skip
+irrelevant states: documentation/provenance can close after its own checks;
+research can close `NO_CHANGE` or `NOT_WORTH_PURSUING`; behavior-neutral work
+uses deterministic/performance qualification; playing-strength changes
+normally require `GAME_GATE`.
+
+`READY_FOR_IMPLEMENTATION` means the central research decision is no longer an
+implementation choice. The mechanism, intended semantics, evidence in this
+engine, known interactions and invariants, falsifier, qualification and
+accept/reject rule are explicit here or in a linked analysis handoff. If a
+material premise fails during implementation, preserve useful diagnostics and
+return the leaf to `RESEARCH`; do not rescue it with an adjacent mechanism.
+
+| Class | Required capability |
+|---|---|
+| `R3` | Frontier research for unresolved causal, chess or architecture questions |
+| `R2` | Bounded but correctness-sensitive architecture/reasoning |
+| `I2` | Difficult implementation with strong reasoning |
+| `I1` | Well-specified implementation |
+| `M` | Mechanical documentation/provenance work |
+| `V` | Deterministic, performance or playing-gate verification |
+
+PLAN owns classes; GUIDE alone maps them to current model names and thinking
+modes. Research owns the question, competing hypotheses, interaction map,
+prospective prediction, falsifier, stop rule and readiness verdict.
+Implementation owns ordinary local code structure, refactoring, focused tests,
+build/debug work and cheap qualification inside that frozen contract. It does
+not redesign the experiment. Long tournaments/SPRTs, datagen, expensive tuning,
+PGO campaigns and lengthy profiling are maintainer-started unless explicitly
+delegated; the agent prepares and verifies the command and artifacts.
+
+Evidence precedence remains rules 4 and 11: a coherent explanation or proxy
+movement is not a verdict. Before result exposure, freeze the prediction in
+`EXPERIMENTS.md`; after exposure append calibration rather than rewriting the
+prediction. Research packets and implementation handoffs use the lightweight
+format in `PROCESS.md` and live under `analysis/` only when PLAN would become
+unwieldy.
 
 ### Subsystem audit contract: correctness, composition and cost
 
@@ -1992,46 +2039,24 @@ king sentinel. Actual value fitting remains after final HCE in 4.15.3-4.15.4.
   dependency-complete playing change is qualified at 4.11b.17. Bench counts
   and cross-engine microbenchmarks never substitute for that verdict.
 
-**Recorded model and thinking assignments (2026-09-06).** Use the rows
-below when handing off these leaves; do not have each successor reselect a
-cheaper model from the step title. These are task-specific recommendations,
-not model benchmarks or a guarantee of correctness. They reflect unresolved
-design/interaction work, not the duration of a run. Bounded instrumentation and
-qualification use Sol; coupled board semantics use Astra. A no-change decision
-can still require difficult analysis. Existing acceptance checks remain mandatory.
+**Active workflow register.** Evidence and detailed contracts are in the
+numbered leaves below and the linked board analyses. A state/class does not
+lift dependency order. GUIDE maps each class to the current GPT and Claude
+recommendations without coupling this roadmap to model generations.
 
-GUIDE abbreviates the pinned versions from AGENTS: Terra/Sol = GPT-5.6,
-Astra = GPT-6; Sonnet/Opus = Claude Sonnet 5/Opus 5. H = High, XH = Extra
-High, M = Medium. GPT Extra High corresponds to `xhigh`. Claude effort names
-use the maintainer's requested UI vocabulary; availability/mapping for these
-pinned Claude releases is unverified, so verify the displayed setting rather
-than inventing a provider API flag. Efforts are selected independently per
-model, not assumed equivalent. The broad GPT capability positioning is described
-in the [official model comparison](https://developers.openai.com/api/docs/models/compare);
-the leaf assignments and Claude choices here are engineering judgments.
-
-Read the leaf's complete requirements and dependencies before execution.
-If new evidence invalidates its scope, report the reason for escalation and
-update the assignment explicitly; never silently downgrade it. These rows do
-not change active settings, lift holds, authorize extra work or alter gates.
-Keep each assignment attached to its task if future evidence changes ordering.
-
-| Step | GPT / thinking | Claude / thinking | Why this assignment |
-|---|---|---|---|
-| 4.11b.5 | GPT-6 Astra / Extra High | Claude Opus 5 / High | Repair three interacting exchange defects; reconcile full/threshold SEE, evolving legality and promoted occupants. |
-| 4.11b.6 | GPT-5.6 Sol / High | Claude Opus 5 / Medium | Bounded value-injection seam; prove default parity and that benchmark inputs reach the kernel. |
-| 4.11b.7 | GPT-5.6 Sol / High | Claude Opus 5 / Medium | Attribute measured search cost with existing tools; distinguish calls, nodes, allocation and cache effects. |
-| 4.11b.8 | GPT-6 Astra / Extra High | Claude Opus 5 / High | Legal generation, order and delivery interact with search; optimize without silently changing chess or move-order semantics. |
-| 4.11b.9 | GPT-5.6 Sol / High | Claude Sonnet 5 / High | Bounded relocation experiment with explicit mailbox, bitboard, hash, PST and special-move invariants. |
-| 4.11b.10 | GPT-6 Astra / Extra High | Claude Opus 5 / High | Sharing pin/check data needs a precise state lifetime, ownership and invalidation contract across consumers. |
-| 4.11b.11 | GPT-6 Astra / High | Claude Opus 5 / High | Optimize only the repaired SEE contract; preserve threshold boundaries, pins, kings and promotions. |
-| 4.11b.12 | GPT-5.6 Sol / High | Claude Sonnet 5 / High | Small conditional king-cache experiment with measurable benefit and straightforward state-restoration checks. |
-| 4.11b.13 | GPT-5.6 Sol / High | Claude Opus 5 / High | Specify history capacity, clone/root ownership and null/real mutation boundaries before changing reservation behavior. |
-| 4.11b.14 | GPT-6 Astra / Extra High | Claude Opus 5 / High | Architecture decision across representation, copying, cache locality and future NNUE seams; a rewrite is not presumed. |
-| 4.11b.15 | GPT-6 Astra / Extra High | Claude Opus 5 / High | Draw identity, null moves and repetition semantics interact with search; separate correctness from rejected policy experiments. |
-| 4.11b.16 | GPT-5.6 Sol / High | Claude Opus 5 / High | Execute the defined integrated qualification matrix; distinguish neutral optimization baselines from correctness changes. |
-| 4.11b.17 | GPT-6 Astra / High | Claude Opus 5 / High | Prospective cluster gate design must distinguish correctness, unknown-sign strength effects and speed attribution. |
-| 4.11b.18 | GPT-6 Astra / High | Claude Opus 5 / High | Identify affected endgame evidence and causal dependencies; refresh only what changed and preserve historical claims correctly. |
+| Leaf | Workflow state | Class | Question or goal | Evidence / dependencies | Ready-to-advance condition and deciding gate |
+|---|---|---|---|---|---|
+| 4.11b.8 | RESEARCH | R3 | Is a specific legal-generation/delivery contract responsible for material full-search cost? | RAR-M20/M25/M30; corrected board baseline | Research card below selects one bounded mechanism; move-set/perft parity and controlled NPS decide readiness/value |
+| 4.11b.9 | READY_FOR_IMPLEMENTATION | I2 | Measure a fused ordinary relocation path | 4.11b.8 first; RAR-M20/M30 | Exact state parity plus controlled local/full-search performance; no game gate unless behavior changes |
+| 4.11b.10 | RESEARCH | R3 | Does sharing remaining pin/check geometry repay lifetime and invalidation cost? | 4.11b.8–9; M30 consumer shares; SEE repair forbids stale pins | A producer/state/consumer/invalidation design and bounded comparison identify a net benefit |
+| 4.11b.11 | READY_FOR_IMPLEMENTATION | I2 | Incrementally maintain attackers inside the corrected SEE contract | 4.11b.10 precedes reuse; RAR-M27–M30 | All external/default verdicts identical plus normalized SEE and whole-search performance |
+| 4.11b.12 | RESEARCH | R2 | Is king lookup still material after shared geometry? | Conditional on 4.11b.10–11; M30 measured 0.544% | Post-geometry profile clears a predeclared practical floor; otherwise `NO_CHANGE` |
+| 4.11b.13 | RESEARCH | R2 | Which capacity/mutation tightening is required without hot-path cost? | M30 found zero growth; arbitrary history and canonical-move contracts | Exact ownership/API handoff; correctness checks decide, no speed claim from zero events |
+| 4.11b.14 | RESEARCH | R3 | Does residual representation cost justify a bounded larger change? | All simpler leaves and new profile | One explicit architecture wins a bounded comparison; otherwise `NO_CHANGE` |
+| 4.11b.15 | RESEARCH | R3 | Which draw/null/repetition contracts should remain, change or await a retry trigger? | Historical rejected combinations; draw tests; 4.11b.14 | Independent dispositions and any new falsifiable candidate; no bundled policy rescue |
+| 4.11b.16 | READY_FOR_IMPLEMENTATION | V | Qualify the integrated board candidate | Dependency-held on preceding dispositions | Defined correctness matrix and controlled pooled-PGO performance pass |
+| 4.11b.17 | RESEARCH | V | Design and run the playing gate for deliberate behavior changes | Candidate undefined until 4.11b.16 | Freeze prediction, arms, recipe, bracket/cap and stop rule; then `GAME_GATE` decides |
+| 4.11b.18 | READY_FOR_IMPLEMENTATION | V | Refresh only endgame evidence affected by the accepted board head | Dependency-held on 4.11b.17 disposition | Versioned affected evidence and ranking, with unchanged artifacts reused mechanically |
 
 1. **4.11b.1 Freeze the audit and comparison -- DONE.** RAR-M20 and its committed evidence preserve the
    three-engine results, limitations, raw output, binary/source hashes, exact
@@ -2254,6 +2279,29 @@ Keep each assignment attached to its task if future evidence changes ordering.
    behavior change explicitly. Done with independent move-set/perft parity,
    controlled within-Rarog A/B and a full-search NPS result.
 
+   **Research card — not implementation-ready.** The decision needed is which,
+   if any, named local contract accounts for enough of M30's **6.751%**
+   full-search region to justify a candidate. Known evidence is RAR-M20's
+   directional 43.7% peer-workload gap, RAR-M25's live separated instrument
+   and RAR-M30's full-search share/caller counts. Candidate explanations are
+   compile-time color/mode specialization, setwise pawn/pin/king-target work,
+   or avoidable list initialization/delivery; credible alternatives are that
+   LLVM already removes the apparent copies, the peer gap belongs to different
+   representation/compiler work, or a faster local primitive does not improve
+   the deployed search. Generation order interacts with picker ordering,
+   pruning and tree shape; pin state interacts with 4.11b.10.
+
+   Cheapest discrimination: inspect optimized emitted code, then use M25's
+   isolated primitives and a minimal switchable within-Rarog variant before a
+   pooled full-search run. The research owner must preregister the exact
+   expected movement and confidence before seeing that result; this migration
+   invents neither a magnitude nor an Elo prior. Falsify a cause if the emitted
+   operation/copy is absent or its isolated removal is flat; stop the leaf
+   `NO_CHANGE` if no candidate clears a predeclared whole-search practical
+   floor with exact move-set/perft/order semantics. Promote only one explicit
+   mechanism whose producer/output/consumers, invariants, test corpus, baseline,
+   performance floor and rejection rule are frozen.
+
 9. **4.11b.9 Measure fused ordinary-piece relocation.** Price a dedicated
    move_piece(from, to) path against remove_piece + add_piece. Update the
    moving piece and both occupancies with a combined from/to mask, mailbox
@@ -2262,6 +2310,16 @@ Keep each assignment attached to its task if future evidence changes ordering.
    Inspect whether LLVM already combines the current operations, and verify
    every redundant field after make AND unmake. Retain only a measured
    benefit with the same chess semantics.
+
+   **Implementation handoff.** For ordinary non-capture/non-special relocation,
+   the producer is `make_move`, stored state is mailbox, piece/color occupancy,
+   piece/full/pawn/minor keys and PST bookkeeping, and consumers are legality,
+   evaluation, repetition/TT identity and undo. Add no new representation or
+   playing policy. Preserve capture, EP, promotion, castling and null paths;
+   prove ordinary make/unmake reconstruction and fingerprint identity. Emitted
+   code plus M25 primitive timing is the cheapest screen; controlled full-search
+   performance is the deciding gate. No maintainer game job is owed if behavior
+   remains identical.
 
 10. **4.11b.10 Share useful pin/check information.** Current search already
     passes check hints and shares pins across capture/quiet stages. Do not
@@ -2286,7 +2344,16 @@ Keep each assignment attached to its task if future evidence changes ordering.
     an exact oracle. Evaluate real search thresholds as well as zero; keep
     a corpus with more than the v1 ten captures. Default-value verdicts must
     be identical to the corrected baseline. Compare normalized benchmark
-    throughput and whole-search NPS separately.
+   throughput and whole-search NPS separately.
+
+   **Implementation handoff.** Change only attacker-set maintenance inside the
+   full/threshold SEE kernels. Inputs remain the board occupancy, move and
+   `SeeValues`; stored transient state is the evolving occupancy/attacker set;
+   consumers remain the existing ordering/pruning/LMR/history callers. The
+   RAR-M28 selected-king, created-pin, x-ray, promotion/new-victim and equality
+   semantics are fixed. All 41 external fixtures, parity cases and production
+   fingerprint must remain exact. Normalized M29 throughput and controlled
+   full-search NPS decide retention; do not fit values or restore stale pins.
 
 12. **4.11b.12 Decide whether to cache king squares.** Basilisk maintains two
     king squares; Rarog and Reckless extract them from bitboards. Prototype
@@ -2478,39 +2545,38 @@ or overwriting v2. Rank alone never accepts a family change.
 | 4.12.20 | KQKRPs | 12 | - | n/a | 0.0042 | 0.04410 | **MEASURE FIRST** -- 0.42% of games, 4.41% of the TREE |
 | 4.12.21 | KRPPKRP | 15 | - | n/a | 0.0540 | 0.05881 | **5.40% of Rarog's games and UNVERIFIABLE at 7 men.** The fourth most common family in the set cannot be adjudicated by the local tables; record it as a tooling gap, not a rare ending |
 
-**Recorded model and thinking assignments.** The version/effort legend and
-handoff rules in 4.11b apply here too. Most family leaves still require deciding
-what defect exists and which interacting mechanism causes it, not merely
-translating a reference function. Sol is assigned bounded existing-family audits;
-Terra is assigned the established no-defect KNNK closure only. Unknown coverage,
-causal debt and coupled fitting retain Astra. Model assignments are not evidence
-that any proposed engine change is needed. The seven-man hold remains in force.
+**Active workflow register.** Every family remains research until its defect,
+mechanism, interacting closure and deciding instrument are established. A
+measured overclaim is evidence for a question, not an implementation handoff.
+The family table and closure rules above supply evidence and dependencies;
+the numbered leaves below supply advance/gate conditions. GUIDE maps classes
+to current models. The seven-man hold remains in force.
 
-| Step | GPT / thinking | Claude / thinking | Why this assignment |
+| Leaf | Workflow state | Class | Current decision |
 |---|---|---|---|
-| 4.12.1 | GPT-6 Astra / High | Claude Opus 5 / High | Confirm current ranking, causal owners and recognizer-versus-scale instruments after board changes. |
-| 4.12.2 | GPT-6 Astra / High | Claude Opus 5 / High | KRPKR: distinguish remaining theoretical coverage from score scaling; protect winning rook endings. |
-| 4.12.3 | GPT-6 Astra / Extra High | Claude Opus 5 / High | KXK: broad dispatcher and promotion closure couple generic guidance to several family regressions. |
-| 4.12.4 | GPT-6 Astra / High | Claude Opus 5 / High | KRKN: repair drawn overclaim and test the steering hypothesis without treating occurrence correlation as causation. |
-| 4.12.5 | GPT-6 Astra / High | Claude Opus 5 / High | KRKB: separate drawn scaling, actual conversions and the shared over-representation hypothesis. |
-| 4.12.6 | GPT-6 Astra / High | Claude Opus 5 / High | KRPKB: determine coverage beyond the existing rook-pawn branches and preserve independent truth. |
-| 4.12.7 | GPT-6 Astra / Extra High | Claude Opus 5 / High | KBPKB: scaling and promotion-closure conversion debt require a joint causal explanation. |
-| 4.12.8 | GPT-5.6 Sol / High | Claude Opus 5 / High | KRKP: bounded existing-family scale audit, with independent draw/win cases and the standard closure contract. |
-| 4.12.9 | GPT-6 Astra / Extra High | Claude Opus 5 / High | KBPKN: promotion-closure debt interacts with scaling and generic mate guidance. |
-| 4.12.10 | GPT-6 Astra / High | Claude Opus 5 / High | KQKR: separate search-budget sensitivity from persistent guidance defects and conversion debt. |
-| 4.12.11 | GPT-5.6 Sol / High | Claude Opus 5 / Medium | KPK: use the existing bitbase to bound the remaining scale/integration audit; escalate if bitbase correctness is disputed. |
-| 4.12.12 | GPT-5.6 Sol / High | Claude Opus 5 / High | KPKP: modest measured scale defect, but pawn races and theoretical draws still require independent checks. |
-| 4.12.13 | GPT-6 Astra / Extra High | Claude Opus 5 / High | KQKP: reconcile historical causal debt, thin drawn cohorts and deficits that disappear at larger budgets. |
-| 4.12.14 | GPT-6 Astra / Extra High | Claude Opus 5 / High | KBNK: isolate mate-gradient, rule-50 and parameter-covariance effects; do not assume the damping hypothesis is true. |
-| 4.12.15 | GPT-6 Astra / Extra High | Claude Opus 5 / High | KNNKP: difficult theoretical residue and non-monotone budget response demand careful mechanism attribution. |
-| 4.12.16 | GPT-5.6 Terra / High | Claude Sonnet 5 / Medium | KNNK: bounded no-change closure using established draw evidence and current-source checks; any new defect escalates to Astra High / Opus High. |
-| 4.12.17 | GPT-6 Astra / High | Claude Opus 5 / High | KPsK: unmeasured coverage; choose the deciding instrument before implementing pawn-ending rules. |
-| 4.12.18 | GPT-6 Astra / High | Claude Opus 5 / High | KBPsK: establish fortress and promotion coverage, then separate scale from conversion obligations. |
-| 4.12.19 | GPT-6 Astra / High | Claude Opus 5 / High | KBPPKB: establish bishop/pawn fortress boundaries and an independent cohort before choosing implementation. |
-| 4.12.20 | GPT-6 Astra / Extra High | Claude Opus 5 / High | KQKRPs: unmeasured family with substantial tree exposure; broad coverage and dispatcher interactions are unresolved. |
-| 4.12.21 | GPT-6 Astra / Extra High | Claude Opus 5 / High | KRPPKRP: resolve the seven-man evidence contract or justify exclusion; this assignment does not lift the hold. |
-| 4.12.22 | GPT-6 Astra / Extra High | Claude Opus 5 / High | Jointly fit dependency-complete families and select prospective occurrence-appropriate gates without post-hoc acceptance rules. |
-| 4.12.23 | GPT-6 Astra / High | Claude Opus 5 / High | Reconcile all twenty dispositions, held evidence, corrected floors and transfer gates; do not close on aggregate results alone. |
+| 4.12.1 | RESEARCH | R3 | Revalidate order, causal owners and instrument kinds after the board disposition. |
+| 4.12.2 | RESEARCH | R3 | Separate KRPKR theoretical coverage from scaling; protect wins. |
+| 4.12.3 | RESEARCH | R3 | Resolve KXK dispatcher/promotion-closure interactions before changing it. |
+| 4.12.4 | RESEARCH | R3 | Test KRKN scale versus endogenous steering explanations. |
+| 4.12.5 | RESEARCH | R3 | Separate KRKB drawn scale, conversions and occurrence correlation. |
+| 4.12.6 | RESEARCH | R3 | Establish KRPKB coverage beyond existing rook-pawn branches. |
+| 4.12.7 | RESEARCH | R3 | Resolve KBPKB scaling with promotion-closure debt. |
+| 4.12.8 | RESEARCH | R2 | Bounded KRKP scale audit; current defect does not select a mechanism. |
+| 4.12.9 | RESEARCH | R3 | Resolve KBPKN scaling with promotion-closure debt. |
+| 4.12.10 | RESEARCH | R3 | Distinguish KQKR budget sensitivity, guidance and conversion debt. |
+| 4.12.11 | RESEARCH | R2 | Use the KPK bitbase to bound the remaining scale/integration question. |
+| 4.12.12 | RESEARCH | R2 | Confirm whether the small KPKP overclaim warrants any change. |
+| 4.12.13 | RESEARCH | R3 | Reconcile KQKP historical debt, thin draws and budget closure. |
+| 4.12.14 | RESEARCH | R3 | Isolate KBNK mate-gradient, rule-50 and covariance explanations. |
+| 4.12.15 | RESEARCH | R3 | Explain KNNKP residue and non-monotone budget response. |
+| 4.12.16 | RESEARCH | R2 | Verify the established KNNK no-defect evidence, then close `NO_CHANGE`. |
+| 4.12.17 | RESEARCH | R3 | Measure KPsK coverage and choose its instrument before implementation. |
+| 4.12.18 | RESEARCH | R3 | Measure KBPsK coverage and separate scale from conversion. |
+| 4.12.19 | RESEARCH | R3 | Establish KBPPKB fortress boundaries and independent cohort. |
+| 4.12.20 | RESEARCH | R3 | Measure KQKRPs coverage and dispatcher interaction. |
+| 4.12.21 | RESEARCH | R3 | Resolve or explicitly exclude the held seven-man evidence gap. |
+| 4.12.22 | RESEARCH | R3 | Families are not ready to refit/gate until their research decisions exist. |
+| 4.12.23 | READY_FOR_IMPLEMENTATION | V | Dependency-held closure matrix; execute only after all family dispositions. |
 
 1. **4.12.1 Order and classification.** Adopt the latest registered ranking
    (v2 at 4.11.12 unless 4.11b.18 supersedes it), confirm the
@@ -2520,6 +2586,15 @@ that any proposed engine change is needed. The seven-man hold remains in force.
    order. Each records whether coverage is full, partial or absent, adds its
    theory/Syzygy tests, states its measurement layer and node budget, and is
    measured on the cohort its KIND calls for.
+   Before implementation, its research record must distinguish: the precise
+   defect question; concrete IDs/measurements already known; leading and
+   credible competing causal hypotheses; dispatch/promotion/search/HCE
+   interactions; the cheapest discriminating test; falsifier and stop rule;
+   a frozen prospective prediction with confidence; and the exact
+   `READY_FOR_IMPLEMENTATION` condition. Unknown or unmeasured fields remain
+   explicitly unknown rather than being filled by reference-engine analogy.
+   Use PROCESS's research-packet format only when this will not fit concisely
+   in the leaf.
 3. **4.12.22 Dependency-complete family refits and gates, tiered by
    occurrence.** Group mutually dependent value, scale, search-guidance and
    generic HCE terms and refit every materially covariant current parameter. Do
@@ -3427,19 +3502,20 @@ accretion.
 
 ## 11. Documentation ownership
 
-`GUIDE.md` is a status board and nothing else: every phase, step and sub-step
-with a checkbox, the current checkpoint, and the command to run next. Anything
-longer than a line belongs in one of the files below. GUIDE lost Phases 6-9
+`GUIDE.md` is the short operator entry point: workflow boundaries, current
+model mapping, reusable research/implementation prompts, every phase/step
+checkbox, checkpoint and next action. Detailed rationale and records belong in
+the files below. GUIDE lost Phases 6-9
 during a shortening pass on 2026-08-30 and endgame work was filed under the
 NNUE runway; `tools/diag/check_guide.py` now fails when a phase heading is
 missing, so that class of drift is caught mechanically rather than by reading.
 
 | File | Purpose |
 |---|---|
-| `GUIDE.md` | Status board: all phases, steps, sub-steps, checkpoint, next command |
-| `PLAN.md` | Rationale, gates, roadmap and what each step involves |
-| `EXPERIMENTS.md` | Durable evidence, failures, retry triggers and reproducible recipes |
-| `PROCESS.md` | Recurring build, Texel, SPSA and release procedures |
+| `GUIDE.md` | Short operator guide, model mapping, prompts, status board and next action |
+| `PLAN.md` | Forward roadmap, workflow state, dependencies, readiness and deciding gates |
+| `EXPERIMENTS.md` | Frozen predictions, measured evidence, calibration, retry triggers and recipes |
+| `PROCESS.md` | Research/handoff template and recurring build, fit, gate and release procedures |
 | `TRACKER.md` | History only; never a source of the next step |
 | `analysis/hce_maturity_2026-08-25.md` | HCE/Stockfish maturity comparison and fitting policy |
 | `analysis/hce_archive_audit_2026-08-31.md` | Archive provenance, content, capacity and quota |

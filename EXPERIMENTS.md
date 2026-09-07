@@ -21,6 +21,7 @@ Forward-looking owner cells in §8 and §9 have been retargeted to current items
 - [1. How to use this ledger](#1-how-to-use-this-ledger)
   - [Result and evidence vocabulary](#result-and-evidence-vocabulary)
   - [Recording contract](#recording-contract)
+  - [Prediction freeze and calibration](#prediction-freeze-and-calibration)
 - [2. Measurement, harness and tuning](#2-measurement-harness-and-tuning)
 - [3. Search and selectivity](#3-search-and-selectivity)
   - [Search-accuracy decomposition](#search-accuracy-decomposition)
@@ -50,6 +51,8 @@ a future decision. Do not copy the tables into `PLAN.md`.
 | **Rejected** | Failed its registered gate or had a clear adverse measurement and was reverted. |
 | **Neutral/inconclusive** | Evidence did not distinguish a useful effect at the tested resolution. |
 | **Observation** | Diagnostic evidence, not an acceptance verdict. |
+| **No-change** | Research closed because the measured premise/opportunity did not justify an engine change. |
+| **Deferred** | Not decided under present prerequisites; owner and objective resume condition are recorded. |
 | **Imported prior** | Evidence from Basilisk; useful for ordering or designing a Rarog test, never for accepting it. |
 
 Unless a row says otherwise, historical strength tests used paired games at
@@ -59,19 +62,37 @@ compress or reverse at longer TC.
 
 ### Recording contract
 
-For every experiment that reaches a verdict, update this file in the same
-commit that accepts, reverts or closes it. Record:
+Register before exposure, then update the same entry when accepting, reverting
+or closing. Record the research question; baseline/candidate SHAs and any
+dirty-diff identity; binary/compiler/PGO identity; hypothesis, competing
+explanations and interacting consumers; cheapest prior falsifier; frozen
+prediction and confidence; falsification and stop rules; full conditions;
+diagnostics separately from the verdict; result/disposition; calibration and
+postmortem; conditional lesson; objective retry trigger; and artifacts.
 
-1. baseline and candidate source SHAs, dirty-diff hash if applicable;
-2. hypothesis and interactions expected to move;
-3. binary/compiler/PGO, book, TC, threads, hash, concurrency, affinity and
-   adjudication profile;
-4. registered gate, games, W-D-L, estimate/CI and LLR where available;
-5. diagnostics separately from the verdict;
-6. disposition, conditional lesson and an objective retry trigger.
+The prediction must state expected diagnostic movement, expected Elo sign or
+range only when defensible, probability the candidate is positive/useful, and
+the most likely failure mode. It is frozen once any deciding result is exposed.
+Correct only a genuine clerical error, mark that correction explicitly, and
+never fabricate a prediction for a historical entry that lacked one.
 
 Use cautious language: “under these conditions this suggests …”, not “feature
 X is good/bad”. If conditions or artifacts are unknown, say so.
+
+### Prediction freeze and calibration
+
+Keep **what was believed before exposure** separate from the postmortem. A good
+retrospective explanation is not evidence that the result was predicted. After
+a surprise ask which part of the original causal model was wrong, not why the
+outcome now seems obvious.
+
+At each phase checkpoint, review new prospectively registered experiments by
+category (search/selectivity, HCE, endgame, TT/cache, SMP/time,
+board/performance, tooling, data/tuning or NNUE): Was the sign right? Was the
+magnitude systematically optimistic? Did high confidence predict reliability?
+Which mechanism or interaction was missed? Did the instrument fail? Was any
+rejected idea retried without its trigger? Record only repeated calibration
+lessons; do not build a score or rewrite the frozen entries.
 
 ## 2. Measurement, harness and tuning
 
@@ -1152,13 +1173,33 @@ a new ID and manifest; it does not overwrite the historical row.
 
 - Date / owner:
 - Baseline SHA / candidate SHA / dirty-diff hash:
-- Hypothesis and interacting consumers:
+- Binary / compiler / PGO identity:
+- Research question:
+- Hypothesis / proposed mechanism:
+- Competing hypotheses:
+- Interacting mechanisms / consumers:
+- **PRE-REGISTERED PREDICTION (freeze before exposure):**
+  - Expected diagnostic movement:
+  - Expected Elo sign/range, if defensible:
+  - Probability positive/useful and confidence basis:
+  - Most likely failure mode:
+- Falsification criteria:
+- Cheapest prior falsifier: test / result / implementation still justified?:
 - Registered gate and stop rule:
-- Build: compiler, flags, PGO manifest, binary hashes:
-- Games: book/hash, TC, threads, hash, concurrency, affinity, adjudication:
-- Result: games, W-D-L, Elo/nElo and CI, LLR:
-- Diagnostics: nodes, EBF, NPS, depth, counters, suites (not the verdict):
-- Disposition: accepted / retained / rejected / neutral / observation:
+- Full conditions / provenance: flags, manifests and hashes; book/hash, TC,
+  threads, Hash, concurrency, affinity, adjudication, node budget and cohort:
+- Result:
+  - Diagnostics: nodes, EBF, NPS, depth, counters, suites (not the verdict):
+  - Games/verdict: games, W-D-L, Elo/nElo and CI, LLR:
+- Disposition: accepted / retained / rejected / neutral/inconclusive /
+  observation / no-change / deferred:
+- **PREDICTION CALIBRATION (append after exposure):**
+  - Original prediction (do not rewrite):
+  - Observed result; sign and magnitude reasonable?:
+  - Proposed causal mechanism supported?:
+  - Missed interaction or instrument failure?:
+  - Confidence over/under-calibrated?:
+- Postmortem: changed causal assumption / what did not change / alternatives:
 - Conditional lesson:
 - Retry trigger or `closed`:
 - Artifacts / commits:
