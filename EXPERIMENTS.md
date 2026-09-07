@@ -285,9 +285,10 @@ changes. No value fit, games, NPS or Elo claim. Evidence:
 **RAR-M30 — 4.11b.7 full-search board profile, COMPLETE 2026-09-07.** Source
 `02420dc`, 20 frozen roots in five cohorts, 600,000 nodes, three counter and
 five ETW repeats. Production SHA-256 `3c81ef95...bf1d904dfd0`; diagnostic
-`aaeda618...25d42e1`; all **60/60** instrumentation-off searches match nodes,
-score, PV and moves. All 151,142 engine samples resolve from the archived
-PE/PDB. Weighted process shares are generation/legality **6.751%**,
+`aaeda618...25d42e1`; all **60/60** instrumentation-off searches match depth,
+seldepth, reported nodes, score type/value and best move; PV and ponder move
+were not compared. All 151,142 engine samples resolve from the archived PE/PDB.
+Weighted process shares are generation/legality **6.751%**,
 make/unmake **7.143%**, check queries **5.177%**, SEE **5.304%**; relocation
 helpers are an overlapping **2.998%**, king lookup **0.544%**. Over 30,604,224
 diagnostic nodes, checked makes are 89.02% of real makes, threshold SEE is

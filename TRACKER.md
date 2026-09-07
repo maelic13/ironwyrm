@@ -18,8 +18,9 @@ two numbering schemes do not correspond and are not meant to.
 - **2026-09-07 — PLAN 4.11b.7, RAR-M30:** profiled 20 frozen roots in five
   actual-search cohorts. Native samples put generation/legality at **6.751%**,
   make/unmake at **7.143%**, check queries at **5.177%**, and SEE at **5.304%**
-  of full process time. Sixty instrumentation-off searches match exactly;
-  30.6M diagnostic nodes show checked make dominates plain make and history
+  of full process time. Sixty instrumentation-off searches match their recorded
+  depth, seldepth, nodes, score and best move; PV and ponder were not compared.
+  The 30.6M diagnostic nodes show checked make dominates plain make and history
   grows zero times. Evidence: `analysis/board_search_profile_2026-09-07.md`.
   Next is 4.11b.8.
 

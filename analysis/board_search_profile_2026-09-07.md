@@ -27,8 +27,9 @@ ETW used five. The suite SHA-256 is
 The exact production and diagnostic executable hashes are respectively
 `3c81ef95f3c1d4ab0f063eb814ed5f51b8ef57da7e3b5a579500cbb1d904dfd0`
 and `aaeda61886789333503ab0984fb54a44ffea44758449995a84f07218425d42e1`.
-All **60/60** fixed-node instrumentation-off comparisons matched nodes, score,
-PV, best move and ponder move. The remote runner also passed six harness tests,
+All **60/60** fixed-node instrumentation-off comparisons matched depth,
+seldepth, reported nodes, score type/value and best move. PV and ponder move
+were not retained or compared. The remote runner also passed six harness tests,
 debug and release Rust suites, formatting, and all-feature/all-target Clippy.
 
 The received archive SHA-256 is

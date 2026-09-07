@@ -2227,10 +2227,11 @@ Keep each assignment attached to its task if future evidence changes ordering.
 
    The frozen 20-root suite used four opening, middlegame, check-heavy,
    promotion and sparse-endgame positions at 600,000 nodes. Sixty
-   instrumentation-off comparisons matched exactly. Across 161,989 native
-   samples, generation/legality is **6.751%**, make/unmake **7.143%**, checks
-   **5.177%** and SEE **5.304%** of process time. Add/remove relocation is a
-   2.998% overlapping subregion; pin computation 1.003%, check-info 0.912%,
+   instrumentation-off comparisons matched depth, seldepth, reported nodes,
+   score type/value and best move; PV and ponder move were not compared. Across
+   161,989 native samples, generation/legality is **6.751%**, make/unmake
+   **7.143%**, checks **5.177%** and SEE **5.304%** of process time. Add/remove
+   relocation is a 2.998% overlapping subregion; pin computation 1.003%, check-info 0.912%,
    and king lookup 0.544%. Counters over 30,604,224 nodes show 89.02% of real
    makes use the check-hinted path, threshold SEE is 92.77% of SEE calls, and
    25,718,154 history pushes cause **zero** growth events. Therefore perft make
