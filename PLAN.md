@@ -38,12 +38,14 @@ predates 4.11b and is not the current roadmap: after 4.11 comes **4.11b**, then
 Board leaves 4.11b.1–4.11b.8 are complete. RAR-M31's pin candidate was
 withdrawn in `c44608a`: whole-search value remains unproven, and another
 standalone timing campaign is not prioritized. Its independent oracle remains.
-4.11b.9 is now closed `NO_CHANGE` (RAR-M32): the fused relocation path held
-exact state and fingerprint parity and gained +15.3% on the isolated
-make/unmake primitive, but its +1.02% full-search median carried a bootstrap
-interval of -0.45% to +3.61% and so failed the retention rule frozen before
-timing. Its targeted per-piece-class test is retained in `8a73cfd`.
-The next leaf is **4.11b.10**, `RESEARCH / R3`.
+4.11b.9 is now **ACCEPTED** and integrated in `5c439da` (RAR-M33): fused quiet
+relocation holds exact state and fingerprint parity, gains +16.33/+17.30/+19.32%
+on the isolated make/unmake primitive and **+0.876%** full-search with a 95%
+bootstrap interval of **+0.050% to +2.055%**, which excludes zero on a
+verified-idle host. RAR-M32's earlier `NO_CHANGE` is **VOID**: it was taken
+while a Manta SPRT held the host at ~50% CPU busy, and the same baseline code
+re-measured 40.7% faster once idle. Its targeted per-piece-class test is in
+`8a73cfd`. The next leaf is **4.11b.10**, `RESEARCH / R3`.
 Actual full-search board cost is profiled; SEE is correctness-verified and
 normalized timing is restored. Cluster playing qualification remains at
 4.11b.17.
@@ -1965,8 +1967,8 @@ which is what exposed the dependency inversion.
 
 **Integrated 2026-09-05 after reconciling the a0aeb68 roadmap.** Finish the
 remaining 4.11 leaves first, then execute this section before 4.12. Those
-4.11 leaves and board leaves 4.11b.1–4.11b.9 are now complete; **4.11b.10 is
-next**. The insertion preserves 4.11.12's registered v2 endgame order until
+4.11 leaves and board leaves 4.11b.1–4.11b.9 are now complete, 4.11b.9 by
+acceptance; **4.11b.10 is next**. The insertion preserves 4.11.12's registered v2 endgame order until
 changed evidence warrants a rerank. Repairs at 4.11b.3/4.11b.5 are implemented;
 the remaining optimizations and cluster qualification are still open. NNUE-only work belongs to 5.2, 5.3, 5.6 and 6.4.
 
@@ -2054,7 +2056,7 @@ recommendations without coupling this roadmap to model generations.
 | Leaf | Workflow state | Class | Question or goal | Evidence / dependencies | Ready-to-advance condition and deciding gate |
 |---|---|---|---|---|---|
 | 4.11b.8 | CLOSED (candidate withdrawn) | R3 | Local pin gains established; useful whole-search value unresolved | RAR-M31; restoration c44608a | Prior x-ray path restored and qualified; independent oracle retained; retry belongs to 4.11b.10 only if justified |
-| 4.11b.9 | CLOSED (`NO_CHANGE`) | I2 | Fused ordinary relocation priced; parity exact, whole-search value unresolved | RAR-M32; test retained `8a73cfd` | Parity and isolated gain met; full-search interval included zero, so the frozen rule rejected. Retry belongs to 4.11b.16 under a powered, PGO instrument |
+| 4.11b.9 | CLOSED (ACCEPTED) | I2 | Fused ordinary quiet relocation integrated | RAR-M33 `5c439da`; RAR-M32 VOID; test `8a73cfd` | Parity exact, isolated +16.3/+17.3/+19.3%, full-search +0.876% with 95% [+0.050%, +2.055%] excluding zero on a verified-idle host. Behaviour-neutral, no game gate owed |
 | 4.11b.10 | RESEARCH | R3 | Does sharing remaining pin/check geometry repay lifetime and invalidation cost? | 4.11b.8–9; M30 consumer shares; SEE repair forbids stale pins | A producer/state/consumer/invalidation design and bounded comparison identify a net benefit |
 | 4.11b.11 | READY_FOR_IMPLEMENTATION | I2 | Incrementally maintain attackers inside the corrected SEE contract | 4.11b.10 precedes reuse; RAR-M27–M30 | All external/default verdicts identical plus normalized SEE and whole-search performance |
 | 4.11b.12 | RESEARCH | R2 | Is king lookup still material after shared geometry? | Conditional on 4.11b.10–11; M30 measured 0.544% | Post-geometry profile clears a predeclared practical floor; otherwise `NO_CHANGE` |
@@ -2352,8 +2354,8 @@ recommendations without coupling this roadmap to model generations.
    Evidence and reproduction: `analysis/movegen_2026-09-07.md` and
    `analysis/artifacts/movegen-20260907/`.
 
-9. **4.11b.9 Measure fused ordinary-piece relocation -- DONE, `NO_CHANGE`
-   (RAR-M32, 2026-09-07).** Price a dedicated
+9. **4.11b.9 Measure fused ordinary-piece relocation -- DONE, ACCEPTED
+   (RAR-M33, 2026-09-07, `5c439da`).** Price a dedicated
    move_piece(from, to) path against remove_piece + add_piece. Update the
    moving piece and both occupancies with a combined from/to mask, mailbox
    endpoints and the required keys; keep captures, EP, promotion and castling
@@ -2372,42 +2374,51 @@ recommendations without coupling this roadmap to model generations.
    performance is the deciding gate. No maintainer game job is owed if behavior
    remains identical.
 
-   **Disposition.** The candidate was built and measured against a
-   prospectively frozen contract. It held exact semantics: both no-feature
-   builds reproduced **7,601,220 / EBF 2.474**, and all 240 paired root answers
-   matched on depth, seldepth, nodes, score, best move, full PV and ponder. The
-   isolated `make/unmake only` primitive gained **+16.28/+15.21/+15.27%** across
-   three alternating rounds, satisfying the registered local condition. The
-   deciding gate did not pass: twelve alternating 600,000-node pairs measured a
-   **+1.016%** median with a bootstrap 95% interval of **-0.450% to +3.609%**,
-   which includes zero. Ten of twelve pairs favoured the candidate; that was not
-   the registered criterion and is not substituted for one. The production path
-   is withdrawn and `src/` is byte-identical to `af83abf`.
+   **Disposition: ACCEPTED.** `Board::move_piece` now serves the
+   `flags == QUIET` branch of `make_move_inner` and `unmake_move`, updating both
+   mailbox endpoints, the piece and colour occupancies, `all_occ` and the
+   applicable pawn/minor/non-pawn keys with one from/to mask and one paired key.
+   Captures, double pushes, en passant, promotions, castling and null moves keep
+   their existing paths and the position hash stays caller-owned.
 
-   The emitted-code screen refutes half the stated alternative and supports the
-   other half: `make_move_inner` grew **468 -> 568** instructions (+21.4%), so
-   LLVM was not already fusing the operations, but the fused path buys fewer
-   dependent memory operations at the cost of larger code. RAR-M30 weights
-   make/unmake at 7.143% of process time, so the primitive gain projects to
-   **+0.96%** whole-search against a measured +1.02% -- the mechanism behaved as
-   reasoned. The failure was instrument power: twelve pairs cannot separate a
-   ~1% effect from zero, and that was foreseeable before exposure. Record it as
-   a power failure, not a mechanism failure.
+   Behaviour is neutral: both no-feature builds reproduce **7,601,220 / EBF
+   2.474** and all **640** paired root answers match on depth, seldepth, nodes,
+   score, best move, full PV and ponder. Under the RAR-M33 contract frozen
+   before the run, the isolated `make/unmake only` primitive gained
+   **+16.33/+17.30/+19.32%** across three alternating rounds, and 32 alternating
+   1,200,000-node pairs measured a **+0.876%** median with a 95% bootstrap
+   interval of **+0.050% to +2.055%** — excluding zero, so the frozen rule
+   retains the candidate. RAR-M30's 7.143% make/unmake weight projected +0.96%,
+   so the mechanism behaved as reasoned. Emitted code grew **468 -> 542**
+   instructions, refuting "LLVM already fuses this" while confirming the fused
+   path trades code size for fewer dependent memory operations.
 
-   Do not revive this standalone. A retry needs a pooled-PGO production build,
-   a precision calculation performed *before* the run, and a prospective
-   whole-search floor with a stop rule; **4.11b.16** is the natural home, where
-   several small board effects can clear one noise floor together. The targeted
-   per-piece-class relocation test is retained in `8a73cfd` because the baseline
-   had no such coverage. Evidence and reproduction:
-   `analysis/relocation_2026-09-07.md` and
-   `tools/results/relocation-411b9/` (ignored, local).
+   **RAR-M32's earlier `NO_CHANGE` is VOID, not a negative result.** It was
+   taken while a Manta SPRT held the host at 50.2–53.4% CPU busy against
+   3.7–5.8% for the comparable 4.11b.8 run; the same baseline code re-measured
+   **40.7% faster** once idle. The runner now asserts host idleness rather than
+   annotating it, and that gate was proven to fire under a deliberately absurd
+   threshold before this run was trusted.
+
+   Two limits are recorded rather than smoothed over. The registered interval
+   half-width was predicted at 0.33–0.46% and came out at **1.003%**, because
+   the projection scaled a bootstrapped median's variance by naive `sqrt(n)`;
+   future board timing registrations must derive precision from the resampled
+   statistic actually used. And the lower bound sits near +0.05%, so the
+   evidence supports "the gain is above approximately zero", not a bankable
+   0.9% floor — no Elo is claimed. Pooled-PGO qualification of the integrated
+   board work remains **4.11b.16**; playing qualification remains 4.11b.17.
+   The targeted per-piece-class relocation test is in `8a73cfd`. Evidence and
+   reproduction: `analysis/relocation_2026-09-07.md`,
+   `tools/results/relocation-411b9-v2/` (ignored, local; `candidate.patch`
+   archived there) and the voided `tools/results/relocation-411b9/`.
 
 10. **4.11b.10 Share useful pin/check information.** 4.11b.8 restored the
     previous x-ray calculation; RAR-M31 retains the alternative and its local
-    gains, but no proven whole-search gain. 4.11b.9 has now closed `NO_CHANGE`
-    without altering the board, so its profile shares still stand; remeasure
-    remaining cost before deciding whether to retry it or alter state lifetime. Search already
+    gains, but no proven whole-search gain. 4.11b.9 has now been accepted and
+    changed the make/unmake path, so RAR-M30's region shares are stale for that
+    region; remeasure remaining cost against `5c439da` before deciding whether
+    to retry it or alter state lifetime. Search already
     passes check hints and shares pins across capture/quiet stages. Do not
     implement that work again. Measure the remaining duplication between
     compute_pinned, check_info and SEE king-safety queries, including both

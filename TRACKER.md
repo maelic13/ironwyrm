@@ -15,7 +15,24 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
-- **2026-09-07 — PLAN 4.11b.9 closed `NO_CHANGE`, RAR-M32:** the fused
+- **2026-09-07 — PLAN 4.11b.9 ACCEPTED, RAR-M33:** `5c439da` fuses ordinary
+  quiet relocation behind `Board::move_piece`. Behaviour-neutral — both builds
+  fingerprint 7,601,220 / EBF 2.474 and 640/640 paired root answers match
+  including full PV and ponder. Isolated make/unmake +16.33/+17.30/+19.32%;
+  full-search median +0.876%, 95% [+0.050%, +2.055%], excluding zero on a
+  verified-idle host (max 11.80% CPU busy). Debug 275 / release 276 tests, fmt
+  and Clippy clean. Interval half-width came out at 1.003% against a registered
+  0.33–0.46% — a power-projection miss, recorded. No Elo claimed; PGO
+  qualification is 4.11b.16 and the playing gate 4.11b.17. 4.11b.10 is next.
+
+- **2026-09-07 — RAR-M32 VOIDED (superseded by RAR-M33):** the earlier
+  measurement ran while a Manta SPRT held the host at ~50% CPU busy; the same
+  baseline code re-measured 40.7% faster once idle. Its `NO_CHANGE` disposition
+  is withdrawn. The harness recorded that load and nothing asserted on it, so
+  the runner now fails on host load instead of annotating it. Retained below
+  with explicit supersession rather than deleted.
+
+- **2026-09-07 — PLAN 4.11b.9 originally closed `NO_CHANGE`, RAR-M32 (VOID):** the fused
   ordinary-relocation path was semantically exact (both builds 7,601,220 /
   EBF 2.474; 240 paired root answers match including full PV and ponder) and
   gained +16.28/+15.21/+15.27% on the isolated make/unmake primitive, but its

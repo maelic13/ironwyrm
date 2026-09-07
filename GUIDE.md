@@ -96,9 +96,10 @@ together, and `python tools/diag/check_guide.py` must pass.
 
 **Next: 4.11b.10 — research shared pin/check information.**
 4.11.7–4.11.10 are complete; their scheduling holds/evidence gaps are resolved.
-4.11b.9 closed `NO_CHANGE`: the fused path was semantically exact and +15.3%
-on the isolated primitive, but its +1.02% full-search median could not be
-separated from zero (RAR-M32).
+4.11b.9 is ACCEPTED and integrated in `5c439da`: fused quiet relocation is
+behaviour-neutral and gains +0.876% full-search, 95% [+0.050%, +2.055%]
+(RAR-M33). RAR-M32's earlier `NO_CHANGE` is VOID — it was measured at ~50%
+host load.
 
 | Open hold | Resume when | Must be resolved before |
 |---|---|---|
@@ -190,7 +191,7 @@ holds still come from PLAN; a readiness label never lifts one.
     - [x] **4.11b.6** Add neutral value injection; restore comparable SEE timing; RAR-M29
     - [x] **4.11b.7** Profile board work in HCE search; RAR-M30
     - [x] **4.11b.8** Withdraw unqualified pin candidate; retain oracle — **CLOSED**, RAR-M31
-    - [x] **4.11b.9** Measure fused piece relocation — **CLOSED `NO_CHANGE`**, RAR-M32
+    - [x] **4.11b.9** Measure fused piece relocation — **ACCEPTED**, RAR-M33
     - [ ] **4.11b.10** Research shared pin/check information — **RESEARCH / R3**
     - [ ] **4.11b.11** Optimize the corrected SEE kernel — **READY_FOR_IMPLEMENTATION / I2**
     - [ ] **4.11b.12** Decide whether king-square caching pays — **RESEARCH / R2**

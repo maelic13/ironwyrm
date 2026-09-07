@@ -348,8 +348,14 @@ Playing gate remains 4.11b.17.
 Recipe, hashes and raw observations: `analysis/movegen_2026-09-07.md` and
 `analysis/artifacts/movegen-20260907/`.
 
-**RAR-M32 — 4.11b.9 fused ordinary relocation, COMPLETE 2026-09-07;
-disposition `NO_CHANGE`, production path withdrawn.** Baseline `af83abf` on
+**RAR-M32 — 4.11b.9 fused ordinary relocation, 2026-09-07; VOID, SUPERSEDED BY
+RAR-M33. Its `NO_CHANGE` disposition is WITHDRAWN.** The run was taken while a
+Manta SPRT held the host at **50.2–53.4% CPU busy** per arm against 3.7–5.8% for
+the comparable 4.11b.8 run; re-measured idle, the same baseline code runs at
+3,071,903 nps versus this run's 2,182,590 nps. The full-search timing conclusion
+is withdrawn; the deterministic findings below (fingerprint parity, 240 paired
+root answers, emitted-code comparison) stand. Original record follows.
+**RAR-M32 original text —** Baseline `af83abf` on
 `dev`; qualification frozen in `86e39f8` **before** any timing. Candidate fuses
 ordinary `QUIET` make/unmake relocation into one from/to mask and one paired
 key across mailbox, piece/colour occupancy, `all_occ` and the pawn/minor/
@@ -384,6 +390,54 @@ a precision calculation and whole-search floor registered before the run.
 Playing gate remains 4.11b.17. At this closure point, 4.11b.10 is next.
 Recipe, hashes and raw observations: `analysis/relocation_2026-09-07.md` and
 `tools/results/relocation-411b9/` (ignored, local).
+
+**RAR-M33 — 4.11b.9 fused ordinary relocation re-measured on a verified-idle
+host, COMPLETE 2026-09-07; ACCEPTED and integrated in `5c439da`.** Baseline
+`1d720af` on `dev`; contract frozen in `tools/results/relocation-411b9-v2/
+registration.md` and reproduced in the analysis document **before** the
+candidate was compiled. Candidate re-implemented from the PLAN handoff because
+RAR-M32 saved no patch; scope is **`flags == QUIET` only**, adding
+`Board::move_piece` to update both mailbox endpoints, the piece and colour
+occupancies, `all_occ` and the applicable pawn/minor/non-pawn keys with one
+from/to mask and one paired key, with captures, double pushes, en passant,
+promotions, castling and null moves untouched and the position hash still
+caller-owned. Prospective prediction: full-search median **+0.7% to +1.2%**
+from RAR-M30's 7.143% make/unmake weight and the +15.27% primitive gain
+(projection +0.96%); isolated gain +14% to +17%; bootstrap half-width 0.33% to
+0.46%. Instrument **32 alternating pairs at 1,200,000 nodes**, one discarded
+warm-up per arm, seed 4119, all pairs retained, non-PGO, 1T, Hash 16 MiB,
+frozen 20-root suite. The runner now **asserts** host idleness instead of
+annotating it, and the gate was proven live by aborting under a deliberately
+absurd `0.0` threshold; the gate was recalibrated 10% -> 15% before any timing
+against a measured 5.52% ambient on a 32-thread host, changing an
+instrument-validity precondition only and leaving the acceptance rule frozen.
+Results: both builds fingerprint **7,601,220 / EBF 2.474**; **640/640** paired
+root answers match on depth, seldepth, reported nodes, score type/value, best
+move, **full PV and ponder**; host busy min 5.41 / mean 6.67 / **max 11.80%**;
+isolated `make/unmake only` **+16.33 / +17.30 / +19.32%** across three
+alternating rounds; full-search median **+0.876%** (3,071,903 -> 3,098,821 nps),
+95% bootstrap **[+0.050%, +2.055%]**, 23/32 candidate-faster. **The interval
+excludes zero, so the frozen rule retains the candidate.** Emitted code
+`make_move_inner` **468 -> 542** instructions; RAR-M32's archived candidate was
+568, so this is the same mechanism with leaner codegen, reported as
+corroboration rather than exact reproduction. Artifacts distinct: baseline
+`62ac2599...`, candidate `d364f2ad...`, board arms `afd11222...` and
+`e20b865a...`; the baseline `.s` hashes identically to RAR-M32's
+(`75ed0249...`), proving the baseline source state reproduced exactly.
+Calibration: magnitude HIT (+0.876% against a predicted +0.7–1.2%), isolated
+gain HIT but slightly under-predicted (one round at +19.32%), **interval width
+MISS** — actual half-width **1.003%** against a predicted 0.33–0.46%, because
+the projection scaled a bootstrapped median's variance by naive `sqrt(n)`.
+A post-hoc 200-seed sweep excludes zero in **198/200** (lower bound -0.017% to
++0.101%), characterising robustness without altering the frozen verdict; the
+evidence supports "the gain is above approximately zero", not a bankable floor
+of 0.9%. Behaviour-neutral, so no game gate is owed and **no Elo is claimed**;
+cluster playing qualification remains 4.11b.17. Debug 275 / release 276 tests,
+fmt and Clippy `--all-features --all-targets` clean; a fresh no-feature build of
+the committed source reproduces 7,601,220 / EBF 2.474. At this closure point,
+4.11b.10 is next. Recipe, hashes and raw observations:
+`analysis/relocation_2026-09-07.md` and `tools/results/relocation-411b9-v2/`
+(ignored, local; `candidate.patch` archived there).
 
 ### Phase-4 registration (RAR-M12, 2026-08-12)
 
