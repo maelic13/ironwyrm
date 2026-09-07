@@ -93,19 +93,18 @@ pub fn generate_captures(board: &mut Board) -> MoveList {
 ///
 /// Deliberately does NOT run the [`has_pseudo_capture`] pre-scan, unlike its
 /// captures-only sibling (10.3(7)). A staged node usually goes on to generate
-/// quiets, and the pre-scan's saving is then illusory: `compute_pinned` is four
-/// slider lookups plus a short sniper walk, while a *failing* pre-scan is a
+/// quiets, and the pre-scan's saving is then illusory: `compute_pinned` is two
+/// empty-board slider lookups plus a short sniper walk, while a *failing* pre-scan is a
 /// full attack pass over every one of our pieces — and 78.5% of the nodes where
 /// it fired then paid for the pins anyway in `generate_quiets`. Computing pins
 /// unconditionally is therefore less work in the common case and lets every
 /// stage at this node share one pinned set.
 pub fn generate_captures_pinned(board: &mut Board) -> (MoveList, Bitboard) {
-    let mut moves = MoveList::new();
     let us = board.side_to_move;
     let them = !us;
     let king_sq = board.king_sq(us);
     let pinned = compute_pinned(board, king_sq, us, them);
-
+    let mut moves = MoveList::new();
     gen_captures_with_pin(board, us, them, king_sq, pinned, &mut moves);
     crate::diag_count!(board_gen_staged_capture_calls);
     crate::diag_add!(board_gen_staged_capture_moves, moves.len() as u64);
@@ -237,8 +236,9 @@ fn gen_moves<const CAPTURES: bool, const QUIETS: bool, S: MoveSink>(board: &Boar
 /// [`gen_moves`] for callers that already hold the pinned set for this
 /// position (10.3 speed pass).
 ///
-/// `compute_pinned` is two slider lookups plus a per-sniper `between` scan, and
-/// it was being repeated: `generate_captures` computed it and then handed off
+/// `compute_pinned` uses two empty-board slider lookups and a per-sniper
+/// occupied-between scan. Before sharing, pin discovery
+/// was being repeated: `generate_captures` computed it and then handed off
 /// to `gen_moves`, which computed the very same thing again; and a staged node
 /// paid for it once more when quiets were finally generated. Pins are a pure
 /// function of the position, so one computation per node serves every stage.
@@ -803,33 +803,16 @@ fn compute_pinned(board: &Board, king_sq: Square, us: Color, them: Color) -> Bit
     let atk = &*ATTACKS;
     let mut pinned = Bitboard::EMPTY;
 
-    // X-ray diagonal: see through our own pieces to find diagonal pinners
-    let bishop_vision = atk.bishop(king_sq, board.all_occ);
-    let xray_bishop = atk.bishop(king_sq, board.all_occ ^ (bishop_vision & our_occ));
-    let diag_pinners =
-        (board.pieces(them, Piece::Bishop) | board.pieces(them, Piece::Queen)) & xray_bishop;
-    let mut diag_pinners = diag_pinners;
-    while diag_pinners.any() {
-        let pinner_sq = diag_pinners.pop_lsb();
-        let ray = between(king_sq, pinner_sq);
-        let blockers = ray & our_occ;
-        if blockers.any() && !blockers.more_than_one() {
-            pinned |= blockers;
-        }
-    }
-
-    // X-ray orthogonal: see through our own pieces to find orthogonal pinners
-    let rook_vision = atk.rook(king_sq, board.all_occ);
-    let xray_rook = atk.rook(king_sq, board.all_occ ^ (rook_vision & our_occ));
-    let ortho_pinners =
-        (board.pieces(them, Piece::Rook) | board.pieces(them, Piece::Queen)) & xray_rook;
-    let mut ortho_pinners = ortho_pinners;
-    while ortho_pinners.any() {
-        let pinner_sq = ortho_pinners.pop_lsb();
-        let ray = between(king_sq, pinner_sq);
-        let blockers = ray & our_occ;
-        if blockers.any() && !blockers.more_than_one() {
-            pinned |= blockers;
+    // Only aligned enemy sliders can pin. Test every occupied square between
+    // king and slider, not just our pieces: an enemy blocker also breaks a pin.
+    let diagonal = board.pieces(them, Piece::Bishop) | board.pieces(them, Piece::Queen);
+    let orthogonal = board.pieces(them, Piece::Rook) | board.pieces(them, Piece::Queen);
+    let mut snipers = (atk.bishop(king_sq, Bitboard::EMPTY) & diagonal)
+        | (atk.rook(king_sq, Bitboard::EMPTY) & orthogonal);
+    while snipers.any() {
+        let blockers = between(king_sq, snipers.pop_lsb()) & board.all_occ;
+        if !blockers.more_than_one() {
+            pinned |= blockers & our_occ;
         }
     }
 
@@ -1003,5 +986,89 @@ impl Board {
             return true;
         }
         false
+    }
+}
+
+#[cfg(test)]
+mod pin_tests {
+    use super::*;
+
+    // Independent mailbox ray walk: no slider tables, BETWEEN or LINE table.
+    fn ray_walk_pins(board: &Board, us: Color) -> Bitboard {
+        let king = board.king_sq(us);
+        let mut result = Bitboard::EMPTY;
+        for (df, dr) in [
+            (-1, -1),
+            (-1, 0),
+            (-1, 1),
+            (0, -1),
+            (0, 1),
+            (1, -1),
+            (1, 0),
+            (1, 1),
+        ] {
+            let mut file = i16::from(king.0 % 8) + df;
+            let mut rank = i16::from(king.0 / 8) + dr;
+            let mut blocker = None;
+            while (0..8).contains(&file) && (0..8).contains(&rank) {
+                let sq = Square(u8::try_from(rank * 8 + file).unwrap());
+                if let Some((color, piece)) = board.piece_at(sq) {
+                    if color == us && blocker.is_none() {
+                        blocker = Some(sq);
+                    } else {
+                        if color != us
+                            && (piece == Piece::Queen
+                                || (df != 0 && dr != 0 && piece == Piece::Bishop)
+                                || ((df == 0 || dr == 0) && piece == Piece::Rook))
+                            && let Some(pinned) = blocker
+                        {
+                            result |= Bitboard::from(pinned);
+                        }
+                        break;
+                    }
+                }
+                file += df;
+                rank += dr;
+            }
+        }
+        result
+    }
+
+    #[test]
+    fn sniper_pins_match_independent_ray_walk() {
+        let profile = include_str!("../../tests/data/board-v2.tsv");
+        let mut rng = 0x9e37_79b9_7f4a_7c15u64;
+        let mut checked = 0;
+        for row in profile
+            .lines()
+            .filter(|row| !row.starts_with('#') && !row.is_empty())
+        {
+            let fields: Vec<_> = row.split('|').collect();
+            let mut board = Board::from_fen(fields[2]).unwrap();
+            for _ in 0..100 {
+                for us in [Color::White, Color::Black] {
+                    assert_eq!(
+                        compute_pinned(&board, board.king_sq(us), us, !us),
+                        ray_walk_pins(&board, us),
+                        "pins for {us:?} in {}",
+                        board.to_fen()
+                    );
+                    checked += 1;
+                }
+                let moves = board.generate_legal_movelist();
+                if moves.is_empty() {
+                    break;
+                }
+                rng ^= rng << 13;
+                rng ^= rng >> 7;
+                rng ^= rng << 17;
+                let index = usize::try_from(rng % u64::try_from(moves.len()).unwrap()).unwrap();
+                board.make_move(moves.as_slice()[index]);
+            }
+        }
+        assert!(
+            checked >= 1000,
+            "pin oracle walk unexpectedly thin: {checked}"
+        );
     }
 }
