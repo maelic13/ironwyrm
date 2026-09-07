@@ -15,6 +15,18 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
+- **2026-09-07 — PLAN 4.11b.9 closed `NO_CHANGE`, RAR-M32:** the fused
+  ordinary-relocation path was semantically exact (both builds 7,601,220 /
+  EBF 2.474; 240 paired root answers match including full PV and ponder) and
+  gained +16.28/+15.21/+15.27% on the isolated make/unmake primitive, but its
+  full-search median of +1.016% carried a bootstrap interval of -0.450% to
+  +3.609% and failed the rule frozen in `86e39f8` before timing. Emitted code
+  grew (`make_move_inner` 468 -> 568 instrs), so LLVM was not already fusing
+  it; the miss is instrument power, not mechanism. Production path withdrawn,
+  `src/` byte-identical to `af83abf`; per-piece-class test retained in
+  `8a73cfd`. Debug 275 / release 276 tests, fmt and Clippy pass. No games.
+  4.11b.10 is next; a powered retry belongs to 4.11b.16.
+
 - **2026-09-07 — PLAN 4.11b.8 closed by withdrawal, RAR-M31:** `c44608a`
   restores the prior pin calculation and retains the independent oracle.
   This supersedes the retention below, not the historical local gains; useful

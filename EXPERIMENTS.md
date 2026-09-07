@@ -348,6 +348,43 @@ Playing gate remains 4.11b.17.
 Recipe, hashes and raw observations: `analysis/movegen_2026-09-07.md` and
 `analysis/artifacts/movegen-20260907/`.
 
+**RAR-M32 — 4.11b.9 fused ordinary relocation, COMPLETE 2026-09-07;
+disposition `NO_CHANGE`, production path withdrawn.** Baseline `af83abf` on
+`dev`; qualification frozen in `86e39f8` **before** any timing. Candidate fuses
+ordinary `QUIET` make/unmake relocation into one from/to mask and one paired
+key across mailbox, piece/colour occupancy, `all_occ` and the pawn/minor/
+non-pawn keys; captures, double pushes, en passant, promotion, castling and
+null moves keep their existing paths. Semantics were exact: both no-feature
+builds reproduce **7,601,220 / EBF 2.474** (asserted in-runner before timing),
+and **240 paired root answers** (12 pairs x 20 roots) match on name, repeat,
+depth, seldepth, reported nodes, score type/value, best move, **full PV and
+ponder**. Executables are distinct — baseline `fde1ed0e...bf59a4` (the
+registered hash), candidate `0da54ca9...cfd9dcf3`, board arms `72e8be2c...`
+and `2166a33e...`; frozen suite `0c8cefdf...6b153e3`. Isolated `make/unmake
+only` gained **+16.28% / +15.21% / +15.27%** over three alternating board-v2
+rounds, meeting the registered local condition; unchanged noise-control columns
+moved by mixed sign and smaller magnitude. Twelve alternating full-search pairs
+(600,000 nodes, one discarded warm-up per arm, seed 4119, all pairs retained)
+measure a **+1.016%** median, bootstrap 95% **-0.450% to +3.609%**, 10/12
+candidate-faster, max host CPU busy 53.43%. **The interval includes zero, so
+the frozen retention rule rejects.** Emitted-code screen: `make_move_inner`
+**468 -> 568** instructions (+21.4%), whole-crate 87,294 -> 87,994 (+0.80%),
+symbol count unchanged — refuting "LLVM already fuses this" while supporting
+"larger code repays part of the saving". RAR-M30's 7.143% make/unmake share
+projects the primitive gain to +0.96% whole-search versus the measured +1.02%,
+so the mechanism behaved as predicted and the miss is **instrument power**, not
+mechanism: twelve pairs cannot resolve a ~1% effect. This is insufficient
+evidence of deployable value, **not** proof of zero benefit, regression or
+defect. No games, NPS acceptance or Elo claim. `src/` restored byte-identical
+to `af83abf`; the targeted per-piece-class relocation test is retained in
+`8a73cfd`. Closure on the restored tree: fmt exit 0, **275 debug / 276 release**
+tests pass, Clippy `--all-features --all-targets` zero warnings. Retry is not
+authorized standalone; it belongs to **4.11b.16** under a pooled-PGO build with
+a precision calculation and whole-search floor registered before the run.
+Playing gate remains 4.11b.17. At this closure point, 4.11b.10 is next.
+Recipe, hashes and raw observations: `analysis/relocation_2026-09-07.md` and
+`tools/results/relocation-411b9/` (ignored, local).
+
 ### Phase-4 registration (RAR-M12, 2026-08-12)
 
 Registered at 4.0, before any Phase-4 code moves. Caps are prospective, derived
