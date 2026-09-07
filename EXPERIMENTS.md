@@ -314,10 +314,32 @@ make/unmake **7.143%**, check queries **5.177%**, SEE **5.304%**; relocation
 helpers are an overlapping **2.998%**, king lookup **0.544%**. Over 30,604,224
 diagnostic nodes, checked makes are 89.02% of real makes, threshold SEE is
 92.77% of SEE calls, and 25,718,154 history pushes cause **zero growth**.
-No games, NPS acceptance, or strength claim. 4.11b.8 remains next; evidence,
+No games, NPS acceptance, or strength claim. At closure, 4.11b.8 was next; evidence,
 full hashes, time budget and reproduction:
 `analysis/board_search_profile_2026-09-07.md` and
 `analysis/artifacts/board-search-profile-20260907/summary.json`.
+
+**RAR-M31 — 4.11b.8 pin discovery measurement, recorded 2026-09-07;
+research disposition OPEN.**
+Baseline `407de51`, engine `2ea279f`; replace four x-ray slider lookups by two
+empty-board lookups and test all occupied squares between king and aligned
+enemy slider. Keep a sole friendly blocker as pinned. Local board-v2 median
+gains over three alternating rounds: legal **+8.54%**, capture **+11.43%**,
+staged **+7.41%**. Twelve alternating full-search pairs on each backend measure
+generic **+0.57%** (bootstrap 95% interval −0.51% to +1.00%) and PEXT **+1.45%**
+(−1.57% to +4.26%); **neither establishes a whole-search gain**. PEXT host load
+varied more. Non-PGO, 1T, Hash 16 MiB, frozen 20 roots, 600k node limit.
+All four production fingerprints are **7,601,220 / EBF 2.474**; 480 paired
+root answers match including PV and ponder. Independent pin-ray oracle,
+debug/release suites, PEXT board tests, fmt and Clippy pass. Retained for local
+generation gains under the original execution contract; no games or strength
+acceptance. The later `b592b40` research card requires a prospective practical
+whole-search floor, which this run did not register. It does not qualify the
+leaf under that new contract. 4.11b.8 stays open for disposition; do not invent
+a post-hoc floor. Later cache/search changes were not measured here.
+Playing gate remains 4.11b.17.
+Recipe, hashes and raw observations: `analysis/movegen_2026-09-07.md` and
+`analysis/artifacts/movegen-20260907/`.
 
 ### Phase-4 registration (RAR-M12, 2026-08-12)
 

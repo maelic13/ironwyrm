@@ -1,0 +1,313 @@
+{
+  "suite_sha256": "0c8cefdfb4917295a2dfc26ad4acbde8fcd1c4e6e2c8760f11f57c01e6b153e3",
+  "pairs": 12,
+  "node_limit": 600000,
+  "backends": {
+    "magic": {
+      "hashes": {
+        "base": "9b24bc09b0837059018447a79e2cf77102e2ebaf3276876f931d3e66ce03330f",
+        "candidate": "90a15809fd80bf905f1a215d2bde39b3236782221ba6e7563a11c40d68972170"
+      },
+      "rows": [
+        {
+          "pair": 0,
+          "nps": {
+            "base": 3357935.4838709678,
+            "candidate": 3381308.5846867748
+          },
+          "cpu_busy_percent": {
+            "base": 4.399892357373525,
+            "candidate": 4.647042790951216
+          }
+        },
+        {
+          "pair": 1,
+          "nps": {
+            "candidate": 3326184.545158135,
+            "base": 3357935.4838709678
+          },
+          "cpu_busy_percent": {
+            "candidate": 5.770006724949561,
+            "base": 4.275729751952861
+          }
+        },
+        {
+          "pair": 2,
+          "nps": {
+            "base": 3377949.668874172,
+            "candidate": 3400469.3333333335
+          },
+          "cpu_busy_percent": {
+            "base": 3.8761776581426655,
+            "candidate": 3.7001768466875307
+          }
+        },
+        {
+          "pair": 3,
+          "nps": {
+            "candidate": 3356830.5363606447,
+            "base": 3384674.1871267417
+          },
+          "cpu_busy_percent": {
+            "candidate": 4.813855175235238,
+            "base": 3.8978677169631992
+          }
+        },
+        {
+          "pair": 4,
+          "nps": {
+            "base": 3386921.646746348,
+            "candidate": 3379068.5657502483
+          },
+          "cpu_busy_percent": {
+            "base": 4.049972542559033,
+            "candidate": 4.724516041694871
+          }
+        },
+        {
+          "pair": 5,
+          "nps": {
+            "candidate": 3407283.9011356044,
+            "base": 3407283.9011356044
+          },
+          "cpu_busy_percent": {
+            "candidate": 4.829979181124222,
+            "base": 3.812356360686764
+          }
+        },
+        {
+          "pair": 6,
+          "nps": {
+            "base": 3399336.22125958,
+            "candidate": 3400469.3333333335
+          },
+          "cpu_busy_percent": {
+            "base": 4.011660188784005,
+            "candidate": 4.067473813086653
+          }
+        },
+        {
+          "pair": 7,
+          "nps": {
+            "candidate": 3417557.1189279733,
+            "base": 3395941.411451398
+          },
+          "cpu_busy_percent": {
+            "candidate": 4.08079142621599,
+            "base": 3.712905452035886
+          }
+        },
+        {
+          "pair": 8,
+          "nps": {
+            "base": 3375714.096624752,
+            "candidate": 3407283.9011356044
+          },
+          "cpu_busy_percent": {
+            "base": 3.9493193152716044,
+            "candidate": 4.299297230260435
+          }
+        },
+        {
+          "pair": 9,
+          "nps": {
+            "candidate": 3410701.437646272,
+            "base": 3377949.668874172
+          },
+          "cpu_busy_percent": {
+            "candidate": 4.206896551724137,
+            "base": 4.354926510615131
+          }
+        },
+        {
+          "pair": 10,
+          "nps": {
+            "base": 3353520.0525969756,
+            "candidate": 3258194.825934206
+          },
+          "cpu_busy_percent": {
+            "base": 4.402261712439415,
+            "candidate": 6.407051703723199
+          }
+        },
+        {
+          "pair": 11,
+          "nps": {
+            "candidate": 3408422.3187437356,
+            "base": 3395941.411451398
+          },
+          "cpu_busy_percent": {
+            "candidate": 3.8909439649267075,
+            "base": 3.842459173871282
+          }
+        }
+      ],
+      "base_bench_nodes": 7601220,
+      "candidate_bench_nodes": 7601220,
+      "median_nps": {
+        "base": 3381311.9280004567,
+        "candidate": 3400469.3333333335
+      },
+      "gain_percent": 0.5665672301403246,
+      "bootstrap_95_percent": [
+        -0.5135990633546972,
+        0.9992959295929582
+      ],
+      "candidate_faster_pairs": 7,
+      "max_cpu_busy_percent": 6.407051703723199
+    },
+    "-pext": {
+      "hashes": {
+        "base": "c6777d20e33597494e74b0777e67ef149bd8b74270c8cbd81a1536cb5427f689",
+        "candidate": "593fd4d7b362b86ec58a7b7859e8c56b66f6d72b6b6692fbb7fe1216ebd3ae00"
+      },
+      "rows": [
+        {
+          "pair": 0,
+          "nps": {
+            "base": 3574424.6671338473,
+            "candidate": 3580697.7886977885
+          },
+          "cpu_busy_percent": {
+            "base": 4.864154250657315,
+            "candidate": 4.000569476082005
+          }
+        },
+        {
+          "pair": 1,
+          "nps": {
+            "candidate": 3606012.0183810536,
+            "base": 3575677.5324220117
+          },
+          "cpu_busy_percent": {
+            "candidate": 3.920421299005261,
+            "base": 4.140491147915482
+          }
+        },
+        {
+          "pair": 2,
+          "nps": {
+            "base": 3388046.496180671,
+            "candidate": 3334883.295194508
+          },
+          "cpu_busy_percent": {
+            "base": 7.703683785963966,
+            "candidate": 9.663072776280323
+          }
+        },
+        {
+          "pair": 3,
+          "nps": {
+            "candidate": 3532343.490304709,
+            "base": 3391425.5319148935
+          },
+          "cpu_busy_percent": {
+            "candidate": 5.643340857787815,
+            "base": 9.513335166345893
+          }
+        },
+        {
+          "pair": 4,
+          "nps": {
+            "base": 3521369.6927856402,
+            "candidate": 3561944.134078212
+          },
+          "cpu_busy_percent": {
+            "base": 5.2809940694719,
+            "candidate": 4.433638443935928
+          }
+        },
+        {
+          "pair": 5,
+          "nps": {
+            "candidate": 3445257.68321513,
+            "base": 3388046.496180671
+          },
+          "cpu_busy_percent": {
+            "candidate": 7.90055248618785,
+            "base": 7.159353348729791
+          }
+        },
+        {
+          "pair": 6,
+          "nps": {
+            "base": 3216080.706179067,
+            "candidate": 3429044.705882353
+          },
+          "cpu_busy_percent": {
+            "base": 12.254199765594475,
+            "candidate": 4.862637362637368
+          }
+        },
+        {
+          "pair": 7,
+          "nps": {
+            "candidate": 3448751.8593644355,
+            "base": 3419848.4746899093
+          },
+          "cpu_busy_percent": {
+            "candidate": 5.608126913442801,
+            "base": 6.18798235942668
+          }
+        },
+        {
+          "pair": 8,
+          "nps": {
+            "base": 3434817.5084175086,
+            "candidate": 3432506.056527591
+          },
+          "cpu_busy_percent": {
+            "base": 5.390051267839824,
+            "candidate": 5.843071786310516
+          }
+        },
+        {
+          "pair": 9,
+          "nps": {
+            "candidate": 3359041.159038525,
+            "base": 3361254.6952224053
+          },
+          "cpu_busy_percent": {
+            "candidate": 8.602006688963215,
+            "base": 5.849056603773583
+          }
+        },
+        {
+          "pair": 10,
+          "nps": {
+            "base": 3331615.937295885,
+            "candidate": 3321852.1654184307
+          },
+          "cpu_busy_percent": {
+            "base": 8.16271186440678,
+            "candidate": 8.864779042074622
+          }
+        },
+        {
+          "pair": 11,
+          "nps": {
+            "candidate": 3401603.2010670225,
+            "base": 3388046.496180671
+          },
+          "cpu_busy_percent": {
+            "candidate": 6.925814399124008,
+            "base": 6.728538283062646
+          }
+        }
+      ],
+      "base_bench_nodes": 7601220,
+      "candidate_bench_nodes": 7601220,
+      "median_nps": {
+        "base": 3389736.014047782,
+        "candidate": 3438881.8698713602
+      },
+      "gain_percent": 1.4498431624146324,
+      "bootstrap_95_percent": [
+        -1.5691402419091172,
+        4.259002770083109
+      ],
+      "candidate_faster_pairs": 8,
+      "max_cpu_busy_percent": 12.254199765594475
+    }
+  }
+}

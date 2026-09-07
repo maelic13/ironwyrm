@@ -36,7 +36,9 @@ predates 4.11b and is not the current roadmap: after 4.11 comes **4.11b**, then
 (RAR-M21, 2026-09-06). RAR-M22 and RAR-M23 subsequently completed 4.11.8 and
 4.11.9. RAR-M24 completed 4.11.10; its scheduling dependency is resolved.
 Board leaves 4.11b.1–4.11b.7 are complete. The next leaf is **4.11b.8**, in
-`RESEARCH`; it is not yet a request to implement one of its candidate designs.
+`RESEARCH`: its existing pin candidate is measured, but whole-search value
+and closure under the new research contract remain unresolved. Do not start
+another implementation until that decision is explicit.
 Actual full-search board cost is profiled; SEE is correctness-verified and
 normalized timing is restored. Cluster playing qualification remains at
 4.11b.17.
@@ -2265,7 +2267,8 @@ recommendations without coupling this roadmap to model generations.
    strength claim. Evidence: `analysis/board_search_profile_2026-09-07.md` and
    `analysis/artifacts/board-search-profile-20260907/summary.json`.
 
-8. **4.11b.8 Optimize legal generation and move-list delivery.** This is the
+8. **4.11b.8 Optimize legal generation and move-list delivery — RESEARCH;
+   existing candidate measured (RAR-M31, 2026-09-07).** This is the
    first speed candidate because the measured Basilisk gap is 43.7% in legal
    generation and 46.0% in two-ply simulation. Inspect compile-time
    color/mode specialization, setwise pawns, pin discovery, king-target
@@ -2302,6 +2305,41 @@ recommendations without coupling this roadmap to model generations.
    mechanism whose producer/output/consumers, invariants, test corpus, baseline,
    performance floor and rejection rule are frozen.
 
+   **Existing candidate, not closure under the new contract:** `2ea279f`
+   predates the `b592b40` research card above. Its measurements had no
+   predeclared practical whole-search floor, so they cannot retrospectively
+   satisfy that card. The candidate remains in dev; no automatic rollback or
+   new acceptance threshold is implied. Next, use R3 to decide whether an
+   independent prospective qualification is worth its cost or whether to
+   propose a documented no-change/revert disposition. Freeze any new criterion
+   before new measurements; do not rejudge exposed data against it. 4.11b.9
+   remains dependent on this disposition. RAR-M31 measured `2ea279f`, not the
+   later LazyMargin/cache/search revisions now at HEAD.
+
+   The candidate replaces four occupied-board x-ray lookups with two
+   empty-board slider lookups plus an all-occupancy BETWEEN scan. A candidate
+   pin requires exactly one intervening piece, of our color; enemy blockers
+   break the ray too. No pin cache or new board state is introduced. Existing
+   staged sharing, legal move order and all promotion choices are preserved.
+   Independent mailbox ray walks check both kings; external board-v2 move-set,
+   partition and perft oracles pass on magic and PEXT. Debug/release suites,
+   fmt and Clippy pass. Both backends keep **7,601,220 / EBF 2.474**; 480 paired
+   root comparisons match depth, seldepth, nodes, score, full PV and best/ponder.
+
+   Three alternating board-v2 rounds show median legal/capture/staged throughput
+   gains **8.54% / 11.43% / 7.41%**. These supported the original retention
+   decision, not an established whole-search speedup: twelve alternating pairs per backend
+   give generic **+0.57%** (bootstrap 95% interval **−0.51% to +1.00%**) and
+   PEXT **+1.45%** (**−1.57% to +4.26%**). PEXT had more background load.
+   These are non-PGO measurements; playing qualification remains 4.11b.17.
+   MoveList already avoids full-array initialization and pawns already use
+   setwise generation. A tuple-construction trial failed to remove the observed
+   520-byte staged-list copy in library assembly and was dropped. Broader
+   specialization/delivery redesign was not bundled into this candidate;
+   4.11b.14 can revisit delivery after checking actual production callers.
+   Evidence and reproduction: `analysis/movegen_2026-09-07.md` and
+   `analysis/artifacts/movegen-20260907/`.
+
 9. **4.11b.9 Measure fused ordinary-piece relocation.** Price a dedicated
    move_piece(from, to) path against remove_piece + add_piece. Update the
    moving piece and both occupancies with a combined from/to mask, mailbox
@@ -2322,6 +2360,8 @@ recommendations without coupling this roadmap to model generations.
    remains identical.
 
 10. **4.11b.10 Share useful pin/check information.** Current search already
+    uses the cheaper 4.11b.8 pin calculation; remeasure its remaining cost
+    rather than treating RAR-M30's pre-change pin share as current. Search already
     passes check hints and shares pins across capture/quiet stages. Do not
     implement that work again. Measure the remaining duplication between
     compute_pinned, check_info and SEE king-safety queries, including both

@@ -15,6 +15,15 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
+- **2026-09-07 — measured work within PLAN 4.11b.8, RAR-M31:** simplified pin discovery in
+  `2ea279f`; local legal/capture/staged generation gains 8.54%/11.43%/7.41%.
+  Generic/PEXT search estimates +0.57%/+1.45% are inconclusive. Debug/release,
+  independent board/pin oracles, PEXT checks, fmt and Clippy pass; fingerprints
+  and 480 paired root answers match. Strength gate remains 4.11b.17.
+  Evidence: `analysis/movegen_2026-09-07.md`. Leaf remains open: the later
+  research contract requires a prospective whole-search floor absent from
+  this run. Next is 4.11b.8 research disposition, before 4.11b.9.
+
 - **2026-09-07 — PLAN 4.11b.7, RAR-M30:** profiled 20 frozen roots in five
   actual-search cohorts. Native samples put generation/legality at **6.751%**,
   make/unmake at **7.143%**, check queries at **5.177%**, and SEE at **5.304%**
