@@ -513,6 +513,69 @@ fn make_unmake_restores_state_through_two_ply_walk() {
 }
 
 #[test]
+fn ordinary_relocation_updates_and_restores_every_piece_class() {
+    let cases = [
+        (
+            "4k3/8/8/8/8/8/4P3/4K3 w - - 0 1",
+            "e2e3",
+            Color::White,
+            Piece::Pawn,
+        ),
+        (
+            "4k3/8/8/8/8/8/8/1N2K3 w - - 0 1",
+            "b1c3",
+            Color::White,
+            Piece::Knight,
+        ),
+        (
+            "2b1k3/8/8/8/8/8/8/4K3 b - - 0 1",
+            "c8g4",
+            Color::Black,
+            Piece::Bishop,
+        ),
+        (
+            "r3k3/8/8/8/8/8/8/4K3 b - - 0 1",
+            "a8a5",
+            Color::Black,
+            Piece::Rook,
+        ),
+        (
+            "4k3/8/8/8/8/8/8/3QK3 w - - 0 1",
+            "d1d4",
+            Color::White,
+            Piece::Queen,
+        ),
+        (
+            "4k3/8/8/8/8/8/8/4K3 b - - 0 1",
+            "e8f7",
+            Color::Black,
+            Piece::King,
+        ),
+    ];
+
+    for (fen, uci, color, piece) in cases {
+        let mut board = Board::from_fen(fen).unwrap_or_else(|err| panic!("{fen}: {err}"));
+        let before = Snapshot::from(&board);
+        let mv = board
+            .parse_move(uci)
+            .unwrap_or_else(|| panic!("{uci} must be legal in {fen}"));
+        let from = mv.from_sq();
+        let to = mv.to_sq();
+
+        assert!(!mv.is_capture() && !mv.is_promo() && !mv.is_castling());
+        board.make_move_unchecked(mv);
+        assert_eq!(board.piece_at(from), None, "{uci} left its origin occupied");
+        assert_eq!(board.piece_at(to), Some((color, piece)), "{uci} target");
+        board
+            .check_consistency()
+            .unwrap_or_else(|err| panic!("{uci} make left inconsistent state: {err}"));
+
+        board.unmake_move(mv);
+        before.assert_same(&board, &format!("ordinary relocation {uci}"));
+    }
+}
+
+#[test]
 fn move_generation_does_not_mutate_board_state() {
     for fen in ORACLE_FENS {
         let mut board = Board::from_fen(fen).unwrap_or_else(|err| panic!("{fen}: {err}"));
