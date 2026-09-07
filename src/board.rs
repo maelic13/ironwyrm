@@ -18,7 +18,10 @@ pub mod zobrist;
 // Convenient re-exports of the most commonly used types.
 pub use attacks::ATTACKS;
 pub use bitboard::Bitboard;
-pub use board::{Board, CheckInfo, GameResult, STARTING_FEN};
+pub use board::{
+    Board, CROSS_ENGINE_SEE_VALUES, CheckInfo, GameResult, PRODUCTION_SEE_VALUES, STARTING_FEN,
+    SeeValues,
+};
 pub use movegen::{generate_captures, generate_legal_movelist, generate_legal_moves, perft};
 pub use moves::{Move, MoveList};
 pub use piece::{CastlingRights, Color, Piece};

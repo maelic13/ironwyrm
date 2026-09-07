@@ -2,7 +2,7 @@
 //! Regenerate with tools/diag/see_contract_oracle.py (python-chess).
 //! Historical debt rows have active acceptance tests after the 4.11b.5 repair.
 
-use rarog::board::Board;
+use rarog::board::{Board, CROSS_ENGINE_SEE_VALUES, PRODUCTION_SEE_VALUES, SeeValues};
 
 const FIXTURES: &str = include_str!("data/see-contract-v1.tsv");
 const REPAIR_FIXTURES: &str = include_str!("data/see-repair-v1.tsv");
@@ -110,6 +110,102 @@ fn repaired_created_pin_repair() {
 #[test]
 fn repaired_recapture_promotion_repair() {
     verify(Some("promotion-recapture"));
+}
+
+fn cross_engine_truth(name: &str) -> i32 {
+    let name = name.strip_prefix("mirror-").unwrap_or(name);
+    match name {
+        "free-pawn" | "pinned-pawn" | "pin-created" | "promoted-piece-recaptured" => 100,
+        "defended-pawn" => -400,
+        "king-after-pawn" | "pin-created-later" => -300,
+        "legal-king-recapture" | "ep-opens-rook" | "castle-king" | "castle-queen" => 0,
+        "defended-king-destination" => 900,
+        "pin-released" | "skip-pinned-choose-rook" => -200,
+        "xray" => 500,
+        "quiet-hanging" => -500,
+        "quiet-promotion-hanging" => -100,
+        "quiet-underpromotion" => 200,
+        "capture-promotion" => 1300,
+        "capture-underpromotion" => 700,
+        "promotion-recapture" => -800,
+        "quiet-allows-promotion" => -1300,
+        "initial-king-capture" => 300,
+        _ => panic!("missing independent cross-engine value for {name}"),
+    }
+}
+
+#[test]
+fn production_and_cross_engine_injection_match_independent_contracts() {
+    assert_eq!(
+        PRODUCTION_SEE_VALUES.as_array(),
+        [100, 320, 330, 500, 900, 20_000]
+    );
+    assert_eq!(
+        CROSS_ENGINE_SEE_VALUES.as_array(),
+        [100, 300, 300, 500, 900, 20_000]
+    );
+    let mut checked = 0;
+    for line in fixture_lines() {
+        let f: Vec<_> = line.split('|').collect();
+        let board = Board::from_fen(f[2]).expect("valid fixture");
+        let mv = board.parse_move(f[3]).expect("legal fixture move");
+        let production = board.see(mv);
+        assert_eq!(
+            production,
+            board.see_with_values(mv, PRODUCTION_SEE_VALUES),
+            "{} production injection",
+            f[0]
+        );
+        let truth = cross_engine_truth(f[0]);
+        let full = match f[1] {
+            "policy-quiet" | "policy-castle" => 0,
+            "policy-promotion" if f[0].contains("underpromotion") => 200,
+            "policy-promotion" => 800,
+            _ => truth,
+        };
+        assert_eq!(
+            board.see_with_values(mv, CROSS_ENGINE_SEE_VALUES),
+            full,
+            "{} cross full",
+            f[0]
+        );
+        for threshold in [
+            truth - 1,
+            truth,
+            truth + 1,
+            -301,
+            -300,
+            0,
+            1,
+            full,
+            full + 1,
+        ] {
+            assert_eq!(
+                board.see_ge_with_values(mv, threshold, CROSS_ENGINE_SEE_VALUES),
+                full >= threshold,
+                "{} cross threshold {threshold}",
+                f[0]
+            );
+            let aware = if f[1] == "policy-quiet" { truth } else { full };
+            assert_eq!(
+                board.see_ge_quiet_aware_with_values(mv, threshold, CROSS_ENGINE_SEE_VALUES),
+                aware >= threshold,
+                "{} cross quiet threshold {threshold}",
+                f[0]
+            );
+        }
+        checked += 1;
+    }
+    assert_eq!(checked, 41);
+}
+
+#[test]
+fn absurd_injected_rook_value_changes_a_known_verdict() {
+    let board = Board::from_fen("4k3/8/2p5/3p4/8/8/3R4/4K3 w - - 0 1").unwrap();
+    let mv = board.parse_move("d2d5").unwrap();
+    assert!(!board.see_ge(mv, 0));
+    let absurd = SeeValues::new(100, 300, 300, 1, 900, 20_000);
+    assert!(board.see_ge_with_values(mv, 0, absurd));
 }
 
 #[test]

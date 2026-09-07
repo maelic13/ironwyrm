@@ -23,6 +23,47 @@ use super::zobrist::ZOBRIST;
 /// public counter is defined identically in debug and release.
 const MAX_FULLMOVE: u16 = u16::MAX;
 
+/// Material scale used by static exchange evaluation.
+///
+/// This is a value object so benchmarks and later fitting can exercise the
+/// same SEE implementation without changing evaluation or playing defaults.
+/// Production callers use [`PRODUCTION_SEE_VALUES`].
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct SeeValues {
+    values: [i32; 6],
+}
+
+impl SeeValues {
+    pub const fn new(
+        pawn: i32,
+        knight: i32,
+        bishop: i32,
+        rook: i32,
+        queen: i32,
+        king: i32,
+    ) -> Self {
+        Self {
+            values: [pawn, knight, bishop, rook, queen, king],
+        }
+    }
+
+    pub const fn as_array(self) -> [i32; 6] {
+        self.values
+    }
+
+    #[inline(always)]
+    const fn value(self, piece: Piece) -> i32 {
+        self.values[piece as usize]
+    }
+}
+
+/// The shipped SEE scale. Its king value is an internal sentinel; legal SEE
+/// never captures a king. It deliberately remains separate from HCE values.
+pub const PRODUCTION_SEE_VALUES: SeeValues = SeeValues::new(100, 320, 330, 500, 900, 20_000);
+
+/// Frozen `cross-engine-board-v1` comparison scale.
+pub const CROSS_ENGINE_SEE_VALUES: SeeValues = SeeValues::new(100, 300, 300, 500, 900, 20_000);
+
 // -----------------------------------------------------------------------
 // Unmake info — everything needed to undo a move
 // -----------------------------------------------------------------------
@@ -1216,9 +1257,14 @@ FEN: {}",
 
     #[inline(always)]
     pub fn see(&self, mv: Move) -> i32 {
+        self.see_with_values(mv, PRODUCTION_SEE_VALUES)
+    }
+
+    #[inline(always)]
+    pub fn see_with_values(&self, mv: Move, values: SeeValues) -> i32 {
         let Some(victim) = self.captured_piece(mv) else {
             return if mv.is_promo() {
-                piece_value(mv.promo_piece()) - piece_value(Piece::Pawn)
+                values.value(mv.promo_piece()) - values.value(Piece::Pawn)
             } else {
                 0
             };
@@ -1229,11 +1275,11 @@ FEN: {}",
         let mut side = self.side_to_move;
         let mut gains = [0i32; 32];
         let mut depth = 0usize;
-        gains[0] = piece_value(victim);
+        gains[0] = values.value(victim);
         let mut occupant = self.moving_piece(mv);
         if mv.is_promo() {
             occupant = mv.promo_piece();
-            gains[0] += piece_value(occupant) - piece_value(Piece::Pawn);
+            gains[0] += values.value(occupant) - values.value(Piece::Pawn);
         }
 
         // A legal king capture ends the exchange; kings are never victims.
@@ -1243,7 +1289,7 @@ FEN: {}",
                 break;
             };
             let promoted = Self::see_recapture_piece(piece, target);
-            let gain = piece_value(occupant) + piece_value(promoted) - piece_value(piece);
+            let gain = values.value(occupant) + values.value(promoted) - values.value(piece);
             depth += 1;
             gains[depth] = gain - gains[depth - 1];
             occupant = promoted;
@@ -1259,7 +1305,12 @@ FEN: {}",
 
     #[inline(always)]
     pub fn see_ge(&self, mv: Move, threshold: i32) -> bool {
-        self.see_ge_impl(mv, threshold, false)
+        self.see_ge_impl(mv, threshold, false, PRODUCTION_SEE_VALUES)
+    }
+
+    #[inline(always)]
+    pub fn see_ge_with_values(&self, mv: Move, threshold: i32, values: SeeValues) -> bool {
+        self.see_ge_impl(mv, threshold, false, values)
     }
 
     /// As [`Board::see_ge`], but a QUIET move is put through the full exchange
@@ -1276,24 +1327,41 @@ FEN: {}",
     /// a quiet move, so the immediate balance starts at 0, which is exactly
     /// right — nothing was won, and the moved piece is now the thing at risk.
     pub fn see_ge_quiet_aware(&self, mv: Move, threshold: i32) -> bool {
-        self.see_ge_impl(mv, threshold, true)
+        self.see_ge_impl(mv, threshold, true, PRODUCTION_SEE_VALUES)
     }
 
-    fn see_ge_impl(&self, mv: Move, threshold: i32, evaluate_quiet: bool) -> bool {
+    pub fn see_ge_quiet_aware_with_values(
+        &self,
+        mv: Move,
+        threshold: i32,
+        values: SeeValues,
+    ) -> bool {
+        self.see_ge_impl(mv, threshold, true, values)
+    }
+
+    fn see_ge_impl(
+        &self,
+        mv: Move,
+        threshold: i32,
+        evaluate_quiet: bool,
+        values: SeeValues,
+    ) -> bool {
         if !mv.is_capture() && !(evaluate_quiet && !mv.is_promo()) {
             let gain = if mv.is_promo() {
-                piece_value(mv.promo_piece()) - piece_value(Piece::Pawn)
+                values.value(mv.promo_piece()) - values.value(Piece::Pawn)
             } else {
                 0
             };
             return gain >= threshold;
         }
 
-        let mut gain = self.captured_piece(mv).map_or(0, piece_value);
+        let mut gain = self
+            .captured_piece(mv)
+            .map_or(0, |piece| values.value(piece));
         let mut occupant = self.moving_piece(mv);
         if mv.is_promo() {
             occupant = mv.promo_piece();
-            gain += piece_value(occupant) - piece_value(Piece::Pawn);
+            gain += values.value(occupant) - values.value(Piece::Pawn);
         }
         if gain < threshold {
             return false;
@@ -1314,7 +1382,8 @@ FEN: {}",
                 break;
             };
             let promoted = Self::see_recapture_piece(piece, target);
-            let capture_gain = piece_value(occupant) + piece_value(promoted) - piece_value(piece);
+            let capture_gain =
+                values.value(occupant) + values.value(promoted) - values.value(piece);
             if capture_gain < limit {
                 break;
             }
@@ -2123,18 +2192,6 @@ fn decode_piece_type(encoded: u8) -> Option<Piece> {
         Some(PIECE_FROM_ENCODED[encoded as usize])
     } else {
         None
-    }
-}
-
-#[inline(always)]
-fn piece_value(piece: Piece) -> i32 {
-    match piece {
-        Piece::Pawn => 100,
-        Piece::Knight => 320,
-        Piece::Bishop => 330,
-        Piece::Rook => 500,
-        Piece::Queen => 900,
-        Piece::King => 20_000,
     }
 }
 
