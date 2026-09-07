@@ -2,6 +2,13 @@
 
 Date: 2026-09-07.
 
+> **Historical audit — superseded for current-state guidance.** This document
+> records the decision and repository identities examined on the date above.
+> Use `GUIDE.md` and `PLAN.md` for current status, sequencing, and model
+> assignments. Later work repaired the LazyMargin cache invalidation discussed
+> here (`e52074e`, `d07454a`), and the HTML snapshots mentioned below were not
+> retained in this repository.
+
 ## Recommendation
 
 Keep developing **Rarog**, narrowly, and retain **Basilisk as a frozen reference
