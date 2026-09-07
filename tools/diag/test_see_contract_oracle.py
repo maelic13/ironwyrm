@@ -9,6 +9,8 @@ import see_contract_oracle as oracle
 class SeeOracleTests(unittest.TestCase):
     def test_committed_fixture_and_wrong_arithmetic_negative_control(self):
         self.assertEqual(oracle.OUTPUT.read_text(encoding="utf-8"), oracle.render())
+        self.assertEqual(oracle.REPAIR_OUTPUT.read_text(encoding="utf-8"),
+                         oracle.render(oracle.REPAIR_CASES, "see-repair-v1"))
         wrong = list(oracle.CASES[0])
         wrong[-1] += 1
         with patch.object(oracle, "CASES", [tuple(wrong)]):
@@ -50,6 +52,14 @@ class SeeOracleTests(unittest.TestCase):
     def test_illegal_initial_move_is_rejected(self):
         with self.assertRaises(ValueError):
             oracle.exchange(chess.Board(), chess.Move.from_uci("e2e5"))
+
+    def test_promoted_piece_is_recaptured_at_its_new_value(self):
+        board = chess.Board(oracle.REPAIR_CASES[0][2])
+        board.push_uci("b2b1")
+        replies = [m for m in board.legal_moves if m.to_square == chess.B1 and m.promotion]
+        self.assertEqual(len(replies), 4)
+        # All promotion gains cancel their new victim value on Rc1xb1.
+        self.assertEqual([oracle.exchange(board, m) for m in replies], [400] * 4)
 
 
 if __name__ == "__main__":

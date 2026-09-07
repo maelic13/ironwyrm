@@ -11,19 +11,20 @@ and `python tools/diag/check_guide.py` must pass.
 | Item | Value |
 |---|---|
 | Released baseline | **2.3.2** at `f931722` on `master` |
-| Accepted head | RAR-E12 + 4.9a.7, **6,901,489 nodes / EBF 2.458**. Includes the 4.9a.4 mate drive, which is bench-INVISIBLE |
+| Last strength-qualified head | RAR-E12 + 4.9a.7, **6,901,489 nodes / EBF 2.458**. Includes the 4.9a.4 mate drive, which is bench-INVISIBLE |
+| Development fingerprint | **7,601,220 / EBF 2.474**, SEE repair `fce0b44`; cluster qualification pending 4.11b.17 |
 | Integration branch | `dev`; the hce-v3 refit `d1d95ab` is accepted |
 | Frozen oracle | `hybrid` at `75d0d43`; never merge it into Rarog |
 | Measured search deficit | **355.26 +/- 27.03 Elo** equal nodes; **250.77 +/- 13.12** equal time; speed worth **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
 | Instrument state | **4.10 repaired; v2 baselines/floors, budget transfer, label audit, mate-drive closure and conversion corrections recorded.** |
-| Current step | **4.11b.5 — repair confirmed SEE exchange defects**, not started |
+| Current step | **4.11b.6 — neutral SEE value injection and comparable timing**, not started |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## Next and held work
 
-**Next: 4.11b.5 — repair confirmed SEE exchange defects.**
+**Next: 4.11b.6 — neutral SEE value injection and comparable timing.**
 4.11.7–4.11.10 are complete; their scheduling holds/evidence gaps are resolved.
 
 | Open hold | Resume when | Must be resolved before |
@@ -113,7 +114,7 @@ Assignments and effort-setting caveats are recorded in PLAN 4.11b and 4.12.
     - [x] **4.11b.2** Strengthen benchmark coverage and correctness oracles; RAR-M25
     - [x] **4.11b.3** Repair move parsing and counter boundaries; RAR-M26
     - [x] **4.11b.4** Define SEE contracts and independent fixtures; RAR-M27
-    - [ ] **4.11b.5** Repair SEE king legality, created pins and recapture promotions — Astra XH / Opus H
+    - [x] **4.11b.5** Repair SEE king legality, created pins and recapture promotions; RAR-M28
     - [ ] **4.11b.6** Add neutral value injection; restore comparable SEE timing — Sol H / Opus M
     - [ ] **4.11b.7** Profile board work in HCE search — Sol H / Opus M
     - [ ] **4.11b.8** Optimize legal generation and move-list delivery — Astra XH / Opus H

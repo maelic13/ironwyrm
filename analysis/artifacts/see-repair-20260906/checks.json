@@ -1,0 +1,52 @@
+[
+  {
+    "command": "cargo test -- --nocapture",
+    "exit": 0,
+    "log": "debug.log"
+  },
+  {
+    "command": "cargo test --release -- --nocapture",
+    "exit": 0,
+    "log": "release.log"
+  },
+  {
+    "command": "cargo fmt --check",
+    "exit": 0,
+    "log": "fmt.log"
+  },
+  {
+    "command": "cargo clippy --all-features --all-targets -- -D warnings",
+    "exit": 0,
+    "log": "clippy.log"
+  },
+  {
+    "command": "cargo build --release --no-default-features",
+    "exit": 0,
+    "log": "production-build.log"
+  },
+  {
+    "command": "target/rarog-see-repair.exe bench 13",
+    "exit": 0,
+    "log": "bench13-argument-noop.log",
+    "valid_measurement": false,
+    "reason": "Process arguments are ignored; only the startup banner was emitted. Replaced by UCI driver below."
+  },
+  {
+    "command": "python analysis/artifacts/see-repair-20260906/bench_recipe.py",
+    "exit": 0,
+    "valid_measurement": true,
+    "engine_exit": 0,
+    "log": "bench13-uci.log"
+  },
+  {
+    "command": "python -m unittest discover -s tools/diag -p test_see_contract_oracle.py",
+    "exit": 0,
+    "tests": 6,
+    "log": "python.log"
+  },
+  {
+    "command": "python tools/diag/see_contract_oracle.py",
+    "exit": 0,
+    "fixtures": 41
+  }
+]

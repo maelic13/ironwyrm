@@ -235,6 +235,26 @@ checks, fmt and all-feature/all-target clippy pass. No games or speed claim.
 Exact FENs, arithmetic, caller contracts, raw observations and reproduction:
 `analysis/see_contract_2026-09-06.md`, `tests/data/see-contract-v1.tsv`,
 `analysis/artifacts/see-contract-20260906/`.
+**Defect status SUPERSEDED by RAR-M28:** the three failures above are historical
+baseline observations; all three acceptance tests are now active and passing.
+
+**RAR-M28 — 4.11b.5 SEE legality and promotion repair, COMPLETE 2026-09-07.**
+Engine/test `fce0b44`, entry `e954e38`. Current-occupancy king safety replaces
+stale pin masks; king captures terminate legally, recapture promotions include
+the promotion gain and promoted victim value, and threshold comparisons preserve
+equality. Values remain 100/320/330/500/900/32000; quiet/promotion shortcut
+policies remain explicit. The three repaired full/threshold-zero results are
+**-300/false, +100/true, -800/false**. Forty-one independent legal-tree fixtures
+and 1,802 legal-capture parity checks pass. Full suites pass **268 debug / 269
+release**, zero failures/ignores; six Python tests, fmt and Clippy pass.
+Exact-feature production bench is **7,601,220 / EBF 2.474**, +10.14% nodes
+against 6,901,489 / 2.458. Development fingerprint updated; **no strength or
+comparative NPS claim**, no games. Playing qualification remains 4.11b.17.
+The first process-argument bench invocation was a no-op, detected from its
+missing summary; it is explicitly invalidated and replaced by a hash-verified
+UCI-driver run. Reproduction, source/binary identity, raw logs and exact engine
+diff against the entry source: `analysis/see_repair_2026-09-06.md` and
+`analysis/artifacts/see-repair-20260906/`.
 
 ### Phase-4 registration (RAR-M12, 2026-08-12)
 

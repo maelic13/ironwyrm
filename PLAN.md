@@ -33,7 +33,9 @@ the earlier guide simply did not show the scheduling hold. Claude's handoff
 predates 4.11b and is not the current roadmap: after 4.11 comes **4.11b**, then
 4.12. The maintainer authorized heavy computation, and **4.11.7 is now complete**
 (RAR-M21, 2026-09-06). RAR-M22 and RAR-M23 subsequently completed 4.11.8 and
-4.11.9. The next leaf is **4.11.10**, which has not started.
+4.11.9. RAR-M24 completed 4.11.10; its scheduling dependency is resolved.
+Board leaves 4.11b.1–4.11b.5 are complete. The next leaf is **4.11b.6**.
+The SEE repair is correctness-verified; cluster playing qualification remains at 4.11b.17.
 
 | Leaf | State and reason | Unblock event / owner | Dependency boundary |
 |---|---|---|---|
@@ -42,9 +44,9 @@ predates 4.11b and is not the current roadmap: after 4.11 comes **4.11b**, then
 RAR-M22 completed 4.11.8 from hash-verified source PGNs and local 3–6-man
 truth. Its raw game-result audit is an input to 4.13.1, not a row-level audit
 of the already corrected `hce-v3-tb` CSVs. RAR-M23 closed 4.11.9's promotion
-closure and recorded two family debts. 4.11.10 remains open and may use
-completed RAR-M21/RAR-M22/RAR-M23 evidence; do not quietly pass its dependency
-boundary before 4.11b.
+closure and recorded two family debts. RAR-M24 used the completed
+RAR-M21/RAR-M22/RAR-M23 evidence to correct the conversion claims at 4.11.10.
+Their remaining family work is owned by 4.12; the obligations were not dropped.
 
 At each handoff review every held item: state what was done, what is still
 held, its unblock event, and the next executable leaf. Resume the earliest
@@ -1906,12 +1908,11 @@ which is what exposed the dependency inversion.
 ### 4.11b Board correctness and HCE throughput, before endgame development
 
 **Integrated 2026-09-05 after reconciling the a0aeb68 roadmap.** Finish the
-remaining 4.11 leaves first, then execute this section before 4.12. The current
-next step is 4.11.10 after completed 4.11.7–4.11.9; this insertion preserves
-all completed work and
-4.11.12's registered v2 endgame order until changed evidence warrants a rerank.
-The board audit and measurement are complete; the repairs and optimizations
-below are NOT implemented. NNUE-only work belongs to 5.2, 5.3, 5.6 and 6.4.
+remaining 4.11 leaves first, then execute this section before 4.12. Those
+4.11 leaves and board leaves 4.11b.1–4.11b.5 are now complete; **4.11b.6 is
+next**. The insertion preserves 4.11.12's registered v2 endgame order until
+changed evidence warrants a rerank. Repairs at 4.11b.3/4.11b.5 are implemented;
+the remaining optimizations and cluster qualification are still open. NNUE-only work belongs to 5.2, 5.3, 5.6 and 6.4.
 
 Evidence: RAR-M20, [board audit](analysis/board_audit_2026-09-05.md), and
 [measurement recipe](analysis/board_benchmark_recipe_2026-09-05.md).
@@ -2122,11 +2123,12 @@ Keep each assignment attached to its task if future evidence changes ordering.
    Quiet-promotion immediate-gain policy is retained: production ordering uses
    a separate promotion tier and currently has no SEE caller for that class.
 
-5. **4.11b.5 Repair the confirmed SEE exchange defects.** On
+5. **4.11b.5 Repair the confirmed SEE exchange defects -- DONE
+   (RAR-M28, 2026-09-07).** Entry defects and acceptance contract: on
    "7k/8/2p5/3pK3/8/8/3R4/8 w - - 0 1", d2d5 gives
-   Rxd5 cxd5 Kxd5 = 100 - 500 + 100 = -300. Current full see returns -400,
-   and see_ge(move, 0) incorrectly returns true in debug and release.
-   board.rs's exchange loops break on an opposing king in next_attackers
+   Rxd5 cxd5 Kxd5 = 100 - 500 + 100 = -300. Entry full see returned -400,
+   and see_ge(move, 0) incorrectly returned true in debug and release.
+   board.rs's entry exchange loops broke on an opposing king in next_attackers
    even when the selected recapturer was a PAWN. Implement the correct
    selected-king legality/parity logic; prove behavior around thresholds
    -301, -300, -299 and 0. Reference Reckless board/see.rs's explicit
@@ -2136,9 +2138,9 @@ Keep each assignment attached to its task if future evidence changes ordering.
    contract to any further demonstrated exchange defects from 4.11b.4.
    RAR-M27 adds two mandatory independent cases: in
    `2k5/2n5/2B5/3p4/8/8/8/2R1K3 w - - 0 1`, c6d5 creates a pin on
-   Nc7, so +100 is correct (current -230/false). In
+   Nc7, so +100 is correct (entry -230/false). In
    `7k/8/8/8/8/7K/pR6/1r6 w - - 0 1`, b2b1 permits a2b1q:
-   500-500-800=-800 (current 0/true). Repair evolving pin geometry and
+   500-500-800=-800 (entry 0/true). Repair evolving pin geometry and
    recapture-promotion accounting in BOTH kernels, including the promoted
    occupant's value on further recapture. The external oracle explores all
    promotion choices; never accept its first generated reply as optimal.
@@ -2148,6 +2150,26 @@ Keep each assignment attached to its task if future evidence changes ordering.
    without a concrete branch-choice explanation. No new SEE scale tuning.
    Record the search-fingerprint change and affected pruning/ordering sites.
    Done when independent fixtures pass; playing qualification remains open.
+
+   **Completion:** engine/test commit `fce0b44` replaces stale pin pairs with
+   legal recapturer selection under evolving occupancy, terminates only on
+   a legal selected king, and accounts for recapture promotion gain/new victim
+   value. Full SEE folds the legal LVA sequence; threshold SEE uses an explicit
+   positive-limit recurrence with equality preserved. Production values and
+   special-move shortcut policies are unchanged. All three ignores are removed.
+   **41 independent fixtures** pass, including a promoted piece captured again,
+   a later-created pin and color mirrors; **1,802 legal captures** pass parity.
+   Complete suites: **268 debug / 269 release**, zero failures/ignores; six
+   Python tests, fmt and all-feature/all-target Clippy pass. After the exact
+   no-feature rebuild, valid UCI `bench 13` is **7,601,220 / EBF 2.474**,
+   previously 6,901,489 / 2.458 (**+10.14% nodes**, not Elo or NPS evidence).
+   This is the development baseline for subsequent neutral work; 4.11b.17
+   still owns playing qualification. All ordering/pruning/LMR/history consumers
+   of SEE can receive changed answers; no per-consumer attribution is claimed.
+   A process-argument bench invocation was a detected no-op and is explicitly
+   invalidated in the evidence. Recipe, raw logs, identities and exact engine
+   diff: `analysis/see_repair_2026-09-06.md` and
+   `analysis/artifacts/see-repair-20260906/`.
 
 6. **4.11b.6 Separate SEE value injection from value tuning.** Introduce a
    board/search-owned value interface that preserves the existing production
@@ -2201,7 +2223,9 @@ Keep each assignment attached to its task if future evidence changes ordering.
 10. **4.11b.10 Share useful pin/check information.** Current search already
     passes check hints and shares pins across capture/quiet stages. Do not
     implement that work again. Measure the remaining duplication between
-    compute_pinned, check_info and see_pins, including both kings. Compare
+    compute_pinned, check_info and SEE king-safety queries, including both
+    kings. 4.11b.5 removed stale see_pins; any sharing must respect the evolving
+    exchange occupancy and cannot restore original-position pin masks. Compare
     node-local lazy sharing with per-ply cached state; explicitly invalidate
     or restore it through real/null moves, undo and worker cloning. Reckless
     InternalState/update_threats and Stockfish StateInfo/set_check_info are
@@ -2212,7 +2236,9 @@ Keep each assignment attached to its task if future evidence changes ordering.
     the exchange and add newly exposed bishop/rook rays after removing the
     selected attacker, rather than recomputing all attackers twice per
     exchange step. Reuse valid pin information and preserve selected-king
-    legality and threshold boundary parity. Reference Reckless board/see.rs,
+    legality, recapture promotion gain/new victim value and threshold boundary
+    parity. Preserve all 41 external fixtures from 4.11b.5; do not reinstate a
+    moving-piece-loss shortcut that ignores a later promotion. Reference Reckless board/see.rs,
     and test its logic against the Rarog contract rather than assuming it is
     an exact oracle. Evaluate real search thresholds as well as zero; keep
     a corpus with more than the v1 ten captures. Default-value verdicts must

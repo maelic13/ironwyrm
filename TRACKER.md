@@ -15,6 +15,13 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
+- **2026-09-07 — PLAN 4.11b.5, RAR-M28:** repaired evolving SEE legality,
+  selected-king handling and recapture promotion accounting in `fce0b44`.
+  All 41 independent fixtures and 1,802-capture parity checks pass; complete
+  debug/release suites, Python, fmt and Clippy pass. Production fingerprint
+  **7,601,220 / EBF 2.474**; playing qualification remains at 4.11b.17.
+  Evidence: `analysis/see_repair_2026-09-06.md`. Next is 4.11b.6.
+
 - **2026-09-06 — PLAN 4.11b.4, RAR-M27:** inventoried every SEE caller and
   special-move policy; added 18 external legal capture-tree fixtures. Confirmed
   king parity debt and found newly created pin/recapture-promotion defects;

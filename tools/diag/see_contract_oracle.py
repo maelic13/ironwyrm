@@ -12,6 +12,7 @@ import chess
 
 ROOT = Path(__file__).resolve().parents[2]
 OUTPUT = ROOT / "tests/data/see-contract-v1.tsv"
+REPAIR_OUTPUT = ROOT / "tests/data/see-repair-v1.tsv"
 VALUES = {chess.PAWN: 100, chess.KNIGHT: 320, chess.BISHOP: 330,
           chess.ROOK: 500, chess.QUEEN: 900, chess.KING: 32000}
 # name, disposition, FEN, initial move, hand-derived material result
@@ -35,6 +36,23 @@ CASES = [
     ("castle-king", "policy-castle", "4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1", "e1g1", 0),
     ("castle-queen", "policy-castle", "4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1", "e1c1", 0),
 ]
+
+# Additional 4.11b.5 cases exercise the repair's state transitions. Preserve
+# the original contract-v1 artifact and its historical debt labels unchanged.
+REPAIR_CASES = [
+    ("promoted-piece-recaptured", "exchange", "7k/8/8/8/8/8/pR6/1rR1K3 w - - 0 1", "b2b1", 100),
+    ("pin-created-later", "exchange", "2k5/2n5/2B1p3/3p4/8/8/3R4/2R4K w - - 0 1", "d2d5", -300),
+    ("skip-pinned-choose-rook", "exchange", "2kr4/2n5/2B5/3p4/8/8/8/2R1K3 w - - 0 1", "c6d5", -230),
+    ("quiet-allows-promotion", "policy-quiet", "7k/8/8/8/8/7K/pR6/8 w - - 0 1", "b2b1", -1300),
+    ("initial-king-capture", "exchange", "k7/7p/8/3n4/4K3/8/7P/8 w - - 0 1", "e4d5", 320),
+]
+for name, disposition, fen, uci, expected in CASES:
+    mirrored = chess.Board(fen).mirror()
+    mv = chess.Move.from_uci(uci)
+    mirrored_move = chess.Move(chess.square_mirror(mv.from_square),
+                               chess.square_mirror(mv.to_square), promotion=mv.promotion)
+    REPAIR_CASES.append(("mirror-" + name, disposition,
+                         mirrored.fen(en_passant="fen"), mirrored_move.uci(), expected))
 
 
 def gain(board, move):
@@ -65,9 +83,11 @@ def exchange(board, move):
     return result
 
 
-def render():
-    lines = ["# see-contract-v1: name|disposition|FEN|move|legal-tree value|immediate gain"]
-    for name, disposition, fen, uci, expected in CASES:
+def render(cases=None, name="see-contract-v1"):
+    if cases is None:
+        cases = CASES
+    lines = [f"# {name}: name|disposition|FEN|move|legal-tree value|immediate gain"]
+    for name, disposition, fen, uci, expected in cases:
         board = chess.Board(fen)
         assert board.is_valid(), name
         move = chess.Move.from_uci(uci)
@@ -82,12 +102,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--write", action="store_true")
     args = parser.parse_args()
-    result = render()
-    if args.write:
-        OUTPUT.write_text(result, encoding="utf-8")
-    else:
-        assert OUTPUT.read_text(encoding="utf-8") == result, "oracle fixture drift"
-    print(f"see-contract-v1: {len(CASES)} independent fixtures PASS; python-chess {chess.__version__}")
+    for output, cases in [(OUTPUT, CASES), (REPAIR_OUTPUT, REPAIR_CASES)]:
+        result = render(cases, output.stem)
+        if args.write:
+            output.write_text(result, encoding="utf-8")
+        else:
+            assert output.read_text(encoding="utf-8") == result, "oracle fixture drift"
+        print(f"{output.stem}: {len(cases)} independent fixtures PASS; python-chess {chess.__version__}")
 
 
 if __name__ == "__main__":

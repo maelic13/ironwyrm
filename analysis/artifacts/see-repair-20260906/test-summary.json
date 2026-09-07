@@ -1,0 +1,14 @@
+{
+  "debug": {
+    "passed": 268,
+    "failed": 0,
+    "ignored": 0,
+    "suites": 26
+  },
+  "release": {
+    "passed": 269,
+    "failed": 0,
+    "ignored": 0,
+    "suites": 26
+  }
+}

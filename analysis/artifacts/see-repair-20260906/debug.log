@@ -1,0 +1,499 @@
+   Compiling rarog v2.3.2 (D:\code\rarog)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.60s
+     Running unittests src\lib.rs (target\debug\deps\rarog-e97dfa9d42bbef96.exe)
+
+running 108 tests
+
+thread 'crash_report::tests::the_installed_hook_fires_on_a_real_panic' (14472) panicked at src\crash_report.rs:182:45:
+deliberate probe 7
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'crash_report::tests::the_previous_hook_still_runs_after_ours' (3604) panicked at src\crash_report.rs:211:45:
+chained probe
+test crash_report::tests::a_report_is_one_line_and_names_thread_location_and_message ... ok
+test crash_report::tests::the_installed_hook_fires_on_a_real_panic ... ok
+test crash_report::tests::the_previous_hook_still_runs_after_ours ... ok
+test engine_command::tests::search_preparation_rejects_stale_epochs ... ok
+test evidence::tests::a_miss_grants_no_capability ... ok
+test evidence::tests::eval_refinement_only_moves_in_the_bound_direction ... ok
+test evidence::tests::cutoff_requires_depth_and_a_resolving_bound ... ok
+test evidence::tests::guarded_refinement_at_depth_zero_equals_the_unguarded_form ... ok
+test evidence::tests::move_class_follows_the_picker_order ... ok
+test evidence::tests::only_the_main_search_form_enforces_a_depth_floor ... ok
+test evidence::tests::pv_line_is_the_union_of_node_and_stored_bits ... ok
+test evidence::tests::outcome_kinds_partition_authority ... ok
+test evidence::tests::singular_depth_margin_cannot_identify_a_probcut_producer ... ok
+test evidence::tests::window_contradiction_is_a_one_sided_test ... ok
+test infra::narrow_tests::saturating_i16_matches_clamp_then_truncate ... ok
+test infra::narrow_tests::saturating_i32_clamps_both_ends ... ok
+test infra::narrow_tests::saturating_i8_respects_floor_and_ceiling ... ok
+test move_ordering::tests::bad_capture_struct_stays_shrunk ... ok
+test move_ordering::tests::row_base_decomposition_matches_cont_and_pawn_indexes ... ok
+test params::generated_param_checks::defaults_are_within_declared_ranges ... ok
+test params::tests::search_params_defaults_are_sane ... ok
+test params::generated_param_checks::declared_ranges_are_sane ... ok
+test search::tests::helper_skip_pattern_spreads_depth_without_starving_anyone ... ok
+test search::tests::lmr_reduction_allows_strong_late_moves_to_reach_zero ... ok
+test search::tests::mopup_mirror_matches_the_real_ply_horizon ... ok
+test search::tests::parallel_result_selection_prefers_decisive_win ... ok
+test search::tests::parallel_result_selection_uses_weighted_helper_votes ... ok
+test search::tests::pooled_instability_reaches_the_clock_and_nothing_else ... ok
+test board::attacks::magic_tests::baked_magics_cover_every_square ... ok
+test eval::endgame_311c_tests::krkp_partial_scale_in_the_draw_zone ... ok
+test eval::endgame_311c_tests::krpkr_recognizes_textbook_draws ... ok
+test eval::endgame_311c_tests::opposite_bishop_scale_relaxed_by_passers ... ok
+test eval::endgame_311c_tests::kqkp_fortress_only_draws_rook_and_bishop_pawns ... ok
+test eval::endgame_311c_tests::krpkb_scales_rook_pawn_fortresses ... ok
+test bench::tests::all_bench_positions_are_legal ... ok
+test search::tests::root_confidence_aspiration_is_asymmetric_and_bounded ... ok
+test eval::endgame_311c_tests::won_endings_are_not_scaled_toward_draw ... ok
+test search::tests::root_confidence_scalar_moves_with_each_of_its_terms ... ok
+test search::tests::root_confidence_without_weights_is_neutral_not_zero ... ok
+test search::tests::root_move_record_keeps_iteration_and_distribution_state ... ok
+test search::tests::root_gap_is_diagnostic_only ... ok
+test eval::endgame_311c_tests::krpkr_never_zeroes_a_won_position ... ok
+test search_threads::tests::pooled_instability_averages_every_slot_including_the_silent_ones ... ok
+test search_threads::tests::root_score_packing_roundtrips_and_ranks_bounds ... ok
+test search_threads::tests::root_score_packing_survives_the_field_extremes ... ok
+test search_threads::tests::shared_stop_request_does_not_overwrite_quit ... ok
+test search_threads::tests::shared_stop_request_sets_search_stop ... ok
+test search_threads::tests::stop_vote_fires_at_the_threshold_not_before ... ok
+test search_threads::tests::stop_vote_threshold_is_a_strict_majority_at_every_pool_size ... ok
+test syzygy::tests::initialize_rejects_path_with_nul_without_calling_fathom ... ok
+test syzygy::tests::legal_move_from_root_probe_requires_exact_promotion_match ... ok
+test syzygy::tests::probe_root_moves_uses_local_syzygy_tables_when_available ... ok
+test syzygy::tests::root_move_from_result_decodes_square_and_promotion_fields ... ok
+test syzygy::tests::root_move_from_result_rejects_no_move_and_unknown_promotion ... ok
+test syzygy::tests::root_move_from_tb_move_decodes_fathom_move_fields ... ok
+test syzygy::tests::tablebase_file_counts_scan_semicolon_separated_paths ... ok
+test syzygy::tests::tb_position_exports_bitboards_side_ep_and_rule50_state ... ok
+test syzygy::tests::wdl_from_raw_maps_fathom_values ... ok
+test time_manager::tests::clock_maximum_reserves_two_move_overheads_at_low_time ... ok
+test time_manager::tests::clock_normal_time_allocation_is_not_throttled_by_reserve ... ok
+test time_manager::tests::clock_optimum_less_than_maximum ... ok
+test time_manager::tests::clock_selection_uses_side_to_move ... ok
+test time_manager::tests::depth_is_clamped_and_absent_clock_is_unbounded ... ok
+test time_manager::tests::movestogo_uses_explicit_clock_horizon ... ok
+test time_manager::tests::movetime_ignores_move_overhead ... ok
+test time_manager::tests::movetime_tiny_budget_is_at_least_one_ms ... ok
+test time_manager::tests::movetime_uses_full_budget_as_hard_limit ... ok
+test time_manager::tests::sudden_death_stays_within_clock ... ok
+test tt::tests::four_bit_age_preserves_the_per_generation_replacement_penalty ... ok
+test tt::tests::four_bit_age_wraps_after_sixteen_searches ... ok
+test uci_protocol::tests::bench_sends_stop_before_bench_command ... ok
+test uci_protocol::tests::control_commands_are_forwarded_to_engine_thread ... ok
+test uci_protocol::tests::go_sends_current_position_with_search_parameters ... ok
+test uci_protocol::tests::newgame_resets_position_and_sends_marker_command ... ok
+test uci_protocol::tests::setoption_sends_configure_and_clears_clear_hash_button_state ... ok
+test wac::tests::all_300_wac_positions_parse_and_are_legal ... ok
+test wac::tests::san_matcher_rejects_wrong_piece_and_destination ... ok
+test evidence::tests::a_contradicting_bound_can_never_produce_a_cutoff ... ok
+test engine::tests::bestmove_wait_does_not_rewait_after_ponderhit_seen_by_search ... ok
+test engine::tests::bestmove_wait_releases_infinite_search_on_stop ... ok
+test engine::tests::bestmove_wait_releases_infinite_search_on_quit ... ok
+test search::tests::quiet_direct_checks_receive_ordering_bonus ... ok
+test search::tests::full_picker_emits_every_legal_move_exactly_once ... ok
+test engine::tests::handle_control_command_returns_true_only_for_quit ... ok
+test search::tests::quiet_history_uses_low_ply_slots_through_ply_seven ... ok
+test search::tests::ponder_move_can_be_recovered_from_tt_child ... ok
+test search::tests::malformed_tt_move_is_not_searched_or_reported_in_pv ... ok
+test search::tests::quiet_history_updates_only_configured_low_ply_window ... ok
+test search::tests::staged_picker_emits_valid_quiet_tt_move_first ... ok
+test engine::tests::search_converts_queued_quit_command_into_search_quit ... ok
+test search::tests::picker_is_exhausted_permanently ... ok
+test search::tests::ponderhit_preserves_elapsed_time_budget ... ok
+test search::tests::quiescence_stops_before_ply_stack_overflow ... ok
+test search::tests::staged_picker_emits_every_legal_move_exactly_once ... ok
+test search::tests::quiescence_detects_mate_after_first_qply_check ... ok
+test search::tests::staged_picker_delays_bad_captures_until_after_quiets ... ok
+test engine::tests::search_converts_queued_stop_command_into_search_stop ... ok
+test search::tests::search_root_respects_restricted_root_moves ... ok
+test search::tests::search_populates_persistent_root_move_records ... ok
+test engine::tests::bestmove_wait_blocks_ponder_search_until_ponderhit ... ok
+test engine::tests::bestmove_wait_blocks_infinite_search_until_stop ... ok
+test search::tests::single_legal_move_shortcut_skips_analysis_but_not_move_requests ... ok
+test search::tests::smp_machinery_is_inert_on_a_single_thread ... ok
+test kpk::tests::defender_with_the_opposition_holds_the_draw ... ok
+test kpk::tests::rook_pawn_vs_king_in_corner_is_drawn ... ok
+test kpk::tests::king_on_key_square_in_front_of_pawn_is_won ... ok
+test kpk::tests::key_square_wins_regardless_of_side_to_move ... ok
+test search::tests::root_confidence_arms_are_inert_off_and_aspiration_is_wired_on ... ok
+
+test result: ok. 108 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.74s
+
+     Running unittests src\main.rs (target\debug\deps\rarog-c2f34e8751069d67.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\board_correctness.rs (target\debug\deps\board_correctness-7e2f52b33f094e46.exe)
+
+running 46 tests
+test deeper_perft_reference_counts_in_release ... ok
+test malformed_uci_move_tokens_are_rejected_without_panicking ... ok
+test fen_rejects_positions_where_side_not_to_move_is_in_check ... ok
+test fen_fullmove_zero_is_normalized_to_first_fullmove ... ok
+test insufficient_material_draw_cases ... ok
+test game_result_stalemate_detected ... ok
+test check_detection_matches_hand_checked_positions ... ok
+test insufficient_material_not_draw_cases ... ok
+test castling_rights_cleared_when_rook_is_captured ... ok
+test fen_ep_square_is_canonicalized_when_no_legal_capture_exists ... ok
+test castling_rights_cleared_by_king_move ... ok
+test castling_rights_cleared_by_rook_move ... ok
+test ep_capture_removes_pawn_from_correct_square ... ok
+test game_result_checkmate_fool_s_mate ... ok
+test game_result_ongoing_returns_none ... ok
+test legal_move_validation_accepts_capturing_checker ... ok
+test fifty_move_rule_triggers_can_declare_draw ... ok
+test gives_check_detects_direct_and_discovered_checks_without_mutating_board ... ok
+test ep_square_is_recorded_only_when_a_legal_capture_exists ... ok
+test legal_move_validation_canonicalizes_move_flags ... ok
+test halfmove_clock_tracking ... ok
+test impossible_and_friendly_occupied_moves_are_not_legal ... ok
+test fullmove_counter_tracking ... ok
+test fullmove_boundary_saturates_and_unmakes_for_real_and_null_moves ... ok
+test illegal_edge_case_moves_are_excluded ... ok
+test gives_check_matches_make_move_check_state_for_curated_positions ... ok
+test legal_captures_are_exact_for_curated_positions ... ok
+test fen_round_trip_preserves_state ... ok
+test attackers_to_color_matches_masked_all_attackers ... ok
+test pawn_key_distinguishes_color_shifted_structures ... ok
+test move_generation_does_not_mutate_board_state ... ok
+test board_history_grows_past_long_reversible_game ... ok
+test perft_divide_matches_known_start_position_depth_two ... ok
+test piece_accessors_at_starting_position ... ok
+test pseudo_legal_pinned_moves_are_rejected_as_illegal ... ok
+test special_moves_update_board_and_hash_correctly ... ok
+test special_position_move_sets_are_exact_for_key_rules ... ok
+test threefold_repetition_triggers_can_declare_draw ... ok
+test starting_position_legal_moves_are_exact ... ok
+test threshold_see_handles_promotion_edge_cases ... ok
+test legal_quiets_and_captures_partition_all_legal_moves ... ok
+test zobrist_different_positions_have_different_hashes ... ok
+test zobrist_transposition_same_position_same_hash ... ok
+test threshold_see_matches_full_see_for_tactical_moves ... ok
+test perft_matches_common_reference_counts ... ok
+test make_unmake_restores_state_through_two_ply_walk ... ok
+
+test result: ok. 46 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+     Running tests\board_differential.rs (target\debug\deps\board_differential-bf06ea634d1c9dc7.exe)
+
+running 2 tests
+test deep_walk_from_startpos ... ok
+test random_walks_keep_every_derived_field_in_sync ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.81s
+
+     Running tests\board_performance.rs (target\debug\deps\board_performance-2380fccd57a52da4.exe)
+
+running 1 test
+
+Custom board representation performance
+------------------------------------------------------------------------
+operation                       ops/s  operations    seconds
+legal moves                  25646123        2580     0.0001
+captures                      7776050         500     0.0001
+make/unmake                   4942529        1290     0.0003
+check detection             119617225        2500     0.0000
+perft(4) startpos            22673892      197281     0.0087
+game simulation              25638693       13809     0.0005
+test board_core_operations_self_benchmark ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests\board_v2.rs (target\debug\deps\board_v2-5b5ceb65ac322ab9.exe)
+
+running 4 tests
+test board_v2_preflight_rejects_wrong_moves_work_and_state ... ok
+test board_v2_randomized_unwind_and_clone_history_are_independent ... ok
+test board_v2_normal_hinted_staged_and_null_paths_restore_every_field ... ok
+test board_v2_profile_is_complete_and_matches_independent_oracle ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests\board_v2_allocations.rs (target\debug\deps\board_v2_allocations-73963e7375a3ae78.exe)
+
+running 1 test
+test board_v2_isolated_primitives_do_not_allocate_after_warmup ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests\canary_integrity.rs (target\debug\deps\canary_integrity-86fe1c540cffd100.exe)
+
+running 1 test
+test every_packaged_position_is_legal ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests\draw_semantics.rs (target\debug\deps\draw_semantics-cae213e667965d57.exe)
+
+running 6 tests
+test stalemate_at_clock_100_is_a_draw ... ok
+test check_with_an_escape_at_clock_100_is_still_a_draw ... ok
+test three_occurrences_are_a_threefold_for_the_arbiter ... ok
+test a_single_prior_twofold_is_a_search_draw ... ok
+test mate_on_the_100th_clock_move_beats_the_rule50_draw ... ok
+test search_finds_mate_in_one_at_clock_99 ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests\endgames.rs (target\debug\deps\endgames-a076a775c70a400a.exe)
+
+running 6 tests
+test kbnk_drives_to_the_bishops_corner ... ok
+test syzygy_won_positions_are_not_scored_as_drawn_or_lost ... ok
+test won_positions_are_clearly_winning ... ok
+test insufficient_material_positions_are_dead_draws ... ok
+test syzygy_drawn_positions_are_never_claimed_as_forced_mate ... ok
+test kbnk_positions_are_driven_to_mate ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 16.99s
+
+     Running tests\engine_coverage.rs (target\debug\deps\engine_coverage-8948f74bd6a44365.exe)
+
+running 29 tests
+test evaluator_reports_terminal_results_with_distance_to_mate ... ok
+test transposition_table_hashfull_counts_only_current_generation_entries ... ok
+test transposition_table_store_probe_replace_clear_and_mate_scores ... ok
+info string Invalid movetime value.
+info string Invalid wtime value.
+info string Invalid btime value.
+info string Invalid Hash value.
+info string Invalid Syzygy50MoveRule value.
+info string Invalid Move Overhead value.
+test search_options_parse_uci_go_perft ... info string Invalid Move Overhead value.
+info string Invalid depth value.
+info string Invalid movestogo value.
+info string Invalid nodes value.
+info string Invalid Threads value.
+info string Invalid SyzygyProbeDepth value.
+okinfo string Invalid SyzygyProbeLimit value.
+
+info string Invalid Syzygy50MoveRule value.
+No such option: Unknown Option
+test engine_command_constructors_set_expected_flags ... ok
+test syzygy_disabled_path_leaves_tablebase_probes_unavailable ... ok
+test search_options_accept_little_blitzer_fullmove_zero_fen ... ok
+test search_options_accept_uppercase_uci_move_text ... ok
+test search_options_parse_startpos_moves_and_go_limits ... ok
+test search_options_reject_illegal_position_move_without_losing_current_board ... ok
+test evaluator_scores_material_from_side_to_move_perspective ... ok
+test search_options_clamp_syzygy_values_and_preserve_raw_path ... ok
+test evaluator_scales_known_drawish_minor_endgames ... ok
+test search_options_invalid_setoption_values_preserve_previous_values ... ok
+test search_options_default_go_and_invalid_limits_are_bounded ... ok
+test evaluator_dampens_static_advantage_near_fifty_move_draw ... ok
+test search_options_setoption_and_reset_cover_engine_configuration ... ok
+test evaluator_rewards_advanced_protected_passers_over_back_rank_pawns ... ok
+test search_respects_node_limit ... ok
+test search_quit_event_exits_search ... ok
+test search_result_records_ponderhit_conversion ... ok
+test search_falls_back_when_searchmoves_match_no_root_move ... ok
+test search_returns_legal_move_in_root_fifty_move_claim_position ... ok
+test search_returns_null_move_for_stalemate ... ok
+test search_respects_searchmoves_root_filter ... ok
+test search_uses_matching_searchmoves_when_some_requested_moves_are_illegal ... ok
+test search_returns_legal_moves_from_little_blitzer_illegal_artifacts ... ok
+test search_returns_legal_root_move_in_drawn_material_positions ... ok
+test threaded_search_uses_aggregate_node_limit ... ok
+
+test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.51s
+
+     Running tests\eval_cache.rs (target\debug\deps\eval_cache-4c137a9113b8b5fd.exe)
+
+running 1 test
+test eval_cache_equals_cold_recompute ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.13s
+
+     Running tests\eval_invariants.rs (target\debug\deps\eval_invariants-84fb5084da4b4f4f.exe)
+
+running 1 test
+test eval_is_colour_symmetric ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.42s
+
+     Running tests\fuzz_lite.rs (target\debug\deps\fuzz_lite-f3ea6cb70fb423f2.exe)
+
+running 5 tests
+test malformed_fens_are_rejected_not_panicked_on ... ok
+test truncations_and_extensions_never_panic ... ok
+test mutated_fens_never_panic_and_never_yield_a_broken_board ... ok
+test malformed_position::tolerated_inputs_keep_the_session_alive ... ok
+test malformed_position::fatal_inputs_exit_cleanly_with_a_diagnostic ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+
+     Running tests\root_abort.rs (target\debug\deps\root_abort-7d52fbec807ab1ea.exe)
+
+running 4 tests
+test reported_depth_never_exceeds_a_completed_iteration ... ok
+test an_aborted_search_never_claims_an_unproven_mate ... ok
+test aborting_at_the_same_point_is_deterministic ... ok
+test an_aborted_search_always_returns_a_legal_move ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 13.48s
+
+     Running tests\search_strength.rs (target\debug\deps\search_strength-8046ff743551b600.exe)
+
+running 8 tests
+test search_prefers_winning_hanging_queen ... ok
+test threaded_search_finds_fools_mate_in_one ... ok
+test search_finds_fools_mate_in_one ... ok
+test search_prefers_safer_interposition_from_sampled_loss_line ... ok
+test fixed_depth_single_thread_search_is_repeatable ... ok
+test near_mate_recognition_canary ... ok
+test search_continues_to_resolve_shorter_mate ... ok
+test searcher_handles_thread_count_changes ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.54s
+
+     Running tests\see_contract.rs (target\debug\deps\see_contract-1fe0fc4ca1a9091e.exe)
+
+running 6 tests
+free-pawn|exchange|tree=100|see=100|thresholds=[99, 100, 101, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+defended-pawn|exchange|tree=-400|see=-400|thresholds=[-401, -400, -399, 0]|ge=[true, true, false, false]|quiet=[true, true, false, false]
+king-after-pawn|debt|tree=-300|see=-300|thresholds=[-301, -300, -299, 0]|ge=[true, true, false, false]|quiet=[true, true, false, false]
+legal-king-recapture|exchange|tree=0|see=0|thresholds=[-1, 0, 1, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+defended-king-destination|exchange|tree=900|see=900|thresholds=[899, 900, 901, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+pinned-pawn|exchange|tree=100|see=100|thresholds=[99, 100, 101, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+pin-created|debt|tree=100|see=100|thresholds=[99, 100, 101, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+pin-released|exchange|tree=-230|see=-230|thresholds=[-231, -230, -229, 0]|ge=[true, true, false, false]|quiet=[true, true, false, false]
+xray|exchange|tree=500|see=500|thresholds=[499, 500, 501, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+ep-opens-rook|exchange|tree=0|see=0|thresholds=[-1, 0, 1, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+quiet-hanging|policy-quiet|tree=-500|see=0|thresholds=[-501, -500, -499, 0]|ge=[true, true, true, true]|quiet=[true, true, false, false]
+quiet-promotion-hanging|policy-promotion|tree=-100|see=800|thresholds=[-101, -100, -99, 0]|ge=[true, true, true, true]|quiet=[true, true, true, true]
+test repaired_recapture_promotion_repair ... ok
+quiet-underpromotion|policy-promotion|tree=220|see=220|thresholds=[219, 220, 221, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+capture-promotion|exchange|tree=1300|see=1300|thresholds=[1299, 1300, 1301, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+test repaired_king_exchange_repair ... ok
+capture-underpromotion|exchange|tree=720|see=720|thresholds=[719, 720, 721, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+test repaired_created_pin_repair ... ok
+promotion-recapture|debt|tree=-800|see=-800|thresholds=[-801, -800, -799, 0]|ge=[true, true, false, false]|quiet=[true, true, false, false]
+castle-king|policy-castle|tree=0|see=0|thresholds=[-1, 0, 1, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+castle-queen|policy-castle|tree=0|see=0|thresholds=[-1, 0, 1, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+promoted-piece-recaptured|exchange|tree=100|see=100|thresholds=[99, 100, 101, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+pin-created-later|exchange|tree=-300|see=-300|thresholds=[-301, -300, -299, 0]|ge=[true, true, false, false]|quiet=[true, true, false, false]
+skip-pinned-choose-rook|exchange|tree=-230|see=-230|thresholds=[-231, -230, -229, 0]|ge=[true, true, false, false]|quiet=[true, true, false, false]
+quiet-allows-promotion|policy-quiet|tree=-1300|see=0|thresholds=[-1301, -1300, -1299, 0]|ge=[true, true, true, true]|quiet=[true, true, false, false]
+initial-king-capture|exchange|tree=320|see=320|thresholds=[319, 320, 321, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+mirror-free-pawn|exchange|tree=100|see=100|thresholds=[99, 100, 101, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+mirror-defended-pawn|exchange|tree=-400|see=-400|thresholds=[-401, -400, -399, 0]|ge=[true, true, false, false]|quiet=[true, true, false, false]
+mirror-king-after-pawn|debt|tree=-300|see=-300|thresholds=[-301, -300, -299, 0]|ge=[true, true, false, false]|quiet=[true, true, false, false]
+mirror-legal-king-recapture|exchange|tree=0|see=0|thresholds=[-1, 0, 1, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+mirror-defended-king-destination|exchange|tree=900|see=900|thresholds=[899, 900, 901, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+mirror-pinned-pawn|exchange|tree=100|see=100|thresholds=[99, 100, 101, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+mirror-pin-created|debt|tree=100|see=100|thresholds=[99, 100, 101, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+mirror-pin-released|exchange|tree=-230|see=-230|thresholds=[-231, -230, -229, 0]|ge=[true, true, false, false]|quiet=[true, true, false, false]
+mirror-xray|exchange|tree=500|see=500|thresholds=[499, 500, 501, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+mirror-ep-opens-rook|exchange|tree=0|see=0|thresholds=[-1, 0, 1, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+mirror-quiet-hanging|policy-quiet|tree=-500|see=0|thresholds=[-501, -500, -499, 0]|ge=[true, true, true, true]|quiet=[true, true, false, false]
+mirror-quiet-promotion-hanging|policy-promotion|tree=-100|see=800|thresholds=[-101, -100, -99, 0]|ge=[true, true, true, true]|quiet=[true, true, true, true]
+mirror-quiet-underpromotion|policy-promotion|tree=220|see=220|thresholds=[219, 220, 221, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+mirror-capture-promotion|exchange|tree=1300|see=1300|thresholds=[1299, 1300, 1301, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+mirror-capture-underpromotion|exchange|tree=720|see=720|thresholds=[719, 720, 721, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+mirror-promotion-recapture|debt|tree=-800|see=-800|thresholds=[-801, -800, -799, 0]|ge=[true, true, false, false]|quiet=[true, true, false, false]
+mirror-castle-king|policy-castle|tree=0|see=0|thresholds=[-1, 0, 1, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+mirror-castle-queen|policy-castle|tree=0|see=0|thresholds=[-1, 0, 1, 0]|ge=[true, true, false, true]|quiet=[true, true, false, true]
+test independent_exchange_and_explicit_shortcut_contracts ... ok
+test report_see_contract_observations ... ok
+SEE parity: 1802 legal captures across four deterministic walks
+test threshold_parity_on_deterministic_legal_walks ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests\see_pins.rs (target\debug\deps\see_pins-f39389e93f6636c7.exe)
+
+running 6 tests
+test capturing_the_pinner_frees_the_blocker ... ok
+test pinned_pawn_may_capture_the_pinner_on_its_ray ... ok
+test pinned_by_bishop_diagonal ... ok
+test xray_recapture_still_seen_with_pin_logic ... ok
+test pinned_pawn_cannot_recapture_off_its_file ... ok
+test plain_winning_and_losing_and_even_captures ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests\slider_backends.rs (target\debug\deps\slider_backends-de20a3fb4b7344db.exe)
+
+running 1 test
+test every_slider_occupancy_matches_coordinate_rays ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests\tt_provenance.rs (target\debug\deps\tt_provenance-164e49097c6155ee.exe)
+
+running 2 tests
+test local_table_round_trips_speculative_provenance ... ok
+test shared_table_round_trips_speculative_provenance ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\tt_shared.rs (target\debug\deps\tt_shared-3a201809b0d7cc8b.exe)
+
+running 3 tests
+test shared_table_starts_empty ... ok
+test shared_store_then_probe_round_trips_every_field ... ok
+test shared_probe_almost_never_matches_keys_never_stored ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+     Running tests\tt_sizing.rs (target\debug\deps\tt_sizing-f645693578a70a1f.exe)
+
+running 4 tests
+test local_table_fits_the_hash_budget ... ok
+test make_shared_is_idempotent ... ok
+test shared_table_does_not_shrink_entry_capacity ... ok
+test shared_table_fits_the_same_budget_as_local ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.15s
+
+     Running tests\uci_process.rs (target\debug\deps\uci_process-3df5f613276e81c2.exe)
+
+running 14 tests
+test invalid_position_fen_is_a_critical_exit ... ok
+test go_perft_runs_synchronously_before_following_quit ... ok
+test position_accepts_uppercase_move_text_before_perft ... ok
+test uci_advertises_ponder_and_core_options ... ok
+test unknown_command_and_option_print_explicit_diagnostics ... ok
+test movetime_100_completes_at_least_one_depth ... ok
+test completed_ponder_search_waits_for_ponderhit_before_bestmove ... ok
+test completed_ponder_search_waits_for_stop_before_bestmove ... ok
+test threaded_infinite_search_stops_cleanly ... ok
+test emitted_pvs_are_legal_for_tournament_positions_with_threads ... ok
+test threaded_go_nodes_returns_bestmove_and_reports_nodes ... ok
+test long_endgame_search_does_not_overflow_engine_thread_stack ... ok
+test ponderhit_after_spent_movetime_does_not_restart_search_clock ... ok
+test threaded_ponderhit_after_spent_movetime_does_not_restart_search_clock ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.41s
+
+     Running tests\wac.rs (target\debug\deps\wac-b02ad9e94d2d1977.exe)
+
+running 2 tests
+test aspiration_terminates_on_sudden_mate_scores ... ok
+test wac_solved_count_stays_above_floor ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 13.93s
+
+     Running tests\zugzwang.rs (target\debug\deps\zugzwang-20f4b8515f6b492b.exe)
+
+running 7 tests
+test forced_mates_are_still_proven ... ok
+test symmetric_blocked_positions_are_not_scored_as_decisive ... ok
+test a_single_legal_reply_is_always_returned ... ok
+test pawn_only_endgames_stay_sound_in_both_directions ... ok
+test classic_king_pawn_zugzwang_stays_balanced ... ok
+test in_check_never_returns_a_null_artifact ... ok
+test every_4_4_switch_preserves_null_soundness ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.63s
+
+   Doc-tests rarog
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

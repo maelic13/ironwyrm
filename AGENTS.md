@@ -119,9 +119,10 @@ did what its name suggests.**
   moved oracle agreement 66% -> 78%. Verifying the ENGINE responds is not the
   same check -- a standalone probe confirmed the option worked while the
   instrument reporting on it did not.
-- A behavior-neutral **engine change** must reproduce the immediate accepted
-  production `bench 13` fingerprint (currently **6,901,489 / EBF 2.458**),
-  plus targeted checks for changed behavior the suite does not reach. The
+- A behavior-neutral **engine change** must reproduce the immediate development
+  production `bench 13` fingerprint (currently **7,601,220 / EBF 2.474**),
+  plus targeted checks for changed behavior the suite does not reach. This
+  includes the 4.11b.5 SEE repair; playing qualification remains at 4.11b.17. The
   4.9a.4 mate drive changed KBN-K conversion 19.4% -> 96.9% with an identical
   bench: fingerprint equality alone is not proof of narrow-feature neutrality.
   RAR-P14/P16 establish cross-platform fingerprint agreement; investigate a
@@ -250,9 +251,9 @@ did what its name suggests.**
   each command's actual exit status and require every intended check to have
   run successfully before committing; do not rely on a chained command's
   final status as proof of earlier checks.
-- The accepted fingerprint is revision-specific. For a neutral change compare
-  to the exact immediate accepted baseline (currently 6,901,489 / EBF 2.458)
-  and targeted cases. A deliberately accepted behavior change updates the
+- The comparison fingerprint is revision-specific. For a neutral change compare
+  to the exact immediate development baseline (currently 7,601,220 / EBF 2.474)
+  and targeted cases. A deliberately integrated behavior change updates the
   fingerprint record; never preserve a known defect to force an obsolete count.
 
 ## Handing work back
