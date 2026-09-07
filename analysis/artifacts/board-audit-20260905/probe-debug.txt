@@ -1,4 +1,0 @@
-FEN=7k/8/2p5/3pK3/8/8/3R4/8 w - - 0 1; MOVE=d2d5; SEE=-400; GE0=true; ORACLE=-300
-FEN=7r/P7/7k/8/8/8/8/K7 w - - 0 1; MOVE=a7a8q; SEE=800; GE0=true; ORACLE=-100
-unicode_panics=true
-fullmove_panics=true; fullmove=65535

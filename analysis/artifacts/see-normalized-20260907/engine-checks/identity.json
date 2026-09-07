@@ -1,9 +1,0 @@
-{
-  "base": "2c59911ee8713a1c7f8224bf31df67270ba4e533",
-  "source_sha256": "5360643483225404d95db03acf4ae705eed27f32c94cbda8486558324cdc3a47",
-  "binary_sha256": "b0a7334e79528921ab089a8b17fe81fd381e56b0faa47cfeac16a4fa68f59f44",
-  "features": [],
-  "rustflags": null,
-  "cargo_encoded_rustflags": null,
-  "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)\nbinary: rustc\ncommit-hash: 8bab26f4f68e0e26f0bb7960be334d5b520ea452\ncommit-date: 2026-07-14\nhost: x86_64-pc-windows-msvc\nrelease: 1.97.1\nLLVM version: 22.1.6\n"
-}

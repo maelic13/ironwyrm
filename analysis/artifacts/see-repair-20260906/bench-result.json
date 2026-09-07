@@ -1,7 +1,0 @@
-{
-  "nodes": 7601220,
-  "ebf": "2.474",
-  "engine_exit": 0,
-  "driver": "tools/diag/bench_counters.py::run_bench",
-  "production_sha256": "C87F0063983C32ADE8EE771EB89C2D50DD32921653772F1B9B02FEA6C98F2347"
-}

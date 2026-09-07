@@ -68,3 +68,15 @@ tools/profile/*.etl
 tools/profile/profile_*.txt
 tools/profile/rarog.json
 tools/profile/butterfly.txt
+
+# Local experiment evidence; tracked Markdown retains decisions and recipes
+/analysis/artifacts/
+/analysis/*.txt
+
+# Unused branding variants; the README logo remains tracked
+/logo/rarog2_dark.png
+/logo/rarog2_light.png
+/logo/rarog_dark.png
+/logo/rarog_light.png
+/logo/rarog_simple_dark.png
+/logo/rarog_simple_light.png

@@ -55,7 +55,8 @@ injected interface.
 The Rarog adapter also accepts a diagnostic-only `--see-values` argument.
 Through the actual benchmark executable, the normal vector makes the defended
 `Rxd5 cxd5` probe false at threshold zero; changing only rook from 500 to the
-deliberately absurd **1** makes it true. The preflight outputs are committed.
+deliberately absurd **1** makes it true. The preflight outputs are retained
+locally under `analysis/artifacts/see-normalized-20260907/` (Git-ignored).
 The ten corpus verdicts happen not to change under that absurd vector, which is
 why the dedicated independently known probe is necessary. This is a live-wire
 test, not a proposed value candidate.

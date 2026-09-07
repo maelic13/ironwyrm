@@ -99,7 +99,7 @@ confirmed individually by the test runner in both profiles (all three fail).
 
 ## Validation and reproduction
 
-Raw observations and expected failures are committed under
+Raw observations and expected failures are retained locally (Git-ignored) under
 `analysis/artifacts/see-contract-20260906/`. Debug and release observations
 agree; each normal run passes 2 new tests plus 6 existing pin tests, with the
 3 debts explicitly ignored. These are scoped tests for new fixtures; production

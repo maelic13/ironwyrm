@@ -1,6 +1,0 @@
-   Compiling find-msvc-tools v0.1.9
-   Compiling shlex v2.0.1
-   Compiling cc v1.3.0
-   Compiling rarog v2.3.2 (D:\code\rarog)
-    Finished `bench` profile [optimized] target(s) in 18.78s
-  Executable benches\board.rs (target/411b6-rarog-native\release\deps\board-12ca175dd86ea15e.exe)

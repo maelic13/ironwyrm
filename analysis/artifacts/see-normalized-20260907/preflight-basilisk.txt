@@ -1,8 +1,0 @@
-
-Basilisk board benchmark
-profile: cross-engine-board-v1
-positions: 5
-see-values: 100/300/300/500/900/20000
-see-verdicts: 1:d5e6=1,1:e2a6=1,1:e5d7=0,1:e5f7=0,1:e5g6=0,1:f3f6=0,1:f3h3=0,1:g2h3=1,4:f6e4=1,4:f6h5=1
-samples: 11 x 150 ms after a 150 ms warm-up (median +/- MAD)
-preflight: PASS

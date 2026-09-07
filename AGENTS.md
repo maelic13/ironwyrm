@@ -262,6 +262,19 @@ did what its name suggests.**
 
 ## Evidence
 
+- **Development and raw evidence live on this machine.** macOS and Windows
+  on ARM are compatibility-test hosts, not separate development workspaces.
+  Keep source, build/CI files, reusable tools, required test fixtures, and
+  concise design/result records in Git. Keep raw runs, logs, executables,
+  profiling traces, bundles and scratch outputs in ignored `analysis/artifacts/`
+  or `tools/results/`; never force-add them merely to preserve evidence.
+  Record local paths, recipes and hashes in the tracked analysis/ledger.
+  Small frozen datasets actually consumed by tests or tools remain versioned.
+  Compatibility checks must not depend on this machine's private run outputs.
+  See `analysis/README.md` for storage boundaries. Untracking uses `git rm
+  --cached` and preserves local bytes; it does not authorize deleting evidence
+  or rewriting Git history.
+
 - **A ledger row must reproduce its artifact without the branch it came from.**
   Record the recipe — exact parameter values, or the diff when it is small —
   plus a fingerprint that proves a rebuild matched. A bare SHA is not evidence;
