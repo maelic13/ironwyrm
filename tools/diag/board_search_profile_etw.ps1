@@ -18,7 +18,8 @@ param(
     [int]$Nodes = 600000,
     [int]$Repeats = 5,
     [int]$SampleIntervalNs100 = 1221,
-    [string]$OutputDirectory = "tools/results/board-search-profile-etw"
+    [string]$OutputDirectory = "tools/results/board-search-profile-etw",
+    [switch]$ReportsOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -69,34 +70,53 @@ $manifest = [ordered]@{
     sample_interval_100ns = $SampleIntervalNs100
     captured_utc = [DateTime]::UtcNow.ToString("o")
 }
-$manifest | ConvertTo-Json | Set-Content -Encoding utf8 (Join-Path $outputPath "manifest.json")
+$manifestPath = Join-Path $outputPath "manifest.json"
+if (-not $ReportsOnly) {
+    $manifest | ConvertTo-Json | Set-Content -Encoding utf8 $manifestPath
+}
+elseif (-not (Test-Path -LiteralPath $manifestPath)) {
+    throw "reports-only mode needs the original capture manifest $manifestPath"
+}
 
-$env:_NT_SYMBOL_PATH = Split-Path $pdbPath -Parent
+$symbolDir = Join-Path $outputPath "symbols"
+New-Item -ItemType Directory -Force -Path $symbolDir | Out-Null
+# rustc embeds the original `rarog.pdb` name and GUID in the executable.  A
+# renamed-but-matching PDB is not discovered by xperf, which previously yielded
+# multi-megabyte reports containing only `***unknown***` Rarog frames.
+Copy-Item -LiteralPath $pdbPath -Destination (Join-Path $symbolDir "rarog.pdb") -Force
+$env:_NT_SYMBOL_PATH = $symbolDir
 $processName = Split-Path $exePath -Leaf
 $cohorts = @("opening", "middlegame", "check-heavy", "promotion", "sparse-endgame")
 
 try {
-    & $xperf -stop 2>&1 | Out-Null
-    & $xperf -setprofint $SampleIntervalNs100
-    if ($LASTEXITCODE -ne 0) { throw "xperf -setprofint failed ($LASTEXITCODE)" }
+    if (-not $ReportsOnly) {
+        & $xperf -stop 2>&1 | Out-Null
+        & $xperf -setprofint $SampleIntervalNs100
+        if ($LASTEXITCODE -ne 0) { throw "xperf -setprofint failed ($LASTEXITCODE)" }
+    }
 
     foreach ($cohort in $cohorts) {
         $etl = Join-Path $outputPath "$cohort.etl"
         $report = Join-Path $outputPath "$cohort-butterfly.txt"
         $json = Join-Path $outputPath "$cohort-searches.json"
 
-        & $xperf -on PROC_THREAD+LOADER+PROFILE -stackwalk profile `
-            -buffersize 1024 -minbuffers 256 -maxbuffers 1024
-        if ($LASTEXITCODE -ne 0) { throw "xperf -on failed for $cohort ($LASTEXITCODE)" }
+        if (-not $ReportsOnly) {
+            & $xperf -on PROC_THREAD+LOADER+PROFILE -stackwalk profile `
+                -buffersize 1024 -minbuffers 256 -maxbuffers 1024
+            if ($LASTEXITCODE -ne 0) { throw "xperf -on failed for $cohort ($LASTEXITCODE)" }
 
-        try {
-            & python $driver --exe $exePath --allow-no-diag --cohort $cohort `
-                --nodes $Nodes --repeats $Repeats --output $json
-            if ($LASTEXITCODE -ne 0) { throw "profile workload failed for $cohort ($LASTEXITCODE)" }
+            try {
+                & python $driver --exe $exePath --allow-no-diag --cohort $cohort `
+                    --nodes $Nodes --repeats $Repeats --output $json
+                if ($LASTEXITCODE -ne 0) { throw "profile workload failed for $cohort ($LASTEXITCODE)" }
+            }
+            finally {
+                & $xperf -stop -d $etl
+                if ($LASTEXITCODE -ne 0) { throw "xperf trace stop failed for $cohort ($LASTEXITCODE)" }
+            }
         }
-        finally {
-            & $xperf -stop -d $etl
-            if ($LASTEXITCODE -ne 0) { throw "xperf trace stop failed for $cohort ($LASTEXITCODE)" }
+        elseif (-not (Test-Path -LiteralPath $etl)) {
+            throw "reports-only mode needs the existing trace $etl"
         }
 
         & $xperf -i $etl -o $report -symbols -a stack -butterfly 100 -process $processName
@@ -106,12 +126,19 @@ try {
         if ($reportSize -lt 10000) {
             throw "report for $cohort is suspiciously small ($reportSize bytes); check symbols"
         }
+        $reportText = Get-Content -LiteralPath $report -Raw
+        $modulePattern = [regex]::Escape($processName) + "</a>!<a [^>]+>(?!\*\*\*unknown\*\*\*)"
+        if ($reportText -notmatch $modulePattern) {
+            throw "report for $cohort has no named Rarog frames; PDB resolution failed"
+        }
         Write-Host ("{0,-16} report {1:N0} bytes" -f $cohort, $reportSize)
     }
 }
 finally {
-    & $xperf -stop 2>&1 | Out-Null
-    & $xperf -setprofint 10000 2>&1 | Out-Null
+    if (-not $ReportsOnly) {
+        & $xperf -stop 2>&1 | Out-Null
+        & $xperf -setprofint 10000 2>&1 | Out-Null
+    }
 }
 
 Write-Host "ETW profile complete: $outputPath"
