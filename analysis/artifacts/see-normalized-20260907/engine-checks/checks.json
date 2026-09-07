@@ -1,0 +1,35 @@
+[
+  {
+    "command": "cargo test -- --nocapture",
+    "exit": 0,
+    "log": "debug.log"
+  },
+  {
+    "command": "cargo test --release -- --nocapture",
+    "exit": 0,
+    "log": "release.log"
+  },
+  {
+    "command": "cargo fmt --check",
+    "exit": 0,
+    "log": "fmt.log"
+  },
+  {
+    "command": "cargo clippy --all-features --all-targets -- -D warnings",
+    "exit": 0,
+    "log": "clippy.log"
+  },
+  {
+    "command": "cargo build --release --no-default-features",
+    "exit": 0,
+    "log": "production-build.log"
+  },
+  {
+    "command": "bench_counters.run_bench(production, 13, 1, [])",
+    "exit": 0,
+    "nodes": 7601220,
+    "ebf": "2.474",
+    "sha256": "b0a7334e79528921ab089a8b17fe81fd381e56b0faa47cfeac16a4fa68f59f44",
+    "log": "bench13.log"
+  }
+]

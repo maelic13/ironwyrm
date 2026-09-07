@@ -1,0 +1,17 @@
+see-values: 100/300/300/500/900/20000
+see-verdicts: 1:d5e6=1,1:e2a6=1,1:e5d7=0,1:e5f7=0,1:e5g6=0,1:f3f6=0,1:f3h3=0,1:g2h3=1,4:f6e4=1,4:f6h5=1
+see-probe: false
+
+Rarog board benchmark
+profile: cross-engine-board-v1
+positions: 5
+samples: 11 x 150 ms after a 150 ms warm-up (median +/- MAD)
+preflight: PASS
+
+workload                estimate ops/s       MAD ops/s      MAD %     ops/iter  total iters
+legal moves                  448051910          201918      0.05%          128      5786924 moves
+legal captures                97597119          164473      0.17%           10     15930000 moves
+make/unmake                   43747350          393363      0.90%          128       564480 moves
+threshold SEE                 45166802          203094      0.45%           10      7430940 captures
+perft(4) startpos            282971806         2070977      0.73%       197281         2363 nodes
+two-ply simulation           364881490         5259778      1.44%         4597       131555 moves

@@ -15,6 +15,14 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
+- **2026-09-07 — PLAN 4.11b.6, RAR-M29:** added neutral board-owned SEE
+  values, proved production identity and the benchmark wire, and restored the
+  normalized three-engine SEE comparison. All adapters agree on values and ten
+  verdicts; medians are **44.923/58.335/40.823 M captures/s** for Rarog/
+  Basilisk/Reckless, with Rarog's 12.20% scatter recorded. Full engine/tool
+  checks pass; no fitting or games. Evidence:
+  `analysis/see_value_injection_2026-09-07.md`. Next is 4.11b.7.
+
 - **2026-09-07 — PLAN 4.11b.5, RAR-M28:** repaired evolving SEE legality,
   selected-king handling and recapture promotion accounting in `fce0b44`.
   All 41 independent fixtures and 1,802-capture parity checks pass; complete

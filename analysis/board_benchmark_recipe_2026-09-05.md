@@ -1,5 +1,10 @@
 # Reproducing the 2026-09-05 board comparison
 
+**Historical recipe.** Its native-value SEE lines remain exact raw evidence but
+are superseded for cross-engine SEE ranking by RAR-M29's normalized comparison:
+`see_value_injection_2026-09-07.md`. The other five workload columns are not
+superseded. Do not edit the embedded raw outputs below.
+
 This is the retained RAR-M20 evidence, integrated into PLAN/GUIDE on
 2026-09-05. The machine-readable sibling files are under
 [artifacts/board-audit-20260905](artifacts/board-audit-20260905).

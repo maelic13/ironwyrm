@@ -1,0 +1,50 @@
+Rarog 2.3.2 by Miloslav Macurek
+
+bench 1/40  depth 13  score 52  nodes 134578  ebf 2.48  time 63ms  nps 2136158
+bench 2/40  depth 13  score -121  nodes 183042  ebf 2.54  time 76ms  nps 2408447
+bench 3/40  depth 13  score 243  nodes 74394  ebf 2.37  time 50ms  nps 1487880
+bench 4/40  depth 13  score 232  nodes 169274  ebf 2.52  time 73ms  nps 2318821
+bench 5/40  depth 13  score -731  nodes 104580  ebf 2.43  time 37ms  nps 2826486
+bench 6/40  depth 13  score 0  nodes 32636  ebf 2.22  time 7ms  nps 4662285
+bench 7/40  depth 13  score 31999  nodes 42  ebf 1.33  time 0ms  nps 42
+bench 8/40  depth 13  score -177  nodes 270921  ebf 2.62  time 126ms  nps 2150166
+bench 9/40  depth 13  score -239  nodes 73598  ebf 2.37  time 19ms  nps 3873578
+bench 10/40  depth 13  score 981  nodes 118997  ebf 2.46  time 31ms  nps 3838612
+bench 11/40  depth 13  score 1274  nodes 255878  ebf 2.61  time 68ms  nps 3762911
+bench 12/40  depth 13  score 696  nodes 145236  ebf 2.50  time 56ms  nps 2593500
+bench 13/40  depth 13  score -69  nodes 363367  ebf 2.68  time 178ms  nps 2041387
+bench 14/40  depth 13  score -15  nodes 244005  ebf 2.60  time 102ms  nps 2392205
+bench 15/40  depth 13  score -801  nodes 49519  ebf 2.30  time 11ms  nps 4501727
+bench 16/40  depth 13  score 992  nodes 72761  ebf 2.37  time 16ms  nps 4547562
+bench 17/40  depth 13  score -18  nodes 447755  ebf 2.72  time 232ms  nps 1929978
+bench 18/40  depth 13  score -37  nodes 546227  ebf 2.76  time 284ms  nps 1923334
+bench 19/40  depth 13  score 58  nodes 134433  ebf 2.48  time 54ms  nps 2489500
+bench 20/40  depth 13  score 116  nodes 213363  ebf 2.57  time 79ms  nps 2700797
+bench 21/40  depth 13  score 215  nodes 201624  ebf 2.56  time 78ms  nps 2584923
+bench 22/40  depth 13  score 193  nodes 105324  ebf 2.43  time 48ms  nps 2194250
+bench 23/40  depth 13  score 199  nodes 330860  ebf 2.66  time 150ms  nps 2205733
+bench 24/40  depth 13  score 446  nodes 361907  ebf 2.68  time 144ms  nps 2513243
+bench 25/40  depth 13  score 324  nodes 135991  ebf 2.48  time 49ms  nps 2775326
+bench 26/40  depth 13  score -31  nodes 112107  ebf 2.45  time 39ms  nps 2874538
+bench 27/40  depth 13  score -656  nodes 103472  ebf 2.43  time 30ms  nps 3449066
+bench 28/40  depth 13  score -383  nodes 392757  ebf 2.69  time 143ms  nps 2746552
+bench 29/40  depth 13  score 0  nodes 75098  ebf 2.37  time 18ms  nps 4172111
+bench 30/40  depth 13  score 524  nodes 295958  ebf 2.64  time 121ms  nps 2445933
+bench 31/40  depth 13  score 1728  nodes 114298  ebf 2.45  time 29ms  nps 3941310
+bench 32/40  depth 13  score 157  nodes 91973  ebf 2.41  time 28ms  nps 3284750
+bench 33/40  depth 13  score -527  nodes 260114  ebf 2.61  time 82ms  nps 3172121
+bench 34/40  depth 13  score -281  nodes 131899  ebf 2.48  time 41ms  nps 3217048
+bench 35/40  depth 13  score -401  nodes 109753  ebf 2.44  time 31ms  nps 3540419
+bench 36/40  depth 13  score 147  nodes 329619  ebf 2.66  time 91ms  nps 3622186
+bench 37/40  depth 13  score 316  nodes 67660  ebf 2.35  time 20ms  nps 3383000
+bench 38/40  depth 13  score 1027  nodes 197752  ebf 2.56  time 50ms  nps 3955040
+bench 39/40  depth 13  score -1285  nodes 355364  ebf 2.67  time 97ms  nps 3663546
+bench 40/40  depth 13  score 478  nodes 193084  ebf 2.55  time 57ms  nps 3387438
+
+=========================
+Nodes searched  : 7601220
+Geomean EBF     : 2.474
+Median nodes    : 145236
+Top-pos share   : 7.2%  (546227 nodes)
+Total time (ms) : 2908
+Nodes/second    : 2613899

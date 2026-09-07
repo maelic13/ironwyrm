@@ -5,6 +5,13 @@ After the maintainer released the edit hold, PLAN/GUIDE were reconciled against
 a0aeb68 and the analysis adopted. Engine repairs and optimizations remain
 unimplemented. No Rarog engine source was changed in this documentation step.
 
+**SEE UPDATE, RAR-M29 / 2026-09-07:** the native-value SEE row below remains
+historical evidence but is superseded for cross-engine ranking. The normalized
+replacement is Rarog/Basilisk/Reckless **44.923/58.335/40.823 M captures/s**
+with identical 100/300/300/500/900/20000 values and ten move/verdict answers.
+Rarog's 12.20% round span limits precision. See
+`see_value_injection_2026-09-07.md`; do not use the old row as a current rank.
+
 The board is a sound bitboard foundation, but it is not yet a best-in-class
 implementation: focused probes demonstrate correctness defects, and Basilisk
 is materially faster on the measured board workloads. Neither result justifies

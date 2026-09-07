@@ -41,7 +41,9 @@ Full/ordinary SEE retain immediate-gain shortcuts for ordinary quiets and quiet
 promotions. Quiet-aware SEE evaluates ordinary quiets but keeps the quiet-promotion
 shortcut. Legal castles still score zero. Initial capture promotions retain the
 chosen underpromotion, and en passant removes the victim from its actual square.
-Production P/N/B/R/Q/K remains **100/320/330/500/900/32000**.
+Production P/N/B/R/Q/K remains **100/320/330/500/900/20000**. RAR-M29
+corrects this document's earlier 32000 sentinel; executable board SEE already
+used 20000 during RAR-M28, so no measured result changes.
 
 ## Independent evidence
 

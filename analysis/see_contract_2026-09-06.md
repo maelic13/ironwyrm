@@ -11,7 +11,8 @@ new development fingerprint. Playing qualification remains at 4.11b.17.
 ## Contract
 
 Input is a legal, canonical, non-null move and an engine-range cp threshold.
-Values are P/N/B/R/Q/K = 100/320/330/500/900/32000. Kings cannot be captured;
+Values are P/N/B/R/Q/K = 100/320/330/500/900/20000. The earlier 32000 entry
+confused eval's `MATE_SCORE` with board SEE and is corrected by RAR-M29. Kings cannot be captured;
 their numerical value is only an internal sentinel. Arbitrary i32 thresholds
 are outside this contract. Do not substitute HCE fitted values in this leaf.
 

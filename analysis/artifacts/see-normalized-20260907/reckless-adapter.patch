@@ -1,0 +1,118 @@
+diff --git a/Cargo.toml b/Cargo.toml
+index 3ad2972..86976c7 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -12,6 +12,8 @@ crate-type = ["cdylib", "rlib"]
+ default = ["syzygy"]
+ syzygy = []
+ spsa = []
++# Standalone board throughput instrument; does not change engine defaults.
++board-bench = []
+ 
+ [profile.dev]
+ opt-level = 3
+@@ -34,3 +36,8 @@ libc = "0.2.175"
+ web-time = "1"
+ wasm-bindgen = "0.2"
+ js-sys = "0.3"
++
++[[bench]]
++name = "board"
++harness = false
++required-features = ["board-bench"]
+diff --git a/src/board/see.rs b/src/board/see.rs
+index eddadcf..5641cdd 100644
+--- a/src/board/see.rs
++++ b/src/board/see.rs
+@@ -3,6 +3,15 @@ use crate::{
+     types::{Bitboard, Color, Move, PieceType},
+ };
+ 
++const NATIVE_SEE_VALUES: [i32; 6] = [109, 403, 435, 679, 1242, 0];
++
++const fn see_value(piece: PieceType, values: &[i32; 6]) -> i32 {
++    match piece {
++        PieceType::None => 0,
++        _ => values[piece as usize],
++    }
++}
++
+ impl super::Board {
+     /// Checks if the static exchange evaluation (SEE) of a move meets the given `threshold`,
+     /// indicating that the sequence of captures on a single square, starting with the move,
+@@ -10,18 +19,33 @@ impl super::Board {
+     ///
+     /// Promotions and castling always pass this check.
+     pub fn see(&self, mv: Move, threshold: i32) -> bool {
++        self.see_with_values_impl(mv, threshold, &NATIVE_SEE_VALUES)
++    }
++
++    /// Benchmark-only value injection; the normal engine remains specialized
++    /// to `NATIVE_SEE_VALUES` and exposes no runtime option.
++    #[cfg(feature = "board-bench")]
++    pub(crate) fn see_with_values(&self, mv: Move, threshold: i32, values: &[i32; 6]) -> bool {
++        self.see_with_values_impl(mv, threshold, values)
++    }
++
++    fn see_with_values_impl(&self, mv: Move, threshold: i32, values: &[i32; 6]) -> bool {
+         if mv.is_castling() {
+             return true;
+         }
+ 
+         // In the best case, we win a piece, but still end up with a negative balance
+-        let mut balance = self.move_value(mv) - threshold;
++        let mut balance = self.move_value(mv, values) - threshold;
+         if balance < 0 {
+             return false;
+         }
+ 
+         // In the worst case, we lose a piece, but still end up with a non-negative balance
+-        balance -= if mv.is_promotion() { mv.promo_piece_type().value() } else { self.piece_on(mv.from()).value() };
++        balance -= if mv.is_promotion() {
++            see_value(mv.promo_piece_type(), values)
++        } else {
++            see_value(self.piece_on(mv.from()).piece_type(), values)
++        };
+ 
+         if balance >= 0 {
+             return true;
+@@ -68,7 +92,7 @@ impl super::Board {
+             stm = !stm;
+ 
+             // Assume our piece is going to be captured
+-            balance = -balance - 1 - attacker.value();
++            balance = -balance - 1 - see_value(attacker, values);
+             if balance >= 0 {
+                 break;
+             }
+@@ -88,12 +112,12 @@ impl super::Board {
+         stm != self.side_to_move()
+     }
+ 
+-    fn move_value(&self, mv: Move) -> i32 {
++    fn move_value(&self, mv: Move, values: &[i32; 6]) -> i32 {
+         let capture = self.type_on(mv.capture_sq());
+-        let mut value = capture.value();
++        let mut value = see_value(capture, values);
+ 
+         if mv.is_promotion() {
+-            value += mv.promo_piece_type().value() - PieceType::Pawn.value()
++            value += see_value(mv.promo_piece_type(), values) - see_value(PieceType::Pawn, values)
+         }
+         value
+     }
+diff --git a/src/lib.rs b/src/lib.rs
+index 09bb90c..1b39ba5 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -24,6 +24,10 @@ mod types;
+ 
+ mod tools;
+ 
++#[cfg(feature = "board-bench")]
++#[path = "tools/board_bench.rs"]
++pub mod board_bench;
++
+ #[cfg(not(target_arch = "wasm32"))]
+ mod uci;
+ 

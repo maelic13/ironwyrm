@@ -242,7 +242,7 @@ baseline observations; all three acceptance tests are now active and passing.
 Engine/test `fce0b44`, entry `e954e38`. Current-occupancy king safety replaces
 stale pin masks; king captures terminate legally, recapture promotions include
 the promotion gain and promoted victim value, and threshold comparisons preserve
-equality. Values remain 100/320/330/500/900/32000; quiet/promotion shortcut
+equality. Values remain 100/320/330/500/900/20000; quiet/promotion shortcut
 policies remain explicit. The three repaired full/threshold-zero results are
 **-300/false, +100/true, -800/false**. Forty-one independent legal-tree fixtures
 and 1,802 legal-capture parity checks pass. Full suites pass **268 debug / 269
@@ -255,6 +255,32 @@ missing summary; it is explicitly invalidated and replaced by a hash-verified
 UCI-driver run. Reproduction, source/binary identity, raw logs and exact engine
 diff against the entry source: `analysis/see_repair_2026-09-06.md` and
 `analysis/artifacts/see-repair-20260906/`.
+
+**RAR-M29 — 4.11b.6 neutral SEE injection and normalized timing, COMPLETE
+2026-09-07.** Engine/test `46f1af2`, entry `2c59911`. `SeeValues` owns the
+board scale; production remains 100/320/330/500/900/20000 with no runtime
+engine option. Explicit production and normalized 100/300/300/500/900/20000
+injection each pass all 41 independent fixtures. Complete suites pass **270
+debug / 271 release**, zero failed/ignored; seven oracle tests, fmt and Clippy
+pass. Exact production `bench 13` remains **7,601,220 / EBF 2.474**.
+
+The benchmark's deliberately absurd rook=1 input flips its independent probe
+false -> true, proving the wire. All three adapters report identical normalized
+values and ten move/verdict answers. Three cyclic rounds give threshold-SEE
+medians Rarog/Basilisk/Reckless **44.923/58.335/40.823 M captures/s**: Basilisk
+is +29.86% over Rarog and Rarog +10.04% over Reckless by median. Rarog's round
+span is **12.20%** and it loses the third round to Reckless, so magnitudes are
+directional; all timed host-busy checks pass. RAR-M20's native SEE row is
+**SUPERSEDED for ranking**, not deleted. Its vectors differed and Rarog's
+kernel changed at 4.11b.5, so it is not an injection-overhead baseline.
+
+**RAR-M19/RAR-M27/RAR-M28 correction:** board SEE's king sentinel was already
+20,000, not `MATE_SCORE`/32,000; those records conflated it with eval's separate
+piece-value vector. Kings are never legal SEE victims, so no exchange result
+changes. No value fit, games, NPS or Elo claim. Evidence:
+`analysis/see_value_injection_2026-09-07.md` and
+`analysis/artifacts/see-normalized-20260907/`. Production fitting remains
+4.15.3–4.15.4; 4.11b.7 next measures actual HCE search share.
 
 ### Phase-4 registration (RAR-M12, 2026-08-12)
 

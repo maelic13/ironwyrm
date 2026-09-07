@@ -13,8 +13,10 @@ import chess
 ROOT = Path(__file__).resolve().parents[2]
 OUTPUT = ROOT / "tests/data/see-contract-v1.tsv"
 REPAIR_OUTPUT = ROOT / "tests/data/see-repair-v1.tsv"
-VALUES = {chess.PAWN: 100, chess.KNIGHT: 320, chess.BISHOP: 330,
-          chess.ROOK: 500, chess.QUEEN: 900, chess.KING: 32000}
+PRODUCTION_VALUES = {chess.PAWN: 100, chess.KNIGHT: 320, chess.BISHOP: 330,
+                     chess.ROOK: 500, chess.QUEEN: 900, chess.KING: 20000}
+CROSS_ENGINE_VALUES = {chess.PAWN: 100, chess.KNIGHT: 300, chess.BISHOP: 300,
+                       chess.ROOK: 500, chess.QUEEN: 900, chess.KING: 20000}
 # name, disposition, FEN, initial move, hand-derived material result
 CASES = [
     ("free-pawn", "exchange", "4k3/8/8/3p4/8/8/3R4/4K3 w - - 0 1", "d2d5", 100),
@@ -55,30 +57,31 @@ for name, disposition, fen, uci, expected in CASES:
                          mirrored.fen(en_passant="fen"), mirrored_move.uci(), expected))
 
 
-def gain(board, move):
+def gain(board, move, values=PRODUCTION_VALUES):
     victim = chess.PAWN if board.is_en_passant(move) else board.piece_type_at(move.to_square)
-    return VALUES.get(victim, 0) + (VALUES[move.promotion] - 100 if move.promotion else 0)
+    return values.get(victim, 0) + (values[move.promotion] - values[chess.PAWN]
+                                  if move.promotion else 0)
 
 
-def recaptures(board, target):
+def recaptures(board, target, values=PRODUCTION_VALUES):
     best = 0
     for move in list(board.legal_moves):
         if move.to_square != target or not board.is_capture(move):
             continue
-        immediate = gain(board, move)
+        immediate = gain(board, move, values)
         board.push(move)
-        value = immediate - recaptures(board, target)
+        value = immediate - recaptures(board, target, values)
         board.pop()
         best = max(best, value)
     return best
 
 
-def exchange(board, move):
+def exchange(board, move, values=PRODUCTION_VALUES):
     if move not in board.legal_moves:
         raise ValueError(f"illegal initial move {move}")
-    immediate = gain(board, move)
+    immediate = gain(board, move, values)
     board.push(move)
-    result = immediate - recaptures(board, move.to_square)
+    result = immediate - recaptures(board, move.to_square, values)
     board.pop()
     return result
 
@@ -91,10 +94,10 @@ def render(cases=None, name="see-contract-v1"):
         board = chess.Board(fen)
         assert board.is_valid(), name
         move = chess.Move.from_uci(uci)
-        value = exchange(board, move)
+        value = exchange(board, move, PRODUCTION_VALUES)
         assert value == expected, (name, value, expected)
         assert board.fen(en_passant="fen") == fen, name
-        lines.append(f"{name}|{disposition}|{fen}|{uci}|{value}|{gain(board, move)}")
+        lines.append(f"{name}|{disposition}|{fen}|{uci}|{value}|{gain(board, move, PRODUCTION_VALUES)}")
     return "\n".join(lines) + "\n"
 
 

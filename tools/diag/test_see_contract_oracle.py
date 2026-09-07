@@ -61,6 +61,28 @@ class SeeOracleTests(unittest.TestCase):
         # All promotion gains cancel their new victim value on Rc1xb1.
         self.assertEqual([oracle.exchange(board, m) for m in replies], [400] * 4)
 
+    def test_cross_engine_values_match_independently_scored_contract(self):
+        expected = {
+            "free-pawn": 100, "defended-pawn": -400, "king-after-pawn": -300,
+            "legal-king-recapture": 0, "defended-king-destination": 900,
+            "pinned-pawn": 100, "pin-created": 100, "pin-released": -200,
+            "xray": 500, "ep-opens-rook": 0, "quiet-hanging": -500,
+            "quiet-promotion-hanging": -100, "quiet-underpromotion": 200,
+            "capture-promotion": 1300, "capture-underpromotion": 700,
+            "promotion-recapture": -800, "castle-king": 0, "castle-queen": 0,
+            "promoted-piece-recaptured": 100, "pin-created-later": -300,
+            "skip-pinned-choose-rook": -200, "quiet-allows-promotion": -1300,
+            "initial-king-capture": 300,
+        }
+        checked = 0
+        for name, _, fen, uci, _ in oracle.CASES + oracle.REPAIR_CASES:
+            base = name.removeprefix("mirror-")
+            board = chess.Board(fen)
+            self.assertEqual(oracle.exchange(board, chess.Move.from_uci(uci),
+                                             oracle.CROSS_ENGINE_VALUES), expected[base])
+            checked += 1
+        self.assertEqual(checked, 41)
+
 
 if __name__ == "__main__":
     unittest.main()

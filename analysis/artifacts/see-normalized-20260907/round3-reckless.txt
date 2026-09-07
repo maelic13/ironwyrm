@@ -1,0 +1,23 @@
+legal[0]: a2a3,a2a4,b1a3,b1c3,b2b3,b2b4,c2c3,c2c4,d2d3,d2d4,e2e3,e2e4,f2f3,f2f4,g1f3,g1h3,g2g3,g2g4,h2h3,h2h4
+legal[1]: a1b1,a1c1,a1d1,a2a3,a2a4,b2b3,c3a4,c3b1,c3b5,c3d1,d2c1,d2e3,d2f4,d2g5,d2h6,d5d6,d5e6,e1c1,e1d1,e1f1,e1g1,e2a6,e2b5,e2c4,e2d1,e2d3,e2f1,e5c4,e5c6,e5d3,e5d7,e5f7,e5g4,e5g6,f3d3,f3e3,f3f4,f3f5,f3f6,f3g3,f3g4,f3h3,f3h5,g2g3,g2g4,g2h3,h1f1,h1g1
+legal[2]: a1b1,a2a3,a2a4,b2b3,c1d2,c1e3,c1f4,c1g5,c1h6,d1d2,d1d3,d1e2,d4d5,e1d2,e1e2,e4e5,f1a6,f1b5,f1c4,f1d3,f1e2,f3d2,f3e5,f3g1,f3g5,f3h4,g2g3,g2g4,h1g1,h2h3,h2h4
+legal[3]: a5a4,a5a6,a5b4
+legal[4]: a7a5,a7a6,b7b5,b7b6,b8a6,b8c6,c7c5,c7c6,d7d5,d7d6,d8e7,e8e7,f6d5,f6e4,f6g4,f6g8,f6h5,f8a3,f8b4,f8c5,f8d6,f8e7,g7g5,g7g6,h7h6,h8g8
+see-values: 100/300/300/500/900/20000
+see-verdicts: 1:d5e6=1,1:e2a6=1,1:e5d7=0,1:e5f7=0,1:e5g6=0,1:f3f6=0,1:f3h3=0,1:g2h3=1,4:f6e4=1,4:f6h5=1
+
+Reckless board benchmark
+profile: cross-engine-board-v1
+SEE: injected cross-engine values 100/300/300/500/900/20000
+observer: NullBoardObserver; native threat/pin/key state retained
+positions: 5
+samples: 11 x 150 ms after a 150 ms warm-up (median +/- MAD)
+preflight: PASS
+
+workload                estimate ops/s       MAD ops/s      MAD %     ops/iter  total iters
+legal moves                  347510688          147863      0.04%          128      4486878 moves
+legal captures                61780840          113284      0.18%           10     10078876 moves
+make/unmake                   24174929          250995      1.04%          128       313222 moves
+threshold SEE                 41834365          375631      0.90%           10      6922071 captures
+perft(4) startpos            180104428         1262789      0.70%       197281         1511 nodes
+two-ply simulation           259028309         2371115      0.92%         4597        93438 moves

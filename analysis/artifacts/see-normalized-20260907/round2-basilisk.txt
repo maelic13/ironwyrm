@@ -1,0 +1,17 @@
+
+Basilisk board benchmark
+profile: cross-engine-board-v1
+positions: 5
+see-values: 100/300/300/500/900/20000
+see-verdicts: 1:d5e6=1,1:e2a6=1,1:e5d7=0,1:e5f7=0,1:e5g6=0,1:f3f6=0,1:f3h3=0,1:g2h3=1,4:f6e4=1,4:f6h5=1
+samples: 11 x 150 ms after a 150 ms warm-up (median +/- MAD)
+preflight: PASS
+
+workload                estimate ops/s       MAD ops/s      MAD %     ops/iter  total iters
+legal moves                  660485508         1190249      0.18%          128      8537799 moves
+legal captures               121340867          306125      0.25%           10     19791170 moves
+make/unmake                   56073405          715160      1.28%          128       723843 moves
+threshold SEE                 58736978          423059      0.72%           10      9675525 captures
+perft(4) startpos            395910192         1175917      0.30%       197281         3314 nodes
+two-ply simulation           531309818         1271904      0.24%         4597       188800 moves
+

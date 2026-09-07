@@ -34,8 +34,9 @@ predates 4.11b and is not the current roadmap: after 4.11 comes **4.11b**, then
 4.12. The maintainer authorized heavy computation, and **4.11.7 is now complete**
 (RAR-M21, 2026-09-06). RAR-M22 and RAR-M23 subsequently completed 4.11.8 and
 4.11.9. RAR-M24 completed 4.11.10; its scheduling dependency is resolved.
-Board leaves 4.11b.1–4.11b.5 are complete. The next leaf is **4.11b.6**.
-The SEE repair is correctness-verified; cluster playing qualification remains at 4.11b.17.
+Board leaves 4.11b.1–4.11b.6 are complete. The next leaf is **4.11b.7**.
+SEE is correctness-verified and normalized timing is restored; cluster playing
+qualification remains at 4.11b.17.
 
 | Leaf | State and reason | Unblock event / owner | Dependency boundary |
 |---|---|---|---|
@@ -1909,7 +1910,7 @@ which is what exposed the dependency inversion.
 
 **Integrated 2026-09-05 after reconciling the a0aeb68 roadmap.** Finish the
 remaining 4.11 leaves first, then execute this section before 4.12. Those
-4.11 leaves and board leaves 4.11b.1–4.11b.5 are now complete; **4.11b.6 is
+4.11 leaves and board leaves 4.11b.1–4.11b.6 are now complete; **4.11b.7 is
 next**. The insertion preserves 4.11.12's registered v2 endgame order until
 changed evidence warrants a rerank. Repairs at 4.11b.3/4.11b.5 are implemented;
 the remaining optimizations and cluster qualification are still open. NNUE-only work belongs to 5.2, 5.3, 5.6 and 6.4.
@@ -1954,13 +1955,17 @@ does not isolate NNUE enablement cost. Preserve the raw baseline for 5.2.1,
 price event/scaffold costs at 5.2.5/5.3.4, and isolate actual-network updates
 and inference at 6.4.3. Do not delete useful state to win this benchmark.
 
-Native-value SEE measured 46.676 / 58.814 / 39.722 million captures/s for
-Rarog / Basilisk / Reckless. **Those three rates are NOT a comparable SEE
-ranking.** Their P/N/B/R/Q/K vectors are respectively
-100/320/330/500/900/32000, 100/300/300/500/900/20000, and
-109/403/435/679/1242/0, and their shortcuts differ. 4.11b.6 repairs the
-measurement interface while preserving playing defaults. Actual value fitting
-remains after the final HCE in 4.15.3-4.15.4.
+The historical native-value SEE row measured 46.676 / 58.814 / 39.722 million
+captures/s for Rarog / Basilisk / Reckless and was not comparable: vectors and
+contracts differed. **RAR-M29 / 4.11b.6 SUPERSEDES that row for ranking.** With
+all three adapters on 100/300/300/500/900/20000 and the same ten verdicts,
+current medians are **44.923 / 58.335 / 40.823 million captures/s**. Basilisk
+leads Rarog by 29.86%; Rarog leads Reckless by 10.04%, but Rarog's rounds span
+12.20% and the third falls behind Reckless, so treat magnitudes as directional.
+The old-to-new change does not measure injection overhead: Rarog's corrected
+4.11b.5 kernel also changed. Source inspection corrects Rarog's historical
+SEE vector to **100/320/330/500/900/20000**, not the previously recorded 32000
+king sentinel. Actual value fitting remains after final HCE in 4.15.3-4.15.4.
 
 #### Execution contract
 
@@ -2171,7 +2176,8 @@ Keep each assignment attached to its task if future evidence changes ordering.
    diff: `analysis/see_repair_2026-09-06.md` and
    `analysis/artifacts/see-repair-20260906/`.
 
-6. **4.11b.6 Separate SEE value injection from value tuning.** Introduce a
+6. **4.11b.6 Separate SEE value injection from value tuning -- DONE
+   (RAR-M29, 2026-09-07).** Introduce a
    board/search-owned value interface that preserves the existing production
    vector exactly. The benchmark must be able to pass the v1 contract vector
    without changing eval.rs or the playing defaults. Static/generic
@@ -2184,6 +2190,26 @@ Keep each assignment attached to its task if future evidence changes ordering.
    adapters and check answers, not just ten function calls.
    This pulls the measurement prerequisite forward from 4.15.5; tuning and
    ownership of fitted values still remain in 4.15.3-4.15.4. No premature fit.
+
+   **Completion:** engine/test `46f1af2` adds the board-owned `SeeValues`
+   interface. Production remains 100/320/330/500/900/20000 and has no runtime
+   option or dynamic dispatch; explicit production injection agrees on all 41
+   external fixtures. The normalized vector also agrees with independently
+   scored values on all 41. Complete suites pass 270 debug / 271 release with
+   zero failures/ignores; seven Python oracle checks, fmt and Clippy pass.
+   Exact production `bench 13` remains **7,601,220 / EBF 2.474**.
+
+   The benchmark wire is live: a rook value of 1 flips the independent defended-
+   pawn probe false -> true. All peer preflights report the same vector and ten
+   move/verdict answers. Three cyclic timing rounds produce Rarog/Basilisk/
+   Reckless medians **44.923/58.335/40.823 M captures/s**. Every timed host-load
+   check passes; Rarog's 12.20% round span prevents a precise small-gap claim.
+   The historical native row is retained but superseded for ranking. RAR-M19,
+   RAR-M27 and RAR-M28's 32000 SEE-king statement is corrected to the actual
+   pre-existing 20000 sentinel. No values were fitted and no games run.
+   Evidence and exact peer adapters:
+   `analysis/see_value_injection_2026-09-07.md` and
+   `analysis/artifacts/see-normalized-20260907/`.
 
 7. **4.11b.7 Profile board work in actual HCE search.** Freeze representative
    opening, middlegame, check-heavy, promotion and sparse-endgame cohorts at
