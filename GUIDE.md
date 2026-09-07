@@ -89,17 +89,17 @@ together, and `python tools/diag/check_guide.py` must pass.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
 | Instrument state | **4.10 repaired; v2 baselines/floors, budget transfer, label audit, mate-drive closure and conversion corrections recorded.** |
-| Current step | **4.11b.10 — shared pin/check information**, `RESEARCH / R3` |
+| Current step | **4.11b.11 — optimize the corrected SEE kernel**, `READY_FOR_IMPLEMENTATION / I2` |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## Next and held work
 
-**Next: 4.11b.10 — research shared pin/check information.**
+**Next: 4.11b.11 — optimize the corrected SEE kernel.**
 4.11.7–4.11.10 are complete; their scheduling holds/evidence gaps are resolved.
-4.11b.9 is ACCEPTED and integrated in `5c439da`: fused quiet relocation is
-behaviour-neutral and gains +0.876% full-search, 95% [+0.050%, +2.055%]
-(RAR-M33). RAR-M32's earlier `NO_CHANGE` is VOID — it was measured at ~50%
-host load.
+4.11b.9 is ACCEPTED in `5c439da` (+0.876% full-search, RAR-M33). 4.11b.10
+closed `NO_CHANGE` (RAR-M34): intra-node pin sharing is already implemented,
+`compute_pinned` and `check_info` share no subexpression, and sharing into SEE
+is forbidden by the 4.11b.5 exchange-occupancy contract.
 
 | Open hold | Resume when | Must be resolved before |
 |---|---|---|
@@ -192,7 +192,7 @@ holds still come from PLAN; a readiness label never lifts one.
     - [x] **4.11b.7** Profile board work in HCE search; RAR-M30
     - [x] **4.11b.8** Withdraw unqualified pin candidate; retain oracle — **CLOSED**, RAR-M31
     - [x] **4.11b.9** Measure fused piece relocation — **ACCEPTED**, RAR-M33
-    - [ ] **4.11b.10** Research shared pin/check information — **RESEARCH / R3**
+    - [x] **4.11b.10** Research shared pin/check information — **CLOSED `NO_CHANGE`**, RAR-M34
     - [ ] **4.11b.11** Optimize the corrected SEE kernel — **READY_FOR_IMPLEMENTATION / I2**
     - [ ] **4.11b.12** Decide whether king-square caching pays — **RESEARCH / R2**
     - [ ] **4.11b.13** Define history capacity and mutation contracts — **RESEARCH / R2**

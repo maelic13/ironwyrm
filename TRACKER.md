@@ -15,6 +15,18 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
+- **2026-09-08 — PLAN 4.11b.10 closed `NO_CHANGE`, RAR-M34:** shared pin/check
+  state is not worth building because there is nothing left to share.
+  `compute_pinned` and `check_info` query different king squares against
+  different slider colours; SEE king safety runs on the evolving exchange
+  occupancy, where reuse is barred by the 4.11b.5 contract; and one pinned set
+  per node across capture/quiet stages already exists (422,246 staged quiet
+  generations at zero extra `compute_pinned`). Activation is low anyway:
+  0.274 and 0.295 calls per node against SEE's 0.993. Counters exact at stride
+  1 with nodes unchanged at 7,601,220. No ETW re-profile requested — it needs
+  elevation and cannot change a structural finding. No code, no games, no Elo.
+  4.11b.11 is next and owes an SEE re-baseline.
+
 - **2026-09-07 — PLAN 4.11b.9 ACCEPTED, RAR-M33:** `5c439da` fuses ordinary
   quiet relocation behind `Board::move_piece`. Behaviour-neutral — both builds
   fingerprint 7,601,220 / EBF 2.474 and 640/640 paired root answers match

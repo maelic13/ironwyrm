@@ -439,6 +439,44 @@ the committed source reproduces 7,601,220 / EBF 2.474. At this closure point,
 `analysis/relocation_2026-09-07.md` and `tools/results/relocation-411b9-v2/`
 (ignored, local; `candidate.patch` archived there).
 
+**RAR-M34 — 4.11b.10 shared pin/check information, COMPLETE 2026-09-08;
+research disposition `NO_CHANGE`.** Source `33c373c` on `dev`. Closed on
+**structure, not cost**: the three producers share no work. `compute_pinned`
+queries from our king against their sliders, `check_info` from their king
+against our sliders — different square, different piece sets, only `all_occ`
+in common — so no cache of either can serve the other in any node.
+`see_recapturer` queries `attackers_to_color(king, after, !side)` against the
+**evolving** exchange occupancy, so reusing a real-position pin or attack mask
+is the stale `see_pins` defect repaired at 4.11b.5: a correctness boundary, not
+a tradeoff. The cross-ply candidate (parent `check_info` versus child
+`compute_pinned` at the same king square after the side flip) fails on changed
+occupancy and on a different predicate — either-colour sole blocker versus
+sole friendly blocker behind an x-ray. The one real sharing opportunity, one
+pinned set per node across capture and quiet stages, was already delivered by
+the 10.3 speed pass and is measurably active: **422,246** staged quiet
+generations cost **zero** extra `compute_pinned` calls. Exact counters
+(`bench 13`, `RAROG_DIAG_SAMPLE_STRIDE=1`, diag build `6b6c3e18...`, nodes
+**7,601,220** unchanged so the instrument does not perturb the search):
+`board_see_threshold_calls` 7,547,296 (**0.993/node**),
+`board_gives_check_fast_calls` 25,540,503, `board_check_info_calls` 2,245,089
+(0.295/node), `board_compute_pinned_calls` 2,079,992 (0.274/node),
+`board_calculate_checkers_calls` 1,155,770, `board_see_full_calls` 445,100.
+Units were reconciled before differencing: generator calls 2,243,478 minus
+`compute_pinned` 2,079,992 leaves **163,486**, exactly the `generate_captures`
+early-out that increments its counter and returns before computing pins. No
+ETW re-profile was requested — it needs an elevated prompt, is a maintainer
+job, and cannot make un-shareable work shareable; the post-`5c439da` share
+update is derived arithmetically and moves every unchanged region by at most
+**0.06 percentage points**, explicitly not a measurement. No implementation,
+no games, no timing claim and no Elo claim. Owed to 4.11b.11: a fresh profile
+where size decides, and an SEE re-baseline, since the 4.11b.9 board benchmark
+showed `threshold SEE only` down 1.77/0.98/1.68% in all three rounds —
+consistent-signed, most likely code layout after `make_move_inner` grew
+468 -> 542 instructions. Reopen only for a genuinely new consumer of pin or
+check geometry, never on donor-engine similarity. At this closure point,
+4.11b.11 is next. Evidence: `analysis/pin_check_sharing_2026-09-08.md` and
+`tools/results/pinshare-411b10/` (ignored, local).
+
 ### Phase-4 registration (RAR-M12, 2026-08-12)
 
 Registered at 4.0, before any Phase-4 code moves. Caps are prospective, derived

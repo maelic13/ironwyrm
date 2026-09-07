@@ -17,7 +17,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.11b.10 — shared pin/check information**, `RESEARCH / R3` |
+| Current step | **4.11b.11 — optimize the corrected SEE kernel**, `READY_FOR_IMPLEMENTATION / I2` |
 | Instrument state | 4.10 repairs; v2 baselines/floors, budget transfer, label audit, mate-drive closure and conversion-claim correction are complete. Historical v1 pawn-family conversion claims are retained but superseded in place by RAR-M24 |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -45,7 +45,12 @@ bootstrap interval of **+0.050% to +2.055%**, which excludes zero on a
 verified-idle host. RAR-M32's earlier `NO_CHANGE` is **VOID**: it was taken
 while a Manta SPRT held the host at ~50% CPU busy, and the same baseline code
 re-measured 40.7% faster once idle. Its targeted per-piece-class test is in
-`8a73cfd`. The next leaf is **4.11b.10**, `RESEARCH / R3`.
+`8a73cfd`. 4.11b.10 is now closed `NO_CHANGE` (RAR-M34): intra-node pin
+sharing is already implemented and active, `compute_pinned` and `check_info`
+share no subexpression because they query different king squares against
+different slider colours, and sharing into SEE is forbidden by the 4.11b.5
+exchange-occupancy contract rather than merely unprofitable.
+The next leaf is **4.11b.11**, `READY_FOR_IMPLEMENTATION / I2`.
 Actual full-search board cost is profiled; SEE is correctness-verified and
 normalized timing is restored. Cluster playing qualification remains at
 4.11b.17.
@@ -1967,8 +1972,8 @@ which is what exposed the dependency inversion.
 
 **Integrated 2026-09-05 after reconciling the a0aeb68 roadmap.** Finish the
 remaining 4.11 leaves first, then execute this section before 4.12. Those
-4.11 leaves and board leaves 4.11b.1–4.11b.9 are now complete, 4.11b.9 by
-acceptance; **4.11b.10 is next**. The insertion preserves 4.11.12's registered v2 endgame order until
+4.11 leaves and board leaves 4.11b.1–4.11b.10 are now complete, 4.11b.9 by
+acceptance and 4.11b.10 by a justified `NO_CHANGE`; **4.11b.11 is next**. The insertion preserves 4.11.12's registered v2 endgame order until
 changed evidence warrants a rerank. Repairs at 4.11b.3/4.11b.5 are implemented;
 the remaining optimizations and cluster qualification are still open. NNUE-only work belongs to 5.2, 5.3, 5.6 and 6.4.
 
@@ -2057,7 +2062,7 @@ recommendations without coupling this roadmap to model generations.
 |---|---|---|---|---|---|
 | 4.11b.8 | CLOSED (candidate withdrawn) | R3 | Local pin gains established; useful whole-search value unresolved | RAR-M31; restoration c44608a | Prior x-ray path restored and qualified; independent oracle retained; retry belongs to 4.11b.10 only if justified |
 | 4.11b.9 | CLOSED (ACCEPTED) | I2 | Fused ordinary quiet relocation integrated | RAR-M33 `5c439da`; RAR-M32 VOID; test `8a73cfd` | Parity exact, isolated +16.3/+17.3/+19.3%, full-search +0.876% with 95% [+0.050%, +2.055%] excluding zero on a verified-idle host. Behaviour-neutral, no game gate owed |
-| 4.11b.10 | RESEARCH | R3 | Does sharing remaining pin/check geometry repay lifetime and invalidation cost? | 4.11b.8–9; M30 consumer shares; SEE repair forbids stale pins | A producer/state/consumer/invalidation design and bounded comparison identify a net benefit |
+| 4.11b.10 | CLOSED (`NO_CHANGE`) | R3 | No shareable duplication remains; sharing into SEE is forbidden | RAR-M34; `analysis/pin_check_sharing_2026-09-08.md` | Closed on structure, not cost: producers share no subexpression and the 4.11b.5 contract bars SEE reuse. Reopen only for a genuinely new consumer |
 | 4.11b.11 | READY_FOR_IMPLEMENTATION | I2 | Incrementally maintain attackers inside the corrected SEE contract | 4.11b.10 precedes reuse; RAR-M27–M30 | All external/default verdicts identical plus normalized SEE and whole-search performance |
 | 4.11b.12 | RESEARCH | R2 | Is king lookup still material after shared geometry? | Conditional on 4.11b.10–11; M30 measured 0.544% | Post-geometry profile clears a predeclared practical floor; otherwise `NO_CHANGE` |
 | 4.11b.13 | RESEARCH | R2 | Which capacity/mutation tightening is required without hot-path cost? | M30 found zero growth; arbitrary history and canonical-move contracts | Exact ownership/API handoff; correctness checks decide, no speed claim from zero events |
@@ -2413,7 +2418,8 @@ recommendations without coupling this roadmap to model generations.
    `tools/results/relocation-411b9-v2/` (ignored, local; `candidate.patch`
    archived there) and the voided `tools/results/relocation-411b9/`.
 
-10. **4.11b.10 Share useful pin/check information.** 4.11b.8 restored the
+10. **4.11b.10 Share useful pin/check information -- DONE, `NO_CHANGE`
+    (RAR-M34, 2026-09-08).** 4.11b.8 restored the
     previous x-ray calculation; RAR-M31 retains the alternative and its local
     gains, but no proven whole-search gain. 4.11b.9 has now been accepted and
     changed the make/unmake path, so RAR-M30's region shares are stale for that
@@ -2429,6 +2435,43 @@ recommendations without coupling this roadmap to model generations.
     InternalState/update_threats and Stockfish StateInfo/set_check_info are
     reference ownership models, not instructions to eagerly compute every
     threat map. Keep only caches whose consumers repay their maintenance.
+
+    **Disposition: `NO_CHANGE`, closed on structure rather than cost.** The
+    three producers do not overlap. `compute_pinned` queries from **our** king
+    against **their** sliders; `check_info` queries from **their** king against
+    **our** sliders; their only common input is `all_occ`, so neither can serve
+    the other in any node. `see_recapturer` tests king safety against the
+    **evolving** exchange occupancy `after = occ ^ from`, so substituting a
+    real-position mask is exactly the stale `see_pins` defect 4.11b.5 repaired
+    — a correctness boundary, not a cost tradeoff. The cross-ply candidate
+    (parent `check_info` versus child `compute_pinned` at the same square)
+    fails on both changed occupancy and a different predicate: `check_info`
+    accepts a sole blocker of either colour, `compute_pinned` requires a sole
+    friendly blocker behind an x-ray pass. The one genuine sharing opportunity
+    — one pinned set per node across capture and quiet stages — is already
+    implemented by the 10.3 speed pass and measurably active: **422,246**
+    staged quiet generations cost **zero** extra `compute_pinned` calls.
+
+    Activation is low regardless. At stride 1 on `bench 13`, `compute_pinned`
+    runs 0.274 times per node and `check_info` 0.295, both already lazily
+    gated, while SEE threshold queries run 0.993 per node. Counter units were
+    reconciled before differencing: the 163,486 gap between generator calls and
+    `compute_pinned` calls is exactly the `generate_captures` early-out.
+
+    Region cost was **not** re-profiled for this leaf: a fresh ETW capture
+    needs an elevated prompt and is a maintainer job, and it cannot make
+    un-shareable work shareable. The post-`5c439da` share update is derived
+    arithmetically instead and moves every unchanged region by at most 0.06
+    percentage points. A fresh profile is still owed to **4.11b.11**, where
+    region size genuinely decides, and 4.11b.11 must re-baseline SEE: the
+    4.11b.9 benchmark showed `threshold SEE only` down 1.77/0.98/1.68% in all
+    three rounds, most likely code layout after `make_move_inner` grew.
+
+    Do not reopen this on donor-engine similarity. Reopen only if a new
+    consumer appears that needs pin or check geometry Rarog does not already
+    compute once per node. Evidence:
+    `analysis/pin_check_sharing_2026-09-08.md` and
+    `tools/results/pinshare-411b10/` (ignored, local).
 
 11. **4.11b.11 Optimize the corrected SEE kernel.** Carry attacker sets through
     the exchange and add newly exposed bishop/rook rays after removing the
