@@ -320,7 +320,7 @@ full hashes, time budget and reproduction:
 `analysis/artifacts/board-search-profile-20260907/summary.json`.
 
 **RAR-M31 — 4.11b.8 pin discovery measurement, recorded 2026-09-07;
-research disposition OPEN.**
+research disposition CLOSED: candidate withdrawn in `c44608a`.**
 Baseline `407de51`, engine `2ea279f`; replace four x-ray slider lookups by two
 empty-board lookups and test all occupied squares between king and aligned
 enemy slider. Keep a sole friendly blocker as pinned. Local board-v2 median
@@ -335,8 +335,15 @@ debug/release suites, PEXT board tests, fmt and Clippy pass. Retained for local
 generation gains under the original execution contract; no games or strength
 acceptance. The later `b592b40` research card requires a prospective practical
 whole-search floor, which this run did not register. It does not qualify the
-leaf under that new contract. 4.11b.8 stays open for disposition; do not invent
-a post-hoc floor. Later cache/search changes were not measured here.
+leaf under that new contract. **Original retention decision SUPERSEDED:**
+restore the prior x-ray algorithm and retain its independent oracle. Decline
+another standalone campaign before shared-geometry research; this is a research
+prioritization decision, not a statistical finding of no gain or a post-hoc
+floor. Later cache/search changes were not measured in the timing study.
+Restoration against `b90232b`: 274 debug / 275 release tests, fmt and Clippy
+pass; fresh no-feature before/after builds reproduce 7,601,220 / EBF 2.474;
+20 roots match standard harness identity fields (not full PV/ponder). No new
+performance or Elo claim. 4.11b.10 owns any justified, prospectively registered retry.
 Playing gate remains 4.11b.17.
 Recipe, hashes and raw observations: `analysis/movegen_2026-09-07.md` and
 `analysis/artifacts/movegen-20260907/`.

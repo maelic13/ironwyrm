@@ -15,6 +15,13 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
+- **2026-09-07 — PLAN 4.11b.8 closed by withdrawal, RAR-M31:** `c44608a`
+  restores the prior pin calculation and retains the independent oracle.
+  This supersedes the retention below, not the historical local gains; useful
+  whole-search value remains uncertain. Debug 274 / release 275 tests, fmt,
+  Clippy, fresh before/after fingerprints and 20 profile identities pass.
+  No new timing/games. 4.11b.9 is next; conditional retry belongs to 4.11b.10.
+
 - **2026-09-07 — measured work within PLAN 4.11b.8, RAR-M31:** simplified pin discovery in
   `2ea279f`; local legal/capture/staged generation gains 8.54%/11.43%/7.41%.
   Generic/PEXT search estimates +0.57%/+1.45% are inconclusive. Debug/release,

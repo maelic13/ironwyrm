@@ -17,7 +17,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.11b.8 — legal generation and move-list delivery**, `RESEARCH / R3` |
+| Current step | **4.11b.9 — fused ordinary-piece relocation**, `READY_FOR_IMPLEMENTATION / I2` |
 | Instrument state | 4.10 repairs; v2 baselines/floors, budget transfer, label audit, mate-drive closure and conversion-claim correction are complete. Historical v1 pawn-family conversion claims are retained but superseded in place by RAR-M24 |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -35,10 +35,10 @@ predates 4.11b and is not the current roadmap: after 4.11 comes **4.11b**, then
 4.12. The maintainer authorized heavy computation, and **4.11.7 is now complete**
 (RAR-M21, 2026-09-06). RAR-M22 and RAR-M23 subsequently completed 4.11.8 and
 4.11.9. RAR-M24 completed 4.11.10; its scheduling dependency is resolved.
-Board leaves 4.11b.1–4.11b.7 are complete. The next leaf is **4.11b.8**, in
-`RESEARCH`: its existing pin candidate is measured, but whole-search value
-and closure under the new research contract remain unresolved. Do not start
-another implementation until that decision is explicit.
+Board leaves 4.11b.1–4.11b.8 are complete. RAR-M31's pin candidate was
+withdrawn in `c44608a`: whole-search value remains unproven, and another
+standalone timing campaign is not prioritized. Its independent oracle remains.
+The next leaf is **4.11b.9**, `READY_FOR_IMPLEMENTATION / I2`.
 Actual full-search board cost is profiled; SEE is correctness-verified and
 normalized timing is restored. Cluster playing qualification remains at
 4.11b.17.
@@ -1960,7 +1960,7 @@ which is what exposed the dependency inversion.
 
 **Integrated 2026-09-05 after reconciling the a0aeb68 roadmap.** Finish the
 remaining 4.11 leaves first, then execute this section before 4.12. Those
-4.11 leaves and board leaves 4.11b.1–4.11b.7 are now complete; **4.11b.8 is
+4.11 leaves and board leaves 4.11b.1–4.11b.8 are now complete; **4.11b.9 is
 next**. The insertion preserves 4.11.12's registered v2 endgame order until
 changed evidence warrants a rerank. Repairs at 4.11b.3/4.11b.5 are implemented;
 the remaining optimizations and cluster qualification are still open. NNUE-only work belongs to 5.2, 5.3, 5.6 and 6.4.
@@ -2048,7 +2048,7 @@ recommendations without coupling this roadmap to model generations.
 
 | Leaf | Workflow state | Class | Question or goal | Evidence / dependencies | Ready-to-advance condition and deciding gate |
 |---|---|---|---|---|---|
-| 4.11b.8 | RESEARCH | R3 | Is a specific legal-generation/delivery contract responsible for material full-search cost? | RAR-M20/M25/M30; corrected board baseline | Research card below selects one bounded mechanism; move-set/perft parity and controlled NPS decide readiness/value |
+| 4.11b.8 | CLOSED (candidate withdrawn) | R3 | Local pin gains established; useful whole-search value unresolved | RAR-M31; restoration c44608a | Prior x-ray path restored and qualified; independent oracle retained; retry belongs to 4.11b.10 only if justified |
 | 4.11b.9 | READY_FOR_IMPLEMENTATION | I2 | Measure a fused ordinary relocation path | 4.11b.8 first; RAR-M20/M30 | Exact state parity plus controlled local/full-search performance; no game gate unless behavior changes |
 | 4.11b.10 | RESEARCH | R3 | Does sharing remaining pin/check geometry repay lifetime and invalidation cost? | 4.11b.8–9; M30 consumer shares; SEE repair forbids stale pins | A producer/state/consumer/invalidation design and bounded comparison identify a net benefit |
 | 4.11b.11 | READY_FOR_IMPLEMENTATION | I2 | Incrementally maintain attackers inside the corrected SEE contract | 4.11b.10 precedes reuse; RAR-M27–M30 | All external/default verdicts identical plus normalized SEE and whole-search performance |
@@ -2267,8 +2267,8 @@ recommendations without coupling this roadmap to model generations.
    strength claim. Evidence: `analysis/board_search_profile_2026-09-07.md` and
    `analysis/artifacts/board-search-profile-20260907/summary.json`.
 
-8. **4.11b.8 Optimize legal generation and move-list delivery — RESEARCH;
-   existing candidate measured (RAR-M31, 2026-09-07).** This is the
+8. **4.11b.8 Optimize legal generation and move-list delivery — CLOSED;
+   candidate withdrawn (RAR-M31, 2026-09-07).** This was the
    first speed candidate because the measured Basilisk gap is 43.7% in legal
    generation and 46.0% in two-ply simulation. Inspect compile-time
    color/mode specialization, setwise pawns, pin discovery, king-target
@@ -2282,7 +2282,7 @@ recommendations without coupling this roadmap to model generations.
    behavior change explicitly. Done with independent move-set/perft parity,
    controlled within-Rarog A/B and a full-search NPS result.
 
-   **Research card — not implementation-ready.** The decision needed is which,
+   **Research card (historical scope; retry requires fresh registration).** The decision needed was which,
    if any, named local contract accounts for enough of M30's **6.751%**
    full-search region to justify a candidate. Known evidence is RAR-M20's
    directional 43.7% peer-workload gap, RAR-M25's live separated instrument
@@ -2305,18 +2305,25 @@ recommendations without coupling this roadmap to model generations.
    mechanism whose producer/output/consumers, invariants, test corpus, baseline,
    performance floor and rejection rule are frozen.
 
-   **Existing candidate, not closure under the new contract:** `2ea279f`
+   **Disposition: withdraw the candidate; no further standalone campaign.** `2ea279f`
    predates the `b592b40` research card above. Its measurements had no
    predeclared practical whole-search floor, so they cannot retrospectively
-   satisfy that card. The candidate remains in dev; no automatic rollback or
-   new acceptance threshold is implied. Next, use R3 to decide whether an
-   independent prospective qualification is worth its cost or whether to
-   propose a documented no-change/revert disposition. Freeze any new criterion
-   before new measurements; do not rejudge exposed data against it. 4.11b.9
-   remains dependent on this disposition. RAR-M31 measured `2ea279f`, not the
-   later LazyMargin/cache/search revisions now at HEAD.
+   satisfy that card. Research disposition now restores the previous x-ray
+   algorithm in `c44608a`, retaining the independent pin oracle. This is a
+   prioritization decision under insufficient whole-search evidence, not proof
+   of zero benefit, regression or incorrectness. Local gains are established;
+   another campaign would target small whole-search value just before 4.11b.10
+   revisits producer lifetime/consumers. No retrospective threshold or new
+   timing result is used to reject it. 4.11b.9 is unblocked. A retry at 4.11b.10
+   needs remaining-cost evidence and a prospective production-build floor,
+   uncertainty rule and fixed budget. RAR-M31 measured `2ea279f`, not the
+   later LazyMargin/cache/search revisions. Restoration from `b90232b` keeps
+   those revisions: 274 debug / 275 release tests pass, fmt and Clippy pass,
+   fresh no-feature builds both reproduce **7,601,220 / EBF 2.474**, and 20
+   profile roots match the standard harness identity fields. No new PEXT,
+   full-PV/ponder, NPS or playing result is claimed; detailed evidence is linked below.
 
-   The candidate replaces four occupied-board x-ray lookups with two
+   The withdrawn candidate replaced four occupied-board x-ray lookups with two
    empty-board slider lookups plus an all-occupancy BETWEEN scan. A candidate
    pin requires exactly one intervening piece, of our color; enemy blockers
    break the ray too. No pin cache or new board state is introduced. Existing
@@ -2359,9 +2366,10 @@ recommendations without coupling this roadmap to model generations.
    performance is the deciding gate. No maintainer game job is owed if behavior
    remains identical.
 
-10. **4.11b.10 Share useful pin/check information.** Current search already
-    uses the cheaper 4.11b.8 pin calculation; remeasure its remaining cost
-    rather than treating RAR-M30's pre-change pin share as current. Search already
+10. **4.11b.10 Share useful pin/check information.** 4.11b.8 restored the
+    previous x-ray calculation; RAR-M31 retains the alternative and its local
+    gains, but no proven whole-search gain. Remeasure remaining cost after
+    4.11b.9 before deciding whether to retry it or alter state lifetime. Search already
     passes check hints and shares pins across capture/quiet stages. Do not
     implement that work again. Measure the remaining duplication between
     compute_pinned, check_info and SEE king-safety queries, including both
