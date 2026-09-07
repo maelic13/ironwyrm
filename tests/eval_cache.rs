@@ -62,3 +62,35 @@ fn eval_cache_equals_cold_recompute() {
         "expected to check many positions, got {checked}"
     );
 }
+
+#[test]
+fn changing_lazy_margin_invalidates_eval_cache() {
+    const LOW_MARGIN: i32 = 200;
+    const HIGH_MARGIN: i32 = 2_000;
+
+    for fen in SEEDS {
+        let board = Board::from_fen(fen).unwrap_or_else(|e| panic!("bad FEN {fen}: {e}"));
+
+        let mut reused = Evaluator::default();
+        reused.set_lazy_margin(LOW_MARGIN);
+        let low_margin_score = reused.evaluate(&board);
+
+        let mut cold = Evaluator::default();
+        cold.set_lazy_margin(HIGH_MARGIN);
+        let high_margin_score = cold.evaluate(&board);
+
+        if low_margin_score != high_margin_score {
+            reused.set_lazy_margin(HIGH_MARGIN);
+            assert_eq!(
+                reused.evaluate(&board),
+                high_margin_score,
+                "eval cache retained a score from LazyMargin={LOW_MARGIN} at {fen}"
+            );
+            return;
+        }
+    }
+
+    panic!(
+        "test corpus did not exercise different lazy-eval paths at margins {LOW_MARGIN} and {HIGH_MARGIN}"
+    );
+}
