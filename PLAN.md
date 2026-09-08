@@ -17,7 +17,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.11b.12 — decide whether king-square caching pays**, `RESEARCH / R2` |
+| Current step | **4.11b.13 — history capacity and mutation contracts**, `RESEARCH / R2` |
 | Instrument state | 4.10 repairs; v2 baselines/floors, budget transfer, label audit, mate-drive closure and conversion-claim correction are complete. Historical v1 pawn-family conversion claims are retained but superseded in place by RAR-M24 |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -57,7 +57,11 @@ the expensive full-search arm was never run. The leaf's premise was partly
 wrong — the two `attackers_to_color` calls per exchange step are not duplicates,
 and the second is the mandatory per-candidate king-legality test that a carried
 target-attacker set cannot serve.
-The next leaf is **4.11b.12**, `RESEARCH / R2`.
+4.11b.12 is now closed `NO_CHANGE` (RAR-M37): the refreshed profile reads
+king-square lookup at 0.502%, whose 2x-local ceiling of 0.25% is two to four
+times smaller than the measured width of the instrument that would have to
+accept it, so the candidate is unqualifiable however it is written.
+The next leaf is **4.11b.13**, `RESEARCH / R2`.
 Actual full-search board cost is profiled; SEE is correctness-verified and
 normalized timing is restored. Cluster playing qualification remains at
 4.11b.17.
@@ -1979,8 +1983,8 @@ which is what exposed the dependency inversion.
 
 **Integrated 2026-09-05 after reconciling the a0aeb68 roadmap.** Finish the
 remaining 4.11 leaves first, then execute this section before 4.12. Those
-4.11 leaves and board leaves 4.11b.1–4.11b.11 are now complete, 4.11b.9 by
-acceptance and 4.11b.10/4.11b.11 by justified `NO_CHANGE`; **4.11b.12 is
+4.11 leaves and board leaves 4.11b.1–4.11b.12 are now complete, 4.11b.9 by
+acceptance and 4.11b.10–4.11b.12 by justified `NO_CHANGE`; **4.11b.13 is
 next**. The insertion preserves 4.11.12's registered v2 endgame order until
 changed evidence warrants a rerank. Repairs at 4.11b.3/4.11b.5 are implemented;
 the remaining optimizations and cluster qualification are still open. NNUE-only work belongs to 5.2, 5.3, 5.6 and 6.4.
@@ -2072,7 +2076,7 @@ recommendations without coupling this roadmap to model generations.
 | 4.11b.9 | CLOSED (ACCEPTED) | I2 | Fused ordinary quiet relocation integrated | RAR-M33 `5c439da`; RAR-M32 VOID; test `8a73cfd` | Parity exact, isolated +16.3/+17.3/+19.3%, full-search +0.876% with 95% [+0.050%, +2.055%] excluding zero on a verified-idle host. Behaviour-neutral, no game gate owed |
 | 4.11b.10 | CLOSED (`NO_CHANGE`) | R3 | No shareable duplication remains; sharing into SEE is forbidden | RAR-M34; `analysis/pin_check_sharing_2026-09-08.md` | Closed on structure, not cost: producers share no subexpression and the 4.11b.5 contract bars SEE reuse. Reopen only for a genuinely new consumer |
 | 4.11b.11 | CLOSED (`NO_CHANGE`) | I2 | Incremental attacker maintenance built, verified correct, measured slower | RAR-M35; `analysis/see_kernel_2026-09-08.md` | Verdicts were exact but `threshold SEE only` fell 1–3%; stage-1 screen rejected and stage 2 never ran. Future SEE work targets the king-legality test |
-| 4.11b.12 | RESEARCH | R2 | Is king lookup still material after shared geometry? | Conditional on 4.11b.10–11; M30 measured 0.544% | Post-geometry profile clears a predeclared practical floor; otherwise `NO_CHANGE` |
+| 4.11b.12 | CLOSED (`NO_CHANGE`) | R2 | King lookup is 0.502%; a 0.25% ceiling is below instrument resolution | RAR-M37; RAR-M36 refreshed profile | Closed without a floor, which would have been post-hoc: the best possible version cannot be distinguished from zero by any budget used here |
 | 4.11b.13 | RESEARCH | R2 | Which capacity/mutation tightening is required without hot-path cost? | M30 found zero growth; arbitrary history and canonical-move contracts | Exact ownership/API handoff; correctness checks decide, no speed claim from zero events |
 | 4.11b.14 | RESEARCH | R3 | Does residual representation cost justify a bounded larger change? | All simpler leaves and new profile | One explicit architecture wins a bounded comparison; otherwise `NO_CHANGE` |
 | 4.11b.15 | RESEARCH | R3 | Which draw/null/repetition contracts should remain, change or await a retry trigger? | Historical rejected combinations; draw tests; 4.11b.14 | Independent dispositions and any new falsifiable candidate; no bundled policy rescue |
@@ -2541,12 +2545,44 @@ recommendations without coupling this roadmap to model generations.
    `analysis/see_kernel_2026-09-08.md` and `tools/results/see-kernel-411b11/`
    (ignored, local; `registration.md` frozen before timing).
 
-12. **4.11b.12 Decide whether to cache king squares.** Basilisk maintains two
+12. **4.11b.12 Decide whether to cache king squares -- DONE, `NO_CHANGE`
+    (RAR-M37, 2026-09-08).** Basilisk maintains two
     king squares; Rarog and Reckless extract them from bitboards. Prototype
     only if 4.11b.7 still shows a material cost after shared geometry work.
     Include cache maintenance, layout and every special make/unmake in the
     measurement. Add the fields to independent consistency reconstruction.
     Close without a cache if the complete candidate has no robust benefit.
+
+    **Disposition: `NO_CHANGE`, no prototype built.** The refreshed RAR-M36
+    profile reads king-square lookup at **0.502%** (RAR-M30: 0.544%), and the
+    conditional trigger — material cost remaining after shared-geometry work —
+    is not met. 4.11b.10 and 4.11b.11 both closed without touching the board,
+    so nothing redistributed this cost; the small move is only 4.11b.9
+    re-weighting every share.
+
+    **The register asked for a predeclared practical floor and none was
+    registered.** The measurement is already exposed twice, so declaring a floor
+    now would be choosing a number to fit a result. The decision therefore does
+    not use one. It rests on instrument capability: the 2x-local whole-search
+    ceiling is **0.25%**, while RAR-M33's qualification run measured a bootstrap
+    half-width of **1.003%** and RAR-M35's heavier design projected 0.6-0.7%.
+    The best possible version of this candidate is two to four times smaller
+    than the uncertainty of the gate that must accept it, so it cannot reach
+    `LOCAL_QUALIFIED` however it is implemented.
+
+    The realistic gain is smaller still. `king_sq` is one bitboard load plus a
+    `tzcnt`; a cache replaces the `tzcnt` with a field load and removes no
+    memory access. The 0.502% is an overlapping mechanism share already counted
+    inside the generation, check-query and SEE regions. Against that, the cache
+    must be maintained through castling (which moves the king) but not promotion
+    or null moves, restored on undo for both colours, copied on worker cloning,
+    and added to independent consistency reconstruction — the same class of
+    derived state whose staleness went undetected in 4.11b.5's `see_pins`.
+
+    Reopen only if a profile shows king lookup above **2%**, where a 2x-local
+    improvement would reach a resolvable 1% ceiling, AND a caller is found that
+    calls it in a loop rather than once per node. Donor similarity is not a
+    trigger. Evidence: `analysis/king_square_cache_2026-09-08.md`.
 
 13. **4.11b.13 Make history capacity and mutation contracts explicit.** Preserve
     arbitrary legal game-history length; do not replace the vector with a

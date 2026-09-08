@@ -15,6 +15,17 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
+- **2026-09-08 — PLAN 4.11b.12 closed `NO_CHANGE`, RAR-M37:** king-square
+  caching is not prototyped. The refreshed profile reads the lookup at 0.502%,
+  whose 2x-local ceiling of 0.25% is two to four times smaller than the
+  measured width of the instrument that would have to accept it, so the best
+  possible version cannot be distinguished from zero by any budget used here.
+  No floor was declared, deliberately: the number was already exposed twice and
+  a threshold chosen now would be fitted to the result. `king_sq` is one
+  bitboard load plus a tzcnt; a cache would add maintenance across castling,
+  undo, worker cloning and consistency reconstruction for at most a quarter of
+  a percent. No engine change, no games. 4.11b.13 is next.
+
 - **2026-09-08 — board profile recipe recovered and refreshed, RAR-M36:**
   RAR-M30's per-sample attribution turned out to be a side effect of xperf
   failing to find the PDB, which `952711f` then fixed — silently switching the

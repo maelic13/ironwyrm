@@ -558,6 +558,31 @@ per-candidate king-legality test, not the attacker set. It cannot split the two
 `#[inline(never)]` probe. No engine change, no games, no Elo claim. Evidence:
 `analysis/board_search_profile_2026-09-08.md`.
 
+**RAR-M37 — 4.11b.12 king-square caching, COMPLETE 2026-09-08; research
+disposition `NO_CHANGE`, no prototype built.** Source `edfb35b` on `dev`. The
+leaf's conditional trigger — material cost remaining after shared-geometry work
+— is not met: RAR-M36 reads king-square lookup at **0.502%** (RAR-M30 0.544%),
+and 4.11b.10/4.11b.11 both closed without touching the board, so the small move
+is only 4.11b.9 re-weighting shares. **The register asked for a predeclared
+practical floor and none was registered**; the measurement is already exposed
+twice, so declaring one now would be choosing a number to fit a result, and the
+decision deliberately does not use one. It rests on instrument capability: the
+2x-local whole-search ceiling is **0.25%**, against RAR-M33's measured bootstrap
+half-width of **1.003%** and RAR-M35's projected 0.6-0.7%. The best possible
+version is two to four times smaller than the uncertainty of the gate that must
+accept it, so it cannot reach `LOCAL_QUALIFIED` however written. The realistic
+gain is smaller than the ceiling — `king_sq` is one bitboard load plus a
+`tzcnt`, a cache swaps the `tzcnt` for a field load and removes no memory
+access, and 0.502% is an overlapping share already counted inside the
+generation, check-query and SEE regions. Cost side: maintenance through castling
+but not promotion or null moves, restoration on undo for both colours, copying
+on worker cloning, and new fields in independent consistency reconstruction —
+the class of derived state whose staleness went undetected in 4.11b.5. Retry
+trigger: king lookup above **2%** in a profile AND a caller that invokes it in a
+loop rather than once per node; donor similarity is explicitly not a trigger. No
+engine change, no prototype, no games, no Elo claim. At this closure point,
+4.11b.13 is next. Evidence: `analysis/king_square_cache_2026-09-08.md`.
+
 ### Phase-4 registration (RAR-M12, 2026-08-12)
 
 Registered at 4.0, before any Phase-4 code moves. Caps are prospective, derived
