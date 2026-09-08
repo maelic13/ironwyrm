@@ -157,6 +157,15 @@ pub struct CheckInfo {
 }
 
 impl Clone for Board {
+    /// Clones preserve history CAPACITY, not just contents.
+    ///
+    /// This is the mechanism by which a search-time reservation reaches every
+    /// helper: `search_impl` reserves on the root once, and each worker's
+    /// `root.clone()` inherits that capacity, so no thread reallocates in its
+    /// hot path. Dropping the capacity here would silently reintroduce
+    /// mid-search growth on helpers only, which is exactly the kind of
+    /// thread-asymmetric behaviour that does not show up in a single-threaded
+    /// bench.
     fn clone(&self) -> Self {
         let mut history = Vec::with_capacity(self.history.capacity().max(128));
         history.extend_from_slice(&self.history);
@@ -616,9 +625,32 @@ impl Board {
         self.king_safe_after(canonical).then_some(canonical)
     }
 
+    /// Legality as a plain boolean.
+    ///
+    /// This DISCARDS the canonical move that [`Board::legal_move`] returns.
+    /// `Move::from_uci` cannot know whether a move is a capture, a double
+    /// push, en passant or castling, so it always yields `QUIET`; only the
+    /// canonical move carries the correct flags. Use this when the answer is
+    /// the only thing wanted. **If the move is going to be played, use
+    /// [`Board::legal_move`] and play the move it returns**, never the input.
+    /// Playing a non-canonical move corrupts make/unmake.
     #[inline(always)]
     pub fn is_legal(&self, mv: Move) -> bool {
         self.legal_move(mv).is_some()
+    }
+
+    /// Reserve room for `plies` further make/unmake pairs.
+    ///
+    /// One `UnmakeInfo` is pushed per ply, so the peak depth of the history
+    /// vector is the game length already played plus the deepest line the
+    /// search walks. Reserving that headroom before the hot path is entered
+    /// means no `push` can reallocate mid-search.
+    ///
+    /// Deliberately a reservation on the existing `Vec` and not a fixed array:
+    /// game history length is unbounded in principle, and a clamped array
+    /// would silently drop repetition evidence in a long game.
+    pub(crate) fn reserve_history(&mut self, plies: usize) {
+        self.history.reserve(plies);
     }
 
     pub fn play_uci(&mut self, input: &str) -> bool {
@@ -2309,5 +2341,155 @@ impl fmt::Display for Board {
         }
         writeln!(f, "  Hash: 0x{:016X}", self.hash)?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod history_contract_tests {
+    use super::*;
+
+    /// Shuffle both knights out and back: four plies that always exist from the
+    /// starting position, so a walk of any even length can be built from them.
+    const SHUFFLE: [&str; 4] = ["g1f3", "g8f6", "f3g1", "f6g8"];
+
+    fn walk(board: &mut Board, plies: usize) -> Vec<Move> {
+        let mut played = Vec::with_capacity(plies);
+        for index in 0..plies {
+            let uci = SHUFFLE[index % SHUFFLE.len()];
+            let mv = board
+                .parse_move(uci)
+                .unwrap_or_else(|| panic!("{uci} must be legal at ply {index}"));
+            board.make_move_unchecked(mv);
+            played.push(mv);
+        }
+        played
+    }
+
+    #[test]
+    fn reserve_history_provides_headroom_above_the_game_already_played() {
+        let mut board = Board::starting_position();
+        walk(&mut board, 40);
+        let played = board.history.len();
+        board.reserve_history(128);
+        assert!(
+            board.history.capacity() >= played + 128,
+            "capacity {} < {} played + 128 reserved",
+            board.history.capacity(),
+            played
+        );
+    }
+
+    #[test]
+    fn a_reserved_history_does_not_reallocate_through_a_full_depth_walk() {
+        let mut board = Board::starting_position();
+        walk(&mut board, 40);
+        board.reserve_history(128);
+        let reserved = board.history.capacity();
+
+        // 128 plies is the search's MAX_PLY; the reservation must absorb all
+        // of it without a single reallocation.
+        let played = walk(&mut board, 128);
+        assert_eq!(
+            board.history.capacity(),
+            reserved,
+            "history reallocated mid-walk: {reserved} -> {}",
+            board.history.capacity()
+        );
+
+        for mv in played.into_iter().rev() {
+            board.unmake_move(mv);
+        }
+        assert_eq!(board.history.len(), 40, "history depth not restored");
+        assert_eq!(
+            board.history.capacity(),
+            reserved,
+            "capacity changed on unwind"
+        );
+    }
+
+    #[test]
+    fn clone_preserves_reserved_capacity_so_workers_inherit_it() {
+        let mut board = Board::starting_position();
+        // A multiple of SHUFFLE.len(), so the cycle restarts cleanly for the
+        // clone's own walk below.
+        walk(&mut board, 12);
+        board.reserve_history(128);
+        let reserved = board.history.capacity();
+
+        let worker = board.clone();
+        assert_eq!(
+            worker.history.capacity(),
+            reserved,
+            "worker clone dropped the reservation"
+        );
+        assert_eq!(worker.history.len(), board.history.len());
+
+        // And the clone must then be able to search without reallocating.
+        let mut worker = worker;
+        walk(&mut worker, 128);
+        assert_eq!(
+            worker.history.capacity(),
+            reserved,
+            "worker reallocated despite inheriting the reservation"
+        );
+    }
+
+    #[test]
+    fn history_restoration_is_exact_through_a_deep_walk() {
+        let mut board = Board::starting_position();
+        board.reserve_history(128);
+        let before = board.clone();
+
+        let played = walk(&mut board, 64);
+        for mv in played.into_iter().rev() {
+            board.unmake_move(mv);
+        }
+
+        board
+            .check_consistency()
+            .unwrap_or_else(|err| panic!("inconsistent after unwind: {err}"));
+        assert_eq!(board.hash, before.hash, "position hash not restored");
+        assert_eq!(board.history.len(), before.history.len());
+        assert_eq!(board.halfmove_clock, before.halfmove_clock);
+        assert_eq!(board.fullmove, before.fullmove);
+        assert_eq!(board.side_to_move, before.side_to_move);
+    }
+
+    #[test]
+    fn legal_move_canonicalizes_flags_that_from_uci_cannot_know() {
+        // `Move::from_uci` always yields QUIET, because a UCI string carries no
+        // flag information. `legal_move` must supply the real flags, and a
+        // caller that plays its own input instead of the returned move would
+        // push the wrong UnmakeInfo. This pins that difference.
+        let cases = [
+            (
+                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                "e2e4",
+            ),
+            (
+                "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2",
+                "e4d5",
+            ),
+            ("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1", "e1g1"),
+        ];
+        for (fen, uci) in cases {
+            let board = Board::from_fen(fen).unwrap_or_else(|err| panic!("{fen}: {err}"));
+            let raw = Move::from_uci(uci).expect("valid UCI shape");
+            assert_eq!(raw.flags(), QUIET, "{uci}: from_uci should be QUIET");
+            let canonical = board
+                .legal_move(raw)
+                .unwrap_or_else(|| panic!("{uci} must be legal in {fen}"));
+            assert_ne!(
+                canonical.flags(),
+                raw.flags(),
+                "{uci}: legal_move did not canonicalize the flags"
+            );
+            assert_eq!(canonical.from_sq(), raw.from_sq());
+            assert_eq!(canonical.to_sq(), raw.to_sq());
+            assert!(
+                board.is_legal(raw),
+                "{uci}: is_legal must agree with legal_move"
+            );
+        }
     }
 }

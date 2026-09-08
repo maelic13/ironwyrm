@@ -1069,7 +1069,7 @@ impl Searcher {
 
     fn search_impl<const ALLOW_PARALLEL: bool, P: FnMut() -> SearchEvent + ?Sized>(
         &mut self,
-        root: Board,
+        mut root: Board,
         limits: &SearchLimits,
         engine_options: &EngineOptions,
         emit_info: bool,
@@ -1084,6 +1084,14 @@ impl Searcher {
         self.shared_state = None;
         self.root_move_offset = 0;
         self.thread_id = 0;
+
+        // Reserve the whole search's history headroom once, before any hot
+        // path or helper exists. Search pushes one UnmakeInfo per ply and pops
+        // it again, so MAX_PLY bounds the peak above the game history already
+        // present. Board::clone preserves capacity, so every worker's
+        // root.clone() inherits this and no thread reallocates while searching.
+        root.reserve_history(MAX_PLY);
+
         let game_ply = 2 * root.fullmove.saturating_sub(1) as u32
             + (root.side_to_move() == Color::Black) as u32;
         self.reset_search_state(
