@@ -15,6 +15,17 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
+- **2026-09-08 — PLAN 4.11b.14 closed `NO_CHANGE`, RAR-M39:** no larger
+  representation change is justified. No board region exceeds 6.7%, so the
+  leaf's own gate for opening an implementation is not met. Six type boards
+  would save 48 bytes of a 264-byte Board that was never near a cache boundary,
+  while taxing 208 `pieces()` sites, 102 of them in the 29.49% eval region.
+  Per-ply state copying would cost 33 KiB against the current 3 KiB and leave
+  L1. Legality is already amortized at 517:1 fast-to-full check calls. Only a
+  compile-time footprint guard was added, proven live by adding a field.
+  Neutral at 7,601,220 / EBF 2.474; debug 280 / release 281, fmt and Clippy
+  clean. No games. 4.11b.15 is next.
+
 - **2026-09-08 — PLAN 4.11b.13 done, RAR-M38:** `f70ac19` reserves `MAX_PLY`
   of history headroom on the root before the hot path, with worker clones
   inheriting it through `Board::clone`'s capacity preservation. The gap was

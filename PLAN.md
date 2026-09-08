@@ -17,7 +17,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.11b.14 — decide whether a larger representation change pays**, `RESEARCH / R3` |
+| Current step | **4.11b.15 — record the draw-state policy boundary**, `RESEARCH / R3` |
 | Instrument state | 4.10 repairs; v2 baselines/floors, budget transfer, label audit, mate-drive closure and conversion-claim correction are complete. Historical v1 pawn-family conversion claims are retained but superseded in place by RAR-M24 |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -67,7 +67,13 @@ through `Board::clone`'s capacity preservation, and five contract tests pin
 headroom, no mid-search reallocation, clone inheritance, exact restoration and
 the `legal_move`/`is_legal` canonicalization difference. Behaviour-neutral, no
 speed claim.
-The next leaf is **4.11b.14**, `RESEARCH / R3`.
+4.11b.14 is now closed `NO_CHANGE` (RAR-M39): no board region exceeds 6.7%,
+so the leaf's gate for opening an implementation is not met, and each named
+alternative loses on measured grounds — six type boards save 48 bytes that were
+never binding while taxing 208 `pieces()` sites, per-ply state copying would
+cost 33 KiB against the current 3 KiB, and legality is already amortized at
+517:1 fast-to-full check calls.
+The next leaf is **4.11b.15**, `RESEARCH / R3`.
 Actual full-search board cost is profiled; SEE is correctness-verified and
 normalized timing is restored. Cluster playing qualification remains at
 4.11b.17.
@@ -1989,9 +1995,9 @@ which is what exposed the dependency inversion.
 
 **Integrated 2026-09-05 after reconciling the a0aeb68 roadmap.** Finish the
 remaining 4.11 leaves first, then execute this section before 4.12. Those
-4.11 leaves and board leaves 4.11b.1–4.11b.13 are now complete: 4.11b.9 by
-acceptance, 4.11b.10–4.11b.12 by justified `NO_CHANGE`, 4.11b.13 by contract
-tightening; **4.11b.14 is next**. The insertion preserves 4.11.12's registered v2 endgame order until
+4.11 leaves and board leaves 4.11b.1–4.11b.14 are now complete: 4.11b.9 by
+acceptance, 4.11b.10–4.11b.12 and 4.11b.14 by justified `NO_CHANGE`, 4.11b.13 by
+contract tightening; **4.11b.15 is next**. The insertion preserves 4.11.12's registered v2 endgame order until
 changed evidence warrants a rerank. Repairs at 4.11b.3/4.11b.5 are implemented;
 the remaining optimizations and cluster qualification are still open. NNUE-only work belongs to 5.2, 5.3, 5.6 and 6.4.
 
@@ -2084,7 +2090,7 @@ recommendations without coupling this roadmap to model generations.
 | 4.11b.11 | CLOSED (`NO_CHANGE`) | I2 | Incremental attacker maintenance built, verified correct, measured slower | RAR-M35; `analysis/see_kernel_2026-09-08.md` | Verdicts were exact but `threshold SEE only` fell 1–3%; stage-1 screen rejected and stage 2 never ran. Future SEE work targets the king-legality test |
 | 4.11b.12 | CLOSED (`NO_CHANGE`) | R2 | King lookup is 0.502%; a 0.25% ceiling is below instrument resolution | RAR-M37; RAR-M36 refreshed profile | Closed without a floor, which would have been post-hoc: the best possible version cannot be distinguished from zero by any budget used here |
 | 4.11b.13 | CLOSED (tightened) | R2 | Search headroom reserved before the hot path; canonical-move contract pinned | RAR-M38 `f70ac19`; `analysis/history_contracts_2026-09-08.md` | Behaviour-neutral at 7,601,220 / EBF 2.474; five contract tests, clone test proven to fail on regression. No speed claim |
-| 4.11b.14 | RESEARCH | R3 | Does residual representation cost justify a bounded larger change? | All simpler leaves and new profile | One explicit architecture wins a bounded comparison; otherwise `NO_CHANGE` |
+| 4.11b.14 | CLOSED (`NO_CHANGE`) | R3 | No board region above 6.7%; all three alternatives lose on measured grounds | RAR-M39; RAR-M36 profile; `analysis/representation_2026-09-08.md` | Gate for opening an implementation not met; footprint pinned by const assertions naming this leaf |
 | 4.11b.15 | RESEARCH | R3 | Which draw/null/repetition contracts should remain, change or await a retry trigger? | Historical rejected combinations; draw tests; 4.11b.14 | Independent dispositions and any new falsifiable candidate; no bundled policy rescue |
 | 4.11b.16 | READY_FOR_IMPLEMENTATION | V | Qualify the integrated board candidate | Dependency-held on preceding dispositions | Defined correctness matrix and controlled pooled-PGO performance pass |
 | 4.11b.17 | RESEARCH | V | Design and run the playing gate for deliberate behavior changes | Candidate undefined until 4.11b.16 | Freeze prediction, arms, recipe, bracket/cap and stop rule; then `GAME_GATE` decides |
@@ -2636,7 +2642,8 @@ recommendations without coupling this roadmap to model generations.
     at **7,601,220 / EBF 2.474**; debug 280 / release 281, fmt and Clippy clean.
     Evidence: `analysis/history_contracts_2026-09-08.md`.
 
-14. **4.11b.14 Decide whether a larger representation change is justified.**
+14. **4.11b.14 Decide whether a larger representation change is justified --
+    DONE, `NO_CHANGE` (RAR-M39, 2026-09-08).**
     Only open an implementation if the preceding profile still identifies
     substantial representation cost. Compare the current 12 colored-piece
     bitboards with six type plus two color bitboards, undo-by-inverse-key-work
@@ -2649,6 +2656,42 @@ recommendations without coupling this roadmap to model generations.
     include cache footprint and HCE search consumers, and stop if it fails to
     beat the optimized current design. Large rewrites require stronger
     evidence, not an exemption from it. Full NNUE stacks remain Phase 5.
+
+    **Disposition: `NO_CHANGE`; no comparison registered, no implementation
+    opened.** The gate is not met. RAR-M36 puts no board region above **6.7%**
+    (make/unmake 6.677%, generation 6.556%, SEE 5.239%, checks 5.179%), and
+    those are the costs of doing the work, not of the representation — a
+    different representation trades their constant factors rather than deleting
+    them. This session's two direct experiments agree: 4.11b.9 won +0.876% and
+    4.11b.11 lost 1-3%, which is not how a representation leaving large wins
+    behaves.
+
+    Each named alternative is refused on measured grounds. **Six type boards
+    plus colours**: `Board` is **264 bytes** and the variant saves **48**, with
+    both figures far inside L1 and neither near a boundary that matters, while
+    every `pieces(color, piece)` gains a load and an AND across **208 call
+    sites**, **102 of them in `eval.rs`** — the largest region in the profile at
+    29.49%. **Per-ply state copying**: `UnmakeInfo` is **24 bytes**, so a
+    128-ply stack costs **3 KiB** and stays in L1; copying whole board state
+    would cost **128 x 264 = 33 KiB** and leave it, an elevenfold increase to
+    avoid inverse work that 4.11b.9 reduced to one fused mask. **Selectively
+    checked generation**: the cost is already amortized — RAR-M34 measured
+    422,246 staged quiet generations at zero extra `compute_pinned`, and
+    `gives_check_fast` runs 25,540,503 times against `gives_check_full`'s
+    49,385, about **517:1**.
+
+    Only a compile-time guard was added: `size_of::<Board>() <= 264` and
+    `size_of::<UnmakeInfo>() <= 24`, as upper bounds since padding may differ
+    between supported targets and only growth invalidates the argument. Each
+    message names this leaf, so a field addition that breaks the premise fails
+    the build instead of drifting past it. Proven live by adding a `[u64; 4]`
+    field. Behaviour unchanged at **7,601,220 / EBF 2.474**; debug 280 /
+    release 281, fmt and Clippy clean.
+
+    Reopen only if a profile shows a **single board region above 12%** AND a
+    specific mechanism is named by which the new representation removes work
+    rather than relocating it. Donor similarity is not a trigger. Evidence:
+    `analysis/representation_2026-09-08.md`.
 
 15. **4.11b.15 Record the draw-state policy boundary.** Audit rule-50 clock,
     null-move boundaries, pre-root versus in-search repetition, and repetition

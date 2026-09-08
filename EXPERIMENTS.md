@@ -616,6 +616,42 @@ inside `board.rs` so the private field stays private. No games, no Elo. At this
 closure point, 4.11b.14 is next. Evidence:
 `analysis/history_contracts_2026-09-08.md`.
 
+**RAR-M39 — 4.11b.14 larger board representation, COMPLETE 2026-09-08; research
+disposition `NO_CHANGE`, no comparison registered and no implementation
+opened.** Source `0d69c5f` on `dev`. The leaf's gate — open an implementation
+only if the preceding profile still identifies substantial representation cost —
+is **not met**: RAR-M36 puts no board region above **6.7%** (make/unmake 6.677%,
+generation and legality 6.556%, SEE 5.239%, check queries 5.179%), and those are
+the costs of doing the work rather than of the representation, which a different
+layout trades rather than deletes. This session's two direct experiments concur:
+4.11b.9 won +0.876%, 4.11b.11 lost 1-3% on its own benchmark. **Six type boards
+plus colours, rejected on a measured trade**: `Board` is **264 bytes**, the
+variant saves **48** (Rarog already keeps `occupancy[2]` and `all_occ`), both
+sit far inside L1 with neither near a meaningful boundary, and against that
+every `pieces(color, piece)` gains a load plus an AND across **208 call sites**,
+**102 in `eval.rs`**, the profile's largest region at 29.49% exclusive.
+**Per-ply state copying, quantitatively worse**: `UnmakeInfo` is **24 bytes** so
+a 128-ply stack costs **3 KiB** and stays in L1, whereas copying whole board
+state in the shape of Reckless's `InternalState` costs **128 x 264 = 33 KiB**
+and leaves it — elevenfold, to avoid inverse work 4.11b.9 reduced to a single
+fused mask. **Selectively checked generation, already amortized**: RAR-M34
+measured 422,246 staged quiet generations served at zero extra `compute_pinned`,
+and `board_gives_check_fast_calls` 25,540,503 against
+`board_gives_check_full_calls` 49,385 is about **517:1**, so deferring legality
+would trade a shared per-node cost for a per-move cost on a population pruning
+discards unexamined. The only change made is a compile-time guard pinning the
+two footprints the decision rests on, as upper bounds (`Board <= 264`,
+`UnmakeInfo <= 24`) since padding may differ between supported targets and only
+growth invalidates the argument; each message names this leaf so a breaking
+field addition fails the build. **Proven live** by adding a `[u64; 4]` field,
+which failed the build with the intended message. Behaviour unchanged at
+**7,601,220 / EBF 2.474**; debug **280** / release **281**, fmt and Clippy
+`--all-features --all-targets` clean. Retry trigger: a single board region above
+**12%** AND a named mechanism that removes work rather than relocating it; donor
+similarity is explicitly not one. No games, no Elo, no NNUE interaction — full
+NNUE stacks remain Phase 5. At this closure point, 4.11b.15 is next. Evidence:
+`analysis/representation_2026-09-08.md`.
+
 ### Phase-4 registration (RAR-M12, 2026-08-12)
 
 Registered at 4.0, before any Phase-4 code moves. Caps are prospective, derived
