@@ -187,12 +187,30 @@ the **6.3%** implied by RAR-M33's +0.876% whole-search gain from an ~18% local
 speedup. **The shares in this document stand, and no refreshed shares have been
 recorded from the 2026-09-08 capture.**
 
-**Fix.** `summarize_board_search_etw.py` now resolves its columns by header
-name and **refuses** the per-function schema outright, naming the remedy, rather
-than emitting a plausible number from it. `board_search_profile_etw.ps1` now
-writes two reports per cohort: the per-address one the summarizer consumes, and
-a `-symbols` one kept alongside for human reading. Both changes are covered by
-`test_summarize_board_search_etw.py` (5/5) and `test_board_search_profile.py`.
+**Fix applied.** `summarize_board_search_etw.py` now resolves its columns by
+header name and **refuses** the per-function schema outright, naming what it
+needs, instead of emitting a plausible number from it. That is the durable part:
+this tool reported "100% of engine samples resolved" while being completely
+wrong, twice, and only a cross-check against an independently measured result
+caught it. It can no longer fail that way silently. Covered by
+`test_summarize_board_search_etw.py` (5/5).
 
-A corrected profile needs only report regeneration from the existing `.etl`
-files — no re-capture — because the raw samples were always fine.
+**Attempted fix that was WRONG and is reverted.** Dropping xperf's `-symbols`
+does **not** produce one row per sampled address. It produces one row per
+MODULE: the entire Rarog image collapses to a single `***unknown***` row with
+all 45,909 engine hits, base `0x0`, limit = image size. That is strictly less
+attribution than the symbolized report, so `board_search_profile_etw.ps1` was
+reverted to emitting the single `-symbols` report it had before.
+
+**Open question, not yet answered.** How RAR-M30 obtained per-sample attribution
+from this toolchain is unresolved. Its own tests fixture shows a six-column
+schema ending in `address`, which today's xperf does not emit for either
+invocation tried. Until that recipe is recovered, **this profile cannot be
+refreshed**, and no refreshed shares exist.
+
+**That blocks nothing right now.** RAR-M30's shares stand on their own
+cross-check, and the open board leaves do not depend on a refresh: 4.11b.12's
+king-square question is already answered at 0.544% by RAR-M30, and the geometry
+work of 4.11b.10/4.11b.11 changed nothing in that region. Recovering the recipe
+is tooling work to be scheduled on its own merits, not a prerequisite the
+roadmap is waiting on.

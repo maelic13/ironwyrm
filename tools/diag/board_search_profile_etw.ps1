@@ -133,20 +133,7 @@ try {
             throw "reports-only mode needs the existing trace $etl"
         }
 
-        # Two reports, deliberately. `-symbols` makes xperf group samples BY
-        # FUNCTION and emit base/limit/size columns. That is readable for a
-        # human but destroys per-address attribution: board work inlined into a
-        # large search function is charged to that function and never appears
-        # under its own region. summarize_board_search_etw.py needs one row per
-        # sampled ADDRESS so it can recover the full inline chain itself and
-        # charge an inlined helper to its board caller, which is how RAR-M30's
-        # shares were produced. So the summarizer input is generated WITHOUT
-        # `-symbols`, and the symbolized report is kept alongside for reading.
-        & $xperf -i $etl -o $report -a stack -butterfly 100 -process $processName
-        if ($LASTEXITCODE -ne 0) { throw "xperf address report failed for $cohort ($LASTEXITCODE)" }
-
-        $symbolReport = [System.IO.Path]::ChangeExtension($report, $null) + "-symbols.txt"
-        & $xperf -i $etl -o $symbolReport -symbols -a stack -butterfly 100 -process $processName
+        & $xperf -i $etl -o $report -symbols -a stack -butterfly 100 -process $processName
         if ($LASTEXITCODE -ne 0) { throw "xperf symbol report failed for $cohort ($LASTEXITCODE)" }
         if (-not (Test-Path -LiteralPath $report)) { throw "missing report for $cohort" }
         $reportSize = (Get-Item -LiteralPath $report).Length
