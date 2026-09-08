@@ -15,6 +15,17 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
+- **2026-09-08 — PLAN 4.11b.11 closed `NO_CHANGE`, RAR-M35:** incremental SEE
+  attacker maintenance was built, proven correct and still rejected. `bench 13`
+  exact, all 41 external fixtures passing, and a debug equivalence assertion on
+  every SEE call -- proven live by deliberate sabotage -- held across 275/275
+  debug tests. But the registered stage-1 screen measured `threshold SEE only`
+  at -2.92 / -10.42 / -0.69%, zero rounds up against a required +5%, so stage 2
+  never ran and the change was withdrawn. A leaf premise was wrong: the two
+  per-step `attackers_to_color` calls are not duplicates -- the second is the
+  mandatory per-candidate king-legality test, which is where SEE cost actually
+  sits and where future work should aim. No games, no Elo. 4.11b.12 is next.
+
 - **2026-09-08 — PLAN 4.11b.10 closed `NO_CHANGE`, RAR-M34:** shared pin/check
   state is not worth building because there is nothing left to share.
   `compute_pinned` and `check_info` query different king squares against

@@ -17,7 +17,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.11b.11 — optimize the corrected SEE kernel**, `READY_FOR_IMPLEMENTATION / I2` |
+| Current step | **4.11b.12 — decide whether king-square caching pays**, `RESEARCH / R2` |
 | Instrument state | 4.10 repairs; v2 baselines/floors, budget transfer, label audit, mate-drive closure and conversion-claim correction are complete. Historical v1 pawn-family conversion claims are retained but superseded in place by RAR-M24 |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -50,7 +50,14 @@ sharing is already implemented and active, `compute_pinned` and `check_info`
 share no subexpression because they query different king squares against
 different slider colours, and sharing into SEE is forbidden by the 4.11b.5
 exchange-occupancy contract rather than merely unprofitable.
-The next leaf is **4.11b.11**, `READY_FOR_IMPLEMENTATION / I2`.
+4.11b.11 is now closed `NO_CHANGE` (RAR-M35): incremental attacker maintenance
+was implemented in full and verified correct, but made `threshold SEE only`
+**slower** in all three rounds, so its registered stage-1 screen rejected it and
+the expensive full-search arm was never run. The leaf's premise was partly
+wrong — the two `attackers_to_color` calls per exchange step are not duplicates,
+and the second is the mandatory per-candidate king-legality test that a carried
+target-attacker set cannot serve.
+The next leaf is **4.11b.12**, `RESEARCH / R2`.
 Actual full-search board cost is profiled; SEE is correctness-verified and
 normalized timing is restored. Cluster playing qualification remains at
 4.11b.17.
@@ -1972,8 +1979,9 @@ which is what exposed the dependency inversion.
 
 **Integrated 2026-09-05 after reconciling the a0aeb68 roadmap.** Finish the
 remaining 4.11 leaves first, then execute this section before 4.12. Those
-4.11 leaves and board leaves 4.11b.1–4.11b.10 are now complete, 4.11b.9 by
-acceptance and 4.11b.10 by a justified `NO_CHANGE`; **4.11b.11 is next**. The insertion preserves 4.11.12's registered v2 endgame order until
+4.11 leaves and board leaves 4.11b.1–4.11b.11 are now complete, 4.11b.9 by
+acceptance and 4.11b.10/4.11b.11 by justified `NO_CHANGE`; **4.11b.12 is
+next**. The insertion preserves 4.11.12's registered v2 endgame order until
 changed evidence warrants a rerank. Repairs at 4.11b.3/4.11b.5 are implemented;
 the remaining optimizations and cluster qualification are still open. NNUE-only work belongs to 5.2, 5.3, 5.6 and 6.4.
 
@@ -2063,7 +2071,7 @@ recommendations without coupling this roadmap to model generations.
 | 4.11b.8 | CLOSED (candidate withdrawn) | R3 | Local pin gains established; useful whole-search value unresolved | RAR-M31; restoration c44608a | Prior x-ray path restored and qualified; independent oracle retained; retry belongs to 4.11b.10 only if justified |
 | 4.11b.9 | CLOSED (ACCEPTED) | I2 | Fused ordinary quiet relocation integrated | RAR-M33 `5c439da`; RAR-M32 VOID; test `8a73cfd` | Parity exact, isolated +16.3/+17.3/+19.3%, full-search +0.876% with 95% [+0.050%, +2.055%] excluding zero on a verified-idle host. Behaviour-neutral, no game gate owed |
 | 4.11b.10 | CLOSED (`NO_CHANGE`) | R3 | No shareable duplication remains; sharing into SEE is forbidden | RAR-M34; `analysis/pin_check_sharing_2026-09-08.md` | Closed on structure, not cost: producers share no subexpression and the 4.11b.5 contract bars SEE reuse. Reopen only for a genuinely new consumer |
-| 4.11b.11 | READY_FOR_IMPLEMENTATION | I2 | Incrementally maintain attackers inside the corrected SEE contract | 4.11b.10 precedes reuse; RAR-M27–M30 | All external/default verdicts identical plus normalized SEE and whole-search performance |
+| 4.11b.11 | CLOSED (`NO_CHANGE`) | I2 | Incremental attacker maintenance built, verified correct, measured slower | RAR-M35; `analysis/see_kernel_2026-09-08.md` | Verdicts were exact but `threshold SEE only` fell 1–3%; stage-1 screen rejected and stage 2 never ran. Future SEE work targets the king-legality test |
 | 4.11b.12 | RESEARCH | R2 | Is king lookup still material after shared geometry? | Conditional on 4.11b.10–11; M30 measured 0.544% | Post-geometry profile clears a predeclared practical floor; otherwise `NO_CHANGE` |
 | 4.11b.13 | RESEARCH | R2 | Which capacity/mutation tightening is required without hot-path cost? | M30 found zero growth; arbitrary history and canonical-move contracts | Exact ownership/API handoff; correctness checks decide, no speed claim from zero events |
 | 4.11b.14 | RESEARCH | R3 | Does residual representation cost justify a bounded larger change? | All simpler leaves and new profile | One explicit architecture wins a bounded comparison; otherwise `NO_CHANGE` |
@@ -2473,7 +2481,8 @@ recommendations without coupling this roadmap to model generations.
     `analysis/pin_check_sharing_2026-09-08.md` and
     `tools/results/pinshare-411b10/` (ignored, local).
 
-11. **4.11b.11 Optimize the corrected SEE kernel.** Carry attacker sets through
+11. **4.11b.11 Optimize the corrected SEE kernel -- DONE, `NO_CHANGE`
+    (RAR-M35, 2026-09-08).** Carry attacker sets through
     the exchange and add newly exposed bishop/rook rays after removing the
     selected attacker, rather than recomputing all attackers twice per
     exchange step. Reuse valid pin information and preserve selected-king
@@ -2494,6 +2503,43 @@ recommendations without coupling this roadmap to model generations.
    semantics are fixed. All 41 external fixtures, parity cases and production
    fingerprint must remain exact. Normalized M29 throughput and controlled
    full-search NPS decide retention; do not fit values or restore stale pins.
+
+   **Disposition: `NO_CHANGE`, rejected on throughput, not on defects.** The
+   candidate was implemented in full: a carried all-colour attacker set built
+   once per exchange, selected with `attackers & color_occ(side)`, extended by
+   `see_expose` with only the ray that vacating `from` can open. It was correct
+   and verified hard -- `bench 13` exact at 7,601,220 / EBF 2.474, all 41
+   external fixtures passing, and a `debug_assert_eq!` comparing the carried set
+   against a fresh `attackers_to_color` on EVERY SEE call, proven live by a
+   deliberate sabotage that made the parity walk panic at once. With that guard
+   active the debug suite passed 275/275.
+
+   It still lost. The registered stage-1 screen required `threshold SEE only`
+   to improve in all three alternating rounds with a median of at least +5%;
+   it measured **-2.92 / -10.42 / -0.69%**. Zero rounds up, so stage 2 never
+   ran and the production path is withdrawn; `src/` is byte-identical to
+   `8d7da2c`. Round 1 was visibly disturbed on unrelated columns, so the honest
+   effect is rounds 0 and 2, a **1-3% regression**; discarding round 1 would
+   not change the verdict and no discard was applied.
+
+   **A premise of this leaf was wrong and is corrected here.** The two
+   `attackers_to_color` calls per exchange step are not duplicates. The first
+   builds the recapturer set at the target; the second is the mandatory
+   per-candidate **selected-king legality test**, at a different square, under
+   a different occupancy, evaluated once per candidate rather than once per
+   step. A carried set of the target's attackers is structurally incapable of
+   serving it. The optimization could therefore address at most one of the two
+   queries while adding a fixed entry cost -- `attackers_to` builds both
+   colours' unions where the old first step built one -- which `see_ge_impl`
+   pays on a large share of its 7.55M early-exiting threshold calls.
+
+   **Future SEE work targets the king-legality test, not the attacker set.**
+   Reopen carried attacker sets only if that test is first made cheaper or
+   rarer by a separately qualified change AND a fresh profile still shows the
+   recapturer rebuild as a material share. Donor-engine similarity is not
+   evidence; this measurement is direct evidence against. Evidence:
+   `analysis/see_kernel_2026-09-08.md` and `tools/results/see-kernel-411b11/`
+   (ignored, local; `registration.md` frozen before timing).
 
 12. **4.11b.12 Decide whether to cache king squares.** Basilisk maintains two
     king squares; Rarog and Reckless extract them from bitboards. Prototype

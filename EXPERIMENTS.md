@@ -477,6 +477,51 @@ check geometry, never on donor-engine similarity. At this closure point,
 4.11b.11 is next. Evidence: `analysis/pin_check_sharing_2026-09-08.md` and
 `tools/results/pinshare-411b10/` (ignored, local).
 
+**RAR-M35 -- 4.11b.11 incremental SEE attacker maintenance, COMPLETE 2026-09-08;
+`NO_CHANGE`, production path withdrawn.** Baseline `8d7da2c` on `dev`; contract
+frozen in `tools/results/see-kernel-411b11/registration.md` before any timing,
+with correctness gates run first and no throughput number observed at freeze.
+The candidate carried an all-colour attacker set (`attackers_to(target, occ) &
+occ`) built once per exchange, selected via `attackers & color_occ(side)` --
+exactly reproducing `attackers_to_color`, since each colour-specific term of
+`attackers_to` is a subset of that colour's occupancy -- and extended by
+`see_expose`, which adds only the ray vacating the source can open (diagonal for
+pawn/bishop/queen, orthogonal for rook/queen; a knight attacking the target is
+never aligned with it, and a king recapture ends the exchange first). All
+4.11b.5 semantics were preserved, including the per-candidate selected-king
+legality test, the `& !Bitboard::from(target)` exclusion, promotion/new-victim
+values, threshold parity, and retention of an illegal candidate in the carried
+set. **Correctness was exact and verified beyond the fingerprint**: `bench 13`
+7,601,220 / EBF 2.474; all 41 external fixtures (`see_contract` 8/8),
+`see_pins` 6/6, debug 275/275, release 276/276, fmt and Clippy `--all-features
+--all-targets` clean; plus a `debug_assert_eq!` comparing the carried set with a
+fresh `attackers_to_color` on EVERY SEE call, **proven live** by deliberately
+dropping queen orthogonal exposure, which made
+`threshold_parity_on_deterministic_legal_walks` panic immediately. Rejection is
+on throughput. The registered two-stage design required stage 1 -- three
+alternating `board_v2` rounds -- to improve `threshold SEE only` in all three
+rounds with a median of at least +5%. Measured **-2.92% / -10.42% / -0.69%**,
+median -2.92%, zero rounds up, host ambient 5.38%. **Stage 2 was therefore never
+run**, saving the entire expensive full-search arm. Round 1 was disturbed on
+unrelated columns (`make/unmake only` -4.79%), so the honest effect is rounds 0
+and 2: a **1-3% regression**; no round was discarded. Calibration: the
+registration named this exact failure mode before exposure -- short exchanges
+gain nothing because the initial `attackers_to` builds both colours where the
+old first step built one, and `see_ge_impl` exits early on much of its 7.55M
+threshold calls -- so direction was a HIT while the predicted +5% to +20% upside
+band was a MISS. **A leaf premise is corrected**: the two `attackers_to_color`
+calls per exchange step are not duplicates. The second is the mandatory
+per-candidate king-legality test at a different square under a different
+occupancy, which a carried target-attacker set cannot serve; future SEE work
+must target that test, not the attacker set. `src/` was restored byte-identical
+to `8d7da2c` with the fingerprint re-verified after withdrawal. No games, no
+Elo, no timing claim retained. A fresh ETW profile is still owed and is now more
+valuable, since it can attribute SEE's 5.3% between recapturer rebuild and
+legality test; it needs an elevated prompt and is a maintainer job. At this
+closure point, 4.11b.12 is next. Evidence:
+`analysis/see_kernel_2026-09-08.md` and `tools/results/see-kernel-411b11/`
+(ignored, local).
+
 ### Phase-4 registration (RAR-M12, 2026-08-12)
 
 Registered at 4.0, before any Phase-4 code moves. Caps are prospective, derived
