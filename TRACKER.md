@@ -15,6 +15,18 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
+- **2026-09-08 — PLAN 4.11b.16 QUALIFIED, RAR-M41:** the integrated board
+  cluster banks **+1.421%** whole-search NPS, 95% [+0.953%, +1.764%], under
+  production pooled-PGO settings on a verified-idle host, with behaviour
+  identical to the baseline throughout. A null pair of two same-revision PGO
+  builds measured +0.222% [-0.130%, +0.630%], confirming the instrument is
+  unbiased and setting the effective floor empirically rather than by
+  assertion. 91/96 pairs faster, max host busy 9.11%. Correctness matrix passed
+  in full, including 72 tests under the PEXT backend and the fingerprint on all
+  six binaries. Projected half-width ~0.5%, measured 0.405% — a calibration hit
+  after RAR-M33's miss. No Elo claimed; the playing gate is 4.11b.17, which is
+  next.
+
 - **2026-09-08 — PLAN 4.11b.15 closed `NO_CHANGE`, RAR-M40:** all four draw
   policies kept, each dispositioned independently with its own retry trigger.
   RAR-S18's two losing arms do not isolate any single part, and that is stated

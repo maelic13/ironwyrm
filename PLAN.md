@@ -17,7 +17,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.11b.16 — qualify the integrated board candidate**, `READY_FOR_IMPLEMENTATION / V` |
+| Current step | **4.11b.17 — register and qualify the playing cluster**, `RESEARCH / V` |
 | Instrument state | 4.10 repairs; v2 baselines/floors, budget transfer, label audit, mate-drive closure and conversion-claim correction are complete. Historical v1 pawn-family conversion claims are retained but superseded in place by RAR-M24 |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -76,9 +76,12 @@ cost 33 KiB against the current 3 KiB, and legality is already amortized at
 4.11b.15 is now closed `NO_CHANGE` (RAR-M40): all four draw policies are kept
 with independent dispositions and retry triggers, and the repetition-identity
 separation is pinned by test.
-The next leaf is **4.11b.16**, `READY_FOR_IMPLEMENTATION / V` — the integrated
-board qualification, where 4.11b.9's accepted +0.876% gets its pooled-PGO
-confirmation.
+4.11b.16 is now **QUALIFIED** (RAR-M41): the integrated board cluster measures
+**+1.421%** whole-search NPS, 95% **[+0.953%, +1.764%]**, under production
+pooled-PGO settings on a verified-idle host, with a null pair of same-revision
+builds confirming the instrument is unbiased at **+0.222% [-0.130%, +0.630%]**.
+The correctness matrix passed in full.
+The next leaf is **4.11b.17**, `RESEARCH / V` — the playing gate.
 Actual full-search board cost is profiled; SEE is correctness-verified and
 normalized timing is restored. Cluster playing qualification remains at
 4.11b.17.
@@ -2000,9 +2003,10 @@ which is what exposed the dependency inversion.
 
 **Integrated 2026-09-05 after reconciling the a0aeb68 roadmap.** Finish the
 remaining 4.11 leaves first, then execute this section before 4.12. Those
-4.11 leaves and board leaves 4.11b.1–4.11b.15 are now complete: 4.11b.9 by
+4.11 leaves and board leaves 4.11b.1–4.11b.16 are now complete: 4.11b.9 by
 acceptance, 4.11b.10–4.11b.12, 4.11b.14 and 4.11b.15 by justified `NO_CHANGE`,
-4.11b.13 by contract tightening; **4.11b.16 is next**. The insertion preserves 4.11.12's registered v2 endgame order until
+4.11b.13 by contract tightening, 4.11b.16 by a banked **+1.421%** pooled-PGO
+throughput qualification; **4.11b.17 is next**. The insertion preserves 4.11.12's registered v2 endgame order until
 changed evidence warrants a rerank. Repairs at 4.11b.3/4.11b.5 are implemented;
 the remaining optimizations and cluster qualification are still open. NNUE-only work belongs to 5.2, 5.3, 5.6 and 6.4.
 
@@ -2097,7 +2101,7 @@ recommendations without coupling this roadmap to model generations.
 | 4.11b.13 | CLOSED (tightened) | R2 | Search headroom reserved before the hot path; canonical-move contract pinned | RAR-M38 `f70ac19`; `analysis/history_contracts_2026-09-08.md` | Behaviour-neutral at 7,601,220 / EBF 2.474; five contract tests, clone test proven to fail on regression. No speed claim |
 | 4.11b.14 | CLOSED (`NO_CHANGE`) | R3 | No board region above 6.7%; all three alternatives lose on measured grounds | RAR-M39; RAR-M36 profile; `analysis/representation_2026-09-08.md` | Gate for opening an implementation not met; footprint pinned by const assertions naming this leaf |
 | 4.11b.15 | CLOSED (`NO_CHANGE`) | R3 | All four policies kept with independent dispositions; identity separation pinned | RAR-M40 `df94b7d`; `analysis/draw_policy_2026-09-08.md` | Engine untouched at 7,601,220 / EBF 2.474; no playing change proposed, no bundle rescued |
-| 4.11b.16 | READY_FOR_IMPLEMENTATION | V | Qualify the integrated board candidate | Dependency-held on preceding dispositions | Defined correctness matrix and controlled pooled-PGO performance pass |
+| 4.11b.16 | CLOSED (QUALIFIED) | V | Correctness matrix passed; +1.421% [+0.953%, +1.764%] pooled-PGO throughput banked | RAR-M41; `analysis/cluster_qualification_2026-09-08.md` | Null pair unbiased at +0.222% [-0.130%, +0.630%]; behaviour identical throughout; no Elo claimed |
 | 4.11b.17 | RESEARCH | V | Design and run the playing gate for deliberate behavior changes | Candidate undefined until 4.11b.16 | Freeze prediction, arms, recipe, bracket/cap and stop rule; then `GAME_GATE` decides |
 | 4.11b.18 | READY_FOR_IMPLEMENTATION | V | Refresh only endgame evidence affected by the accepted board head | Dependency-held on 4.11b.17 disposition | Versioned affected evidence and ranking, with unchanged artifacts reused mechanically |
 
@@ -2767,7 +2771,8 @@ recommendations without coupling this roadmap to model generations.
     Debug 282 / release 283, fmt and Clippy clean; `bench 13` unchanged at
     7,601,220 / EBF 2.474. Evidence: `analysis/draw_policy_2026-09-08.md`.
 
-16. **4.11b.16 Qualify the integrated board candidate.** Run debug/release
+16. **4.11b.16 Qualify the integrated board candidate -- DONE, QUALIFIED
+    (RAR-M41, 2026-09-08).** Run debug/release
     board/SEE/parser/draw tests, independent randomized move/state comparison,
     both slider backends and supported-target checks for touched code,
     fmt/Clippy, and feature-off behavior. Rebuild exact production features,
@@ -2778,6 +2783,48 @@ recommendations without coupling this roadmap to model generations.
     host and a gain exceeding the predeclared noise/practical floor to bank
     a small speed claim. Revisit regressions by cohort. Do not infer Elo from
     a cross-engine throughput ratio or suppress a correctness failure.
+
+    **Disposition: QUALIFIED; a speed claim is banked, no Elo is claimed.**
+
+    *Correctness matrix, all passing.* Debug **282** / release **283**;
+    `see_contract` 8/8 including all 41 external fixtures, `see_pins` 6/6,
+    `draw_semantics` 8/8; randomized `board_differential` and `fuzz_lite`;
+    **72** tests under the PEXT slider backend; `cargo fmt --check` and Clippy
+    `--all-features --all-targets` clean; feature-off default throughout; and
+    the production fingerprint **7,601,220 / EBF 2.474** on all six PGO
+    binaries. *Difference from section entry:* exactly one, the 4.11b.5 SEE
+    repair that set the current fingerprint; every later board change preserved
+    it, which the six independent checks confirm. *Not runnable here and stated
+    as such:* the supported-target cross build, because
+    `aarch64-pc-windows-msvc` is not installed and the vendored fathom C code
+    needs a cross `cl.exe`. Touched code is architecture-neutral and the
+    4.11b.14 assertions are upper bounds; this belongs on the ARM64
+    compatibility host.
+
+    *Performance.* Arms are `1d720af` against head — exactly the fused
+    relocation, history reservation and footprint assertions — and both are
+    behaviour-identical, so trees match and NPS at fixed nodes is clean. Six
+    PGO binaries, three per arm; **PGO build variance was verified rather than
+    assumed**, two builds of identical source differing by hash. A **null pair**
+    of same-revision builds measured **+0.222%, 95% [-0.130%, +0.630%]**,
+    containing zero: the instrument is unbiased, and its upper bound became the
+    effective floor. The main comparison over 96 alternating pairs at 2,000,000
+    nodes measured **+1.421%, 95% [+0.953%, +1.764%]**, 91/96 pairs faster, max
+    host busy 9.11% against a 15% gate. Every registered condition passed.
+
+    *Calibration.* Projected half-width ~0.5% from RAR-M33's **measured**
+    1.003%; got **0.405%** — deriving the projection from a measured width
+    rather than a variance model corrected RAR-M33's miss. The estimate exceeds
+    RAR-M33's non-PGO +0.876% but is consistent with it, since that interval
+    ([+0.050%, +2.055%]) contains 1.421%; PGO may amplify the fused path, and
+    this arm also carries `f70ac19`/`20ee114`. The registration's warning that
+    variance might exceed the effect did not materialise.
+
+    *Claimed:* +1.421% [+0.953%, +1.764%] whole-search NPS under production
+    pooled-PGO settings. *Not claimed:* any Elo. The ~2 Elo per 1% NPS constant
+    would suggest ~+2.8 Elo, but that is an inference, not a measurement, and no
+    games were played. The playing gate remains **4.11b.17**. Evidence:
+    `analysis/cluster_qualification_2026-09-08.md`.
 
 17. **4.11b.17 Register and qualify the playing cluster.** The SEE repair and
     any other deliberate search-affecting behavior require one

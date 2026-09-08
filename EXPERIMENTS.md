@@ -689,6 +689,50 @@ release **283**, fmt and Clippy `--all-features --all-targets` clean. No games,
 no Elo, no playing change proposed and no bundle rescued. At this closure point,
 4.11b.16 is next. Evidence: `analysis/draw_policy_2026-09-08.md`.
 
+**RAR-M41 — 4.11b.16 integrated board cluster qualification, COMPLETE
+2026-09-08; QUALIFIED, speed claim banked, no Elo claimed.** Registration frozen
+in `120b8d9` before the run; arms `1d720af` against head `1be34ac`, which is
+exactly the fused relocation, history reservation and footprint assertions. Both
+arms **behaviour-identical**: all six PGO binaries reproduce `bench 13` at
+**7,601,220 / EBF 2.474**, so trees match and fixed-node NPS is a clean
+throughput comparison. Section entry was deliberately not the baseline, because
+the 4.11b.5 SEE repair changed the fingerprint and measuring across it would
+confound throughput with a correctness fix owned by 4.11b.17. **Correctness
+matrix, all passing**: debug **282** / release **283**; `see_contract` 8/8 with
+all 41 external fixtures; `see_pins` 6/6; `draw_semantics` 8/8; randomized
+`board_differential` and `fuzz_lite`; **72** tests under the PEXT slider backend
+(`--cfg rarog_pext -C target-cpu=native`); fmt and Clippy `--all-features
+--all-targets` clean; feature-off default. The one difference from section entry
+is the SEE repair, and six independent fingerprint checks confirm every later
+board change preserved it. The supported-target cross build was **not runnable
+on this host** — `aarch64-pc-windows-msvc` is not installed and the vendored
+fathom C code needs a cross `cl.exe` — and is stated as owed to the ARM64
+compatibility host rather than claimed. **Instrument**: six PGO binaries via
+`cargo xtask build --arch pext --native --pgo`, three per arm, rotating so no
+build carries an arm; PGO build variance **verified, not assumed**, two builds
+of identical source differing by hash. A **null pair** of same-revision builds
+measured **+0.222%, 95% [-0.130%, +0.630%]** — containing zero, so the
+instrument is unbiased, and that upper bound became the effective floor over the
+0.5% practical floor derived from the ~2 Elo per 1% NPS constant. **Main
+comparison**: 96 alternating pairs at 2,000,000 nodes, seed 4119, one discarded
+warm-up per binary, 1T, Hash 16 MiB, rustc 1.97.1 PEXT `target-cpu=native`, no
+affinity pinning; **+1.421%, 95% [+0.953%, +1.764%]**, median 3,606,933 ->
+3,658,176 nps, **91/96** pairs faster, max host busy **9.11%** against a 15%
+gate. Every registered condition passed and the frozen rule banks the claim.
+**Calibration**: projected ~0.5% half-width from RAR-M33's measured 1.003%, got
+**0.405%** — deriving the projection from a measured width rather than a
+variance model corrected RAR-M33's miss; the estimate exceeds RAR-M33's non-PGO
++0.876% but is consistent with it since that interval contains 1.421%, with PGO
+amplification and the two extra commits as unestablished candidate reasons; and
+the registration's pre-stated risk that variance might exceed the effect did not
+materialise. **Claimed**: +1.421% [+0.953%, +1.764%] whole-search NPS under
+production pooled-PGO settings on a verified-idle host with identical behaviour.
+**Not claimed**: any Elo — the constant would suggest ~+2.8 Elo but that is an
+inference, not a measurement, and no games were played. At this closure point,
+4.11b.17 is next and owns the playing gate. Evidence:
+`analysis/cluster_qualification_2026-09-08.md` and
+`tools/results/cluster-411b16/` (ignored, local).
+
 ### Phase-4 registration (RAR-M12, 2026-08-12)
 
 Registered at 4.0, before any Phase-4 code moves. Caps are prospective, derived

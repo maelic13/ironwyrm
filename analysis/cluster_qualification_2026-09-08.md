@@ -110,8 +110,93 @@ construction**. That is a legitimate and honest outcome — it means the effect 
 smaller than the production build's own variance — and it is registered here
 before the fact rather than discovered afterwards.
 
-## Status
+## Status at registration time
 
-Correctness: **complete and passing**. Performance: **prepared, not yet run**.
-No Elo is claimed or inferred, and no cross-engine throughput ratio is involved.
-The playing gate for deliberate behaviour changes remains 4.11b.17.
+Correctness: **complete and passing**. Performance: **prepared, not yet run** —
+superseded by the Result section below, which records the run the maintainer
+then performed. No Elo is claimed or inferred, and no cross-engine throughput
+ratio is involved. The playing gate for deliberate behaviour changes remains
+4.11b.17.
+
+---
+
+# Result — 2026-09-08, **QUALIFIED; speed claim banked**
+
+The maintainer ran the frozen instrument on an idle host. Every mandatory gate
+passed and the registered rule banks the claim.
+
+## Instrument validity — the null pair
+
+Two PGO builds of the **same** revision, `cand-1` against `cand-2`:
+
+| Quantity | Value |
+|---|---|
+| Median | 3,569,193 -> 3,577,103 nps |
+| Gain | **+0.222%** |
+| 95% bootstrap | **[-0.130%, +0.630%]** — **contains zero** |
+| Faster pairs | 19 / 32 |
+| Max host CPU busy | **4.57%** |
+
+The instrument is unbiased: two builds of identical source are indistinguishable
+at 95%. The interval's upper bound, **0.630%**, is the measured noise floor
+including PGO build-to-build variance, and it exceeds the 0.5% practical floor,
+so it becomes the effective floor as registered.
+
+## Main comparison — baseline `1d720af` against head
+
+| Quantity | Value |
+|---|---|
+| Median | 3,606,933 -> 3,658,176 nps |
+| Gain | **+1.421%** |
+| 95% bootstrap | **[+0.953%, +1.764%]** — **excludes zero** |
+| Faster pairs | **91 / 96** |
+| Max host CPU busy | **9.11%** (gate 15%) |
+
+| Registered condition | Outcome |
+|---|---|
+| All six fingerprints 7,601,220 / EBF 2.474 | pass |
+| Every paired root answer identical incl. full PV and ponder | pass, 128 pairs x 20 roots |
+| Host busy <= 15% every arm | pass, max 9.11% |
+| Null interval contains zero | pass |
+| Candidate median higher | pass |
+| 95% interval excludes zero | pass |
+| Estimate exceeds effective floor of 0.630% | pass, +1.421% |
+
+**Verdict: bank the speed claim.**
+
+## Calibration
+
+- **Instrument width: HIT.** Projected roughly 0.5% half-width from RAR-M33's
+  measured 1.003% at 32 pairs / 1.2M nodes; measured **0.405%** on the main
+  comparison and 0.380% on the null. Deriving the projection from a measured
+  half-width rather than a variance model worked, which is the correction
+  RAR-M33's miss called for.
+- **Effect size: larger than the non-PGO estimate, and consistent with it.**
+  RAR-M33 measured +0.876% non-PGO with a 95% interval of [+0.050%, +2.055%].
+  That interval contains this +1.421%, so the two do not conflict; this
+  measurement is simply far more precise. Two reasons the point estimate is
+  higher, neither established here: PGO may amplify the fused relocation path
+  through better inlining and layout, and this candidate additionally contains
+  `f70ac19` and `20ee114`, which RAR-M33's arm did not.
+- **The registered pessimism did not materialise.** The registration warned the
+  effect could prove unbankable if PGO build variance exceeded it. Variance came
+  in at 0.630% against an effect of 1.421%, so it did not.
+
+## What is and is not claimed
+
+**Claimed:** a measured **+1.421% [+0.953%, +1.764%]** whole-search NPS gain for
+the integrated board cluster, under production pooled-PGO build settings, on a
+verified-idle host, with behaviour identical to the baseline throughout.
+
+**Not claimed:** any Elo. At the project's measured ~2 Elo per 1% NPS at STC
+this would suggest roughly +2.8 Elo, but that is an inference from a constant,
+not a measurement, and it is recorded as such. No games were played. The playing
+gate for the deliberate behaviour changes in this section — principally the
+4.11b.5 SEE repair — remains **4.11b.17**.
+
+## Evidence
+
+`tools/results/cluster-411b16/` (ignored, local): `qualify.py` with the frozen
+rule, `qualification.json` with all 128 pairs, `run.log`, `fingerprints.json`,
+the six PGO binaries and their build logs. Binary hashes: candidate
+`051fdfa7`, `32dd3fae`, `d3431afa`; baseline `4b72663d`, `dc34c33d`, `8c4e18fb`.
