@@ -652,6 +652,43 @@ similarity is explicitly not one. No games, no Elo, no NNUE interaction — full
 NNUE stacks remain Phase 5. At this closure point, 4.11b.15 is next. Evidence:
 `analysis/representation_2026-09-08.md`.
 
+**RAR-M40 — 4.11b.15 draw-state policy boundary, COMPLETE 2026-09-08; research
+disposition `NO_CHANGE` on all four policies.** Source `95db376` on `dev`;
+engine source untouched, so `bench 13` holds at **7,601,220 / EBF 2.474**. The
+only change is `tests/draw_semantics.rs` (`df94b7d`). **What RAR-S18
+establishes and what it does not**: arm A (null-clock + cross-null fence +
+root-aware) **−7.21 ± 6.03**, arm B (same without root-aware) **−11.91 ± 7.67**;
+both exclude zero so both bundles were harmful, but **neither isolates a single
+part**, and although B is worse than A by 4.70 the intervals overlap heavily
+(`[−13.24,−1.18]` vs `[−19.58,−4.24]`) so that ordering is unsupported. No
+disposition leans on these as evidence about one component. **(1) Rule-50 clock
+— KEEP, no retry trigger**: mate on the 100th-clock move outranks the draw, four
+tests cover it. **(2) Null-move boundaries — KEEP**: the cross-null question
+resolves structurally rather than on Elo, since `is_repetition` compares the
+full hash including side to move so crossing a null yields only false NEGATIVES,
+and `can_declare_draw` is reached only from `game_result` and the root tablebase
+gate where history holds no nulls; the rejected fence guarded a search scoring
+imprecision, not a legality defect. Retry needs a measured case where a
+cross-null match changes a **root** best move. **(3) Pre-root versus in-search
+repetition — KEEP**, and partial root-awareness already exists: `search.rs:2218`
+guards `ply > 0`, so the root is never scored a draw in search and the rejected
+change was a further one; retry needs a demonstrated **won game** lost to the
+aggressive twofold, not node counts. **(4) Repetition versus TT and evaluation
+keys — KEEP, audited clean, now pinned**: repetition uses the position hash
+only; the TT key is `board.hash` with the clock applied on READ as a mate-score
+correction in `tt::score_from_tt`; the eval cache stores a `halfmove_clock`
+compared for equality (`eval.rs:1254`) as entry validity, not in a hash. Two new
+tests pin this — one asserting positions differing only in the clock share a
+hash, one recording that the scan bound is a **cost** choice because an
+irreversible move permanently changes the hash. **Proving the identity test live
+took three sabotage attempts**: via `check_consistency` (never called by these
+tests) and via `from_fen` before the clock is parsed (still zero, a no-op),
+before mixing it in after parsing failed the test and only it — a sabotage that
+does not visibly change the thing under test proves nothing. Debug **282** /
+release **283**, fmt and Clippy `--all-features --all-targets` clean. No games,
+no Elo, no playing change proposed and no bundle rescued. At this closure point,
+4.11b.16 is next. Evidence: `analysis/draw_policy_2026-09-08.md`.
+
 ### Phase-4 registration (RAR-M12, 2026-08-12)
 
 Registered at 4.0, before any Phase-4 code moves. Caps are prospective, derived

@@ -17,7 +17,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none; RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo. RAR-E13 withdrawn unresolved |
-| Current step | **4.11b.15 — record the draw-state policy boundary**, `RESEARCH / R3` |
+| Current step | **4.11b.16 — qualify the integrated board candidate**, `READY_FOR_IMPLEMENTATION / V` |
 | Instrument state | 4.10 repairs; v2 baselines/floors, budget transfer, label audit, mate-drive closure and conversion-claim correction are complete. Historical v1 pawn-family conversion claims are retained but superseded in place by RAR-M24 |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -73,7 +73,12 @@ alternative loses on measured grounds — six type boards save 48 bytes that wer
 never binding while taxing 208 `pieces()` sites, per-ply state copying would
 cost 33 KiB against the current 3 KiB, and legality is already amortized at
 517:1 fast-to-full check calls.
-The next leaf is **4.11b.15**, `RESEARCH / R3`.
+4.11b.15 is now closed `NO_CHANGE` (RAR-M40): all four draw policies are kept
+with independent dispositions and retry triggers, and the repetition-identity
+separation is pinned by test.
+The next leaf is **4.11b.16**, `READY_FOR_IMPLEMENTATION / V` — the integrated
+board qualification, where 4.11b.9's accepted +0.876% gets its pooled-PGO
+confirmation.
 Actual full-search board cost is profiled; SEE is correctness-verified and
 normalized timing is restored. Cluster playing qualification remains at
 4.11b.17.
@@ -1995,9 +2000,9 @@ which is what exposed the dependency inversion.
 
 **Integrated 2026-09-05 after reconciling the a0aeb68 roadmap.** Finish the
 remaining 4.11 leaves first, then execute this section before 4.12. Those
-4.11 leaves and board leaves 4.11b.1–4.11b.14 are now complete: 4.11b.9 by
-acceptance, 4.11b.10–4.11b.12 and 4.11b.14 by justified `NO_CHANGE`, 4.11b.13 by
-contract tightening; **4.11b.15 is next**. The insertion preserves 4.11.12's registered v2 endgame order until
+4.11 leaves and board leaves 4.11b.1–4.11b.15 are now complete: 4.11b.9 by
+acceptance, 4.11b.10–4.11b.12, 4.11b.14 and 4.11b.15 by justified `NO_CHANGE`,
+4.11b.13 by contract tightening; **4.11b.16 is next**. The insertion preserves 4.11.12's registered v2 endgame order until
 changed evidence warrants a rerank. Repairs at 4.11b.3/4.11b.5 are implemented;
 the remaining optimizations and cluster qualification are still open. NNUE-only work belongs to 5.2, 5.3, 5.6 and 6.4.
 
@@ -2091,7 +2096,7 @@ recommendations without coupling this roadmap to model generations.
 | 4.11b.12 | CLOSED (`NO_CHANGE`) | R2 | King lookup is 0.502%; a 0.25% ceiling is below instrument resolution | RAR-M37; RAR-M36 refreshed profile | Closed without a floor, which would have been post-hoc: the best possible version cannot be distinguished from zero by any budget used here |
 | 4.11b.13 | CLOSED (tightened) | R2 | Search headroom reserved before the hot path; canonical-move contract pinned | RAR-M38 `f70ac19`; `analysis/history_contracts_2026-09-08.md` | Behaviour-neutral at 7,601,220 / EBF 2.474; five contract tests, clone test proven to fail on regression. No speed claim |
 | 4.11b.14 | CLOSED (`NO_CHANGE`) | R3 | No board region above 6.7%; all three alternatives lose on measured grounds | RAR-M39; RAR-M36 profile; `analysis/representation_2026-09-08.md` | Gate for opening an implementation not met; footprint pinned by const assertions naming this leaf |
-| 4.11b.15 | RESEARCH | R3 | Which draw/null/repetition contracts should remain, change or await a retry trigger? | Historical rejected combinations; draw tests; 4.11b.14 | Independent dispositions and any new falsifiable candidate; no bundled policy rescue |
+| 4.11b.15 | CLOSED (`NO_CHANGE`) | R3 | All four policies kept with independent dispositions; identity separation pinned | RAR-M40 `df94b7d`; `analysis/draw_policy_2026-09-08.md` | Engine untouched at 7,601,220 / EBF 2.474; no playing change proposed, no bundle rescued |
 | 4.11b.16 | READY_FOR_IMPLEMENTATION | V | Qualify the integrated board candidate | Dependency-held on preceding dispositions | Defined correctness matrix and controlled pooled-PGO performance pass |
 | 4.11b.17 | RESEARCH | V | Design and run the playing gate for deliberate behavior changes | Candidate undefined until 4.11b.16 | Freeze prediction, arms, recipe, bracket/cap and stop rule; then `GAME_GATE` decides |
 | 4.11b.18 | READY_FOR_IMPLEMENTATION | V | Refresh only endgame evidence affected by the accepted board head | Dependency-held on 4.11b.17 disposition | Versioned affected evidence and ranking, with unchanged artifacts reused mechanically |
@@ -2693,7 +2698,8 @@ recommendations without coupling this roadmap to model generations.
     rather than relocating it. Donor similarity is not a trigger. Evidence:
     `analysis/representation_2026-09-08.md`.
 
-15. **4.11b.15 Record the draw-state policy boundary.** Audit rule-50 clock,
+15. **4.11b.15 Record the draw-state policy boundary -- DONE, `NO_CHANGE`
+    (RAR-M40, 2026-09-08).** Audit rule-50 clock,
     null-move boundaries, pre-root versus in-search repetition, and repetition
     keys versus TT/evaluation keys as separate contracts. Mate at clock 100
     already correctly outranks the draw: preserve its passing tests.
@@ -2705,6 +2711,61 @@ recommendations without coupling this roadmap to model generations.
     playing change gets its own dependency-complete registration, not an
     automatic Stockfish/Reckless port. Never put rule-50 buckets into the
     repetition identity merely because a TT key might use them.
+
+    **Disposition: `NO_CHANGE` on all four policies; two contracts pinned by
+    test in `df94b7d`. Engine source untouched, fingerprint holds.**
+
+    *What RAR-S18 establishes and what it does not.* Arm A (null-clock +
+    cross-null fence + root-aware) measured **−7.21 ± 6.03**; arm B (the same
+    without root-aware) measured **−11.91 ± 7.67**. Both exclude zero, so both
+    bundles were harmful. **Neither isolates a single part.** B is worse than A
+    by 4.70, which might suggest root-awareness was the least harmful
+    component, but the intervals overlap heavily (`[−13.24, −1.18]` against
+    `[−19.58, −4.24]`) so that ordering is not supported. No disposition below
+    leans on these numbers as evidence about one part.
+
+    **1. Rule-50 clock — KEEP, no retry trigger.** Mate on the 100th-clock move
+    outranks the draw; four tests cover mate, check-with-escape, stalemate and
+    mate-in-one at clock 99. Correctness is not a tuning surface.
+
+    **2. Null-move boundaries — KEEP.** Nulls increment the clock and clear en
+    passant. The cross-null question resolves on structure rather than Elo:
+    `is_repetition` compares the full hash including side to move, so crossing a
+    null can only produce a false NEGATIVE, never a false positive; and
+    `can_declare_draw` is reached only from `game_result` and the root
+    tablebase gate, where history contains no nulls. The rejected fence
+    therefore guarded a scoring imprecision inside search, not a legality
+    defect. *Retry trigger:* a measured case where a cross-null match changes a
+    **root** best move, with its own registration. Semantics and donor ports
+    are not triggers.
+
+    **3. Pre-root versus in-search repetition — KEEP; partial root-awareness
+    already exists.** The aggressive twofold is a deliberate strength heuristic;
+    the arbiter keeps `is_repetition(3)`. The guard at `search.rs:2218` is
+    `ply > 0`, so the root is already never scored a draw in search — the
+    rejected change was a further one. *Retry trigger:* a demonstrated case
+    where the twofold costs a **won game**; node counts do not qualify.
+
+    **4. Repetition versus TT and evaluation keys — KEEP, audited clean, now
+    pinned.** Three distinct identities: repetition uses the position hash only;
+    the TT key is `board.hash` with the clock applied on READ as a mate-score
+    correction in `tt::score_from_tt`; the evaluation cache stores a
+    `halfmove_clock` compared for equality (`eval.rs:1254`) as entry validity,
+    not in any hash. The prohibition holds and the TT key does not use rule-50
+    buckets either. A test now asserts two positions differing only in the clock
+    share one hash. A second test records that the scan bound is a **cost**
+    choice: nulls advance the clock so the bound can reach past an irreversible
+    move, which is harmless because such a move changes piece placement
+    permanently and those positions carry a different hash.
+
+    *Proving the tests live took three sabotage attempts* — via
+    `check_consistency` (a path the draw tests never call) and via `from_fen`
+    before the clock is parsed (still zero, so a no-op) — before mixing the
+    clock in after parsing failed the test, and only it. A sabotage that does
+    not visibly change the thing under test proves nothing.
+
+    Debug 282 / release 283, fmt and Clippy clean; `bench 13` unchanged at
+    7,601,220 / EBF 2.474. Evidence: `analysis/draw_policy_2026-09-08.md`.
 
 16. **4.11b.16 Qualify the integrated board candidate.** Run debug/release
     board/SEE/parser/draw tests, independent randomized move/state comparison,

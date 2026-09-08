@@ -15,6 +15,17 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
+- **2026-09-08 — PLAN 4.11b.15 closed `NO_CHANGE`, RAR-M40:** all four draw
+  policies kept, each dispositioned independently with its own retry trigger.
+  RAR-S18's two losing arms do not isolate any single part, and that is stated
+  rather than glossed. Cross-null repetition resolves structurally: the full
+  hash includes side to move so crossing a null yields only false negatives,
+  and the arbiter path never sees nulls at all. Partial root-awareness already
+  exists via the `ply > 0` guard. Key separation audited clean and now pinned
+  by two tests; proving the identity test live took three sabotage attempts.
+  Engine untouched at 7,601,220 / EBF 2.474; debug 282 / release 283, fmt and
+  Clippy clean. No games. 4.11b.16 is next.
+
 - **2026-09-08 — PLAN 4.11b.14 closed `NO_CHANGE`, RAR-M39:** no larger
   representation change is justified. No board region exceeds 6.7%, so the
   leaf's own gate for opening an implementation is not met. Six type boards
