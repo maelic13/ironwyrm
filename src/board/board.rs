@@ -80,6 +80,31 @@ struct UnmakeInfo {
     checkers: Bitboard,
 }
 
+/// Hot-struct footprint, measured for RAR-M39 / 4.11b.14 and pinned here.
+///
+/// 4.11b.14 decided against replacing the 12 colour-piece bitboards with six
+/// type boards plus colours, and against copying per-ply state instead of the
+/// compact `UnmakeInfo`. Both arms of that decision are footprint arguments, so
+/// the footprint is guarded rather than left to drift:
+///
+/// - `Board` is 264 bytes. The six-board variant would save 48 and neither
+///   figure is near any cache boundary that matters, while the extra mask would
+///   land on 208 `pieces()` call sites, 102 of them inside evaluation.
+/// - `UnmakeInfo` is 24 bytes, so a 128-ply search stack costs 3 KiB and stays
+///   comfortably in L1. Copying whole board state per ply instead would cost
+///   128 x 264 = 33 KiB and leave it.
+///
+/// Upper bounds, not equalities: padding may differ between supported targets,
+/// and only growth would invalidate the decision.
+const _: () = assert!(
+    core::mem::size_of::<Board>() <= 264,
+    "Board grew past the 264 bytes 4.11b.14 measured; re-open the PLAN 4.11b.14 representation comparison before accepting the growth"
+);
+const _: () = assert!(
+    core::mem::size_of::<UnmakeInfo>() <= 24,
+    "UnmakeInfo grew past 24 bytes; a 128-ply stack no longer costs 3 KiB and PLAN 4.11b.14's per-ply restoration argument needs re-checking"
+);
+
 const NO_PIECE: u8 = 255;
 // 9.0: padded 12 → 16 so the hot mailbox decode can index with `& 15` — the
 // bounds check elides and no unsafe is needed. Entries 12–15 are unreachable
