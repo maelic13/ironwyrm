@@ -98,14 +98,63 @@ def parse_report(path: Path, module_name: str) -> tuple[int, list[ExclusiveHit]]
         raise ValueError(f"{path}: expected exactly one {module_name} process row")
     total_samples = int(process_matches[0][2].replace(",", ""))
 
+    # Resolve columns by HEADER NAME, never by position, and refuse a schema
+    # this tool cannot attribute correctly.
+    #
+    # xperf emits two different exclusive-hits schemas:
+    #
+    #   unsymbolized  function | hits | percent | a | b | ADDRESS
+    #   symbolized    function name | exclusivehits | totalpercent |
+    #                 inclusivehits | BASE | LIMIT | size
+    #
+    # This tool is built for the first one: one row per sampled ADDRESS, which
+    # is what lets llvm-symbolizer recover a complete inline chain and charge a
+    # hot inlined helper to its board caller. Index 5 is the address there, but
+    # it is `limit` in the symbolized schema -- the byte one past the end of a
+    # function -- so a fixed index silently resolved the wrong location and
+    # produced a complete-looking report with wrong shares.
+    #
+    # The symbolized schema cannot be rescued by reading `base` instead. It has
+    # one row per FUNCTION, so board work inlined into a large search function
+    # is charged to that function and never appears under its own region. That
+    # under-attribution is real: it read make/unmake at 3.59% where RAR-M33's
+    # measured speedup independently requires about 6.3%. Refuse it rather than
+    # emit a plausible number.
+    header = next(
+        (
+            row
+            for row in exclusive_rows
+            if row and row[0].strip().casefold() in ("function", "function name")
+        ),
+        None,
+    )
+    if header is None:
+        raise ValueError(f"{path}: exclusive-hits table has no header row")
+    columns = {name.strip().casefold(): index for index, name in enumerate(header)}
+    if "address" not in columns:
+        raise ValueError(
+            f"{path}: this report is per-function (columns {header!r}), not "
+            "per-address, so inline attribution is unavailable and the shares "
+            "would be wrong. Regenerate the butterfly WITHOUT xperf's -symbols "
+            "so each sampled address gets its own row, then re-run."
+        )
+    count_column = next(
+        (columns[name] for name in ("hits", "exclusivehits") if name in columns), 1
+    )
+    address_column = columns["address"]
+
     hits: list[ExclusiveHit] = []
     prefix = f"{module_name}!".casefold()
     for row in exclusive_rows:
-        if len(row) < 6 or not row[0].casefold().startswith(prefix):
+        if row is header:
+            continue
+        if len(row) <= max(count_column, address_column):
+            continue
+        if not row[0].casefold().startswith(prefix):
             continue
         try:
-            count = int(row[1].replace(",", ""))
-            rva = int(row[5], 16)
+            count = int(row[count_column].replace(",", ""))
+            rva = int(row[address_column], 16)
         except ValueError as exc:
             raise ValueError(f"{path}: malformed exclusive row {row!r}") from exc
         hits.append(ExclusiveHit(rva=rva, hits=count))

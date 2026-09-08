@@ -147,31 +147,52 @@ A refresh of this profile at `cf10a46` produced impossible region shares —
 with `core::num::trailing_zeros` as a 38% exclusive leaf. The numbers were
 discarded and are not recorded anywhere as measurements.
 
-**Root cause.** `dbghelp` searches the profiled image's own directory before
-`_NT_SYMBOL_PATH`. Two non-matching `rarog.pdb` files could win that race:
+**First diagnosis was WRONG and is retracted.** This document briefly blamed a
+stale `rarog.pdb` shadowing the correct one in `dbghelp`'s search order. That is
+not what happened: xperf symbolized correctly the whole time. Its own report
+already named `rarog::eval::Evaluator::evaluate` with the same 18,503 exclusive
+hits that the broken summary mislabelled `core::num::trailing_zeros`. Placing
+the matching PDB beside the executable changed nothing about the reports, which
+came back byte-identical. The PDB hygiene committed for that wrong reason is
+harmless and kept, but it fixed nothing.
 
-1. a stale copy left in `tools/results/board-search-profile/` by an earlier run, and
-2. `target/release/rarog.pdb`, which held the **diagnostic** build's symbols
-   because the wrapper built diag *after* production.
+**Actual root cause: a report-schema mismatch.** xperf emits two different
+exclusive-hits tables.
 
-Both are GUID-mismatched against the profiled executable, verified by comparing
-the PE debug-directory GUID bytes. xperf therefore grouped samples under another
-build's function boundaries. The failure is silent: the report still looks
-complete, resolves 100% of engine samples, and carries plausible Rarog symbol
-names. Only the shares are wrong.
+| mode | columns |
+|---|---|
+| without `-symbols` | `function, hits, percent, a, b, `**`address`** |
+| with `-symbols` | `function name, exclusivehits, totalpercent, inclusivehits, `**`base`**`, limit, size` |
 
-**Detection.** Not by inspection — by arithmetic against an independent result.
-RAR-M33 measured **+0.876%** whole-search from an ~18% local make/unmake gain,
-which requires that region to be about **6.3%** of process time. A 0.756% region
-could contribute at most 0.12%. That contradiction is what condemned the run.
+`summarize_board_search_etw.py` is built for the first: **one row per sampled
+address**, which is what lets it recover a complete inline chain and charge a
+hot inlined helper to its board *caller* rather than its leaf. It read a fixed
+index 5, correct for that schema. The ETW runner had since been changed to pass
+`-symbols`, which switches to the second schema, where index 5 is `limit` — the
+byte one past the end of each function. Every lookup therefore resolved into the
+next function or into padding, and the tool reported a complete-looking result
+with 100% of samples "resolved".
 
-**This record's own numbers cross-check as sound.** RAR-M30 measured make/unmake
-at **7.143%**, against the **6.3%** implied independently by RAR-M33's speedup.
-Those agree to well within profiling error, so the shares in this document stand
-and were not produced under the defect.
+**Reading `base` instead does not rescue it.** The symbolized schema has one row
+per *function*, so board work inlined into a large search function is charged to
+that function and never appears under its own region. Corrected to `base`, the
+run read make/unmake at **3.59%**, against the **6.3%** that RAR-M33's measured
+speedup independently requires. Still wrong, just less obviously.
 
-**Fix.** `board_search_profile_etw.ps1` now copies the matching PDB beside the
-executable, overwriting any stale one, and fails loudly if it cannot. The
-wrapper now builds diagnostic first and production last, so the PDB left in
-`target/release` matches the binary that is actually profiled. A corrected
-report can be regenerated from the existing `.etl` files without re-capturing.
+**Why this record is unaffected.** RAR-M30 resolved **151,142 individual engine
+samples** — per-address rows, the schema the tool supports. Today's capture
+produced only ~562 function rows for the same workload. RAR-M30 also
+cross-checks against an independent result: its **7.143%** make/unmake matches
+the **6.3%** implied by RAR-M33's +0.876% whole-search gain from an ~18% local
+speedup. **The shares in this document stand, and no refreshed shares have been
+recorded from the 2026-09-08 capture.**
+
+**Fix.** `summarize_board_search_etw.py` now resolves its columns by header
+name and **refuses** the per-function schema outright, naming the remedy, rather
+than emitting a plausible number from it. `board_search_profile_etw.ps1` now
+writes two reports per cohort: the per-address one the summarizer consumes, and
+a `-symbols` one kept alongside for human reading. Both changes are covered by
+`test_summarize_board_search_etw.py` (5/5) and `test_board_search_profile.py`.
+
+A corrected profile needs only report regeneration from the existing `.etl`
+files — no re-capture — because the raw samples were always fine.
