@@ -98,28 +98,27 @@ def parse_report(path: Path, module_name: str) -> tuple[int, list[ExclusiveHit]]
         raise ValueError(f"{path}: expected exactly one {module_name} process row")
     total_samples = int(process_matches[0][2].replace(",", ""))
 
-    # Resolve columns by HEADER NAME, never by position, and refuse a schema
-    # this tool cannot attribute correctly.
+    # xperf emits the SAME column header for two very different tables, so the
+    # schema must be detected from the DATA, not the header.
     #
-    # xperf emits two different exclusive-hits schemas:
+    #   per-address  base == limit, size == 0  -- one row per sampled address,
+    #                names are `***unknown***`. This is what this tool needs:
+    #                it recovers the symbols itself, with the full inline chain,
+    #                so a hot inlined helper is charged to its board caller.
     #
-    #   unsymbolized  function | hits | percent | a | b | ADDRESS
-    #   symbolized    function name | exclusivehits | totalpercent |
-    #                 inclusivehits | BASE | LIMIT | size
+    #   per-function base <  limit, size >  0  -- xperf resolved symbols and
+    #                aggregated by function. Board work inlined into a large
+    #                search function is then charged to that function and never
+    #                appears under its own region.
     #
-    # This tool is built for the first one: one row per sampled ADDRESS, which
-    # is what lets llvm-symbolizer recover a complete inline chain and charge a
-    # hot inlined helper to its board caller. Index 5 is the address there, but
-    # it is `limit` in the symbolized schema -- the byte one past the end of a
-    # function -- so a fixed index silently resolved the wrong location and
-    # produced a complete-looking report with wrong shares.
+    # Reading a fixed index happened to work on the per-address table because
+    # base == limit there. On the per-function table index 5 is `limit`, the
+    # byte one past the end of each function, so every lookup resolved into the
+    # next function or into padding while still reporting 100% resolved.
     #
-    # The symbolized schema cannot be rescued by reading `base` instead. It has
-    # one row per FUNCTION, so board work inlined into a large search function
-    # is charged to that function and never appears under its own region. That
-    # under-attribution is real: it read make/unmake at 3.59% where RAR-M33's
-    # measured speedup independently requires about 6.3%. Refuse it rather than
-    # emit a plausible number.
+    # The per-function table is NOT usable by correcting the column: it read
+    # make/unmake at 3.59% where RAR-M33's measured speedup independently
+    # requires about 6.3%. Refuse it and say how to regenerate.
     header = next(
         (
             row
@@ -131,20 +130,26 @@ def parse_report(path: Path, module_name: str) -> tuple[int, list[ExclusiveHit]]
     if header is None:
         raise ValueError(f"{path}: exclusive-hits table has no header row")
     columns = {name.strip().casefold(): index for index, name in enumerate(header)}
-    if "address" not in columns:
-        raise ValueError(
-            f"{path}: this report is per-function (columns {header!r}), not "
-            "per-address, so inline attribution is unavailable and the shares "
-            "would be wrong. Regenerate the butterfly WITHOUT xperf's -symbols "
-            "so each sampled address gets its own row, then re-run."
-        )
     count_column = next(
         (columns[name] for name in ("hits", "exclusivehits") if name in columns), 1
     )
-    address_column = columns["address"]
+
+    if "address" in columns:
+        # Legacy six-column form; the address is explicit.
+        address_column = columns["address"]
+        size_column = None
+    else:
+        for required in ("base", "limit"):
+            if required not in columns:
+                raise ValueError(
+                    f"{path}: exclusive-hits header lacks {required!r}; got {header!r}"
+                )
+        address_column = columns["base"]
+        size_column = columns.get("size")
 
     hits: list[ExclusiveHit] = []
     prefix = f"{module_name}!".casefold()
+    aggregated = 0
     for row in exclusive_rows:
         if row is header:
             continue
@@ -155,9 +160,22 @@ def parse_report(path: Path, module_name: str) -> tuple[int, list[ExclusiveHit]]
         try:
             count = int(row[count_column].replace(",", ""))
             rva = int(row[address_column], 16)
+            if size_column is not None and len(row) > size_column:
+                if int(row[size_column], 16) != 0:
+                    aggregated += count
         except ValueError as exc:
             raise ValueError(f"{path}: malformed exclusive row {row!r}") from exc
         hits.append(ExclusiveHit(rva=rva, hits=count))
+
+    if aggregated:
+        raise ValueError(
+            f"{path}: this report is aggregated PER FUNCTION ({aggregated} hits in "
+            "rows with a non-zero size), so board work inlined into a search "
+            "function is charged to that function and the shares would be wrong. "
+            "Regenerate the butterfly with xperf unable to resolve symbols "
+            "(empty _NT_SYMBOL_PATH and empty _NT_SYMCACHE_PATH, no PDB beside "
+            "the executable) so each sampled address gets its own row."
+        )
 
     if not hits or sum(item.hits for item in hits) >= total_samples:
         if not hits:
@@ -262,7 +280,7 @@ def mechanisms(functions: list[str]) -> list[str]:
     """Return overlapping leaf-specific mechanisms visible in inline context."""
     joined = "\n".join(functions).casefold()
     markers = {
-        "piece_relocation_helpers": ("::remove_piece", "::add_piece"),
+        "piece_relocation_helpers": ("::remove_piece", "::add_piece", "::move_piece"),
         "compute_pinned": ("::compute_pinned",),
         "check_info": ("::check_info",),
         "gives_check": ("::gives_check",),

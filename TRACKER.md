@@ -15,6 +15,19 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
+- **2026-09-08 — board profile recipe recovered and refreshed, RAR-M36:**
+  RAR-M30's per-sample attribution turned out to be a side effect of xperf
+  failing to find the PDB, which `952711f` then fixed — silently switching the
+  report to per-function aggregation and making the summarizer resolve function
+  END addresses while reporting "100% resolved". The recipe is to deny xperf
+  symbols deliberately (empty symbol path AND symcache AND no adjacent PDB).
+  Refreshed shares at head: make/unmake 6.677% (was 7.143%), SEE 5.239%,
+  generation 6.556%, check queries 5.179%, king square lookup 0.502%. The drop
+  in make/unmake is 4.11b.9, measured by an instrument that knew nothing about
+  it. A stale `piece_relocation_helpers` marker was fixed for `::move_piece`.
+  Per-function view shows `see_recapturer` 4.35% vs `see_ge_impl` 0.87%,
+  supporting RAR-M35's redirect. No engine change, no games.
+
 - **2026-09-08 — PLAN 4.11b.11 closed `NO_CHANGE`, RAR-M35:** incremental SEE
   attacker maintenance was built, proven correct and still rejected. `bench 13`
   exact, all 41 external fixtures passing, and a debug equivalence assertion on

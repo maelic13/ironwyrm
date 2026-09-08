@@ -92,13 +92,23 @@ $env:_NT_SYMBOL_PATH = $symbolDir
 # not visible in the output: the report still looks complete, with plausible
 # Rarog symbols, and only the region shares are wrong.  Overwrite that slot with
 # the matching PDB, and fail loudly if a non-matching one cannot be replaced.
+# A PDB sitting beside the executable is found by dbghelp before anything else,
+# which would let xperf resolve symbols for the per-address pass below and
+# silently switch it to the per-function schema.  Keep that slot clear.
 $exeDir = Split-Path -Parent $exePath
 $adjacentPdb = Join-Path $exeDir "rarog.pdb"
-Copy-Item -LiteralPath $pdbPath -Destination $adjacentPdb -Force
-if ((Get-FileHash -Algorithm SHA256 -LiteralPath $adjacentPdb).Hash -ne
-    (Get-FileHash -Algorithm SHA256 -LiteralPath $pdbPath).Hash) {
-    throw "could not place the matching PDB beside $exePath; refusing to symbolize"
+if (Test-Path -LiteralPath $adjacentPdb) {
+    Remove-Item -LiteralPath $adjacentPdb -Force
 }
+
+# Denying xperf symbols is deliberate, not a workaround.  With no PDB and no
+# symcache it emits one row per sampled ADDRESS; summarize_board_search_etw.py
+# then recovers each address with llvm-symbolizer and gets the complete inline
+# chain, which is what charges an inlined helper to its board caller.  Let xperf
+# resolve instead and it aggregates by function, losing that attribution.
+$blindSymbols = Join-Path $outputPath "no-symbols"
+$blindCache = Join-Path $outputPath "no-symcache"
+New-Item -ItemType Directory -Force -Path $blindSymbols, $blindCache | Out-Null
 $processName = Split-Path $exePath -Leaf
 $cohorts = @("opening", "middlegame", "check-heavy", "promotion", "sparse-endgame")
 
@@ -133,17 +143,35 @@ try {
             throw "reports-only mode needs the existing trace $etl"
         }
 
+        # Per-address report: the summarizer's input.  Symbols denied on purpose.
+        $env:_NT_SYMBOL_PATH = $blindSymbols
+        $env:_NT_SYMCACHE_PATH = $blindCache
         & $xperf -i $etl -o $report -symbols -a stack -butterfly 100 -process $processName
+        if ($LASTEXITCODE -ne 0) { throw "xperf address report failed for $cohort ($LASTEXITCODE)" }
+
+        # Symbolized report: human-readable per-function view, kept alongside.
+        $env:_NT_SYMBOL_PATH = $symbolDir
+        Remove-Item Env:\_NT_SYMCACHE_PATH -ErrorAction SilentlyContinue
+        $symbolReport = Join-Path $outputPath "$cohort-butterfly-symbols.txt"
+        & $xperf -i $etl -o $symbolReport -symbols -a stack -butterfly 100 -process $processName
         if ($LASTEXITCODE -ne 0) { throw "xperf symbol report failed for $cohort ($LASTEXITCODE)" }
         if (-not (Test-Path -LiteralPath $report)) { throw "missing report for $cohort" }
         $reportSize = (Get-Item -LiteralPath $report).Length
         if ($reportSize -lt 10000) {
             throw "report for $cohort is suspiciously small ($reportSize bytes); check symbols"
         }
+        # Each report is checked against its OWN contract.  The per-address one
+        # must be unresolved and finely grained; the symbolized one must have
+        # named frames, which is the only place a PDB failure is detectable.
         $reportText = Get-Content -LiteralPath $report -Raw
+        if ($reportText -notmatch [regex]::Escape($processName + "!***unknown***")) {
+            throw ("per-address report for $cohort resolved symbols; xperf aggregated " +
+                   "by function and inline attribution is lost")
+        }
+        $symbolText = Get-Content -LiteralPath $symbolReport -Raw
         $modulePattern = [regex]::Escape($processName) + "</a>!<a [^>]+>(?!\*\*\*unknown\*\*\*)"
-        if ($reportText -notmatch $modulePattern) {
-            throw "report for $cohort has no named Rarog frames; PDB resolution failed"
+        if ($symbolText -notmatch $modulePattern) {
+            throw "symbolized report for $cohort has no named Rarog frames; PDB resolution failed"
         }
         Write-Host ("{0,-16} report {1:N0} bytes" -f $cohort, $reportSize)
     }
@@ -153,6 +181,10 @@ finally {
         & $xperf -stop 2>&1 | Out-Null
         & $xperf -setprofint 10000 2>&1 | Out-Null
     }
+    # xperf is done; restore the PDB beside the executable under its embedded
+    # name so summarize_board_search_etw.py can symbolize.  llvm-symbolizer
+    # resolves by the name in the PE debug directory, not by --pdb.
+    Copy-Item -LiteralPath $pdbPath -Destination $adjacentPdb -Force
 }
 
 Write-Host "ETW profile complete: $outputPath"

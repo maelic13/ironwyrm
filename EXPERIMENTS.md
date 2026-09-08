@@ -522,6 +522,42 @@ closure point, 4.11b.12 is next. Evidence:
 `analysis/see_kernel_2026-09-08.md` and `tools/results/see-kernel-411b11/`
 (ignored, local).
 
+**RAR-M36 — full-search board profile refreshed at head, COMPLETE 2026-09-08.**
+Source `2d621ff`; production `a3cca8dc...`, PDB `c61e93e3...`, 162,846 process
+samples, five cohorts, 600,000 nodes, 5 repeats. **Recipe recovered.** RAR-M30's
+per-sample attribution was a side effect of xperf failing to discover the PDB;
+`952711f` fixed that discovery and silently switched the report to per-function
+aggregation, where board work inlined into `negamax`/`evaluate` is charged to
+those functions and `summarize_board_search_etw.py` — reading a fixed column
+that had been correct for the per-address table — resolved `limit`, the byte one
+past each function's end, while reporting "100% of engine samples resolved". The
+working recipe is to deny xperf symbols on purpose: empty `_NT_SYMBOL_PATH`,
+empty `_NT_SYMCACHE_PATH`, and no `rarog.pdb` beside the executable; an empty
+symbol path alone is insufficient because xperf reuses its symcache and dbghelp
+finds an adjacent PDB first. The PDB must then be restored beside the executable
+for llvm-symbolizer, which resolves by the embedded name rather than `--pdb`.
+Both directions are now detected from the DATA (`base == limit, size == 0` is
+per-address and accepted; non-zero size is per-function and refused with the
+regeneration recipe). Refreshed shares against RAR-M30: generation/legality
+**6.556%** (6.751%), make/unmake **6.677%** (7.143%), SEE **5.239%** (5.304%),
+check queries **5.179%** (5.177%); mechanisms piece relocation **2.752%**
+(2.998%), gives_check **1.654%**, check_info **1.026%** (0.912%), compute_pinned
+**0.979%** (1.003%), king square lookup **0.502%** (0.544%). **The instrument
+validates independently**: RAR-M33's +0.876% whole-search from an ~18% local
+make/unmake gain requires that region to be ~6.3%, and this profile reads 6.677%
+against RAR-M30's 7.143% — the drop is 4.11b.9, measured by a second instrument
+that knew nothing about it, while check_queries reproduces to within 0.002pp. A
+**stale mechanism marker** was found and fixed: `piece_relocation_helpers` keyed
+only on `::remove_piece`/`::add_piece` and under-read at 1.419% after 4.11b.9
+fused the QUIET path into `Board::move_piece`; with `::move_piece` added it
+reads 2.752%. The symbolized per-function view additionally shows
+`see_recapturer` at **4.35%** exclusive against `see_ge_impl` at **0.87%** —
+independent measured support for RAR-M35's conclusion that SEE cost sits in the
+per-candidate king-legality test, not the attacker set. It cannot split the two
+`attackers_to_color` calls inside `see_recapturer`; that needs a counter or an
+`#[inline(never)]` probe. No engine change, no games, no Elo claim. Evidence:
+`analysis/board_search_profile_2026-09-08.md`.
+
 ### Phase-4 registration (RAR-M12, 2026-08-12)
 
 Registered at 4.0, before any Phase-4 code moves. Caps are prospective, derived

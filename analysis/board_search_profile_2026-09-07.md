@@ -202,15 +202,11 @@ all 45,909 engine hits, base `0x0`, limit = image size. That is strictly less
 attribution than the symbolized report, so `board_search_profile_etw.ps1` was
 reverted to emitting the single `-symbols` report it had before.
 
-**Open question, not yet answered.** How RAR-M30 obtained per-sample attribution
-from this toolchain is unresolved. Its own tests fixture shows a six-column
-schema ending in `address`, which today's xperf does not emit for either
-invocation tried. Until that recipe is recovered, **this profile cannot be
-refreshed**, and no refreshed shares exist.
-
-**That blocks nothing right now.** RAR-M30's shares stand on their own
-cross-check, and the open board leaves do not depend on a refresh: 4.11b.12's
-king-square question is already answered at 0.544% by RAR-M30, and the geometry
-work of 4.11b.10/4.11b.11 changed nothing in that region. Recovering the recipe
-is tooling work to be scheduled on its own merits, not a prerequisite the
-roadmap is waiting on.
+**RESOLVED 2026-09-08 — the recipe was recovered.** RAR-M30's per-sample
+attribution was a side effect of xperf being unable to find the PDB, which
+`952711f` then "fixed". Denying xperf symbols deliberately — empty
+`_NT_SYMBOL_PATH`, empty `_NT_SYMCACHE_PATH`, and no `rarog.pdb` beside the
+executable — restores the per-address table this tool is built for. The profile
+has been refreshed at head and reproduces this document's shares closely; see
+`analysis/board_search_profile_2026-09-08.md` (RAR-M36). The shares here remain
+valid for `02420dc` and are superseded only for the current head.
