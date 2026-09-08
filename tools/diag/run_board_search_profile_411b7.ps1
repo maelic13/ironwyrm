@@ -81,16 +81,20 @@ $productionPdb = Join-Path $runDir "rarog-production.pdb"
 $diagExe = Join-Path $runDir "rarog-diag.exe"
 $env:CARGO_PROFILE_RELEASE_DEBUG = "2"
 try {
+    # Diagnostic FIRST, production LAST.  Whichever build runs last leaves its
+    # PDB at target\release\rarog.pdb, and that file can shadow the correct one
+    # during symbolization.  Profiling uses the production binary, so production
+    # must be the build that owns that slot.
+    Invoke-LoggedNative "exact diagnostic build" "$runDir\build-diag.log" {
+        & cargo build --release --no-default-features --features diag
+    }
+    Copy-Item -LiteralPath "target\release\rarog.exe" -Destination $diagExe -Force
+
     Invoke-LoggedNative "exact production build" "$runDir\build-production.log" {
         & cargo build --release --no-default-features
     }
     Copy-Item -LiteralPath "target\release\rarog.exe" -Destination $productionExe -Force
     Copy-Item -LiteralPath "target\release\rarog.pdb" -Destination $productionPdb -Force
-
-    Invoke-LoggedNative "exact diagnostic build" "$runDir\build-diag.log" {
-        & cargo build --release --no-default-features --features diag
-    }
-    Copy-Item -LiteralPath "target\release\rarog.exe" -Destination $diagExe -Force
 }
 finally {
     Remove-Item Env:\CARGO_PROFILE_RELEASE_DEBUG -ErrorAction SilentlyContinue

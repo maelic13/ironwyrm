@@ -85,6 +85,20 @@ New-Item -ItemType Directory -Force -Path $symbolDir | Out-Null
 # multi-megabyte reports containing only `***unknown***` Rarog frames.
 Copy-Item -LiteralPath $pdbPath -Destination (Join-Path $symbolDir "rarog.pdb") -Force
 $env:_NT_SYMBOL_PATH = $symbolDir
+
+# dbghelp searches the image's own directory BEFORE _NT_SYMBOL_PATH, so a stale
+# or wrong-build `rarog.pdb` sitting beside the executable silently wins and the
+# whole report is grouped under another build's function boundaries.  That is
+# not visible in the output: the report still looks complete, with plausible
+# Rarog symbols, and only the region shares are wrong.  Overwrite that slot with
+# the matching PDB, and fail loudly if a non-matching one cannot be replaced.
+$exeDir = Split-Path -Parent $exePath
+$adjacentPdb = Join-Path $exeDir "rarog.pdb"
+Copy-Item -LiteralPath $pdbPath -Destination $adjacentPdb -Force
+if ((Get-FileHash -Algorithm SHA256 -LiteralPath $adjacentPdb).Hash -ne
+    (Get-FileHash -Algorithm SHA256 -LiteralPath $pdbPath).Hash) {
+    throw "could not place the matching PDB beside $exePath; refusing to symbolize"
+}
 $processName = Split-Path $exePath -Leaf
 $cohorts = @("opening", "middlegame", "check-heavy", "promotion", "sparse-endgame")
 

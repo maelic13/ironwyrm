@@ -139,3 +139,39 @@ python tools/diag/summarize_board_search_etw.py `
   <archive>\etw\promotion-butterfly.txt `
   <archive>\etw\sparse-endgame-butterfly.txt
 ```
+
+## Symbolization defect found 2026-09-08 (affects re-runs, not this record)
+
+A refresh of this profile at `cf10a46` produced impossible region shares —
+`make_unmake` **0.756%**, `see` **0.464%**, `king_square_lookup` **27.496%**,
+with `core::num::trailing_zeros` as a 38% exclusive leaf. The numbers were
+discarded and are not recorded anywhere as measurements.
+
+**Root cause.** `dbghelp` searches the profiled image's own directory before
+`_NT_SYMBOL_PATH`. Two non-matching `rarog.pdb` files could win that race:
+
+1. a stale copy left in `tools/results/board-search-profile/` by an earlier run, and
+2. `target/release/rarog.pdb`, which held the **diagnostic** build's symbols
+   because the wrapper built diag *after* production.
+
+Both are GUID-mismatched against the profiled executable, verified by comparing
+the PE debug-directory GUID bytes. xperf therefore grouped samples under another
+build's function boundaries. The failure is silent: the report still looks
+complete, resolves 100% of engine samples, and carries plausible Rarog symbol
+names. Only the shares are wrong.
+
+**Detection.** Not by inspection — by arithmetic against an independent result.
+RAR-M33 measured **+0.876%** whole-search from an ~18% local make/unmake gain,
+which requires that region to be about **6.3%** of process time. A 0.756% region
+could contribute at most 0.12%. That contradiction is what condemned the run.
+
+**This record's own numbers cross-check as sound.** RAR-M30 measured make/unmake
+at **7.143%**, against the **6.3%** implied independently by RAR-M33's speedup.
+Those agree to well within profiling error, so the shares in this document stand
+and were not produced under the defect.
+
+**Fix.** `board_search_profile_etw.ps1` now copies the matching PDB beside the
+executable, overwriting any stale one, and fails loudly if it cannot. The
+wrapper now builds diagnostic first and production last, so the PDB left in
+`target/release` matches the binary that is actually profiled. A corrected
+report can be regenerated from the existing `.etl` files without re-capturing.
