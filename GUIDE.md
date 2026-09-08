@@ -89,12 +89,12 @@ together, and `python tools/diag/check_guide.py` must pass.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none |
 | Instrument state | **4.10 repaired; v2 baselines/floors, budget transfer, label audit, mate-drive closure and conversion corrections recorded.** |
-| Current step | **4.11b.13 — history capacity and mutation contracts**, `RESEARCH / R2` |
+| Current step | **4.11b.14 — decide whether a larger representation change pays**, `RESEARCH / R3` |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## Next and held work
 
-**Next: 4.11b.13 — define history capacity and mutation contracts.**
+**Next: 4.11b.14 — decide whether a larger representation change pays.**
 4.11.7–4.11.10 are complete; their scheduling holds/evidence gaps are resolved.
 4.11b.9 is ACCEPTED in `5c439da` (+0.876% full-search, RAR-M33). 4.11b.10 and
 4.11b.11 both closed `NO_CHANGE` (RAR-M34, RAR-M35), and 4.11b.12 likewise
@@ -195,7 +195,7 @@ holds still come from PLAN; a readiness label never lifts one.
     - [x] **4.11b.10** Research shared pin/check information — **CLOSED `NO_CHANGE`**, RAR-M34
     - [x] **4.11b.11** Optimize the corrected SEE kernel — **CLOSED `NO_CHANGE`**, RAR-M35
     - [x] **4.11b.12** Decide whether king-square caching pays — **CLOSED `NO_CHANGE`**, RAR-M37
-    - [ ] **4.11b.13** Define history capacity and mutation contracts — **RESEARCH / R2**
+    - [x] **4.11b.13** Define history capacity and mutation contracts — **DONE**, RAR-M38
     - [ ] **4.11b.14** Decide whether a larger representation change pays — **RESEARCH / R3**
     - [ ] **4.11b.15** Review draw/null/repetition policy boundaries — **RESEARCH / R3**
     - [ ] **4.11b.16** Qualify integrated correctness and throughput — **READY_FOR_IMPLEMENTATION / V**, dependency-held

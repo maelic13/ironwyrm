@@ -583,6 +583,39 @@ loop rather than once per node; donor similarity is explicitly not a trigger. No
 engine change, no prototype, no games, no Elo claim. At this closure point,
 4.11b.13 is next. Evidence: `analysis/king_square_cache_2026-09-08.md`.
 
+**RAR-M38 — 4.11b.13 history capacity and mutation contracts, COMPLETE
+2026-09-08; tightened and integrated in `f70ac19`.** Baseline `745976b` on
+`dev`. Behaviour-neutral, **no speed claim in either direction**, per the
+register's own condition that zero observed growth events cannot support one.
+`Board::reserve_history` (`pub(crate)`) reserves further make/unmake pairs, and
+`search_impl` reserves **`MAX_PLY`** on the root once before any hot path or
+helper exists; `Board::clone` preserves capacity, so every worker's
+`root.clone()` inherits the reservation and no thread reallocates while
+searching. The history stays a `Vec`: a clamped fixed array would silently drop
+repetition evidence in a long game. **The gap was real but invisible to the
+instrument that looked for it** — peak depth is `game_plies + search_depth`, so
+an ordinary 64-move game hits `len == capacity` at 128 and reallocates on the
+next search's first push, yet RAR-M30 measured zero growth across 25,718,154
+pushes because `bench` builds every position from FEN and leaves game history
+empty. `is_legal` audited: `Move::from_uci` always yields `QUIET`, so only
+`legal_move`'s canonical move carries real flags and a caller playing its own
+input corrupts make/unmake; `is_legal` has **no production callers** (three test
+assertions that never play the move) and all five search sites bind what
+`legal_move` returns, so the property the leaf asked to preserve holds. It is
+now documented and pinned by a test asserting raw flags are `QUIET` while
+canonical flags differ, across a double push, a capture and a castle. Five
+contract tests cover headroom, no reallocation across a 128-ply walk, clone
+inheritance plus the clone walking without reallocating, exact hash/history
+restoration on a 64-ply unwind, and canonicalization. **The clone test was
+proven live**: reverting `Clone` to `Vec::with_capacity(self.history.len())`
+made it fail, and only it failed. Verification: fresh no-feature build
+reproduces **7,601,220 / EBF 2.474**; debug **280** / release **281** tests,
+fmt and Clippy `--all-features --all-targets` clean. No public surface widened —
+`reserve_history` is `pub(crate)` and the tests live in a `#[cfg(test)]` module
+inside `board.rs` so the private field stays private. No games, no Elo. At this
+closure point, 4.11b.14 is next. Evidence:
+`analysis/history_contracts_2026-09-08.md`.
+
 ### Phase-4 registration (RAR-M12, 2026-08-12)
 
 Registered at 4.0, before any Phase-4 code moves. Caps are prospective, derived

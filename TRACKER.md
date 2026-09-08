@@ -15,6 +15,18 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
+- **2026-09-08 — PLAN 4.11b.13 done, RAR-M38:** `f70ac19` reserves `MAX_PLY`
+  of history headroom on the root before the hot path, with worker clones
+  inheriting it through `Board::clone`'s capacity preservation. The gap was
+  real but invisible to the instrument that looked for it: peak depth is
+  game plies plus search depth, so an ordinary 64-move game reallocates on the
+  next search, yet RAR-M30 saw zero growth because bench starts every position
+  from FEN with empty history. `is_legal` audited and found to have no
+  production callers; its canonicalization trap is now documented and pinned.
+  Five contract tests, the clone one proven to fail on regression. Neutral at
+  7,601,220 / EBF 2.474; debug 280 / release 281, fmt and Clippy clean. No
+  speed claim, no games. 4.11b.14 is next.
+
 - **2026-09-08 — PLAN 4.11b.12 closed `NO_CHANGE`, RAR-M37:** king-square
   caching is not prototyped. The refreshed profile reads the lookup at 0.502%,
   whose 2x-local ceiling of 0.25% is two to four times smaller than the
