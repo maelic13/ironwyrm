@@ -34,13 +34,13 @@ are not reliably visible by reading:
    GUIDE's titles also off by one against PLAN's. Both directions are compared
    now.
 
-6. **Invalid or drifting active workflow metadata.** Open 4.11b/4.12 leaves
+6. **Invalid or drifting active workflow metadata.** Open leaves in the active phases (A and B)
    must have one PLAN row using a canonical state/capability class, and GUIDE's
    compact suffix must agree. Vendor/model tags do not belong on those active
    checklist lines; GUIDE's model mapping owns them.
 
 The child pattern is checked against the format GUIDE actually uses --
-`- [ ] **4.9a.1** ...`, bold and optionally letter-suffixed. The first version
+`- [ ] **A.2.1** ...`, bold, lettered phase, dotted step. The first version
 of this checker required a bare `4.9.1`, matched no line in the file, and so
 passed vacuously for every edit it existed to guard. The step count in the
 success line is there to make that failure mode visible.
@@ -76,11 +76,11 @@ GUIDE = ROOT / "GUIDE.md"
 # marker inside the bold, the number then fails to match, and the step drops
 # out of the count silently -- which is how the count went 100 -> 101 when one
 # such marker was moved out. Markers go after the bold: `**4.9** NEXT - ...`.
-PARENT = re.compile(r"^- \[([ x])\] \*\*(\d+\.\d+[a-z]?)\*\*")
-CHILD = re.compile(r"^( *)- \[([ x])\] \*\*(\d+\.\d+[a-z]?\.\d+)\*\*")
-STRAY = re.compile(r"^ *- \[[ x]\] \*\*\d+\.\d+[a-z]?(\.\d+)? [^*]")
-PHASE = re.compile(r"^## Phase (\d+)")
-REQUIRED_PHASES = {4, 5, 6, 7, 8, 9}
+PARENT = re.compile(r"^- \[([ x])\] \*\*([A-Z]\.\d+)\*\*")
+CHILD = re.compile(r"^( *)- \[([ x])\] \*\*([A-Z]\.\d+\.\d+)\*\*")
+STRAY = re.compile(r"^ *- \[[ x]\] \*\*[A-Z]\.\d+(\.\d+)? [^*]")
+PHASE = re.compile(r"^## Phase ([A-Z])")
+REQUIRED_PHASES = set("ABCDEFG")
 PLAN = ROOT / "PLAN.md"
 # Every GUIDE step number must appear somewhere in PLAN. GUIDE and PLAN are
 # required to change in the same commit, and three times in one session a
@@ -91,8 +91,8 @@ PLAN = ROOT / "PLAN.md"
 STEP_IN_PLAN = re.compile(r"(?<![\d.])%s(?![\d])")
 # `SUPERSEDED -> 4.11.1`, after the closing bold. See failure 4 above.
 SUPERSEDED = re.compile(
-    r"\*\*(\d+\.\d+[a-z]?(?:\.\d+)?)\*\*.*?SUPERSEDED\s*->\s*"
-    r"(\d+\.\d+[a-z]?(?:\.\d+)?)"
+    r"\*\*([A-Z]\.\d+(?:\.\d+)?)\*\*.*?SUPERSEDED\s*->\s*"
+    r"([A-Z]\.\d+(?:\.\d+)?)"
 )
 # A PLAN sub-step DEFINITION, not a reference to one. PLAN writes a definition
 # as `**4.10.1 Some title...**` -- bold, number, space, then the title -- while
@@ -100,12 +100,12 @@ SUPERSEDED = re.compile(
 # nothing after the number (`**4.12.22**`). The trailing `\s+\S` is what
 # separates them, and without it every owner pointer in the prose would be
 # read as a step this file does not define.
-PLAN_DEFINITION = re.compile(r"\*\*(\d+\.\d+[a-z]?\.\d+)\s+\S")
+PLAN_DEFINITION = re.compile(r"\*\*([A-Z]\.\d+\.\d+)\s+\S")
 WORKFLOW_ROW = re.compile(
-    r"^\|\s*(\d+\.\d+[a-z]?\.\d+)\s*\|\s*([A-Z_]+)\s*\|\s*([A-Z]\d?)\s*\|"
+    r"^\|\s*([A-Z]\.\d+(?:\.\d+)?)\s*\|\s*([A-Z_]+)\s*\|\s*([A-Z]\d?)\s*\|"
 )
 GUIDE_WORKFLOW = re.compile(
-    r"\*\*(\d+\.\d+[a-z]?\.\d+)\*\*.*?\*\*"
+    r"\*\*([A-Z]\.\d+(?:\.\d+)?)\*\*.*?\*\*"
     r"([A-Z_]+)\s*/\s*([A-Z]\d?)\*\*"
 )
 MODEL_TAG = re.compile(r"\b(?:Astra|Terra|Sol|Opus|Sonnet|Fable)\b")
@@ -118,7 +118,7 @@ VALID_STATES = {
     "CLOSED",
 }
 VALID_CLASSES = {"R3", "R2", "I2", "I1", "M", "V"}
-ACTIVE_PREFIXES = ("4.11b.", "4.12.")
+ACTIVE_PREFIXES = ("A.", "B.")
 
 
 def parse_workflow_rows(lines):
@@ -153,8 +153,8 @@ def parse_workflow_rows(lines):
 def self_test():
     """Prove the workflow guard rejects intentionally malformed input."""
     sample = [
-        "| 4.11b.8 | WRONG_STATE | R3 | synthetic |",
-        "| 4.11b.8 | RESEARCH | Z9 | duplicate and invalid |",
+        "| A.2.1 | WRONG_STATE | R3 | synthetic |",
+        "| A.2.1 | RESEARCH | Z9 | duplicate and invalid |",
     ]
     _, problems = parse_workflow_rows(sample)
     expected = ("invalid workflow state", "duplicate workflow", "invalid capability")
@@ -225,7 +225,7 @@ def main():
     for n, line in enumerate(lines, 1):
         ph = PHASE.match(line)
         if ph:
-            phases.add(int(ph.group(1)))
+            phases.add(ph.group(1))
         m = PARENT.match(line)
         if m:
             close()
@@ -237,7 +237,7 @@ def main():
         if STRAY.match(line):
             problems.append(
                 "GUIDE.md:%d: text inside the step number's bold run; the "
-                "number must be the whole bold (write `**4.9** NEXT - ...`), "
+                "number must be the whole bold (write `**A.4** NEXT - ...`), "
                 "or the step drops out of the count silently" % n
             )
         k = CHILD.match(line)
@@ -257,12 +257,19 @@ def main():
 
     # Failure 4: a SUPERSEDED marker whose owner is missing or already closed.
     ticked = {}
+    headings = set()
+    last_parent = None
     for line in lines:
-        m = PARENT.match(line) or CHILD.match(line)
+        m = PARENT.match(line)
         if m:
-            groups = m.groups()
-            ticked[groups[-1] if len(groups) == 2 else groups[2]] = (
-                groups[0] if len(groups) == 2 else groups[1]) == "x"
+            last_parent = m.group(2)
+            ticked[last_parent] = m.group(1) == "x"
+            continue
+        k = CHILD.match(line)
+        if k:
+            ticked[k.group(3)] = k.group(2) == "x"
+            if last_parent is not None:
+                headings.add(last_parent)
     for n, line in enumerate(lines, 1):
         marker = SUPERSEDED.search(line)
         if not marker:
@@ -311,6 +318,7 @@ def main():
         active_open = {
             step for step, is_ticked in ticked.items()
             if not is_ticked and step.startswith(ACTIVE_PREFIXES)
+            and step not in headings
         }
         missing_metadata = sorted(active_open - set(metadata))
         if missing_metadata:
@@ -328,9 +336,15 @@ def main():
         guide_metadata = {}
         for n, line in enumerate(lines, 1):
             item = CHILD.match(line)
-            if not item or item.group(2) == "x":
-                continue
-            leaf = item.group(3)
+            if item:
+                if item.group(2) == "x":
+                    continue
+                leaf = item.group(3)
+            else:
+                item = PARENT.match(line)
+                if not item or item.group(1) == "x" or item.group(2) in headings:
+                    continue
+                leaf = item.group(2)
             if not leaf.startswith(ACTIVE_PREFIXES):
                 continue
             match = GUIDE_WORKFLOW.search(line)
@@ -360,7 +374,7 @@ def main():
     if missing:
         problems.append(
             "missing phase heading(s): %s -- GUIDE lists every phase, not only "
-            "the active one" % ", ".join("Phase %d" % p for p in missing)
+            "the active one" % ", ".join("Phase %s" % p for p in missing)
         )
     if steps == 0:
         problems.append(

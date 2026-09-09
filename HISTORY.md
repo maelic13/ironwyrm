@@ -1,17 +1,50 @@
-# Rarog work tracker
+# Rarog history
 
-The detailed per-step checklist, past and forward. Split out of `GUIDE.md`
-on 2026-08-21, which is now a high-level overview only.
+⚠ **THIS FILE IS HISTORY. It does not tell you what to do next.** Read
+`GUIDE.md` for the current step and `PLAN.md` for what it involves.
 
-⚠ **THIS FILE IS HISTORY. It does not tell you what to do next.**
+## Numbering, and how to resolve an old reference
 
-**Item numbers here are FROZEN and retired**, and any UNCHECKED forward item
-below is **superseded** by PLAN's 2026-08-21 renumbering — most of them were
-parked by the ablation decomposition, which measured them collectively at ~30
-Elo. Read this to see what was already done and why; read `GUIDE.md` for the
-current step and `PLAN.md` for what it involves. The old numbers are kept
-because commits, `EXPERIMENTS.md` rows and analysis documents cite them; the
-two numbering schemes do not correspond and are not meant to.
+Three numbering schemes exist in the ledger, the analyses and source comments.
+None of them is the current roadmap's, which uses lettered phases (`A.2.1`).
+
+| Scheme | Where it appears | Resolve it in |
+|---|---|---|
+| Legacy Lynx/Rarog phases (`8.2(a)`, `9.0a`, `10.3 speed pass`) | source comments, oldest ledger rows, the tracker below | the tracker section of this file |
+| Phase 4 roadmap (`4.5`, `4.9a.4`, `4.11b.19`, `4.12.7`), Phases 5–9 | `EXPERIMENTS.md`, `analysis/*.md`, commits up to `f10b999`…`c80df74` | [docs/archive/PLAN-phase4-2026-09-09.md](docs/archive/PLAN-phase4-2026-09-09.md) and [docs/archive/GUIDE-phase4-2026-09-09.md](docs/archive/GUIDE-phase4-2026-09-09.md); the retired-to-current map is PLAN section 6 |
+| Current roadmap (`A`–`G`) | `PLAN.md`, `GUIDE.md`, ledger rows from RAR-M45 on | `PLAN.md` |
+
+## The Phase-4 line, 2026-08-11 to 2026-09-09: what it established
+
+The archived roadmap ran from the 2.3.2 release to the 2026-09-09 rewrite. Its
+durable results, each with its ledger row:
+
+| Result | Evidence |
+|---|---|
+| Search deficit against Stockfish's search with Rarog's evaluation: **250.8 ± 13.1 Elo** equal time, 355 equal nodes; LMR plus shallow pruning explain 272 ± 18 of it | `analysis/ablation_results.md`, RAR-S55…S70 |
+| Evaluation deficit against Stockfish's classical HCE with the same search: **about 329 Elo** | RAR-O02 |
+| Accepted strength: ProbCut move filter +15.56 ± 10.02; root LMR relief +2.33 ± 1.85; complete HCE refit +22.04 ± 7.51; TB-corrected labels +6.73 ± 3.82; hce-v3 refit +11.81 ± 5.33; board cluster with the SEE repair +12.12 ± 10.17 | RAR-S57/S58, RAR-S70, RAR-E06, RAR-E08, RAR-E12, RAR-E15 |
+| Rejected or null: interior LMR contract changes, quiet SEE prune, the SearchCore rewrite (−9.76 ± 17.70, stopped), broad selectivity SPSA declined | 4.5, 4.6 dispositions in the archive |
+| Board: SEE king legality, created pins and recapture promotions repaired against 41 external fixtures; fused relocation +17.5% make/unmake; caller-owned move-list delivery +2.48% NPS; generation constant-factor candidates measured −0.55% in search and reverted | RAR-M25…M44 |
+| Endgame instruments: truth, drawn-overclaim, conversion, floors, occurrence and ranking tools with cohort digests and guard self-tests; registered family order v2; KBN-K conversion 19.4% → 96.9% from the mate drive | 4.9a, 4.10, 4.11 in the archive |
+| Instruments: paired matched ablation against the frozen `hybrid` oracle; pooled-PGO NPS with null pairs; cross-engine board benchmark with harness parity; counter-unit discipline | `analysis/ablation_design.md`, `analysis/phase4_counter_spec.md`, `tools/nps_multibuild.ps1` |
+| Fingerprint at the rewrite: `bench 13` **7,601,220 / EBF 2.474** at `c80df74` | GUIDE checkpoint |
+
+What it did not do, and why the roadmap was rewritten: it was about to spend
+twenty-three frontier-research leaves on endgame recognisers worth ten to
+thirty Elo while the measured search deficit had one candidate leaf; the
+maintainer's assumption that endgames were the last missing evaluation piece
+was contradicted by the 329-Elo same-search evaluation gap and by the
+110–220-Elo pool deficit to the strongest HCE-era engines.
+
+## Legacy tracker (retired numbering, frozen)
+
+The detailed per-step checklist of the pre-Phase-4 line, split out of
+`GUIDE.md` on 2026-08-21. **Item numbers here are FROZEN and retired**, and any
+UNCHECKED forward item below was **superseded** by the Phase-4 line and then
+by the current roadmap. The old numbers are kept because commits,
+`EXPERIMENTS.md` rows and analysis documents cite them; the numbering schemes
+do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 

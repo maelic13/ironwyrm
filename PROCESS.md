@@ -47,7 +47,7 @@ distinguish independence from masking; do not require it for every small change.
 Freeze predictions in EXPERIMENTS before exposure. A later explanation is
 calibration, never proof that the outcome was predicted.
 
-### Phase-4 step lifecycle and audit handoff
+### Step lifecycle and audit handoff
 
 Before selecting a leaf, review GUIDE's current/held overview and PLAN's
 execution register. Select the earliest unblocked dependency-compatible leaf;
@@ -61,7 +61,7 @@ deliver findings, an interaction/cost map and derived numbered implementation
 leaves, or a justified no-change result. They do not implement speculative
 improvements during the audit. Required later work stays open under its owner.
 
-For every behavioral Phase-4 step:
+For every behavioral step:
 
 **Gate the fitted dependency-complete cluster, not each feature and not the
 whole phase at once.** Internal substeps may be too sparse or coupled to win
@@ -111,15 +111,14 @@ games until the end destroys attribution and lets losing structures hide.
    candidate or waives a gate; resume it before its recorded boundary.
 
 A separable categorical alternative may have a preliminary SPRT, but that
-never replaces the locally fitted integrated cluster SPRT. **4.8** owns the
-complete existing-HCE refit, **4.14** owns post-structure consolidation and
-**4.19** owns the final combined checkpoint, with separate confirmation SPRTs;
-none may rescue an earlier losing cluster.
+never replaces the locally fitted integrated cluster SPRT. The programme
+checkpoints (PLAN B.9, C.11, E.1) own the combined confirmation runs; none may
+rescue an earlier losing cluster.
 
-Two failed coherent search clusters trigger a return to evidence. Two failed
-HCE clusters trigger a **4.7** data/instrument/maturity re-audit, not silent closure.
-The HCE track may close early only by explicitly conceding the Phase-4 HCE
-maturity target; no unknown or first-draft contract may be presented as mature.
+Two failed coherent clusters in one programme trigger a return to evidence
+(PLAN rule 6), not silent closure. A programme may close early only by
+explicitly conceding its target; no unknown or first-draft contract may be
+presented as mature.
 
 ### The independence boundary
 
@@ -137,8 +136,8 @@ table; the working rules are:
   and behavioral equivalence as a goal. A donor constant may cross only as an
   explicitly labelled seed under PLAN's current independence rule; it is on
   the donor's scale and must be locally fitted and gated before acceptance.
-- Read, understand, close the file, then design from Rarog's own code and 4.2
-  evidence. If a change cannot be justified without pointing at the reference,
+- Read, understand, close the file, then design from Rarog's own code and its
+  measured evidence. If a change cannot be justified without pointing at the reference,
   it is not understood well enough to ship.
 - No upstream code is copied, so Rarog is not a derivative work. `README.md`
   already states the correct posture — an independent engine, with thanks for
@@ -164,7 +163,8 @@ Adjudication is not unfair -- it is symmetric between arms -- it is **lossy**,
 and the loss scales with how badly the engine converts. An engine that
 converts KRP-KR at 52% disagrees with its own adjudicated verdict far more
 often than one converting at 99%, which is the argument for revisiting this
-default once 4.9a closes rather than treating it as permanent.
+default once the endgame cluster (PLAN C.5) closes rather than treating it as
+permanent.
 
 Pass `-Adjudicate` to opt back in, and justify it in the registration: wall
 time genuinely binding, and a change that provably cannot touch conversion or
@@ -301,19 +301,20 @@ verdict:
    frozen test once after selection using exact full evaluation against an
    explicit saved source vector. A floating optimizer vector or prior-stage
    comparator is not the deployable model.
-8. At 4.8 fit and gate the complete existing linear/nonlinear HCE before adding
-   features. Run a local covariant fit after each later structural cluster.
+8. Fit and gate the complete existing linear/nonlinear HCE before adding
+   features (done at RAR-E06; every C-phase family cluster repeats the fit). Run a local covariant fit after each later structural cluster.
    Apply registered
    static semantic/loss/NPS filters as refutation only. Bake the fit into
    clean PGO and SPRT the cluster; a lower loss alone accepts nothing.
-9. At 4.10, if structure changed, rerun the complete instrument schedule.
+9. After a structural cluster (PLAN C.3-C.7), rerun the complete instrument schedule.
    Repeat a data cycle only for a prospectively registered
    changed-data hypothesis supported by validation and the baked game verdict.
    Stop at the first no-gain/failed cycle or convergence to the same attractor.
 10. Keep search parameters fixed during HCE fitting; remeasure their populations
-    at 4.11 rather than co-tuning evaluator and search.
+    at PLAN C.10 rather than co-tuning evaluator and search.
 
-The registered 4.8 offline run is one command from a clean worktree:
+The registered RAR-E06 offline run was one command from a clean worktree, and
+is the template for every C-phase refit:
 
 ```powershell
 pwsh -NoProfile -File tools\texel\fit_complete.ps1
@@ -331,10 +332,10 @@ patch or registering games. The command itself supplies no strength verdict.
 
 ### SPSA go/no-go procedure
 
-The generic harness is retained, but no SPSA is owed. The admissible Phase-4
-surfaces are a small 4.8 nonlinear HCE residue that deterministic re-evaluation
-cannot resolve, and 4.12 post-HCE search margins. They are separate and narrow.
-An undirected broad tune stays forbidden, and HCE and search coordinates are
+The generic harness is retained. The current roadmap owes SPSA where a
+cluster's registration names its live coordinates (PLAN B.2.3, B.6, C.9,
+C.10, F.6); each is registered fresh with its surface and horizon. An
+undirected broad tune stays forbidden, and HCE and search coordinates are
 never mixed in one run.
 Before any SPSA:
 
@@ -409,7 +410,7 @@ becomes a product goal, 8.1 may add a Stockfish-style baseline dispatcher.
 - Commit after each finished and verified step, and keep tooling changes in
   separate commits from engine changes.
 - Mirror any status or number change into **both `GUIDE.md` and `PLAN.md` in
-  the same commit**. `TRACKER.md` is history and is not updated for new work.
+  the same commit**. `HISTORY.md` is history and is not updated for new work.
 
 ## Common commands
 

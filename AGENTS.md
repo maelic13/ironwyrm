@@ -197,7 +197,7 @@ did what its name suggests.**
   `analysis/phase4_counter_spec.md`.
 - Before differencing two counters, check they are in the **same unit**. Per
   node vs per move has produced three false findings in this project
-  (RAR-S25, and twice inside the Phase-4 instrumentation itself). A passing
+  (RAR-S25, and twice inside the matched-ablation instrumentation itself). A passing
   invariant does not prove comparability — `probcut_cut <= probcut_attempt`
   held for two phases while the two counters counted different things.
 
@@ -241,10 +241,11 @@ did what its name suggests.**
   instrument reporting on it did not.
 - A behavior-neutral **engine change** must reproduce the immediate development
   production `bench 13` fingerprint (currently **7,601,220 / EBF 2.474**),
-  plus targeted checks for changed behavior the suite does not reach. This
-  includes the 4.11b.5 SEE repair; playing qualification remains at 4.11b.17. The
-  4.9a.4 mate drive changed KBN-K conversion 19.4% -> 96.9% with an identical
-  bench: fingerprint equality alone is not proof of narrow-feature neutrality.
+  plus targeted checks for changed behavior the suite does not reach. The
+  fingerprint includes the RAR-M28 SEE repair and was accepted by RAR-E15. The
+  RAR-E12-era mate drive changed KBN-K conversion 19.4% -> 96.9% with an
+  identical bench: fingerprint equality alone is not proof of narrow-feature
+  neutrality.
   RAR-P14/P16 establish cross-platform fingerprint agreement; investigate a
   mismatch, do not dismiss it as platform noise. For docs-only work, verify
   the diff contains no engine inputs rather than running a neutrality bench.
@@ -296,7 +297,7 @@ did what its name suggests.**
   seeing games.
 - **`[0,3]` nElo is the DEFAULT bracket.** Widen only when the prior is
   genuinely large, and say why in the registration. This is not "narrow is
-  better": 4.7 had a 25–60 nElo prior, measured +24.90, and `[3,10]` resolved
+  better": the ProbCut cluster (RAR-S57) had a 25–60 nElo prior, measured +24.90, and `[3,10]` resolved
   it in **2,838 games** — a wide bracket is the right instrument for a large
   effect. The error is using one for a small candidate. Compute the games at
   the EXPECTED value from RAR-M10 before choosing, every time.
@@ -337,7 +338,7 @@ did what its name suggests.**
   file that says what to do next and it will be believed. This applies when
   roadmap status or requirements change; an AGENTS-only operating-rule edit
   does not require unrelated PLAN/GUIDE churn.
-- **GUIDE carries STATUS, not just a list.** Its Phase-4 checkboxes are how
+- **GUIDE carries STATUS, not just a list.** Its phase checkboxes are how
   the maintainer sees what is done. Tick one only when the step is finished
   AND verified, in the commit that finishes it — never in advance.
 - **Tick the PARENT when its last sub-step is ticked.** A step whose sub-steps
@@ -353,12 +354,14 @@ did what its name suggests.**
 - **Keep GUIDE short.** Outside its operator contract, model mapping and two
   reusable prompts, a change that runs past a few lines belongs somewhere
   else: what a step INVOLVES goes in `PLAN.md`; a completed step's
-  record goes in `TRACKER.md`; a repeatable procedure goes in `PROCESS.md`;
+  record goes in `HISTORY.md`; a repeatable procedure goes in `PROCESS.md`;
   durable evidence goes in `EXPERIMENTS.md`; a measurement's derivation goes in
   `analysis/`. GUIDE grew to 898 lines by absorbing all five and stopped being
   readable as an overview.
-- `TRACKER.md` is HISTORY. Its numbering is retired and does not correspond to
-  PLAN's. Never take a next step from it.
+- `HISTORY.md` is HISTORY. Every numbering scheme in it is retired; the
+  current roadmap uses lettered phases (`A.2.1`) and PLAN section 6 maps the
+  retired Phase-4 identifiers onto it. Never take a next step from HISTORY or
+  from `docs/archive/`.
 - When two documents disagree, source, defaults and reproducible artifacts
   outrank prose. Fix the prose in the same change.
 
