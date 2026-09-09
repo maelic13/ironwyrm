@@ -44,7 +44,7 @@ top 100, established by CCRL's own testing after a public release.
 | Where the search deficit lives | LMR plus shallow-depth pruning explain **272 ± 18** of it, near-additively; everything else about 30 | matched ablation, mask 160 |
 | Evaluation deficit with the same search | Stockfish's classical HCE beats Rarog's HCE by **about 329 Elo** | RAR-O02 |
 | Speed | 3.22 MNPS at bench 13, PGO, 1T; Basilisk 3.71; board work 24% of time, evaluation 29%, search loop 23% | RAR-M36, RAR-M44 |
-| Conversion | 57 draws and 12 losses after holding a piece-up advantage for 12+ plies, in 2,400 games against the six HCE-era engines; Basilisk 40 and 12 | replay of the same tournament, A.4 makes this a tracked instrument |
+| Conversion | 57 draws and 12 losses after holding a piece-up advantage for 12+ plies, in 2,400 games against the six HCE-era engines; Basilisk 40 and 12 | replay of the same tournament, A.6 makes this a tracked instrument |
 | Fingerprint | `bench 13` **7,601,220 / EBF 2.474** at `c80df74`, accepted by RAR-E15 | GUIDE checkpoint |
 
 Both halves of the engine have room of the same order. The search half is
@@ -126,7 +126,7 @@ gating. The rules below decide order and acceptance in this roadmap.
 10. **Deficit meters are re-measured at every programme checkpoint**: the
     equal-time gap against the frozen Stockfish-search oracle (B), the
     same-search gap against Stockfish's classical HCE (C), the conversion
-    instrument (A.4), pooled-PGO NPS, and the pool score against the four
+    instrument (A.6), pooled-PGO NPS, and the pool score against the four
     target engines.
 11. **Engine, tooling and documentation changes are separate commits.** PLAN
     and GUIDE change together. Completed IDs never change; open IDs may be
@@ -177,19 +177,22 @@ linked analyses; this table is the index.
 | Behaviour-neutral change = exact fingerprint plus targeted checks plus pooled NPS | `AGENTS.md` |
 | Cross-engine board benchmark parity | `benches/board.rs`, `analysis/board_comparison_411b19_2026-09-09.md` |
 
-## Phase A — Reset: repository, instruments, baselines
+## Phase A — Reset: repository, instruments, baselines, consolidation release
 
-Short and mostly mechanical. It leaves the repository clean, the instruments
-trusted, and every deficit meter measured on the head the programmes start
-from.
+Short and mostly mechanical. It leaves the repository clean, ships the
+accepted head as a release before the search programme rewrites the search,
+and measures every deficit meter on that released binary, which is the head
+the programmes start from. Execution order is the numbering: the release
+(A.3) comes before the baselines (A.5) so that the baseline measurements are
+release evidence as well and are taken on the exact shipped binary; the
+universal-binary investigation (A.4) runs while the release gate's games are
+being played and can still make this release if it passes its checks.
 
-- **A.1 Document reset — `M`, CLOSED by this rewrite.** New PLAN, GUIDE and
+- **A.1 Document reset — `M`, CLOSED 2026-09-09.** New PLAN, GUIDE and
   HISTORY; the Phase-4 roadmap and GUIDE archived under `docs/archive/`;
   `check_guide.py` adapted to lettered phases; AGENTS and PROCESS references
-  updated. Done criteria: checker passes; every old `4.x` citation resolves
-  through HISTORY's number map.
-- **A.2 Repository and branch cleanup — `I1`.** Keep in Git only what the
-  engine, its tests, its reusable tools and its concise records need.
+  updated.
+- **A.2 Repository and branch cleanup.**
     - **A.2.1 Tracked-file cleanup — DONE 2026-09-09.** Removed, all last
       present at `6fa6731`: the 4.11.7 study runners (`archive_4117.py`,
       `run_4117_registered.py`, `summarize_4117.py`; RAR-M21's outputs are
@@ -203,8 +206,7 @@ from.
       (the rejected Stockfish-label path, RAR-E03), and `holdout.py` with its
       test (imported by nothing). Kept for named owners: the SMP probe scripts
       (D.2), the answer harness and search-quality readouts (B.0 decides), the
-      SPSA configs (A.2.3 decides). Outside the repository, the maintainer may
-      delete the stale checkout `D:/code/rarog-411b8-baseline`.
+      SPSA configs (A.2.3 decides).
     - **A.2.2 Branch and tag disposition — DONE 2026-09-09.** The oracle
       package (`rarog-stockfish-hce-hybrid.exe` `da78a145…`, `rarog_hce.dll`
       `e43b602b…`, licences) is archived at
@@ -221,40 +223,126 @@ from.
       through `v2.3.0` point at different objects than the annotated tags on
       `origin` (`git push --tags` rejected twelve); `origin` is authoritative
       and `git fetch --force --tags` would realign them.
-    - **A.2.3 Feature and option inventory.** Decide the fate of every Cargo
-      feature and UCI option: `diag` stays (instrument), `ablate` stays until
-      B.9 has re-measured the deficit and is then removed, `tune` stays. Every
-      `SearchParams` entry is classified consumed / seed-for-B / dead; dead
-      ones are removed in B.1 with the search restructure, not here.
-- **A.3 Baselines on the starting head — `V`.** All maintainer-run, registered
-  first. Rarog head = `c80df74` PGO pext.
-    - **A.3.1 Reference pool refresh (RAR-M45).** Colosseum rating tournament
+    - **A.2.3 Feature and option inventory — `R2`.** Decide the fate of every
+      Cargo feature and UCI option: `diag` stays (instrument), `ablate` stays
+      until B.9 has re-measured the deficit and is then removed, `tune` stays.
+      Every `SearchParams` entry is classified consumed / seed-for-B / dead;
+      dead ones are removed in B.1 with the search restructure, not here.
+- **A.3 Consolidation release — `V`/`M`.** Ship the accepted head before the
+  search programme changes it. The 2026-09-04 pool already has the head's
+  predecessor at **+43.7 Elo head-to-head over 2.3.2** (400 games) and +29 in
+  pooled pool score; ProbCut, root LMR relief, two HCE refits, TB-corrected
+  labels and the board cluster are all gated individually. The version follows
+  the release rule in section 4: 2.4.0 if the registered STC gate's point
+  estimate is at least +40 with the lower bound above +25, else 2.3.3.
+    - **A.3.1 Toolchain bump, behaviour-neutral — `I1`.** `rust-toolchain.toml`
+      from 1.97.1 to the current stable (1.98.1 on this host), never between a
+      baseline build and its candidate. Done criteria: exact fingerprint
+      7,601,220 / EBF 2.474 on magic and PEXT, debug and release suites, clippy
+      on the new toolchain, ISA verification of the PGO asset, pooled-PGO NPS
+      against the 1.97.1 build inside ±1% or the delta explained.
+    - **A.3.2 Release gate — RAR-E16, `V`.** Registered before games: the
+      release candidate (A.3.1 head, PGO pext) against the 2.3.2 release binary,
+      `3+0.03`, 1T, Hash 64, paired UHO, no adjudication, `[3,10]` nElo, cap
+      16,000 games, plus `10+0.1` and 4T `10+0.1` direction checks of 400 games
+      each with zero forfeits. Prediction frozen in the row. H1 with the point
+      estimate at or above +40 and the lower bound above +25 licenses 2.4.0;
+      any other H1 licenses 2.3.3; H0 stops the release and is itself a finding
+      against the accepted-gains ledger. While these games run, the agent works
+      A.4.
+    - **A.3.3 Release — `M`.** Version strings, README, CHANGELOG from the
+      accepted ledger rows since 2.3.2, fmt, suites, clippy, feature builds,
+      fingerprint, PGO assets with ISA verification, CI matrix on the release
+      commit, tag and publish on maintainer instruction. `master` fast-forwards
+      to the release commit. Ships the universal x86-64 binary **only if A.4.5
+      adopted it**; otherwise the per-tier assets as before, and A.4's verdict
+      names its later owner. The release does not wait beyond A.4's stop rule.
+- **A.4 Universal x86-64 binary — `R2` investigation with `I2`/`V`
+  sub-steps.** Goal: one Windows and one Linux x86-64 executable that selects
+  the best code path at startup, so users stop choosing `base`/`avx2`/`pext`.
+  Stockfish 19 does this by compiling the whole engine once per tier into
+  separate C++ namespaces (`Stockfish_<arch>::main`), collecting each tier's
+  static initializers into its own section, linking every copy into one file,
+  and dispatching from CPUID in `src/universal/entry_x86.cpp`; its asm
+  sections are rewritten by scripts and each tier is PGO-trained. Rust has no
+  namespace wrapper and cargo applies target features per build, not per
+  crate, so the mechanism must be found, not assumed. Adoption criteria, fixed
+  now: single file per OS; exact `bench 13` identity per forced tier against
+  the dedicated build; fixed-node whole-search NPS per tier within **1%** of
+  the dedicated PGO binary of that tier; startup under 50 ms; no writes to
+  disk at runtime; baseline fallback on a CPU without BMI2/AVX2 and on an OS
+  with vector state disabled; a forced-tier override for tests; PGO per tier
+  or a measured statement of what PGO is lost. Stop rule: if A.4.1 finds no
+  design meeting the single-file and 1% criteria, or A.4.2's prototype cannot
+  be made to link cleanly within two working sessions, the release ships
+  per-tier assets and adoption moves to G.2 with the blocker recorded.
+    - **A.4.1 Design — `R2`.** Compare, with a two-crate link prototype for
+      the symbol question before anything else: (a) a fat binary of N engine
+      copies, built by `xtask` as N `staticlib`s with distinct `-C metadata`
+      and `-C target-feature`, each exporting one `extern "C"` tier entry, and
+      a baseline-compiled dispatcher that links all N (falsifier: duplicate
+      Rust std or allocator symbols across the copies fail the link on MSVC and
+      GNU ld; test it first); (b) function-level multiversioning of the hot
+      kernels only (slider lookups PEXT versus magic, and later NNUE), one
+      baseline codegen elsewhere (falsifier: the measured loss of global
+      `target-cpu` codegen; the 4.11b lesson says measure in search, not on
+      the bench); (c) a launcher executable that detects the CPU and hands
+      its stdio to a sibling tier executable from the same archive (one name
+      for GUIs, not one file; falsifier: the single-file criterion); (d) a
+      single-file launcher with embedded tier images written to a per-user
+      cache (falsifier: the no-runtime-writes criterion). Deliver
+      `analysis/universal_binary_2026-xx.md` with the chosen design, the
+      dispatch table (BMI2 fast versus slow PEXT CPUs, AVX2, OS XSAVE state),
+      and frozen A.4.2–A.4.4 handoffs.
+    - **A.4.2 Prototype — `I2`.** Implement the chosen design as an `xtask`
+      build target (`--arch universal`) in isolation; production defaults and
+      per-tier assets unchanged; ISA verification adapted to per-tier code
+      regions; a forced-tier override and a selected-tier report on startup.
+    - **A.4.3 Compatibility and identity — `V`.** Every forced tier on this
+      host and the automatic choice; baseline-only and vector-disabled cases
+      via the override or ISA-constrained execution, labelled as gaps where no
+      hardware exists; exact bench identity per tier; UCI, stop and thread
+      lifecycle; debug and release suites; perft and the board fixtures.
+    - **A.4.4 Performance and size — `V`.** Fixed-node NPS per tier against
+      the dedicated PGO binaries, pooled and alternated; startup time; binary
+      size; memory. The 1% criterion decides.
+    - **A.4.5 Decision — `R2`.** Adopt for A.3.3, or defer to G.2 with the
+      blocker and the measured shortfall. If adopted, the released universal
+      asset is re-validated against the gated pext binary by bench identity
+      per tier and a 400-game null pair before it ships; the SPRT is not
+      repeated.
+- **A.5 Baselines on the release binary — `V`.** All maintainer-run,
+  registered first. The Rarog arm is the A.3.3 release binary (its pext tier
+  if universal), or the A.3.1 head if the release was not cut.
+    - **A.5.1 Reference pool refresh (RAR-M45).** Colosseum rating tournament
       with Houdini 3 added to the existing 14-engine pool, `3+0.03`, 1T, 400
       games per pair. Produces the head-to-head table the E.2 gate is measured
-      against and the first Houdini 3 number.
-    - **A.3.2 Four-thread pool (RAR-M46).** The same pool at 4T for the four
+      against and the first Houdini 3 number. Because 2.3.2 stays in the pool,
+      the run is also release evidence at the pool level.
+    - **A.5.2 Four-thread pool (RAR-M46).** The same pool at 4T for the four
       target engines and Basilisk only, 400 games per pair, no affinity, after
-      a 4T null pair. Establishes the SMP starting point for D.3.
-    - **A.3.3 Oracle deficit meter (RAR-O03).** Paired equal-time run of the
-      head against the `hybrid` oracle, `3+0.03`, 3,000 games, no
+      a 4T null pair. Establishes the SMP starting point for D.2.
+    - **A.5.3 Oracle deficit meter (RAR-O03).** Paired equal-time run of the
+      release binary against the `hybrid` oracle, `3+0.03`, 3,000 games, no
       adjudication. The oracle is the frozen Stockfish `9587eeeb` search
-      driving `rarog_hce.dll`; rebuild that DLL from the head's evaluation
-      (`hybrid/build.ps1` on the tagged branch) so the meter holds the
-      evaluation constant and measures search only. Re-measures G(0) on the
-      head the search programme starts from; RAR-S70's 250.8 is the prior.
-      Prediction registered in the row.
-    - **A.3.4 Speed baseline.** Pooled-PGO NPS of the head with the
+      driving `rarog_hce.dll`; rebuild that DLL from the release head's
+      evaluation (`hybrid/build.ps1` on the `oracle/hybrid` tag) so the meter
+      holds the evaluation constant and measures search only. RAR-S70's 250.8
+      is the prior. Prediction registered in the row.
+    - **A.5.4 Speed baseline.** Pooled-PGO NPS of the release head with the
       RAR-M41 protocol; three builds; archived hashes. The number B and C
       measure against.
-- **A.4 Conversion instrument — `I1`.** Make the replay used on 2026-09-09 a
-  tracked tool: `tools/diag/conversion_audit.py` reads a Colosseum tournament
-  by id, replays every game of a named engine against a named opponent set,
-  and reports draws and losses after a persistent material advantage (12
-  plies, at least a minor piece, lone-minor exclusions), by termination and by
-  phase, plus saves from persistent deficits. Baseline: Rarog 57/12, Basilisk
-  40/12 on tournament `41768fe9`. The tool is re-run at every programme
-  checkpoint; it is a diagnostic layer, never an acceptance layer.
-- **A.5 Codebase consolidation analysis — `R2`.** Inventory the crate
+- **A.6 Conversion instrument — `I1`.** Make the replay used on 2026-09-09
+  (`tools/results/conversion-replay-20260909/replay.py`) a tracked tool:
+  `tools/diag/conversion_audit.py` reads a Colosseum tournament by id,
+  replays every game of a named engine against a named opponent set, and
+  reports draws and losses after a persistent material advantage (12 plies,
+  at least a minor piece, lone-minor exclusions by material signature), by
+  termination and by phase, plus saves from persistent deficits. Baseline:
+  Rarog 57/12, Basilisk 40/12 on tournament `41768fe9`. The tool is re-run at
+  every programme checkpoint; it is a diagnostic layer, never an acceptance
+  layer.
+- **A.7 Codebase consolidation analysis — `R2`.** Inventory the crate
   (24,103 lines; `search.rs` 6,275 with a 1,700-line `negamax`, `eval.rs`
   3,756, `diag.rs` 1,298, `params.rs` 987, `evidence.rs` 707) against the
   module layout the programmes will produce, and decide what is refactored
@@ -262,34 +350,6 @@ from.
   what a programme is about to replace. Expected output: the B.1 and C.1
   restructure handoffs, a dead-code list for A.2.3, and the target layout
   below. No behaviour change in this leaf.
-
-- **A.6 Consolidation release — `V`/`M`.** Ship the accepted head before the
-  search programme changes it. The 2026-09-04 pool already has the head's
-  predecessor at **+43.7 Elo head-to-head over 2.3.2** (400 games) and +29 in
-  pooled pool score; ProbCut, root LMR relief, two HCE refits, TB-corrected
-  labels and the board cluster are all gated individually. The version follows
-  the release rule in section 4: 2.4.0 if the registered STC gate's point
-  estimate is at least +40 with the lower bound above +25, else 2.3.3.
-    - **A.6.1 Toolchain bump, behaviour-neutral — `I1`.** `rust-toolchain.toml`
-      from 1.97.1 to the current stable (1.98.1 on this host), never between a
-      baseline build and its candidate. Done criteria: exact fingerprint
-      7,601,220 / EBF 2.474 on magic and PEXT, debug and release suites, clippy
-      on the new toolchain, ISA verification of the PGO asset, pooled-PGO NPS
-      against the 1.97.1 build inside ±1% or the delta explained. This lands
-      before A.3 so the baselines are measured on the release toolchain.
-    - **A.6.2 Release gate — RAR-E16, `V`.** Registered before games: the
-      release candidate (A.6.1 head, PGO pext) against the 2.3.2 release binary,
-      `3+0.03`, 1T, Hash 64, paired UHO, no adjudication, `[3,10]` nElo, cap
-      16,000 games, plus `10+0.1` and 4T `10+0.1` direction checks of 400 games
-      each with zero forfeits. Prediction frozen in the row. H1 with the point
-      estimate at or above +40 and the lower bound above +25 licenses 2.4.0;
-      any other H1 licenses 2.3.3; H0 stops the release and is itself a finding
-      against the accepted-gains ledger.
-    - **A.6.3 Release — `M`.** Version strings, README, CHANGELOG from the
-      accepted ledger rows since 2.3.2, fmt, suites, clippy, feature builds,
-      fingerprint, PGO assets with ISA verification, CI matrix on the release
-      commit, tag and publish on maintainer instruction. `master` fast-forwards
-      to the release commit.
 
 Target module layout after B and C (the investigations may adjust it):
 
@@ -418,7 +478,7 @@ diagnostics; two rejections stop B.
   `search/params.rs`; remove parameters classified dead in A.2.3; keep every
   mechanism exactly as it is. Done criteria: exact fingerprint
   7,601,220 / EBF 2.474 on magic and PEXT, debug and release suites, clippy,
-  pooled-PGO NPS inside ±0.5% of A.3.4. This is the scaffold the clusters land
+  pooled-PGO NPS inside ±0.5% of A.5.4. This is the scaffold the clusters land
   on; it earns no strength credit.
 - **B.2 Cluster 1 — the selectivity core — `I2`, then `V`.** One cluster:
   TT entry format with stored raw eval and tt-pv and the estimated-score rule;
@@ -489,16 +549,21 @@ class until they open.
 | Leaf | Workflow state | Class | Current decision |
 |---|---|---|---|
 | A.2.3 | RESEARCH | R2 | Classify every feature, option and `SearchParams` entry; removals land in B.1 |
-| A.3.1 | READY_FOR_IMPLEMENTATION | V | RAR-M45 registered; maintainer-run pool with Houdini 3 at 1T |
-| A.3.2 | READY_FOR_IMPLEMENTATION | V | RAR-M46 registered; 4T pool after a 4T null pair |
-| A.3.3 | READY_FOR_IMPLEMENTATION | V | RAR-O03 registered; equal-time G(0) on the head |
-| A.3.4 | READY_FOR_IMPLEMENTATION | V | Pooled-PGO NPS of the head, three builds, hashes archived |
-| A.4 | READY_FOR_IMPLEMENTATION | I1 | Track the 2026-09-09 replay as a tool with tests; baseline recorded |
-| A.6.1 | READY_FOR_IMPLEMENTATION | I1 | Toolchain 1.97.1 -> 1.98.1; exact fingerprint, suites, ISA, pooled NPS |
-| A.6.2 | READY_FOR_IMPLEMENTATION | V | RAR-E16 registered; maintainer-run STC SPRT plus LTC and 4T direction checks |
-| A.6.3 | RESEARCH | M | Waits for the A.6.2 verdict; version per the release rule |
-| A.5 | RESEARCH | R2 | Inventory and target layout; outputs the B.1 and C.1 handoffs and the dead-code list |
-| B.0 | RESEARCH | R3 | Opens after A.5; ends with frozen handoffs for B.1–B.3 and the scale ratio |
+| A.3.1 | READY_FOR_IMPLEMENTATION | I1 | Toolchain 1.97.1 -> 1.98.1; exact fingerprint, suites, ISA, pooled NPS |
+| A.3.2 | READY_FOR_IMPLEMENTATION | V | RAR-E16 registered; maintainer-run STC SPRT plus LTC and 4T direction checks |
+| A.3.3 | RESEARCH | M | Waits for the A.3.2 verdict and the A.4.5 decision; version per the release rule |
+| A.4.1 | READY_FOR_IMPLEMENTATION | R2 | Symbol-isolation link prototype first; then the design document and handoffs |
+| A.4.2 | RESEARCH | I2 | Waits for A.4.1 |
+| A.4.3 | RESEARCH | V | Waits for A.4.2 |
+| A.4.4 | RESEARCH | V | Waits for A.4.3 |
+| A.4.5 | RESEARCH | R2 | Adopt for A.3.3 or defer to G.2 |
+| A.5.1 | READY_FOR_IMPLEMENTATION | V | RAR-M45 registered; maintainer-run pool with Houdini 3 at 1T, on the release binary |
+| A.5.2 | READY_FOR_IMPLEMENTATION | V | RAR-M46 registered; 4T pool after a 4T null pair |
+| A.5.3 | READY_FOR_IMPLEMENTATION | V | RAR-O03 registered; equal-time G(0) with the evaluation held constant |
+| A.5.4 | READY_FOR_IMPLEMENTATION | V | Pooled-PGO NPS of the release head, three builds, hashes archived |
+| A.6 | READY_FOR_IMPLEMENTATION | I1 | Track the 2026-09-09 replay as a tool with tests; baseline recorded |
+| A.7 | RESEARCH | R2 | Inventory and target layout; outputs the B.1 and C.1 handoffs and the dead-code list |
+| B.0 | RESEARCH | R3 | Opens after A.7; ends with frozen handoffs for B.1–B.3 and the scale ratio |
 | B.1 | RESEARCH | I1 | Waits for the B.0 handoff; exact fingerprint required |
 | B.2.1 | RESEARCH | I2 | Waits for B.1 |
 | B.2.2 | RESEARCH | V | Waits for B.2.1 |
@@ -670,8 +735,8 @@ loss).
   release suites, clippy, feature builds, fingerprint, PGO assets, ISA
   verification, CI matrix, tag and publish on maintainer instruction. Version
   is 3.0.0 if E.2 is met, else 2.4.0.
-- **E.4 Universal binary — `R2`, optional.** Startup CPU dispatch investigation
-  kept from the old roadmap, executed only if release logistics justify it.
+- **E.4 Universal binary adoption — `I1`, only if A.4 deferred it.** Ship the
+  A.4 design at this release if its blocker was resolved; otherwise G.2.
 
 ## Phase F — NNUE
 
@@ -728,8 +793,8 @@ datagen baseline and the fallback until F.9 replaces it in releases.
 
 | Meter | Protocol | Owner |
 |---|---|---|
-| Pool score | Colosseum, fixed pool with Houdini 3, `3+0.03`, UHO, no adjudication, 400 games per pair, 1T and 4T | A.3, B.9, C.11, E.2 |
-| Search deficit G(0) | `tools/sprt.ps1` paired, head against the frozen `hybrid` oracle, 3,000 games, equal time, no adjudication | A.3.3, B.9 |
+| Pool score | Colosseum, fixed pool with Houdini 3, `3+0.03`, UHO, no adjudication, 400 games per pair, 1T and 4T | A.5, B.9, C.11, E.2 |
+| Search deficit G(0) | `tools/sprt.ps1` paired, head against the frozen `hybrid` oracle, 3,000 games, equal time, no adjudication | A.5.3, B.9 |
 | Evaluation deficit | Hybrid at the current head against Stockfish-HCE hybrid, same search, 2,400 games | C.11 |
 | Cluster acceptance | Registered final-PGO SPRT, brackets per rule 5, `[0,10]` for B.2 | every cluster |
 | Neutral change | Exact fingerprint on magic and PEXT, debug and release suites, `nps_multibuild.ps1` pooled PGO | B.1, B.7, C.1, F.1 |
@@ -776,7 +841,7 @@ leaf continues here, this is the mapping; everything else is history.
 | 4.15, 4.15a–c, 4.16, 4.18 (search audits, SPSA, cleanup) | B.0–B.9 | replaced by the search programme |
 | 4.17 (time management) | D.1 | |
 | 4.19, 4.20 (checkpoint, release) | E.1–E.3 | |
-| 4.21 (universal binary) | E.4 / G.2 | optional |
+| 4.21 (universal binary) | A.4 | investigation and prototype before the consolidation release; E.4/G.2 own deferred adoption |
 | Phase 5, 6, 7 (NNUE runway, baseline, frontier) | F | |
 | Phase 8 (scaling) | G | |
 | Phase 9 (classical fallback) | dropped | the classical evaluation stays as datagen baseline and fallback by construction |

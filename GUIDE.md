@@ -90,17 +90,18 @@ together, and `python tools/diag/check_guide.py` must pass.
 | Evaluation deficit | **about 329 Elo** against Stockfish's classical HCE with the same search |
 | Speed | 3.22 MNPS bench 13, PGO 1T; Basilisk 3.71 |
 | Conversion | 57 draws + 12 losses after a persistent piece-up in 2,400 games vs the six HCE-era engines |
-| Active experiment | none; RAR-M45, RAR-M46 and RAR-O03 registered for A.3 |
-| Current step | **A.6.1 — toolchain bump** (agent), then the maintainer runs **A.3** and **A.6.2** while the agent does **A.4** and **A.5** |
-| Next release | A.6: 2.4.0 if RAR-E16 reads at least +40 with the lower bound above +25, else 2.3.3; later 3.0.0 if E.2 is met |
+| Active experiment | none; RAR-E16 registered for A.3.2; RAR-M45, RAR-M46 and RAR-O03 registered for A.5 |
+| Current step | **A.3.1 — toolchain bump** (agent); then the maintainer runs the **A.3.2** gate while the agent does **A.4**; release at **A.3.3**; then **A.5** baselines on the released binary |
+| Next release | A.3: 2.4.0 if RAR-E16 reads at least +40 with the lower bound above +25, else 2.3.3; universal binary if A.4 adopts; later 3.0.0 if E.2 is met |
 
 ## Next and held work
 
-**Next: A.6.1 toolchain bump** (agent, behaviour-neutral). Then the maintainer
-runs A.3 (four registered baseline measurements) and A.6.2 (the release gate)
-on that head, while the agent does A.4 (conversion instrument) and A.5
-(consolidation analysis). A.6.3 releases on the gate's verdict. **B.0**, the
-search programme investigation, opens after A.5.
+**Next: A.3.1 toolchain bump** (agent, behaviour-neutral). Then the maintainer
+runs the A.3.2 release gate while the agent investigates the universal binary
+(A.4); A.3.3 releases on the gate's verdict, with the universal asset only if
+A.4.5 adopted it. The maintainer then runs the A.5 baselines on the released
+binary while the agent does A.6 (conversion instrument) and A.7 (consolidation
+analysis). **B.0**, the search programme investigation, opens after A.7.
 
 | Open hold / obligation | Resume or resolve when | Must be resolved before |
 |---|---|---|
@@ -109,26 +110,33 @@ search programme investigation, opens after A.5.
 
 Follow the earliest unblocked leaf. Held items stay unticked in place.
 
-## Phase A — Reset: repository, instruments, baselines
+## Phase A — Reset: repository, instruments, baselines, consolidation release
 
-Open active leaves show `workflow state / capability class`.
+Open active leaves show `workflow state / capability class`. Execution order
+is the numbering: release first, baselines on the released binary.
 
 - [x] **A.1** Document reset — new PLAN, GUIDE, HISTORY; archives; checker — CLOSED, 2026-09-09
 - [ ] **A.2** Repository and branch cleanup
     - [x] **A.2.1** Tracked-file cleanup: twelve one-off or superseded files removed, each with its last commit — DONE 2026-09-09
     - [x] **A.2.2** Branch and tag disposition: seven branches tagged and deleted, oracle package archived, stale worktrees removed — DONE 2026-09-09
     - [ ] **A.2.3** Feature and option inventory: `diag`, `ablate`, `tune`; every `SearchParams` entry classified — **RESEARCH / R2**
-- [ ] **A.3** Baselines on the starting head `c80df74`
-    - [ ] **A.3.1** Reference pool refresh with Houdini 3, 1T, 400 games per pair — RAR-M45 — **READY_FOR_IMPLEMENTATION / V**
-    - [ ] **A.3.2** Four-thread pool against the four targets and Basilisk — RAR-M46 — **READY_FOR_IMPLEMENTATION / V**
-    - [ ] **A.3.3** Oracle deficit meter G(0) at the head, 3,000 paired games — RAR-O03 — **READY_FOR_IMPLEMENTATION / V**
-    - [ ] **A.3.4** Pooled-PGO NPS baseline, three builds, archived hashes — **READY_FOR_IMPLEMENTATION / V**
-- [ ] **A.4** Conversion instrument `tools/diag/conversion_audit.py`; baseline 57/12 vs 40/12 — **READY_FOR_IMPLEMENTATION / I1**
-- [ ] **A.5** Codebase consolidation analysis: target layout, B.1 and C.1 handoffs, dead-code list — **RESEARCH / R2**
-- [ ] **A.6** Consolidation release before the search programme
-    - [ ] **A.6.1** Toolchain bump 1.97.1 → 1.98.1, behaviour-neutral: exact fingerprint, suites, ISA, pooled NPS — **READY_FOR_IMPLEMENTATION / I1**
-    - [ ] **A.6.2** Release gate RAR-E16: candidate vs 2.3.2, STC `[3,10]`, plus `10+0.1` and 4T direction checks — **READY_FOR_IMPLEMENTATION / V**
-    - [ ] **A.6.3** Release 2.4.0 or 2.3.3 per the release rule: changelog, assets, CI, tag on instruction — **RESEARCH / M**
+- [ ] **A.3** Consolidation release before the search programme
+    - [ ] **A.3.1** Toolchain bump 1.97.1 → 1.98.1, behaviour-neutral: exact fingerprint, suites, ISA, pooled NPS — **READY_FOR_IMPLEMENTATION / I1**
+    - [ ] **A.3.2** Release gate RAR-E16: candidate vs 2.3.2, STC `[3,10]`, plus `10+0.1` and 4T direction checks — **READY_FOR_IMPLEMENTATION / V**
+    - [ ] **A.3.3** Release 2.4.0 or 2.3.3 per the release rule; universal binary only if A.4.5 adopted it — **RESEARCH / M**
+- [ ] **A.4** Universal x86-64 binary: one file per OS selecting its code path at startup
+    - [ ] **A.4.1** Design: symbol-isolation link prototype first; fat binary vs kernel multiversioning vs launcher; dispatch table — **READY_FOR_IMPLEMENTATION / R2**
+    - [ ] **A.4.2** Prototype as `xtask --arch universal`, isolated; forced-tier override; per-region ISA check — **RESEARCH / I2**
+    - [ ] **A.4.3** Compatibility and identity: every tier forced and automatic, bench identity per tier, lifecycle, suites — **RESEARCH / V**
+    - [ ] **A.4.4** Performance and size: fixed-node NPS per tier within 1% of the dedicated PGO binary; startup; size — **RESEARCH / V**
+    - [ ] **A.4.5** Decision: adopt for A.3.3 with a null pair against the gated pext binary, or defer to G.2 — **RESEARCH / R2**
+- [ ] **A.5** Baselines on the release binary
+    - [ ] **A.5.1** Reference pool refresh with Houdini 3, 1T, 400 games per pair — RAR-M45 — **READY_FOR_IMPLEMENTATION / V**
+    - [ ] **A.5.2** Four-thread pool against the four targets and Basilisk — RAR-M46 — **READY_FOR_IMPLEMENTATION / V**
+    - [ ] **A.5.3** Oracle deficit meter G(0), evaluation held constant, 3,000 paired games — RAR-O03 — **READY_FOR_IMPLEMENTATION / V**
+    - [ ] **A.5.4** Pooled-PGO NPS baseline, three builds, archived hashes — **READY_FOR_IMPLEMENTATION / V**
+- [ ] **A.6** Conversion instrument `tools/diag/conversion_audit.py`; baseline 57/12 vs 40/12 — **READY_FOR_IMPLEMENTATION / I1**
+- [ ] **A.7** Codebase consolidation analysis: target layout, B.1 and C.1 handoffs, dead-code list — **RESEARCH / R2**
 
 ## Phase B — Search programme (evaluation frozen)
 
@@ -182,7 +190,7 @@ Open active leaves show `workflow state / capability class`.
 - [ ] **E.1** Attribution checkpoint: STC, `10+0.1`, 4T against 2.3.2 and the B.9/C.11 heads; maturity checklist — **V**
 - [ ] **E.2** Target gate: ≥50% against Critter 1.6a, Houdini 3, Rybka 4 and Fritz 16 at 1T and 4T — **V**
 - [ ] **E.3** Release 3.0.0 (gate met) or 2.4.0: changelog, suites, PGO assets, ISA, CI, tag on instruction — **M**
-- [ ] **E.4** Universal binary investigation, optional — **R2**
+- [ ] **E.4** Universal binary adoption, only if A.4 deferred it — **I1**
 
 ## Phase F — NNUE (own data only)
 
