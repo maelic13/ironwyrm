@@ -92,22 +92,27 @@ together, and `python tools/diag/check_guide.py` must pass.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none; **RAR-E15 ACCEPTED 2026-09-08 at +12.12 +/- 10.17 Elo, +18.40 nElo** |
 | Instrument state | **4.10 repaired; v2 baselines/floors, budget transfer, label audit, mate-drive closure and conversion corrections recorded.** |
-| Current step | **4.11b.19 — caller-owned move-list delivery and generator constant factors**; (a)+(b) done and **(b) BANKED at +2.48% NPS**, (c) screened with 2 of 4 promoted and its bundle run owed; **(d)** then 4.12.1 |
+| Current step | **4.11b.19** — (a), (b), (c) and (d) all done; **the (c) bundle's pooled-PGO run is the only thing owed** and it can revert (c). Then 4.12.1 |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## Next and held work
 
-**Next: 4.11b.19(d), the corrected four-arm comparison** (RAR-M44;
-`analysis/movelist_delivery_2026-09-09.md`). **(a) `55e228a` and (b)
-`021dc98` are done and (b) BANKED +2.48% whole-search NPS, [+2.29%, +2.65%]**,
-null pair -0.21%, against a frozen +0.5% floor. **(c) is screened**: candidate
-1 `be5c02a` (+4.68% legal moves) and candidate 2 `c969ccd` (+7.38%) promoted,
-candidates 3 and 4 rejected and reverted -- both made the generator SLOWER by
-removing a check, which is a retry-blocked negative result. **One maintainer
-job is owed**: the (c) bundle's pooled-PGO run, prediction +0.8% to +2.2%,
-floor +0.5%, and below the floor it reverts both (c) commits. Fingerprint
-stays exactly 7,601,220 / EBF 2.474 throughout, so no game gate is owed.
-**4.12.1** follows (d).
+**Next: the 4.11b.19(c) bundle's pooled-PGO NPS run, which is the
+maintainer's and is the only thing 4.11b.19 still owes** (RAR-M44;
+`analysis/movelist_delivery_2026-09-09.md`). Prediction +0.8% to +2.2%, floor
++0.5%; **below the floor it reverts `be5c02a` and `c969ccd` and (d) must be
+re-measured**. Commands and binaries:
+`tools/results/movelist-c-screen-20260909/HANDOFF.md`.
+
+**Everything else in the leaf is done.** (a) `55e228a` fixed the harness, (b)
+`021dc98` **BANKED +2.48% whole-search NPS** [+2.29%, +2.65%], (c) screened
+four candidates and promoted two -- the other two made the generator SLOWER by
+removing a check and are retry-blocked -- and (d) re-measured all four arms in
+one session with the control reproducing this time. **The generation gap to
+Basilisk went 46.2% -> 17.7% and capture generation is now 19% AHEAD**;
+RAR-M43's table and its Elo arithmetic are superseded
+(`analysis/board_comparison_411b19_2026-09-09.md`). Fingerprint stayed exactly
+7,601,220 / EBF 2.474 throughout, so no game gate is owed. **4.12.1** follows.
 
 **Section 4.11b is otherwise CLOSED**, and 4.11.7–4.11.10 before it. Its playing gate
 RAR-E15 was **ACCEPTED at +12.12 +/- 10.17 Elo, +18.40 nElo**, H1 at 1,950
@@ -218,7 +223,7 @@ holds still come from PLAN; a readiness label never lifts one.
     - [x] **4.11b.16** Qualify integrated correctness and throughput — **QUALIFIED +1.421%**, RAR-M41
     - [x] **4.11b.17** Register and qualify the playing cluster — **ACCEPTED +12.12 Elo**, RAR-E15
     - [x] **4.11b.18** Refresh affected endgame evidence and close — **CLOSED**, RAR-M42
-    - [ ] **4.11b.19** Caller-owned move-list delivery; constant-factor screen; corrected comparison — **LOCAL_QUALIFIED / I1**, RAR-M44; (b) banked +2.48% NPS, (c) screened 2/4, (d) open
+    - [ ] **4.11b.19** Caller-owned move-list delivery; constant-factor screen; corrected comparison — **LOCAL_QUALIFIED / I1**, RAR-M44; (b) banked +2.48% NPS, (c) screened 2/4 with its bundle run owed, (d) done
 - [ ] **4.12** Endgame reference functions — order registered by 4.11.6, re-derived at 4.11.12
     - [ ] **4.12.1** Adopt the order; confirm recognizer-vs-scale classification — **RESEARCH / R3**
     - [ ] **4.12.2** KRPKR [ref 13] scale — 30.7% overclaim remains after 4.9a.7 — **RESEARCH / R3**

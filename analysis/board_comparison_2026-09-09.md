@@ -1,5 +1,20 @@
 # Board comparison after 4.11b — RAR-M43
 
+> **SUPERSEDED 2026-09-09 by 4.11b.19(d) —
+> [board_comparison_411b19_2026-09-09.md](board_comparison_411b19_2026-09-09.md).**
+> Two specific findings below are wrong and the raw numbers are kept anyway.
+> **(1) The generation gap was partly the HARNESS, not the generator.** This
+> document's "legal moves" and "legal captures" columns timed a 520-byte
+> `MoveList` return copy inside the timed region on the Rarog side and not on
+> Basilisk's, whose harness had removed it; the two columns never measured the
+> same work. RAR-M44 found the copy in the emitted assembly and 4.11b.19(a)
+> fixed the harness. **(2) The Elo arithmetic in "What the remaining gap is
+> worth" priced only two of the four board regions**, omitting SEE (5.239%)
+> and check queries (5.179%). Corrected in the new document, where closing the
+> remaining generation and make/unmake gaps is worth about +1.5% rather than
+> +2.9%, and about +2.7% with SEE included. Nothing below is deleted: the
+> session, the control argument and every raw figure stand as measured.
+
 Re-measurement of RAR-M20's board benchmark against Basilisk, on the accepted
 board head. Zero games; this is board throughput only.
 
@@ -84,6 +99,11 @@ target of any 4.11b leaf.
 
 ## The gap to Basilisk, then and now — both measured today
 
+**SUPERSEDED — see the banner at the top.** The Rarog side of the two
+generation rows includes a harness copy that Basilisk's harness did not pay.
+The current table is in
+[board_comparison_411b19_2026-09-09.md](board_comparison_411b19_2026-09-09.md).
+
 How much faster Basilisk is:
 
 | Workload | was (ca03a46) | **now (head)** | change |
@@ -104,6 +124,10 @@ included because re-timing its archived binary costs nothing and keeps the
 session self-consistent.
 
 ## What the remaining gap is worth
+
+**SUPERSEDED — this arithmetic omitted SEE and check queries, and its
+generation gap was partly the harness.** Corrected in
+[board_comparison_411b19_2026-09-09.md](board_comparison_411b19_2026-09-09.md).
 
 Board throughput is not search speed. RAR-M36 puts board work at **23.65%** of
 process time: generation and legality 6.556%, make/unmake 6.677%, SEE 5.239%,

@@ -3132,7 +3132,8 @@ recommendations without coupling this roadmap to model generations.
     I-cache cost a real search does. Commands and binaries:
     `tools/results/movelist-c-screen-20260909/HANDOFF.md`.
 
-    (d) **Re-measure and correct the record -- class V then M.** Rerun the
+    (d) **Re-measure and correct the record -- DONE 2026-09-09, class V then
+    M.** Rerun the
     RAR-M43 four-arm comparison with the parity harness, in one session,
     against the archived hash-verified Basilisk and Reckless binaries and the
     exact ca03a46 control, following `analysis/board_benchmark_recipe_2026-09-05.md`.
@@ -3141,6 +3142,44 @@ recommendations without coupling this roadmap to model generations.
     was partly the harness, and its Elo arithmetic omitted SEE and check
     queries. Do not delete the old table; mark it superseded and link the new
     one. Close the leaf with GUIDE and PLAN in the same commit.
+
+    **(d) OUTCOME, 2026-09-09.** Four arms in one session, RAR-M43's runner
+    reused unchanged except for the head binary path, affinity mask 4, three
+    cyclic rounds, host busy 4.8-5.7% against the recipe's 12% threshold.
+    **The control reproduced this time**: the identical `ca03a46` binary is
+    within **-0.96% to +1.25%** of its RAR-M43 readings and Basilisk within
+    +/-1.2%, so this session is comparable to RAR-M43's rather than
+    within-session only -- RAR-M43 itself could not say that, its control
+    having drifted 0.7-6.1% against RAR-M20.
+
+    | Gap to Basilisk | RAR-M20 | RAR-M43 | **now** |
+    |---|---:|---:|---:|
+    | legal moves | 44.5% | 46.2% | **17.7%** |
+    | legal captures | 20.9% | 26.2% | **-16.0%, Rarog 19% ahead** |
+    | two-ply | 46.5% | 38.9% | **18.6%** |
+    | perft(4) | 39.2% | 38.2% | **16.2%** |
+    | make/unmake | 31.3% | 11.8% | **7.3%** |
+    | threshold SEE | -- | 34.9% | **29.4%** |
+
+    RAR-M43 and `analysis/board_comparison_2026-09-09.md` carry supersession
+    notes naming both errors -- the harness copy in the generation columns and
+    the Elo arithmetic that omitted SEE and check queries -- with every raw
+    figure retained. The corrected arithmetic on measured gaps: closing the
+    remaining generation and make/unmake gaps entirely is worth about **+1.5%**
+    whole-search NPS rather than +2.9%, about **+2.7%** with SEE included at
+    this session's matched-value 1.294x (which independently reproduces
+    RAR-M29's ~30%), and check queries are still not in that number, so it is a
+    floor. Roughly 3 to 5 Elo at the project's ~2 Elo per 1% constant, **no Elo
+    claimed**, far below the 250-355 Elo search deficit -- the prioritisation
+    stands. New record: `analysis/board_comparison_411b19_2026-09-09.md`;
+    evidence `tools/results/board-compare-d-20260909/`.
+
+    **The leaf does NOT close here.** (c)'s bundled pooled-PGO run is
+    registered and unrun, and its rule reverts `be5c02a` and `c969ccd` if it
+    lands below the +0.5% floor -- in which case (d) must be re-measured,
+    because this table would then describe code that is gone. 4.11b.19 closes
+    when that run is recorded and, if it fails, when the revert and
+    re-measurement are done.
 
     **Not this leaf:** any HCE, search-policy or pruning change; any change to
     generated move order; a game gate -- the section's playing verdict RAR-E15
