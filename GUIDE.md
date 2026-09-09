@@ -125,7 +125,7 @@ is the numbering: release first, baselines on the released binary.
 - [ ] **A.3** Consolidation release before the search programme
     - [x] **A.3.1** Toolchain bump 1.97.1 → 1.98.1, behaviour-neutral: fingerprint, suites, ISA and pooled NPS all clean (RAR-P18) — DONE 2026-09-09
     - [x] **A.3.2** Release gate RAR-E16: **H1 accepted at 742 games, +54.77 ± 17.04 Elo**; 4T check +79.53 ± 21.21, zero forfeits; 2.4.0 licensed — DONE 2026-09-09
-    - [ ] **A.3.3** Time-forfeit repair: stall mechanism demonstrated (blocking info writes under a lagging harness), info-line throttle `d93f808`; RAR-R11 10,000-game validation owed — **LOCAL_QUALIFIED / R2**
+    - [ ] **A.3.3** Time-forfeit repair: stalls diagnosed, clock now starts at `go` parse as in Stockfish and Reckless (`79d3974`); RAR-R11 10,000-game validation owed — **LOCAL_QUALIFIED / R2**
     - [ ] **A.3.4** Release 2.4.0 or 2.3.3 per the release rule; universal binary only if A.4.5 adopted it — **RESEARCH / M**
 - [ ] **A.4** Universal x86-64 binary: one file per OS selecting its code path at startup
     - [ ] **A.4.1** Design: symbol-isolation link prototype first; fat binary vs kernel multiversioning vs launcher; dispatch table — **READY_FOR_IMPLEMENTATION / R2**

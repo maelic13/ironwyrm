@@ -324,22 +324,23 @@ being played and can still make this release if it passes its checks.
       verdict. Prediction frozen in the row.
 
       **Disposition 2026-09-09: diagnosed and repaired, `LOCAL_QUALIFIED`;
-      RAR-R11 decides.** The seven forfeits are one population: stalls of
-      50–500 ms in which the search cannot run its clock check, and the
-      demonstrated mechanism is blocking `println!` when the harness has not
-      drained the pipe. CPU contention alone did not reproduce it (5,600
-      searches under fourteen concurrent processes, worst overrun 2 ms); a
-      reader lagging 20 ms per line reproduced it exactly (every move overran
-      its clock by about 190 ms while the search reported 50 ms). Repair
-      `d93f808`: depth 1, then at most one `info` line per 250 ms, and always
-      the last completed iteration before `bestmove` from a snapshot taken at
-      completion; two lines per bullet move instead of thirteen. Under the
-      same lagging reader no move exceeds clock plus margin. Bench-invisible
-      by construction and reproduced at 7,601,220 / EBF 2.474 on both slider
-      backends; 567 tests, fmt and clippy clean. The low-time reserve was
-      deliberately not changed: the stalls are 50–500 ms and a 30–40 ms
-      reserve rescues at most one of seven at a cost on every last move; it
-      stays with D.1. Evidence: `analysis/time_forfeit_2026-09-09.md`.
+      RAR-R11 decides.** The seven forfeits are one population of 50–500 ms
+      stalls in which the search cannot run its clock check. CPU contention
+      alone did not reproduce them (5,600 searches under fourteen concurrent
+      processes, worst overrun 2 ms). Both donors stamp the clock on the UCI
+      thread while parsing `go` (Stockfish `limits.startTime`, Reckless
+      `TimeManager::new`); Rarog stamped it on the engine thread after the
+      command hand-off and configuration invalidation, so that latency under a
+      loaded host was invisible to its budget. Repair `79d3974`: the clock
+      starts when `go` is parsed (`SearchLimits.issued`), with a test that a
+      search issued past its budget returns at once. An interim throttle of
+      `info` output (`d93f808`) was reverted at `e3430d9`: neither donor
+      throttles and the reproduction behind it measured the driver's own
+      per-line lag. Bench-invisible by construction and reproduced at
+      7,601,220 / EBF 2.474 on both slider backends; 567 tests, fmt and clippy
+      clean. The low-time reserve was deliberately not changed and stays with
+      D.1; stalls that land mid-search are the harness margin's problem for
+      every engine. Evidence: `analysis/time_forfeit_2026-09-09.md`.
     - **A.3.4 Release — `M`.** Version strings, README, CHANGELOG from the
       accepted ledger rows since 2.3.2, fmt, suites, clippy, feature builds,
       fingerprint, PGO assets with ISA verification, CI matrix on the release
@@ -638,7 +639,7 @@ class until they open.
 
 | Leaf | Workflow state | Class | Current decision |
 |---|---|---|---|
-| A.3.3 | LOCAL_QUALIFIED | R2 | Stall mechanism demonstrated and repaired by info-line throttling (`d93f808`); RAR-R11 run is the maintainer's |
+| A.3.3 | LOCAL_QUALIFIED | R2 | Clock now starts at `go` parse as in both donors (`79d3974`); RAR-R11 run is the maintainer's |
 | A.3.4 | RESEARCH | M | Waits for the A.3.2 verdict, the A.3.3 repair and the A.4.5 decision; version per the release rule |
 | A.4.1 | READY_FOR_IMPLEMENTATION | R2 | Symbol-isolation link prototype first; then the design document and handoffs |
 | A.4.2 | RESEARCH | I2 | Waits for A.4.1 |
