@@ -39,6 +39,16 @@ impl MoveList {
         self.len += 1;
     }
 
+    /// Reset the list to empty without touching any element.
+    ///
+    /// Only `len` moves; the `MaybeUninit` prefix contract is preserved
+    /// because nothing below the new `len` is ever read. This is what makes a
+    /// caller-owned list reusable across generations at no cost (RAR-M44).
+    #[inline(always)]
+    pub fn clear(&mut self) {
+        self.len = 0;
+    }
+
     #[inline(always)]
     pub fn len(&self) -> usize {
         self.len

@@ -700,8 +700,20 @@ impl Board {
         super::movegen::generate_legal_movelist(self)
     }
 
+    /// [`Board::generate_legal_movelist`] into a caller-owned list, which is
+    /// the form the search uses: the value form pays a 520-byte return copy
+    /// (RAR-M44).
+    pub fn generate_legal_movelist_into(&self, moves: &mut MoveList) {
+        super::movegen::generate_legal_into(self, moves);
+    }
+
     pub fn generate_legal_captures(&mut self) -> MoveList {
         super::movegen::generate_captures(self)
+    }
+
+    /// [`Board::generate_legal_captures`] into a caller-owned list.
+    pub fn generate_legal_captures_into(&mut self, moves: &mut MoveList) {
+        super::movegen::generate_captures_into(self, moves);
     }
 
     pub fn generate_legal_quiets(&self) -> MoveList {
@@ -714,10 +726,21 @@ impl Board {
         super::movegen::generate_captures_pinned(self)
     }
 
+    /// [`Board::generate_legal_captures_pinned`] into a caller-owned list,
+    /// handing back only the pinned set.
+    pub fn generate_legal_captures_pinned_into(&mut self, moves: &mut MoveList) -> Bitboard {
+        super::movegen::generate_captures_pinned_into(self, moves)
+    }
+
     /// Quiet generation reusing a pinned set from
     /// [`Board::generate_legal_captures_pinned`] at the same node.
     pub fn generate_legal_quiets_pinned(&self, pinned: Bitboard) -> MoveList {
         super::movegen::generate_quiets_pinned(self, pinned)
+    }
+
+    /// [`Board::generate_legal_quiets_pinned`] into a caller-owned list.
+    pub fn generate_legal_quiets_pinned_into(&self, pinned: Bitboard, moves: &mut MoveList) {
+        super::movegen::generate_quiets_pinned_into(self, pinned, moves);
     }
 
     pub fn perft(&mut self, depth: u32) -> u64 {

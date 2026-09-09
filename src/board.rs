@@ -22,7 +22,10 @@ pub use board::{
     Board, CROSS_ENGINE_SEE_VALUES, CheckInfo, GameResult, PRODUCTION_SEE_VALUES, STARTING_FEN,
     SeeValues,
 };
-pub use movegen::{generate_captures, generate_legal_movelist, generate_legal_moves, perft};
+pub use movegen::{
+    generate_captures, generate_captures_into, generate_legal_into, generate_legal_movelist,
+    generate_legal_moves, perft,
+};
 pub use moves::{Move, MoveList};
 pub use piece::{CastlingRights, Color, Piece};
 pub use square::{File, Rank, Square};

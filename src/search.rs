@@ -3,7 +3,7 @@
 use std::sync::{Arc, atomic::Ordering, mpsc};
 use std::time::Instant;
 
-use crate::board::{Bitboard, Board, CheckInfo, Color, GameResult, Move, Piece};
+use crate::board::{Bitboard, Board, CheckInfo, Color, GameResult, Move, MoveList, Piece};
 use crate::eval::{Evaluator, INF_SCORE, MATE_SCORE, VALUE_NONE, piece_value};
 use crate::infra;
 use crate::move_ordering::{
@@ -793,7 +793,8 @@ impl MovePicker {
     }
 
     fn staged(searcher: &Searcher, board: &mut Board, tt_move: Move, ply: usize) -> Self {
-        let (captures, pinned) = board.generate_legal_captures_pinned();
+        let mut captures = MoveList::new();
+        let pinned = board.generate_legal_captures_pinned_into(&mut captures);
         let (moves, good_len, cap_len) =
             searcher.score_staged_captures(board, captures.as_slice(), tt_move);
         Self::Staged {
@@ -900,7 +901,8 @@ impl MovePicker {
                         // Once, on demand, appended after the captures. The
                         // stage exists so "have the quiets been generated" is a
                         // position in the order rather than a bool.
-                        let quiet_moves = board.generate_legal_quiets_pinned(*pinned);
+                        let mut quiet_moves = MoveList::new();
+                        board.generate_legal_quiets_pinned_into(*pinned, &mut quiet_moves);
                         searcher.append_scored_moves(
                             board,
                             quiet_moves.as_slice(),
@@ -1104,7 +1106,8 @@ impl Searcher {
         );
 
         let board = root;
-        let legal_moves = board.generate_legal_movelist();
+        let mut legal_moves = MoveList::new();
+        board.generate_legal_movelist_into(&mut legal_moves);
         if legal_moves.is_empty() {
             return self.no_legal_moves_result(&board);
         }
@@ -2815,7 +2818,8 @@ impl Searcher {
                     } else {
                         0
                     };
-                let captures = board.generate_legal_captures();
+                let mut captures = MoveList::new();
+                board.generate_legal_captures_into(&mut captures);
                 let mut scored = self.score_tactical_moves(board, captures.as_slice(), tt_move);
                 let mut searched_here = 0i32;
                 for index in 0..scored.len() {
@@ -2914,7 +2918,8 @@ impl Searcher {
         }
 
         let mut move_picker = if in_check || ply == 0 || !excluded.is_null() {
-            let legal_moves = board.generate_legal_movelist();
+            let mut legal_moves = MoveList::new();
+            board.generate_legal_movelist_into(&mut legal_moves);
             if legal_moves.is_empty() {
                 return if in_check {
                     -MATE_SCORE + infra::to_i32(ply)
@@ -2992,7 +2997,7 @@ impl Searcher {
         // only observe the per-node event, so that is the comparable unit.
         #[cfg(feature = "diag")]
         let mut diag_node_lmp_seen = false;
-        let mut quiets = crate::board::MoveList::new();
+        let mut quiets = MoveList::new();
         let mut good_caps = BadCaptureList::new();
         let mut bad_caps = BadCaptureList::new();
         let previous_move = if ply > 0 {
@@ -4019,11 +4024,12 @@ impl Searcher {
             }
         }
 
-        let moves = if in_check {
-            board.generate_legal_movelist()
+        let mut moves = MoveList::new();
+        if in_check {
+            board.generate_legal_movelist_into(&mut moves);
         } else {
-            board.generate_legal_captures()
-        };
+            board.generate_legal_captures_into(&mut moves);
+        }
 
         if in_check && moves.is_empty() {
             return -MATE_SCORE + infra::to_i32(ply);
