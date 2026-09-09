@@ -240,6 +240,48 @@ fn movetime_100_completes_at_least_one_depth() {
     session.quit();
 }
 
+/// A.3.3 (RAR-R11): a short search writes depth 1, at most one line per
+/// 250 ms, and the last completed iteration -- not one line per iteration.
+/// Blocking `println!` calls were the measured path by which a lagging harness
+/// turned into engine wall time and time forfeits at bullet.
+#[test]
+fn short_search_throttles_info_lines_and_reports_the_final_depth() {
+    let mut session = UciSession::start();
+    session.send("uci");
+    session.expect_line_containing("uciok", wait(15));
+    session.send("position startpos");
+    session.send("go movetime 100");
+
+    let lines = session.collect_until_line_containing("bestmove", wait(2));
+    let info: Vec<&String> = lines
+        .iter()
+        .filter(|line| line.starts_with("info depth "))
+        .collect();
+
+    assert!(
+        info.first()
+            .is_some_and(|line| line.starts_with("info depth 1 ")),
+        "depth 1 is always printed first: {lines:?}"
+    );
+    assert!(
+        info.len() <= 3,
+        "a 100 ms search prints depth 1, at most one throttled line and the final          iteration, never one line per depth: {} lines: {lines:?}",
+        info.len()
+    );
+    let depth_of = |line: &String| -> usize {
+        line.split_whitespace()
+            .nth(2)
+            .and_then(|d| d.parse().ok())
+            .expect("info depth N")
+    };
+    let depths: Vec<usize> = info.iter().map(|l| depth_of(l)).collect();
+    assert!(
+        depths.windows(2).all(|w| w[0] < w[1]),
+        "printed depths must increase and end with the completed depth: {depths:?}"
+    );
+    session.quit();
+}
+
 #[test]
 fn long_endgame_search_does_not_overflow_engine_thread_stack() {
     let mut session = UciSession::start();
