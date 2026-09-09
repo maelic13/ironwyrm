@@ -124,7 +124,7 @@ is the numbering: release first, baselines on the released binary.
     - [x] **A.2.3** Feature and option inventory: 42 inert parameters for B.1, 55 seeds for B.2, features kept — DONE 2026-09-09
 - [ ] **A.3** Consolidation release before the search programme
     - [x] **A.3.1** Toolchain bump 1.97.1 → 1.98.1, behaviour-neutral: fingerprint, suites, ISA and pooled NPS all clean (RAR-P18) — DONE 2026-09-09
-    - [ ] **A.3.2** Release gate RAR-E16: candidate vs 2.3.2, STC `[3,10]`, plus `10+0.1` and 4T direction checks — arms built and verified, baseline corrected before games — **LOCAL_QUALIFIED / V**
+    - [ ] **A.3.2** Release gate RAR-E16: candidate vs 2.3.2, `3+0.03` `[3,10]` 1T, plus a `3+0.03` 4T check; `10+0.1` is pre-release — arms built and verified — **LOCAL_QUALIFIED / V**
     - [ ] **A.3.3** Release 2.4.0 or 2.3.3 per the release rule; universal binary only if A.4.5 adopted it — **RESEARCH / M**
 - [ ] **A.4** Universal x86-64 binary: one file per OS selecting its code path at startup
     - [ ] **A.4.1** Design: symbol-isolation link prototype first; fat binary vs kernel multiversioning vs launcher; dispatch table — **READY_FOR_IMPLEMENTATION / R2**

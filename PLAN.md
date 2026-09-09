@@ -258,8 +258,11 @@ being played and can still make this release if it passes its checks.
     - **A.3.2 Release gate — RAR-E16, `V`.** Registered before games: the
       release candidate (A.3.1 head, PGO pext) against the 2.3.2 release binary,
       `3+0.03`, 1T, Hash 64, paired UHO, no adjudication, `[3,10]` nElo, cap
-      16,000 games, plus `10+0.1` and 4T `10+0.1` direction checks of 400 games
-      each with zero forfeits. Prediction frozen in the row. H1 with the point
+      16,000 games, plus a `3+0.03` 4T direction check of 400 games with zero
+      forfeits. `3+0.03` is the gate's clock at both thread counts; `10+0.1` is
+      a pre-release check rather than a condition of the verdict, and the 4T
+      null pair is dropped as already-calibrated harness behaviour (maintainer
+      decision 2026-09-09, before any gate game). Prediction frozen in the row. H1 with the point
       estimate at or above +40 and the lower bound above +25 licenses 2.4.0;
       any other H1 licenses 2.3.3; H0 stops the release and is itself a finding
       against the accepted-gains ledger. While these games run, the agent works
