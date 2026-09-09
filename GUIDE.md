@@ -90,8 +90,8 @@ together, and `python tools/diag/check_guide.py` must pass.
 | Evaluation deficit | **about 329 Elo** against Stockfish's classical HCE with the same search |
 | Speed | 3.22 MNPS bench 13, PGO 1T; Basilisk 3.71 |
 | Conversion | 57 draws + 12 losses after a persistent piece-up in 2,400 games vs the six HCE-era engines |
-| Active experiment | none; RAR-E16 CLOSED (H1, +54.77 ± 17.04 Elo); RAR-R11 registered for A.3.3; RAR-M45, RAR-M46 and RAR-O03 registered for A.5 |
-| Current step | **A.3.3 — time-forfeit repair** (agent), then the maintainer runs RAR-R11; release at **A.3.4** as **2.4.0**; then **A.5** baselines on the released binary |
+| Active experiment | **RAR-R11 ready to run** (10,000 games, fixed length); RAR-M45, RAR-M46 and RAR-O03 registered for A.5 |
+| Current step | **A.3.3 — RAR-R11 validation run** (maintainer); then **A.3.4** release; the agent works **A.4** meanwhile |
 | Next release | **2.4.0** — RAR-E16 read +54.77 ± 17.04, lower bound +37.73, so the rule is met; cut at A.3.4 after A.3.3 and the two 1.98.1 holds; universal binary if A.4 adopts; later 3.0.0 if E.2 is met |
 
 ## Next and held work
@@ -125,7 +125,7 @@ is the numbering: release first, baselines on the released binary.
 - [ ] **A.3** Consolidation release before the search programme
     - [x] **A.3.1** Toolchain bump 1.97.1 → 1.98.1, behaviour-neutral: fingerprint, suites, ISA and pooled NPS all clean (RAR-P18) — DONE 2026-09-09
     - [x] **A.3.2** Release gate RAR-E16: **H1 accepted at 742 games, +54.77 ± 17.04 Elo**; 4T check +79.53 ± 21.21, zero forfeits; 2.4.0 licensed — DONE 2026-09-09
-    - [ ] **A.3.3** Time-forfeit repair: reconstructed clocks of the seven forfeits, low-time reserve fix, RAR-R11 10,000-game validation — **READY_FOR_IMPLEMENTATION / R2**
+    - [ ] **A.3.3** Time-forfeit repair: stall mechanism demonstrated (blocking info writes under a lagging harness), info-line throttle `d93f808`; RAR-R11 10,000-game validation owed — **LOCAL_QUALIFIED / R2**
     - [ ] **A.3.4** Release 2.4.0 or 2.3.3 per the release rule; universal binary only if A.4.5 adopted it — **RESEARCH / M**
 - [ ] **A.4** Universal x86-64 binary: one file per OS selecting its code path at startup
     - [ ] **A.4.1** Design: symbol-isolation link prototype first; fat binary vs kernel multiversioning vs launcher; dispatch table — **READY_FOR_IMPLEMENTATION / R2**
