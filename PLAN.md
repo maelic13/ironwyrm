@@ -2112,7 +2112,7 @@ recommendations without coupling this roadmap to model generations.
 | 4.11b.16 | CLOSED (QUALIFIED) | V | Correctness matrix passed; +1.421% [+0.953%, +1.764%] pooled-PGO throughput banked | RAR-M41; `analysis/cluster_qualification_2026-09-08.md` | Null pair unbiased at +0.222% [-0.130%, +0.630%]; behaviour identical throughout; no Elo claimed |
 | 4.11b.17 | CLOSED (ACCEPTED) | V | Integrated cluster gated and accepted | RAR-E15; `analysis/playing_gate_2026-09-08.md` | H1 at 1,950 games under a symmetric `[-5,5]` registered before games: +12.12 +/- 10.17 Elo, +18.40 nElo, LLR 2.96. Magnitude imprecise; no subcomponent credited |
 | 4.11b.18 | CLOSED (refreshed) | V | Affected evidence refreshed and versioned; 4.12 order verified unchanged | RAR-M42; `analysis/endgame_refresh_2026-09-09.md` | Layer-1 theory identical on all 19 families, floors PASS both arms, order rederived and reproduces registered v2 exactly. One non-blocking KRP-KB report owned by 4.12.6 |
-| 4.11b.19 | LOCAL_QUALIFIED | I1 | (a)+(b) done and qualified, (b) banked at +2.48% NPS; (c)/(d) open. Remove the 520-byte move-list return copy from bench and search; bounded constant-factor screen; corrected comparison record | RAR-M44; `analysis/movelist_delivery_2026-09-09.md`; probe `tools/results/board-copy-probe-20260909/` | (a) `55e228a` and (b) `021dc98` landed on the exact fingerprint 7,601,220 / EBF 2.474 (magic and PEXT) with zero 520-byte `memcpy` sites left in the fat-LTO binary, four before; the registered pooled-PGO run measured **+2.48% [+2.29%, +2.65%]** against a +0.5% floor, null pair -0.21% [-0.57%, +0.23%], so (b) is **BANKED** and the prediction missed high; (c) conditional on the parity bench; (d) re-measures the four arms and supersedes RAR-M43's gap table |
+| 4.11b.19 | CLOSED (banked + `NO_CHANGE`) | I1 | (a)+(b) banked +2.48% NPS; (c) rejected in search at -0.55% and reverted; (d) re-measured and RAR-M43 superseded. Remove the 520-byte move-list return copy from bench and search; bounded constant-factor screen; corrected comparison record | RAR-M44; `analysis/movelist_delivery_2026-09-09.md`; probe `tools/results/board-copy-probe-20260909/` | (a) `55e228a` and (b) `021dc98` landed on the exact fingerprint 7,601,220 / EBF 2.474 (magic and PEXT) with zero 520-byte `memcpy` sites left in the fat-LTO binary, four before; the registered pooled-PGO run measured **+2.48% [+2.29%, +2.65%]** against a +0.5% floor, null pair -0.21%, so (b) is **BANKED**; (c) promoted two of four candidates on the bench (+12.7% legal moves) and its bundled run then measured **-0.55% [-0.76%, -0.30%]** whole-search NPS, below the floor and negative, so both commits were **REVERTED** at `39542b7`; (c) conditional on the parity bench; (d) re-measures the four arms and supersedes RAR-M43's gap table |
 
 1. **4.11b.1 Freeze the audit and comparison -- DONE.** RAR-M20 and its committed evidence preserve the
    three-engine results, limitations, raw output, binary/source hashes, exact
@@ -2920,7 +2920,8 @@ recommendations without coupling this roadmap to model generations.
     `analysis/endgame_refresh_2026-09-09.md`.
 
 19. **4.11b.19 Caller-owned move-list delivery and generator constant factors
-    -- (a) and (b) DONE and QUALIFIED / I1 (RAR-M44, registered 2026-09-09).**
+    -- CLOSED 2026-09-09 / I1 (RAR-M44). (a)+(b) banked +2.48% NPS; (c)
+    rejected in search and reverted; (d) re-measured.**
     Inserted after the section closed. Research is done; this leaf is
     implementation, cheap deterministic qualification and one pooled-PGO
     throughput measurement, followed by a bounded, conditional screen.
@@ -3041,9 +3042,9 @@ recommendations without coupling this roadmap to model generations.
     NPS is not Elo and none is claimed; behaviour is unchanged, so RAR-E15's
     verdict stands and no game gate is owed. This unblocks (c).
 
-    (c) **Bounded constant-factor screen -- SCREEN COMPLETE 2026-09-09, 2 of
-    4 candidates promoted; the bundled pooled-PGO run is registered and owed
-    to the maintainer. Class I2.** The remaining ~32% legal-moves gap is also
+    (c) **Bounded constant-factor screen -- CLOSED `NO_CHANGE` 2026-09-09.
+    Two of four candidates cleared the bench gate; the bundled pooled-PGO run
+    then measured -0.55% whole-search NPS and both were reverted. Class I2.** The remaining ~32% legal-moves gap is also
     constant factor; the candidates below were seen in the same assembly and
     are listed in priority order. Rules: one candidate at a time on top of
     (b); measure each with the parity bench from (a) using the RAR-M43 runner
@@ -3115,8 +3116,7 @@ recommendations without coupling this roadmap to model generations.
     move -- giving the compiler more information, by forcing inlining and by
     making the colour a compile-time constant.
 
-    **(c) bundle run, REGISTERED and frozen before any run, owed to the
-    maintainer.** Same RAR-M41 instrument, `tools/nps_multibuild.ps1 -Cycles
+    **(c) bundle run, REGISTERED and frozen before any run.** Same RAR-M41 instrument, `tools/nps_multibuild.ps1 -Cycles
     10 -Repeats 3`, three PGO builds per arm. Base is the (b) head -- the same
     three binaries that were (b)'s candidate arm, so the two measurements
     chain without a gap. Prediction **+0.8% to +2.2%** whole-search NPS, floor
@@ -3132,8 +3132,25 @@ recommendations without coupling this roadmap to model generations.
     I-cache cost a real search does. Commands and binaries:
     `tools/results/movelist-c-screen-20260909/HANDOFF.md`.
 
-    (d) **Re-measure and correct the record -- DONE 2026-09-09, class V then
-    M.** Rerun the
+    **(c) BUNDLE RESULT and REVERT, 2026-09-09.** One run on an idle host:
+    **-0.55% whole-search NPS, 95% bootstrap [-0.76%, -0.30%]** (3,227,009 ->
+    3,209,296 n/s), null pair **+0.06% [-0.46%, +0.44%]**. Below the +0.5%
+    floor and NEGATIVE with an interval excluding zero. The registered
+    consequence was applied without argument, which is the entire reason it
+    was written down beforehand: **`be5c02a` and `c969ccd` reverted at
+    `39542b7`**, `src/board/movegen.rs` restored byte-identical to the (b)
+    head, re-verified at 7,601,220 / EBF 2.474 on magic and PEXT, 26/26 debug
+    and release, fmt and Clippy clean. **The prediction missed in SIGN** --
+    +0.8% to +2.2% predicted, -0.55% measured -- and the postmortem is
+    deliberately thin: the stated pre-run risk (candidate 2 doubling the
+    generator, whose I-cache cost this bench cannot see) is the leading
+    explanation and is **not established**; the pair was gated as one bundle,
+    so neither candidate is individually credited or blamed. **Retry rule:
+    neither candidate returns without a whole-search instrument that can
+    separate them, and a microbenchmark column is not that instrument.**
+
+    (d) **Re-measure and correct the record -- DONE 2026-09-09, measured
+    twice, class V then M.** Rerun the
     RAR-M43 four-arm comparison with the parity harness, in one session,
     against the archived hash-verified Basilisk and Reckless binaries and the
     exact ca03a46 control, following `analysis/board_benchmark_recipe_2026-09-05.md`.
@@ -3174,12 +3191,35 @@ recommendations without coupling this roadmap to model generations.
     stands. New record: `analysis/board_comparison_411b19_2026-09-09.md`;
     evidence `tools/results/board-compare-d-20260909/`.
 
-    **The leaf does NOT close here.** (c)'s bundled pooled-PGO run is
-    registered and unrun, and its rule reverts `be5c02a` and `c969ccd` if it
-    lands below the +0.5% floor -- in which case (d) must be re-measured,
-    because this table would then describe code that is gone. 4.11b.19 closes
-    when that run is recorded and, if it fails, when the revert and
-    re-measurement are done.
+    **(d) was then RE-MEASURED, because the (c) revert removed the code that
+    table described.** Second session, same instrument and runner, on the (b)
+    head: control within -1.32% to +1.81% and Basilisk within -1.21% to
+    +0.37% of the RAR-M43 session. **Final gaps to Basilisk: legal moves
+    46.2% -> 33.2%, legal captures 26.2% -> -5.5% (Rarog 5.8% AHEAD), two-ply
+    38.9% -> 33.1%, perft 38.2% -> 27.2%**, with make/unmake 11.8% -> 12.3%
+    and threshold SEE 34.9% -> 35.0% -- both untouched by this leaf and both
+    flat, which is the table's internal consistency check. The first session
+    is retained as superseded, because the difference between the two IS the
+    finding: the (c) head was up to 13% faster on every board column and half
+    a percent slower in search. Corrected arithmetic on the final gaps:
+    closing generation and make/unmake entirely is worth about **+2.4%**
+    whole-search NPS, about **+3.9%** with SEE at this session's matched-value
+    1.350x, check queries still uncompared so it is a floor -- roughly 5 to 8
+    Elo at the project constant, **no Elo claimed**, far below the 250-355 Elo
+    search deficit. RAR-M44's own directional prediction for (b) scores as
+    **essentially exact on legal moves** (about 32% predicted, 33.2% measured)
+    and **overstated by about half on captures** (about 11% ahead predicted,
+    5.8% measured).
+
+    **LEAF CLOSED 2026-09-09.** Banked: (a)'s harness correction and (b)'s
+    **+2.48%** whole-search NPS. Closed `NO_CHANGE`: (c). Corrected: RAR-M43's
+    gap table and its Elo arithmetic. Fingerprint unchanged at 7,601,220 /
+    EBF 2.474 throughout, so no game gate was owed and RAR-E15's verdict
+    stands. **The leaf's most transferable result is about the instrument:**
+    (b) removed work and +11% legal moves became +2.48% of search; (c) moved
+    work around and +12.7% legal moves became -0.55%. A board microbenchmark
+    column is not a proxy for search speed here, and its sign need not
+    survive. Next: **4.12.1**.
 
     **Not this leaf:** any HCE, search-policy or pruning change; any change to
     generated move order; a game gate -- the section's playing verdict RAR-E15

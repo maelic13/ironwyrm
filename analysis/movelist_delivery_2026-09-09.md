@@ -135,3 +135,35 @@ at the caller's return slot, outside the symbol a share profile charges
 generation to — and 520 bytes of store traffic per call costs more than its
 instruction count implies. No Elo is claimed; behaviour is unchanged and
 RAR-E15's verdict stands.
+
+## (c) and (d), 2026-09-09
+
+**(c) constant-factor screen: 2 of 4 candidates promoted on the bench, then
+the bundle REJECTED in search and reverted.** Force-inlining three helpers
+(+4.68% legal moves) and const-generic colour (+7.38%) cleared the registered
++3% gate; an unchecked `MoveList::push` (-9.57%) and hoisting six of seven
+`LazyLock` state checks (-4.25%) did not, and were reverted unscreened
+further. The bundled pooled-PGO run then measured **-0.55% whole-search NPS,
+95% [-0.76%, -0.30%]**, with a null pair at +0.06% [-0.46%, +0.44%], against
+a registered +0.5% floor and a frozen prediction band of +0.8% to +2.2%.
+Both commits were reverted, as the registration required.
+
+**The prediction missed in SIGN.** The two candidates were worth +12.7% on the
+legal-moves and two-ply bench columns and NEGATIVE half a percent of search.
+The stated risk written down before the run -- candidate 2 roughly doubling
+the generator, whose I-cache cost a microbenchmark running one hot generator
+cannot see -- is the leading explanation and is NOT established; the pair was
+gated as one bundle, so neither candidate is individually credited or blamed.
+
+**(d) re-measured the four arms twice**: once on the (c) head, and again on
+the (b) head after the revert. Current record and the superseded (c)-head
+table: `analysis/board_comparison_411b19_2026-09-09.md`. The legal-moves gap
+to Basilisk is **33.2%**, down from RAR-M43's 46.2%, and capture generation is
+**5.8% ahead** of Basilisk. This document's own directional prediction for (b)
+-- "about 32%" and "about 11% ahead" -- scores as exact on the first and
+overstated by about half on the second.
+
+**What this leaf establishes about its own instrument:** (b) removed work and
++11% legal moves converted to +2.48% of search; (c) moved work around and
++12.7% legal moves converted to -0.55%. A board microbenchmark column is not a
+proxy for search speed on this codebase, and its SIGN does not always survive.
