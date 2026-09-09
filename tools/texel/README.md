@@ -42,8 +42,8 @@ Label each sampled position by a **strong engine's WDL/eval**, distilling its
 static judgment into Rarog's weights (a common strong-HCE technique). Denser and
 often higher-quality than self-play results, but can chase SF quirks that do not
 transfer. Rarog measured exactly that failure in RAR-E03 (**−17.11 Elo**), so
-do not use this path for a fit candidate. `import_beast.py` remains only to reproduce or
-diagnose that result once you have `FEN<TAB>target` files (e.g. from
+do not use this path for a fit candidate. The `import_beast.py` converter was removed
+on 2026-09-09 (last at `6fa6731`); reproduce that result from git history if ever needed, with `FEN<TAB>target` files (e.g. from
 running an SF `go nodes`/`go depth` pass over the sampled FENs and writing its
 WDL as the side-to-move target). No SF binary was found in this repo; point the
 labeller at your capped/full Stockfish when you choose this path.
@@ -64,8 +64,6 @@ copied**. Treat it as an immutable position pool.
 | `extract_parallel.py` | Parallel front end with the same deterministic dataset contract; validates datagen sidecars/ranges and reports result, termination, mate, label and material coverage. |
 | `fit_complete.ps1` | One-command qualified corpus publication plus complete alternating nonlinear/linear fit, verification, bake/test/bench artifact capture and safe source/binary restoration. |
 | `confirm_hce_fit.ps1` | One-command untouched confirmation of the fixed production fit: 150k unused independent openings, pure self-play WDL, exact source-to-rounded-candidate report. |
-| `import_beast.py` | For Path B: converts pre-evaluated `FEN<TAB>target` files to `FEN;target` train/holdout, converting side-to-move targets to White perspective. |
-| `reference/basilisk_tuner.cpp` | Historical source for the completed Rust port's Adam, K-fit, group masks and reconstruction gate; do not build because it links Basilisk's eval. |
 
 ---
 
@@ -188,7 +186,7 @@ The output file loads straight into a `--features tune` engine via
 passes its registered gate. Parallelism uses `std::thread` (no external crates), so the
 engine stays dependency-free.
 
-It was ported from `reference/basilisk_tuner.cpp`. The reusable, engine-agnostic
+It was ported from Basilisk's `tools/texel/tuner.cpp` (a copy lived here until `6fa6731`). The reusable, engine-agnostic
 parts (copied as *structure*, not C++):
 
 - **Objective / Adam / K-fit** (`sigmoid`, `traced_loss`, `cmd_tune`, `fit_K`):

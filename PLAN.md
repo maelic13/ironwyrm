@@ -190,13 +190,21 @@ from.
   through HISTORY's number map.
 - **A.2 Repository and branch cleanup — `I1`.** Keep in Git only what the
   engine, its tests, its reusable tools and its concise records need.
-    - **A.2.1 Tracked-file cleanup.** Remove one-off runners and superseded
-      scripts (the `4117` runners, `run_board_search_profile_411b7.ps1`,
-      `profile_probe.py`, `nps_ab.ps1`, and any script whose only reference is
-      its own ledger row), the Basilisk tuner copy under `tools/texel/reference`,
-      and stale spsa configs of the closed line. Keep everything a tracked
-      procedure, test or PROCESS command references. Each deletion names its
-      last use. Tooling commit; no engine input changes.
+    - **A.2.1 Tracked-file cleanup — DONE 2026-09-09.** Removed, all last
+      present at `6fa6731`: the 4.11.7 study runners (`archive_4117.py`,
+      `run_4117_registered.py`, `summarize_4117.py`; RAR-M21's outputs are
+      archived locally), `run_board_search_profile_411b7.ps1` (one remote
+      measurement; the reusable ETW capture and summarizer stay),
+      `profile_probe.py` and `profile_attrib.ps1` (legacy duplicate-work
+      probes, superseded by the ETW profile), `nps_ab.ps1` (superseded by
+      `nps_multibuild.ps1`), `perft_compare.py` (superseded by the
+      cross-engine board benchmark), `tools/texel/reference/basilisk_tuner.cpp`
+      (a copy of Basilisk's tuner; the Rust port is the tool), `import_beast.py`
+      (the rejected Stockfish-label path, RAR-E03), and `holdout.py` with its
+      test (imported by nothing). Kept for named owners: the SMP probe scripts
+      (D.2), the answer harness and search-quality readouts (B.0 decides), the
+      SPSA configs (A.2.3 decides). Outside the repository, the maintainer may
+      delete the stale checkout `D:/code/rarog-411b8-baseline`.
     - **A.2.2 Branch and tag disposition.** Maintainer action from the table
       below. The three `hybrid*` branches are the diagnostic oracle: they are
       tagged, never merged, and deleted as branches once tagged and once the
@@ -439,7 +447,6 @@ class until they open.
 
 | Leaf | Workflow state | Class | Current decision |
 |---|---|---|---|
-| A.2.1 | READY_FOR_IMPLEMENTATION | I1 | Delete the listed one-off scripts and copies; every deletion names its last use |
 | A.2.2 | READY_FOR_IMPLEMENTATION | M | Maintainer runs the tag-and-delete commands; oracle executables archived outside Git first |
 | A.2.3 | RESEARCH | R2 | Classify every feature, option and `SearchParams` entry; removals land in B.1 |
 | A.3.1 | READY_FOR_IMPLEMENTATION | V | RAR-M45 registered; maintainer-run pool with Houdini 3 at 1T |

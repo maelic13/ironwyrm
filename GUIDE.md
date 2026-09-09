@@ -91,14 +91,14 @@ together, and `python tools/diag/check_guide.py` must pass.
 | Speed | 3.22 MNPS bench 13, PGO 1T; Basilisk 3.71 |
 | Conversion | 57 draws + 12 losses after a persistent piece-up in 2,400 games vs the six HCE-era engines |
 | Active experiment | none; RAR-M45, RAR-M46 and RAR-O03 registered for A.3 |
-| Current step | **A.2.1 — tracked-file cleanup**, `READY_FOR_IMPLEMENTATION / I1` |
+| Current step | **A.2.2 — branch and tag disposition** (maintainer commands), then **A.4** and **A.5** for the agent |
 | Next release | 3.0.0 if the E.2 target gate is met, else 2.4.0 |
 
 ## Next and held work
 
-**Next: A.2.1 tracked-file cleanup**, then the maintainer runs A.2.2 (branch
-and tag disposition) and A.3 (four registered baseline measurements) while
-the agent does A.4 (conversion instrument) and A.5 (consolidation analysis).
+**Next: the maintainer runs A.2.2 (branch and tag disposition) and A.3 (four
+registered baseline measurements) while the agent does A.4 (conversion
+instrument) and A.5 (consolidation analysis).
 **B.0**, the search programme investigation, opens after A.5.
 
 | Open hold / obligation | Resume or resolve when | Must be resolved before |
@@ -115,7 +115,7 @@ Open active leaves show `workflow state / capability class`.
 
 - [x] **A.1** Document reset — new PLAN, GUIDE, HISTORY; archives; checker — CLOSED, 2026-09-09
 - [ ] **A.2** Repository and branch cleanup
-    - [ ] **A.2.1** Tracked-file cleanup: one-off runners, superseded scripts, tuner copy, stale configs — **READY_FOR_IMPLEMENTATION / I1**
+    - [x] **A.2.1** Tracked-file cleanup: twelve one-off or superseded files removed, each with its last commit — DONE 2026-09-09
     - [ ] **A.2.2** Branch and tag disposition: tag `hybrid*` and `p410-*`, delete merged and tagged branches; keep `master` and `dev` — **READY_FOR_IMPLEMENTATION / M**
     - [ ] **A.2.3** Feature and option inventory: `diag`, `ablate`, `tune`; every `SearchParams` entry classified — **RESEARCH / R2**
 - [ ] **A.3** Baselines on the starting head `c80df74`
