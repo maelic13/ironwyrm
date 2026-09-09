@@ -254,7 +254,7 @@ being played and can still make this release if it passes its checks.
       `rust-lld` Windows ARM64 PGO workaround is unverified on 1.98.1 and needs
       the ARM64 compatibility host (RAR-P14 is the 1.97.1 precedent), and the
       CI matrix has not yet run on the new pin. Both are held in GUIDE and are
-      required before A.3.3 publishes assets.
+      required before A.3.4 publishes assets.
     - **A.3.2 Release gate — RAR-E16, `V`.** Registered before games: the
       release candidate (A.3.1 head, PGO pext) against the 2.3.2 release binary,
       `3+0.03`, 1T, Hash 64, paired UHO, no adjudication, `[3,10]` nElo, cap
@@ -275,7 +275,45 @@ being played and can still make this release if it passes its checks.
       flavour guard. The replacement is built from tag `v2.3.2` with the release
       recipe and reproduces RAR-M12's recorded 6,519,711 / EBF 2.449. Bounds,
       cap, clock, book, adjudication and prediction are unchanged.
-    - **A.3.3 Release — `M`.** Version strings, README, CHANGELOG from the
+    - **A.3.3 Time-forfeit repair — `R2` investigation, `I1` fix, `V`
+      validation, before the release.** Rarog forfeits on time in roughly one
+      game per thousand at `3+0.03`, 1T, concurrency 14, on every recent SPRT
+      regardless of arm: RAR-E16's STC run (game 114 of 743, the candidate),
+      RAR-E15 (1 in 1,951), RAR-E09's runs (4 in 7,389 and 1 in 1,501). The
+      seven forfeited games reconstructed from their PGN clocks agree with
+      RAR-M14: at this control the base clock is three seconds, and five of
+      the seven losers had spent their entire budget within ±0.1 s of zero by
+      their own reported move times when they stalled, while two still had
+      0.16 s and 0.48 s by their own accounting, which only harness-side wall
+      time can explain. The engine keeps a hard ceiling of `time − 2 ×
+      MoveOverhead` at 1T (`time_manager.rs`, `min_reserve`), with a further
+      30 ms reserve only when `Threads > 1`, `MoveOverhead` defaults to 10 ms,
+      and the harness allows a 20 ms margin; under a saturated 14-game host
+      the wall-time jitter of one reply exceeds that reserve about once per
+      thousand games. Sub-steps: (1) *diagnose*, `R2`: add the per-game clock
+      reconstruction used here to `tools/pgn_result.ps1` or a sibling so every
+      SPRT log reports forfeits with the loser's reconstructed clock and last
+      move times; confirm from the seven games whether the stall is the last
+      move overrunning `maximum_ms` (engine) or a reply lost to scheduling
+      (harness), by comparing each loser's reported time with the wall time
+      the PGN clock implies. (2) *fix*, `I1`: the engine-side candidate is a
+      clock-proportional low-time floor, `min_reserve = max(2 × overhead,
+      jitter_reserve)` applied at every thread count with `jitter_reserve`
+      around 30–40 ms and scaled down when the remaining clock is under it,
+      plus a check that the hard stop is evaluated against wall time including
+      the bestmove write; the harness-side candidate is `Move Overhead` raised
+      for the pool and SPRT profiles (RAR-M14's sweep, sized first: at 0.1% the
+      background rate needs tens of thousands of games to distinguish two
+      values). Fingerprint unaffected (time management is bench-invisible),
+      so the repair is qualified by games, not by bench. (3) *validate*,
+      `V`, registered as **RAR-R11**: a fixed-length 10,000-game paired run at
+      `3+0.03`, 1T, concurrency 14, fix against the A.3.1 head, adjudication
+      off, with the fix accepted when its arm forfeits at most a quarter of the
+      baseline arm's forfeits and the paired Elo interval excludes −3 (a
+      reserve costs thinking time; the loss must be bounded). Zero forfeits in
+      the release gate's runs is a precondition of the release, never the
+      verdict. Prediction frozen in the row.
+    - **A.3.4 Release — `M`.** Version strings, README, CHANGELOG from the
       accepted ledger rows since 2.3.2, fmt, suites, clippy, feature builds,
       fingerprint, PGO assets with ISA verification, CI matrix on the release
       commit, tag and publish on maintainer instruction. `master` fast-forwards
@@ -331,13 +369,13 @@ being played and can still make this release if it passes its checks.
     - **A.4.4 Performance and size — `V`.** Fixed-node NPS per tier against
       the dedicated PGO binaries, pooled and alternated; startup time; binary
       size; memory. The 1% criterion decides.
-    - **A.4.5 Decision — `R2`.** Adopt for A.3.3, or defer to G.2 with the
+    - **A.4.5 Decision — `R2`.** Adopt for A.3.4, or defer to G.2 with the
       blocker and the measured shortfall. If adopted, the released universal
       asset is re-validated against the gated pext binary by bench identity
       per tier and a 400-game null pair before it ships; the SPRT is not
       repeated.
 - **A.5 Baselines on the release binary — `V`.** All maintainer-run,
-  registered first. The Rarog arm is the A.3.3 release binary (its pext tier
+  registered first. The Rarog arm is the A.3.4 release binary (its pext tier
   if universal), or the A.3.1 head if the release was not cut.
     - **A.5.1 Reference pool refresh (RAR-M45).** Colosseum rating tournament
       with Houdini 3 added to the existing 14-engine pool, `3+0.03`, 1T, 400
@@ -574,12 +612,13 @@ class until they open.
 | Leaf | Workflow state | Class | Current decision |
 |---|---|---|---|
 | A.3.2 | LOCAL_QUALIFIED | V | Arms built and manifest-verified, baseline corrected before games; maintainer runs the STC SPRT, then the LTC and 4T direction checks |
-| A.3.3 | RESEARCH | M | Waits for the A.3.2 verdict and the A.4.5 decision; version per the release rule |
+| A.3.3 | READY_FOR_IMPLEMENTATION | R2 | Diagnose the seven forfeits by reconstructed clock; fix the low-time reserve; RAR-R11 registered |
+| A.3.4 | RESEARCH | M | Waits for the A.3.2 verdict, the A.3.3 repair and the A.4.5 decision; version per the release rule |
 | A.4.1 | READY_FOR_IMPLEMENTATION | R2 | Symbol-isolation link prototype first; then the design document and handoffs |
 | A.4.2 | RESEARCH | I2 | Waits for A.4.1 |
 | A.4.3 | RESEARCH | V | Waits for A.4.2 |
 | A.4.4 | RESEARCH | V | Waits for A.4.3 |
-| A.4.5 | RESEARCH | R2 | Adopt for A.3.3 or defer to G.2 |
+| A.4.5 | RESEARCH | R2 | Adopt for A.3.4 or defer to G.2 |
 | A.5.1 | READY_FOR_IMPLEMENTATION | V | RAR-M45 registered; maintainer-run pool with Houdini 3 at 1T, on the release binary |
 | A.5.2 | READY_FOR_IMPLEMENTATION | V | RAR-M46 registered; 4T pool after a 4T null pair |
 | A.5.3 | READY_FOR_IMPLEMENTATION | V | RAR-O03 registered; equal-time G(0) with the evaluation held constant |
