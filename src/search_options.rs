@@ -74,6 +74,17 @@ pub struct SearchLimits {
     pub infinite: bool,
     pub ponder: bool,
     pub search_moves: Vec<Move>,
+    /// The instant the `go` command was parsed on the UCI thread.
+    ///
+    /// A.3.3 (RAR-R11): the harness charges the clock from the moment it
+    /// writes `go`, so the search budget must start there too. Stockfish
+    /// stamps `limits.startTime` while parsing `go` ("the search starts as
+    /// early as possible") and Reckless builds its `TimeManager` at parse;
+    /// Rarog stamped its clock on the engine thread after the command
+    /// hand-off, so any wake-up or setup latency under a loaded host was
+    /// invisible to its budget and came straight off the harness margin.
+    /// `None` (tests, bench) means the search stamps its own start.
+    pub issued: Option<std::time::Instant>,
 }
 
 impl SearchLimits {
@@ -90,6 +101,7 @@ impl SearchLimits {
         self.infinite = false;
         self.ponder = false;
         self.search_moves.clear();
+        self.issued = None;
     }
 }
 
@@ -179,6 +191,7 @@ impl SearchOptions {
 
     pub fn set_search_parameters(&mut self, args: &[String]) {
         self.limits.reset_temporary_parameters();
+        self.limits.issued = Some(std::time::Instant::now());
 
         self.limits.ponder = args.iter().any(|r| r == "ponder");
 

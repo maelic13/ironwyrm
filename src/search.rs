@@ -1176,8 +1176,10 @@ impl Searcher {
             self.tt.clear();
         }
 
-        // Configuration invalidation is setup work, not search time.
-        self.start = Instant::now();
+        // The clock starts when `go` was parsed, as the harness measures it;
+        // configuration invalidation and thread hand-off are on the clock
+        // because they are on the harness's clock (A.3.3, RAR-R11).
+        self.start = limits.issued.unwrap_or_else(Instant::now);
         self.nodes = 0;
         self.tb_hits = 0;
         self.seldepth = 0;
@@ -5305,6 +5307,48 @@ mod tests {
     use std::time::{Duration, Instant};
 
     const LAZY_MARGIN_REGRESSION_FEN: &str = "5k2/5p1p/p3B1p1/Pp6/1P6/5P1P/4K1P1/8 b - - 0 1";
+
+    /// A.3.3 (RAR-R11): the budget is measured from the instant `go` was
+    /// parsed, not from the engine thread's start. A `go movetime 200`
+    /// parsed 300 ms ago has already spent its budget and must return at
+    /// once with a legal move from the first completed iteration.
+    #[test]
+    fn search_clock_starts_when_go_was_parsed() {
+        let board = Board::from_fen(LAZY_MARGIN_REGRESSION_FEN).unwrap();
+        let legal = board.generate_legal_moves();
+        let limits = SearchLimits {
+            move_time: 200,
+            issued: Some(Instant::now() - Duration::from_millis(300)),
+            ..SearchLimits::default()
+        };
+        let mut searcher = Searcher::default();
+        searcher.reset_search_state(
+            &limits,
+            &EngineOptions::default(),
+            board.side_to_move(),
+            0,
+            true,
+            true,
+        );
+        let started = Instant::now();
+        let result = searcher.search_root(board, &legal, false, &mut || SearchEvent::None);
+        let took = started.elapsed();
+        assert!(
+            took < Duration::from_millis(100),
+            "a search whose budget expired before it began must stop at once, took {took:?}"
+        );
+        assert!(
+            result.depth >= 1,
+            "at least one iteration completes: {}",
+            result.depth
+        );
+        assert!(legal.contains(&result.bestmove), "bestmove must be legal");
+        assert!(
+            result.elapsed_ms >= 300,
+            "elapsed is measured from the parse instant: {} ms",
+            result.elapsed_ms
+        );
+    }
 
     fn store_static_eval(searcher: &mut Searcher, board: &Board, static_eval: i32) {
         let mv = board
