@@ -223,11 +223,16 @@ being played and can still make this release if it passes its checks.
       through `v2.3.0` point at different objects than the annotated tags on
       `origin` (`git push --tags` rejected twelve); `origin` is authoritative
       and `git fetch --force --tags` would realign them.
-    - **A.2.3 Feature and option inventory — `R2`.** Decide the fate of every
-      Cargo feature and UCI option: `diag` stays (instrument), `ablate` stays
-      until B.9 has re-measured the deficit and is then removed, `tune` stays.
-      Every `SearchParams` entry is classified consumed / seed-for-B / dead;
-      dead ones are removed in B.1 with the search restructure, not here.
+    - **A.2.3 Feature and option inventory — DONE 2026-09-09.** All four
+      Cargo features stay (`diag` and `tune` as instruments, `texel` as the
+      fitting path, `ablate` until B.9); all nine UCI options are consumed.
+      Of the 99 `SearchParams` entries, **42 are inert at default** (zero
+      guards, zero additive terms, or weights behind an off switch) and are
+      removed in B.1; **55 are live seeds** the B.2 cluster replaces with
+      donor-shaped successors; `lazy_margin` belongs to C.1 and
+      `ablation_mask` leaves with the feature. RAR-S65 to S69 are superseded by
+      B.2 and recorded so at B.1; typed TT provenance and the SPSA configs are
+      B.0/B.1 decisions. Evidence: `analysis/feature_inventory_2026-09-09.md`.
 - **A.3 Consolidation release — `V`/`M`.** Ship the accepted head before the
   search programme changes it. The 2026-09-04 pool already has the head's
   predecessor at **+43.7 Elo head-to-head over 2.3.2** (400 games) and +29 in
@@ -548,7 +553,6 @@ class until they open.
 
 | Leaf | Workflow state | Class | Current decision |
 |---|---|---|---|
-| A.2.3 | RESEARCH | R2 | Classify every feature, option and `SearchParams` entry; removals land in B.1 |
 | A.3.1 | READY_FOR_IMPLEMENTATION | I1 | Toolchain 1.97.1 -> 1.98.1; exact fingerprint, suites, ISA, pooled NPS |
 | A.3.2 | READY_FOR_IMPLEMENTATION | V | RAR-E16 registered; maintainer-run STC SPRT plus LTC and 4T direction checks |
 | A.3.3 | RESEARCH | M | Waits for the A.3.2 verdict and the A.4.5 decision; version per the release rule |

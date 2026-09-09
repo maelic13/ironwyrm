@@ -116,10 +116,10 @@ Open active leaves show `workflow state / capability class`. Execution order
 is the numbering: release first, baselines on the released binary.
 
 - [x] **A.1** Document reset — new PLAN, GUIDE, HISTORY; archives; checker — CLOSED, 2026-09-09
-- [ ] **A.2** Repository and branch cleanup
+- [x] **A.2** Repository and branch cleanup
     - [x] **A.2.1** Tracked-file cleanup: twelve one-off or superseded files removed, each with its last commit — DONE 2026-09-09
     - [x] **A.2.2** Branch and tag disposition: seven branches tagged and deleted, oracle package archived, stale worktrees removed — DONE 2026-09-09
-    - [ ] **A.2.3** Feature and option inventory: `diag`, `ablate`, `tune`; every `SearchParams` entry classified — **RESEARCH / R2**
+    - [x] **A.2.3** Feature and option inventory: 42 inert parameters for B.1, 55 seeds for B.2, features kept — DONE 2026-09-09
 - [ ] **A.3** Consolidation release before the search programme
     - [ ] **A.3.1** Toolchain bump 1.97.1 → 1.98.1, behaviour-neutral: exact fingerprint, suites, ISA, pooled NPS — **READY_FOR_IMPLEMENTATION / I1**
     - [ ] **A.3.2** Release gate RAR-E16: candidate vs 2.3.2, STC `[3,10]`, plus `10+0.1` and 4T direction checks — **READY_FOR_IMPLEMENTATION / V**
