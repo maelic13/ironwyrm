@@ -1386,18 +1386,6 @@ impl Searcher {
         }
     }
 
-    /// Minimum interval between two `info depth` lines within one search.
-    ///
-    /// A.3.3 (RAR-R11): every completed iteration used to be printed, about
-    /// thirteen lines per bullet move. `println!` blocks when the harness has
-    /// not drained the pipe, and the search cannot see time spent blocked, so
-    /// a harness that lags by tens of milliseconds under fourteen concurrent
-    /// games turned directly into engine wall time and, once per thousand
-    /// games, into a time forfeit. Depth 1 is always printed, the last
-    /// completed iteration is always printed before `bestmove`, and anything
-    /// in between only after this interval.
-    const INFO_THROTTLE_MS: f64 = 250.0;
-
     fn search_root<P: FnMut() -> SearchEvent + ?Sized>(
         &mut self,
         mut board: Board,
@@ -1441,12 +1429,6 @@ impl Searcher {
         // it.
         #[cfg(feature = "diag")]
         let mut best_since_depth = 0usize;
-        // Info-line throttle state and the PV of the last COMPLETED iteration,
-        // snapshotted at completion so the final line before `bestmove` can
-        // describe that iteration even if a later one was aborted.
-        let mut last_info_ms = 0.0_f64;
-        let mut printed_depth = 0usize;
-        let mut completed_pv: Vec<Move> = Vec::new();
 
         for depth in 1..=max_depth {
             // 4.9c: helpers may skip this iteration so the pool spreads across
@@ -1603,13 +1585,6 @@ impl Searcher {
                 }
                 best_score = score;
                 completed_depth = depth;
-                completed_pv.clear();
-                completed_pv.extend(
-                    self.pv_table[0][..self.pv_len[0].min(MAX_PLY)]
-                        .iter()
-                        .copied()
-                        .filter(|mv| !mv.is_null()),
-                );
                 let iteration_nodes = self.nodes.saturating_sub(self.root_iteration_nodes).max(1);
                 self.root_best_effort = self.root_best_nodes as f64 / iteration_nodes as f64;
                 if self.pv_len[0] > 0 {
@@ -1640,12 +1615,7 @@ impl Searcher {
             }
 
             if emit_info {
-                let elapsed = self.elapsed_ms();
-                if depth == 1 || elapsed - last_info_ms >= Self::INFO_THROTTLE_MS {
-                    self.send_info_line(depth, best_score, &completed_pv);
-                    printed_depth = depth;
-                    last_info_ms = elapsed;
-                }
+                self.send_info(depth, best_score);
             }
 
             // Only one legal move: it will be played whatever the score is, so
@@ -1859,10 +1829,6 @@ impl Searcher {
         // Phase 4.1: dump per-search counters (no-op without `--features diag`).
         // 9.7.5(b): serial path only — see the reset note above. The parallel
         // dump lives in `search_parallel`, after the helpers are joined.
-        if emit_info && completed_depth > 0 && printed_depth != completed_depth {
-            self.send_info_line(completed_depth, best_score, &completed_pv);
-        }
-
         crate::diag::record_thread_depth(self.thread_id, completed_depth);
         if self.shared_state.is_none() {
             crate::diag::dump();
@@ -5143,6 +5109,15 @@ impl Searcher {
 
     fn elapsed_ms(&self) -> f64 {
         self.start.elapsed().as_secs_f64() * 1000.0
+    }
+
+    fn send_info(&self, depth: usize, score: i32) {
+        let pv = self.pv_table[0][..self.pv_len[0].min(MAX_PLY)]
+            .iter()
+            .copied()
+            .filter(|mv| !mv.is_null())
+            .collect::<Vec<_>>();
+        self.send_info_line(depth, score, &pv);
     }
 
     fn send_info_line(&self, depth: usize, score: i32, pv: &[Move]) {
