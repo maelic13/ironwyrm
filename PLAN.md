@@ -82,10 +82,13 @@ pooled-PGO settings on a verified-idle host, with a null pair of same-revision
 builds confirming the instrument is unbiased at **+0.222% [-0.130%, +0.630%]**.
 The correctness matrix passed in full.
 4.11b.17 (RAR-E15, accepted) and 4.11b.18 (RAR-M42) followed. A post-closure
-review on 2026-09-09 (RAR-M44) inserted **4.11b.19**, `READY_FOR_IMPLEMENTATION
-/ I1`: every generator returns its 520-byte move list through a `memcpy` that
-Basilisk avoids, in both the cross-engine harness and the search. It is the
-next leaf and precedes 4.12.1; it is behaviour-neutral and owes no game gate.
+review on 2026-09-09 (RAR-M44) inserted **4.11b.19**: every generator returned
+its 520-byte move list through a `memcpy` that Basilisk avoids, in both the
+cross-engine harness and the search. Its (a) and (b) are now **IMPLEMENTED**
+(`55e228a`, `021dc98`) and deterministically qualified; the pooled-PGO run
+that decides whether (b) is banked is owed to the maintainer, and (c)/(d)
+follow.
+It precedes 4.12.1; it is behaviour-neutral and owes no game gate.
 
 | Leaf | State and reason | Unblock event / owner | Dependency boundary |
 |---|---|---|---|
@@ -2009,9 +2012,9 @@ acceptance, 4.11b.10–4.11b.12, 4.11b.14 and 4.11b.15 by justified `NO_CHANGE`,
 4.11b.13 by contract tightening, 4.11b.16 by a banked **+1.421%** pooled-PGO
 throughput qualification, 4.11b.17 by RAR-E15's accepted gate and 4.11b.18 by
 RAR-M42's refresh. **4.11b.19 was inserted on 2026-09-09 (RAR-M44)** after a
-post-closure review found that every generator returns its 520-byte `MoveList`
-through a `memcpy` that Basilisk's harness and search both avoid; it is the
-next leaf, behaviour-neutral, and precedes 4.12.1. The insertion preserves 4.11.12's registered v2 endgame order until
+post-closure review found that every generator returned its 520-byte `MoveList`
+through a `memcpy` that Basilisk's harness and search both avoid; its (a) and
+(b) are implemented, its NPS run is owed, and it precedes 4.12.1. The insertion preserves 4.11.12's registered v2 endgame order until
 changed evidence warrants a rerank. Repairs at 4.11b.3/4.11b.5 are implemented;
 the remaining optimizations and cluster qualification are still open. NNUE-only work belongs to 5.2, 5.3, 5.6 and 6.4.
 
@@ -2109,7 +2112,7 @@ recommendations without coupling this roadmap to model generations.
 | 4.11b.16 | CLOSED (QUALIFIED) | V | Correctness matrix passed; +1.421% [+0.953%, +1.764%] pooled-PGO throughput banked | RAR-M41; `analysis/cluster_qualification_2026-09-08.md` | Null pair unbiased at +0.222% [-0.130%, +0.630%]; behaviour identical throughout; no Elo claimed |
 | 4.11b.17 | CLOSED (ACCEPTED) | V | Integrated cluster gated and accepted | RAR-E15; `analysis/playing_gate_2026-09-08.md` | H1 at 1,950 games under a symmetric `[-5,5]` registered before games: +12.12 +/- 10.17 Elo, +18.40 nElo, LLR 2.96. Magnitude imprecise; no subcomponent credited |
 | 4.11b.18 | CLOSED (refreshed) | V | Affected evidence refreshed and versioned; 4.12 order verified unchanged | RAR-M42; `analysis/endgame_refresh_2026-09-09.md` | Layer-1 theory identical on all 19 families, floors PASS both arms, order rederived and reproduces registered v2 exactly. One non-blocking KRP-KB report owned by 4.12.6 |
-| 4.11b.19 | READY_FOR_IMPLEMENTATION | I1 | Remove the 520-byte move-list return copy from bench and search; bounded constant-factor screen; corrected comparison record | RAR-M44; `analysis/movelist_delivery_2026-09-09.md`; probe `tools/results/board-copy-probe-20260909/` | (a)+(b) land on exact fingerprint 7,601,220 / EBF 2.474 and no `memcpy` of 520 in the four generators; pooled-PGO NPS floor +0.5% decides whether (b) is banked or closes `NO_CHANGE`; (c) conditional on the parity bench; (d) re-measures the four arms and supersedes RAR-M43's gap table |
+| 4.11b.19 | IMPLEMENTED | I1 | (a)+(b) done and deterministically qualified; (c)/(d) open. Remove the 520-byte move-list return copy from bench and search; bounded constant-factor screen; corrected comparison record | RAR-M44; `analysis/movelist_delivery_2026-09-09.md`; probe `tools/results/board-copy-probe-20260909/` | (a) `55e228a` and (b) `021dc98` landed on the exact fingerprint 7,601,220 / EBF 2.474 (magic and PEXT) with zero 520-byte `memcpy` sites left in the fat-LTO binary, four before; pooled-PGO NPS floor +0.5% decides whether (b) is banked or closes `NO_CHANGE`, and that run is owed to the maintainer; (c) conditional on the parity bench; (d) re-measures the four arms and supersedes RAR-M43's gap table |
 
 1. **4.11b.1 Freeze the audit and comparison -- DONE.** RAR-M20 and its committed evidence preserve the
    three-engine results, limitations, raw output, binary/source hashes, exact
@@ -2917,7 +2920,7 @@ recommendations without coupling this roadmap to model generations.
     `analysis/endgame_refresh_2026-09-09.md`.
 
 19. **4.11b.19 Caller-owned move-list delivery and generator constant factors
-    -- READY_FOR_IMPLEMENTATION / I1 (RAR-M44, registered 2026-09-09).**
+    -- (a) and (b) IMPLEMENTED / I1 (RAR-M44, registered 2026-09-09).**
     Inserted after the section closed. Research is done; this leaf is
     implementation, cheap deterministic qualification and one pooled-PGO
     throughput measurement, followed by a bounded, conditional screen.
@@ -2955,8 +2958,9 @@ recommendations without coupling this roadmap to model generations.
 
     **Sub-steps, in order. Engine and tooling/doc changes in separate commits.**
 
-    (a) **Harness parity -- tooling commit.** In `benches/board.rs` make
-    `legal_movegen`, `capture_gen`, `make_unmake` and `game_simulation` reuse
+    (a) **Harness parity -- tooling commit. DONE `55e228a`.** In
+    `benches/board.rs` make `legal_movegen`, `capture_gen`, `make_unmake` and
+    `game_simulation` reuse
     caller-owned `MoveList`s created before timing (one scratch list, plus
     `outer`/`inner` for the two-ply workload), exactly as Basilisk's
     `tests/board_performance.cpp` does. Leave `see_captures` and `perft`
@@ -2966,8 +2970,9 @@ recommendations without coupling this roadmap to model generations.
     prints `PASS` with the same six quanta; `cargo fmt --check`;
     `cargo clippy --all-features --all-targets` zero warnings.
 
-    (b) **Production delivery -- engine commit.** Add to `src/board/moves.rs`
-    `MoveList::clear(&mut self)` (`len = 0`, no element writes). Add to
+    (b) **Production delivery -- engine commit. DONE `021dc98`; the NPS run
+    is still owed.** Add to `src/board/moves.rs` `MoveList::clear(&mut self)`
+    (`len = 0`, no element writes). Add to
     `src/board/movegen.rs` the out-parameter forms and route the by-value
     forms through them so there is one generator body per kind:
     `generate_legal_into(&Board, &mut MoveList)`,
@@ -2994,6 +2999,34 @@ recommendations without coupling this roadmap to model generations.
     `tests/board_differential.rs` pass. Hand the maintainer the pooled-PGO
     NPS run (RAR-M41 protocol, prediction above) and record the result in
     EXPERIMENTS under RAR-M44 before touching (c).
+
+    **What landed, 2026-09-09.** The two commits are in dependency order --
+    the engine API first (`021dc98`), then the harness that consumes it
+    (`55e228a`) -- because the caller-owned bench cannot compile before the
+    `_into` forms exist and the two must stay in separate commits.
+    One deviation from the registered caller list, inside the leaf's
+    mechanism and reported rather than silently taken: **ProbCut's capture
+    generation** in `negamax` reached the same copy through
+    `Board::generate_legal_captures` and was converted with the rest. It was
+    the only 520-byte copy left in the binary after the registered sites were
+    done, and it is the site the assembly check found. No by-value wrapper
+    became unused -- tests, `benches/board_v2.rs` and `src/diag.rs` still use
+    all of them -- so none was deleted. Verification, all on the final state:
+    the fat-LTO binary asm has **zero** `movl $520` + `callq memcpy` sites,
+    against **four** on the pre-change tree (`movegen::generate_captures`,
+    `movegen::generate_legal_movelist`, `MovePicker::staged`,
+    `MovePicker::next`), and the same scan still reports the copy inside the
+    surviving by-value wrappers, so a clean line is a measurement rather than
+    an absent pattern; `bench 13` reproduces **7,601,220 / EBF 2.474** on
+    magic and on PEXT; `cargo test` 26/26 debug and 26/26 release including
+    `board_v2` and `board_differential`, plus 76 tests under the PEXT slider
+    backend; `cargo fmt --check` clean and `cargo clippy --all-features
+    --all-targets` at zero warnings from a clean rebuild, with the bench
+    target proved covered; the parity bench's preflight passes on the frozen
+    quanta and fails with exit 101 when one is perturbed. Evidence:
+    `tools/results/movelist-delivery-20260909/` (ignored: `asm_lib_after.txt`,
+    `asm_bin_before_after.txt`, `fingerprint.txt`, `harness_parity.txt`,
+    `asmcheck.py`, `where520.py`).
 
     (c) **Bounded constant-factor screen -- conditional, class I2, only after
     (b)'s result is recorded.** The remaining ~32% legal-moves gap is also
