@@ -81,6 +81,18 @@ never fabricate a prediction for a historical entry that lacked one.
 Use cautious language: “under these conditions this suggests …”, not “feature
 X is good/bad”. If conditions or artifacts are unknown, say so.
 
+**Test-engine store cleared 2026-09-09.** `tools/test_engines/` held 183
+executables, 181 of them built on the retired 1.97.1 pin and 73 of those with
+no manifest at all, so they could not be used in a gate anyway — `sprt.ps1`
+refuses a pair whose compilers differ and warns when equality is not
+checkable. All of them were deleted on maintainer instruction after the A.3.1
+bump; rows that cite a path under `tools/test_engines/` now rest on their
+recorded recipe and fingerprint, which is what the ledger's own rule requires
+of them. Rebuild from the row when a binary is needed again. **Kept:** the two
+RAR-E16 gate arms, `tools/test_engines/ablate/` (the frozen matched-ablation
+oracle and its HCE glue, which B.9 still needs and which is not cheaply
+rebuilt), and `rarog-43b-cand.diff`, a recipe rather than an artifact.
+
 ### Prediction freeze and calibration
 
 Keep **what was believed before exposure** separate from the postmortem. A good
