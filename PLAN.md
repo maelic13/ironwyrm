@@ -263,7 +263,15 @@ being played and can still make this release if it passes its checks.
       estimate at or above +40 and the lower bound above +25 licenses 2.4.0;
       any other H1 licenses 2.3.3; H0 stops the release and is itself a finding
       against the accepted-gains ledger. While these games run, the agent works
-      A.4.
+      A.4. **Prepared 2026-09-09, games not started.** Both arms are built with
+      verified manifests; RAR-E16 carries their paths, hashes and fingerprints.
+      The registered
+      baseline artifact was wrong and was replaced before any game: the file the
+      row named benches the development fingerprint, not 2.3.2's, and its
+      `--native` flavour is never released and is refused by the harness's
+      flavour guard. The replacement is built from tag `v2.3.2` with the release
+      recipe and reproduces RAR-M12's recorded 6,519,711 / EBF 2.449. Bounds,
+      cap, clock, book, adjudication and prediction are unchanged.
     - **A.3.3 Release — `M`.** Version strings, README, CHANGELOG from the
       accepted ledger rows since 2.3.2, fmt, suites, clippy, feature builds,
       fingerprint, PGO assets with ISA verification, CI matrix on the release
@@ -562,7 +570,7 @@ class until they open.
 
 | Leaf | Workflow state | Class | Current decision |
 |---|---|---|---|
-| A.3.2 | READY_FOR_IMPLEMENTATION | V | RAR-E16 registered; maintainer-run STC SPRT plus LTC and 4T direction checks |
+| A.3.2 | LOCAL_QUALIFIED | V | Arms built and manifest-verified, baseline corrected before games; maintainer runs the STC SPRT, then the LTC and 4T direction checks |
 | A.3.3 | RESEARCH | M | Waits for the A.3.2 verdict and the A.4.5 decision; version per the release rule |
 | A.4.1 | READY_FOR_IMPLEMENTATION | R2 | Symbol-isolation link prototype first; then the design document and handoffs |
 | A.4.2 | RESEARCH | I2 | Waits for A.4.1 |
