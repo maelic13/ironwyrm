@@ -205,13 +205,22 @@ from.
       (D.2), the answer harness and search-quality readouts (B.0 decides), the
       SPSA configs (A.2.3 decides). Outside the repository, the maintainer may
       delete the stale checkout `D:/code/rarog-411b8-baseline`.
-    - **A.2.2 Branch and tag disposition.** Maintainer action from the table
-      below. The three `hybrid*` branches are the diagnostic oracle: they are
-      tagged, never merged, and deleted as branches once tagged and once the
-      oracle executables are archived outside the repository. The three
-      unmerged `p410-*` candidate arms are single-default-value changes whose
-      recipes are recorded in RAR-S67/S68/S69; they are deleted after a tag.
-      `p46-root-relief` is merged and deleted. Only `master` and `dev` remain.
+    - **A.2.2 Branch and tag disposition — DONE 2026-09-09.** The oracle
+      package (`rarog-stockfish-hce-hybrid.exe` `da78a145…`, `rarog_hce.dll`
+      `e43b602b…`, licences) is archived at
+      `D:/chess/engines/oracle-rarog-hybrid-75d0d43/`. Tags `oracle/hybrid`
+      (75d0d43), `oracle/hybrid-diag` (2682f64), `oracle/hybrid-ablate`
+      (984f478), `arm/p410-jitter-1t` (e7965b9), `arm/p410-lmr-relief`
+      (5dbeb52), `arm/p410-margin-relief` (e950f03) and `arm/p46-root-relief`
+      (2a64941) were created and pushed; the seven branches were deleted
+      locally and on `origin`, and three stale worktrees (a temporary
+      `hybrid-ablate` checkout, `target/411b7-probe-work`,
+      `D:/code/rarog-411b8-baseline`) were removed. Only `master` and `dev`
+      remain. Every ledger SHA cited on those branches resolves through a tag.
+      Observation for the maintainer: the local lightweight tags `v1.3.0`
+      through `v2.3.0` point at different objects than the annotated tags on
+      `origin` (`git push --tags` rejected twelve); `origin` is authoritative
+      and `git fetch --force --tags` would realign them.
     - **A.2.3 Feature and option inventory.** Decide the fate of every Cargo
       feature and UCI option: `diag` stays (instrument), `ablate` stays until
       B.9 has re-measured the deficit and is then removed, `tune` stays. Every
@@ -253,6 +262,34 @@ from.
   what a programme is about to replace. Expected output: the B.1 and C.1
   restructure handoffs, a dead-code list for A.2.3, and the target layout
   below. No behaviour change in this leaf.
+
+- **A.6 Consolidation release — `V`/`M`.** Ship the accepted head before the
+  search programme changes it. The 2026-09-04 pool already has the head's
+  predecessor at **+43.7 Elo head-to-head over 2.3.2** (400 games) and +29 in
+  pooled pool score; ProbCut, root LMR relief, two HCE refits, TB-corrected
+  labels and the board cluster are all gated individually. The version follows
+  the release rule in section 4: 2.4.0 if the registered STC gate's point
+  estimate is at least +40 with the lower bound above +25, else 2.3.3.
+    - **A.6.1 Toolchain bump, behaviour-neutral — `I1`.** `rust-toolchain.toml`
+      from 1.97.1 to the current stable (1.98.1 on this host), never between a
+      baseline build and its candidate. Done criteria: exact fingerprint
+      7,601,220 / EBF 2.474 on magic and PEXT, debug and release suites, clippy
+      on the new toolchain, ISA verification of the PGO asset, pooled-PGO NPS
+      against the 1.97.1 build inside ±1% or the delta explained. This lands
+      before A.3 so the baselines are measured on the release toolchain.
+    - **A.6.2 Release gate — RAR-E16, `V`.** Registered before games: the
+      release candidate (A.6.1 head, PGO pext) against the 2.3.2 release binary,
+      `3+0.03`, 1T, Hash 64, paired UHO, no adjudication, `[3,10]` nElo, cap
+      16,000 games, plus `10+0.1` and 4T `10+0.1` direction checks of 400 games
+      each with zero forfeits. Prediction frozen in the row. H1 with the point
+      estimate at or above +40 and the lower bound above +25 licenses 2.4.0;
+      any other H1 licenses 2.3.3; H0 stops the release and is itself a finding
+      against the accepted-gains ledger.
+    - **A.6.3 Release — `M`.** Version strings, README, CHANGELOG from the
+      accepted ledger rows since 2.3.2, fmt, suites, clippy, feature builds,
+      fingerprint, PGO assets with ISA verification, CI matrix on the release
+      commit, tag and publish on maintainer instruction. `master` fast-forwards
+      to the release commit.
 
 Target module layout after B and C (the investigations may adjust it):
 
@@ -451,13 +488,15 @@ class until they open.
 
 | Leaf | Workflow state | Class | Current decision |
 |---|---|---|---|
-| A.2.2 | READY_FOR_IMPLEMENTATION | M | Maintainer runs the tag-and-delete commands; oracle executables archived outside Git first |
 | A.2.3 | RESEARCH | R2 | Classify every feature, option and `SearchParams` entry; removals land in B.1 |
 | A.3.1 | READY_FOR_IMPLEMENTATION | V | RAR-M45 registered; maintainer-run pool with Houdini 3 at 1T |
 | A.3.2 | READY_FOR_IMPLEMENTATION | V | RAR-M46 registered; 4T pool after a 4T null pair |
 | A.3.3 | READY_FOR_IMPLEMENTATION | V | RAR-O03 registered; equal-time G(0) on the head |
 | A.3.4 | READY_FOR_IMPLEMENTATION | V | Pooled-PGO NPS of the head, three builds, hashes archived |
 | A.4 | READY_FOR_IMPLEMENTATION | I1 | Track the 2026-09-09 replay as a tool with tests; baseline recorded |
+| A.6.1 | READY_FOR_IMPLEMENTATION | I1 | Toolchain 1.97.1 -> 1.98.1; exact fingerprint, suites, ISA, pooled NPS |
+| A.6.2 | READY_FOR_IMPLEMENTATION | V | RAR-E16 registered; maintainer-run STC SPRT plus LTC and 4T direction checks |
+| A.6.3 | RESEARCH | M | Waits for the A.6.2 verdict; version per the release rule |
 | A.5 | RESEARCH | R2 | Inventory and target layout; outputs the B.1 and C.1 handoffs and the dead-code list |
 | B.0 | RESEARCH | R3 | Opens after A.5; ends with frozen handoffs for B.1–B.3 and the scale ratio |
 | B.1 | RESEARCH | I1 | Waits for the B.0 handoff; exact fingerprint required |

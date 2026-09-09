@@ -91,21 +91,21 @@ together, and `python tools/diag/check_guide.py` must pass.
 | Speed | 3.22 MNPS bench 13, PGO 1T; Basilisk 3.71 |
 | Conversion | 57 draws + 12 losses after a persistent piece-up in 2,400 games vs the six HCE-era engines |
 | Active experiment | none; RAR-M45, RAR-M46 and RAR-O03 registered for A.3 |
-| Current step | **A.2.2 — branch and tag disposition** (maintainer commands), then **A.4** and **A.5** for the agent |
-| Next release | 3.0.0 if the E.2 target gate is met, else 2.4.0 |
+| Current step | **A.6.1 — toolchain bump** (agent), then the maintainer runs **A.3** and **A.6.2** while the agent does **A.4** and **A.5** |
+| Next release | A.6: 2.4.0 if RAR-E16 reads at least +40 with the lower bound above +25, else 2.3.3; later 3.0.0 if E.2 is met |
 
 ## Next and held work
 
-**Next: the maintainer runs A.2.2 (branch and tag disposition) and A.3 (four
-registered baseline measurements) while the agent does A.4 (conversion
-instrument) and A.5 (consolidation analysis).
-**B.0**, the search programme investigation, opens after A.5.
+**Next: A.6.1 toolchain bump** (agent, behaviour-neutral). Then the maintainer
+runs A.3 (four registered baseline measurements) and A.6.2 (the release gate)
+on that head, while the agent does A.4 (conversion instrument) and A.5
+(consolidation analysis). A.6.3 releases on the gate's verdict. **B.0**, the
+search programme investigation, opens after A.5.
 
 | Open hold / obligation | Resume or resolve when | Must be resolved before |
 |---|---|---|
 | KRPPKRP 7-man truth gap | Independent truth becomes available, or C.5.8 records an explicit exclusion | C.5.8 closes |
 | KRP-KB win-preserving 0.9990 → 0.9949 (−2.2 SE, RAR-M42) | Non-blocking; blocking if a later change pushes it past 3 SE | C.5.4 closes (owner) |
-| Oracle branches as tags, oracle executables archived outside Git | A.2.2 maintainer commands run | B.9 (needs the oracle binary) |
 
 Follow the earliest unblocked leaf. Held items stay unticked in place.
 
@@ -116,7 +116,7 @@ Open active leaves show `workflow state / capability class`.
 - [x] **A.1** Document reset — new PLAN, GUIDE, HISTORY; archives; checker — CLOSED, 2026-09-09
 - [ ] **A.2** Repository and branch cleanup
     - [x] **A.2.1** Tracked-file cleanup: twelve one-off or superseded files removed, each with its last commit — DONE 2026-09-09
-    - [ ] **A.2.2** Branch and tag disposition: tag `hybrid*` and `p410-*`, delete merged and tagged branches; keep `master` and `dev` — **READY_FOR_IMPLEMENTATION / M**
+    - [x] **A.2.2** Branch and tag disposition: seven branches tagged and deleted, oracle package archived, stale worktrees removed — DONE 2026-09-09
     - [ ] **A.2.3** Feature and option inventory: `diag`, `ablate`, `tune`; every `SearchParams` entry classified — **RESEARCH / R2**
 - [ ] **A.3** Baselines on the starting head `c80df74`
     - [ ] **A.3.1** Reference pool refresh with Houdini 3, 1T, 400 games per pair — RAR-M45 — **READY_FOR_IMPLEMENTATION / V**
@@ -125,6 +125,10 @@ Open active leaves show `workflow state / capability class`.
     - [ ] **A.3.4** Pooled-PGO NPS baseline, three builds, archived hashes — **READY_FOR_IMPLEMENTATION / V**
 - [ ] **A.4** Conversion instrument `tools/diag/conversion_audit.py`; baseline 57/12 vs 40/12 — **READY_FOR_IMPLEMENTATION / I1**
 - [ ] **A.5** Codebase consolidation analysis: target layout, B.1 and C.1 handoffs, dead-code list — **RESEARCH / R2**
+- [ ] **A.6** Consolidation release before the search programme
+    - [ ] **A.6.1** Toolchain bump 1.97.1 → 1.98.1, behaviour-neutral: exact fingerprint, suites, ISA, pooled NPS — **READY_FOR_IMPLEMENTATION / I1**
+    - [ ] **A.6.2** Release gate RAR-E16: candidate vs 2.3.2, STC `[3,10]`, plus `10+0.1` and 4T direction checks — **READY_FOR_IMPLEMENTATION / V**
+    - [ ] **A.6.3** Release 2.4.0 or 2.3.3 per the release rule: changelog, assets, CI, tag on instruction — **RESEARCH / M**
 
 ## Phase B — Search programme (evaluation frozen)
 
