@@ -81,10 +81,11 @@ separation is pinned by test.
 pooled-PGO settings on a verified-idle host, with a null pair of same-revision
 builds confirming the instrument is unbiased at **+0.222% [-0.130%, +0.630%]**.
 The correctness matrix passed in full.
-The next leaf is **4.11b.17**, `RESEARCH / V` — the playing gate.
-Actual full-search board cost is profiled; SEE is correctness-verified and
-normalized timing is restored. Cluster playing qualification remains at
-4.11b.17.
+4.11b.17 (RAR-E15, accepted) and 4.11b.18 (RAR-M42) followed. A post-closure
+review on 2026-09-09 (RAR-M44) inserted **4.11b.19**, `READY_FOR_IMPLEMENTATION
+/ I1`: every generator returns its 520-byte move list through a `memcpy` that
+Basilisk avoids, in both the cross-engine harness and the search. It is the
+next leaf and precedes 4.12.1; it is behaviour-neutral and owes no game gate.
 
 | Leaf | State and reason | Unblock event / owner | Dependency boundary |
 |---|---|---|---|
@@ -2006,7 +2007,11 @@ remaining 4.11 leaves first, then execute this section before 4.12. Those
 4.11 leaves and board leaves 4.11b.1–4.11b.16 are now complete: 4.11b.9 by
 acceptance, 4.11b.10–4.11b.12, 4.11b.14 and 4.11b.15 by justified `NO_CHANGE`,
 4.11b.13 by contract tightening, 4.11b.16 by a banked **+1.421%** pooled-PGO
-throughput qualification; **4.11b.17 is next**. The insertion preserves 4.11.12's registered v2 endgame order until
+throughput qualification, 4.11b.17 by RAR-E15's accepted gate and 4.11b.18 by
+RAR-M42's refresh. **4.11b.19 was inserted on 2026-09-09 (RAR-M44)** after a
+post-closure review found that every generator returns its 520-byte `MoveList`
+through a `memcpy` that Basilisk's harness and search both avoid; it is the
+next leaf, behaviour-neutral, and precedes 4.12.1. The insertion preserves 4.11.12's registered v2 endgame order until
 changed evidence warrants a rerank. Repairs at 4.11b.3/4.11b.5 are implemented;
 the remaining optimizations and cluster qualification are still open. NNUE-only work belongs to 5.2, 5.3, 5.6 and 6.4.
 
@@ -2104,6 +2109,7 @@ recommendations without coupling this roadmap to model generations.
 | 4.11b.16 | CLOSED (QUALIFIED) | V | Correctness matrix passed; +1.421% [+0.953%, +1.764%] pooled-PGO throughput banked | RAR-M41; `analysis/cluster_qualification_2026-09-08.md` | Null pair unbiased at +0.222% [-0.130%, +0.630%]; behaviour identical throughout; no Elo claimed |
 | 4.11b.17 | CLOSED (ACCEPTED) | V | Integrated cluster gated and accepted | RAR-E15; `analysis/playing_gate_2026-09-08.md` | H1 at 1,950 games under a symmetric `[-5,5]` registered before games: +12.12 +/- 10.17 Elo, +18.40 nElo, LLR 2.96. Magnitude imprecise; no subcomponent credited |
 | 4.11b.18 | CLOSED (refreshed) | V | Affected evidence refreshed and versioned; 4.12 order verified unchanged | RAR-M42; `analysis/endgame_refresh_2026-09-09.md` | Layer-1 theory identical on all 19 families, floors PASS both arms, order rederived and reproduces registered v2 exactly. One non-blocking KRP-KB report owned by 4.12.6 |
+| 4.11b.19 | READY_FOR_IMPLEMENTATION | I1 | Remove the 520-byte move-list return copy from bench and search; bounded constant-factor screen; corrected comparison record | RAR-M44; `analysis/movelist_delivery_2026-09-09.md`; probe `tools/results/board-copy-probe-20260909/` | (a)+(b) land on exact fingerprint 7,601,220 / EBF 2.474 and no `memcpy` of 520 in the four generators; pooled-PGO NPS floor +0.5% decides whether (b) is banked or closes `NO_CHANGE`; (c) conditional on the parity bench; (d) re-measures the four arms and supersedes RAR-M43's gap table |
 
 1. **4.11b.1 Freeze the audit and comparison -- DONE.** RAR-M20 and its committed evidence preserve the
    three-engine results, limitations, raw output, binary/source hashes, exact
@@ -2909,6 +2915,134 @@ recommendations without coupling this roadmap to model generations.
     were held constant to isolate the census effect, so this work does not
     establish that they are current. Evidence:
     `analysis/endgame_refresh_2026-09-09.md`.
+
+19. **4.11b.19 Caller-owned move-list delivery and generator constant factors
+    -- READY_FOR_IMPLEMENTATION / I1 (RAR-M44, registered 2026-09-09).**
+    Inserted after the section closed. Research is done; this leaf is
+    implementation, cheap deterministic qualification and one pooled-PGO
+    throughput measurement, followed by a bounded, conditional screen.
+    Evidence and the exact probe: `analysis/movelist_delivery_2026-09-09.md`.
+
+    **Research card.** *Mechanism:* `generate_legal_movelist`,
+    `generate_captures`, `generate_captures_pinned` and `generate_quiets_pinned`
+    build a `MoveList` in a local and return it by value; in the fat-LTO
+    production build LLVM does not apply return-value optimisation and each
+    normal return path ends in `memcpy(out, local, 520)`. Basilisk's search
+    and its benchmark harness both write into a caller-owned `MoveList&`, and
+    its harness comment records that the copy had been "measured as if it
+    were move generation". A within-Rarog probe that only removed the copy
+    moved the cross-engine bench columns **legal captures +40.5%, legal moves
+    +11.2%, two-ply +4.6%**, with the untouched SEE and perft controls at
+    +0.05% and -0.69%. *Interactions:* none on behaviour. The generated move
+    set and order are unchanged, so the search fingerprint must stay exactly
+    **7,601,220 / EBF 2.474**; the staged picker scores the list into a
+    `ScoredMoveList` immediately, so the caller-owned list is a short-lived
+    stack local, not new per-ply state. *Invariants:* `MoveList`'s
+    `MaybeUninit` prefix contract (only `..len` is initialised; `clear` only
+    resets `len`); the bench's frozen work quanta 128/10/128/10/197281/4597
+    and the `cross-engine-board-v1` profile; perft and board-v2 oracle parity
+    on magic and PEXT; debug and release suites. *Falsifier:* the pooled-PGO
+    whole-search NPS interval includes zero or its point estimate is below the
+    **+0.5%** practical floor RAR-M41 used; then (b) closes `NO_CHANGE` and only
+    (a) and (d) remain, because a harness correction is owed regardless of
+    speed. One pooled run decides; do not rerun to chase a number.
+
+    **Prospective prediction, frozen before measurement:** (b) gains **+0.5%
+    to +1.5%** whole-search NPS under the RAR-M41 protocol (three independent
+    PGO builds per arm, `tools/nps_multibuild.ps1 -Cycles 10 -Repeats 3`, idle
+    host, null pair reported). Confidence: moderate on sign, low on magnitude;
+    RAR-M36's 6.556% generation share bounds it from above.
+
+    **Sub-steps, in order. Engine and tooling/doc changes in separate commits.**
+
+    (a) **Harness parity -- tooling commit.** In `benches/board.rs` make
+    `legal_movegen`, `capture_gen`, `make_unmake` and `game_simulation` reuse
+    caller-owned `MoveList`s created before timing (one scratch list, plus
+    `outer`/`inner` for the two-ply workload), exactly as Basilisk's
+    `tests/board_performance.cpp` does. Leave `see_captures` and `perft`
+    untouched: they are the session controls in (b) and (d). Keep the profile
+    string, corpus, quanta, estimator and preflight unchanged; update the
+    module comment to say why lists are caller-owned. Verify: preflight
+    prints `PASS` with the same six quanta; `cargo fmt --check`;
+    `cargo clippy --all-features --all-targets` zero warnings.
+
+    (b) **Production delivery -- engine commit.** Add to `src/board/moves.rs`
+    `MoveList::clear(&mut self)` (`len = 0`, no element writes). Add to
+    `src/board/movegen.rs` the out-parameter forms and route the by-value
+    forms through them so there is one generator body per kind:
+    `generate_legal_into(&Board, &mut MoveList)`,
+    `generate_captures_into(&mut Board, &mut MoveList)`,
+    `generate_captures_pinned_into(&mut Board, &mut MoveList) -> Bitboard`,
+    `generate_quiets_pinned_into(&Board, Bitboard, &mut MoveList)`; each
+    clears the list first. Mirror them on `Board` next to the existing
+    wrappers (`generate_legal_movelist`, `generate_legal_captures_pinned`,
+    `generate_legal_quiets_pinned`). Convert every hot caller to a local
+    `let mut list = MoveList::new();` followed by the `_into` call -- at
+    registration these were `MovePicker::staged` and the `GenerateQuiets`
+    stage in `src/search.rs`, the root and in-check/excluded-node full-list
+    sites in `negamax`, in-check quiescence, and `movegen::perft`; re-locate
+    them with `rg "generate_(legal_movelist|captures|legal_captures_pinned|legal_quiets_pinned)\("`
+    because line numbers drift. Delete by-value wrappers that end up unused
+    rather than leaving dead code; tests may keep a by-value convenience if
+    they need one. Mechanical proof, not eyeballing: rebuild the lib with
+    `cargo rustc --release --lib --no-default-features -- --emit=asm` under
+    the RAR-M20 flags and require that no `callq memcpy` preceded by
+    `movl $520, %r8d` remains inside the four generators; archive the grep
+    output with the commit hash. Then: fresh no-feature build reproduces
+    **7,601,220 / EBF 2.474** on magic and PEXT; `cargo test` debug AND
+    release; fmt; all-feature/all-target Clippy; board-v2 oracle tests and
+    `tests/board_differential.rs` pass. Hand the maintainer the pooled-PGO
+    NPS run (RAR-M41 protocol, prediction above) and record the result in
+    EXPERIMENTS under RAR-M44 before touching (c).
+
+    (c) **Bounded constant-factor screen -- conditional, class I2, only after
+    (b)'s result is recorded.** The remaining ~32% legal-moves gap is also
+    constant factor; the candidates below were seen in the same assembly and
+    are listed in priority order. Rules: one candidate at a time on top of
+    (b); measure each with the parity bench from (a) using the RAR-M43 runner
+    discipline (affinity, three alternating rounds, controls within 1%);
+    predeclare the expected column movement before running; promote a
+    candidate into one bundled pooled-PGO run only if it moves legal moves
+    or two-ply by **at least +3%** with controls flat and the fingerprint
+    exact; stop when the list is exhausted, and do not add candidates
+    mid-leaf.
+    1. Force inlining of the out-of-line helpers that the LTO'd
+       `generate_legal_movelist` still calls: `push_pawn_move_flags` (four
+       call sites, `#[inline]` did not take), `is_attacked_with_occ` (per
+       king target), `compute_pinned`. Expect a modest single-digit gain;
+       check code size does not explode the generator.
+    2. Const-generic colour: `gen_moves_pinned::<CAPTURES, QUIETS, US>`
+       with one runtime dispatch at each public entry, specialising
+       `gen_pawn_moves`, `gen_unpinned_pawn_quiets/captures`, `gen_castling`
+       and the pinned-pawn loop, as Basilisk's `template<Color Us>` does.
+       Move set and order must be byte-identical; the board-v2 move-set
+       oracle is the test.
+    3. `MoveList::push` bounds check: `self.moves[self.len]` is checked in
+       release. Either prove elision or replace with `get_unchecked_mut`
+       behind a `debug_assert!`, documented as a KEEP-UNSAFE with the
+       measured reason, following the existing 9.0 policy in `moves.rs`.
+    4. Lowest priority, ceiling small: the `LazyLock<AttackTables>` state
+       checks (seven per generation, cold branches) and the `Vec`-backed
+       slider tables. Try only if 1-3 leave more than a 15% column gap, and
+       only as a layout change that keeps runtime initialisation.
+    Explicitly out of scope: changing the move encoding to Basilisk's
+    flag-free `make_move(from, to)`; that is a representation change owned
+    by 4.11b.14's reopen rule, and it would touch every consumer of
+    `Move::is_capture`.
+
+    (d) **Re-measure and correct the record -- class V then M.** Rerun the
+    RAR-M43 four-arm comparison with the parity harness, in one session,
+    against the archived hash-verified Basilisk and Reckless binaries and the
+    exact ca03a46 control, following `analysis/board_benchmark_recipe_2026-09-05.md`.
+    Then add a supersession note to RAR-M43 and
+    `analysis/board_comparison_2026-09-09.md`: the generation gap it reported
+    was partly the harness, and its Elo arithmetic omitted SEE and check
+    queries. Do not delete the old table; mark it superseded and link the new
+    one. Close the leaf with GUIDE and PLAN in the same commit.
+
+    **Not this leaf:** any HCE, search-policy or pruning change; any change to
+    generated move order; a game gate -- the section's playing verdict RAR-E15
+    stands and a behaviour-neutral change owes none.
 
 ### 4.12 Endgame reference functions (was 4.9a.9-4.9a.28)
 
