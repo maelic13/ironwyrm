@@ -15,6 +15,20 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
+- **2026-09-09 — PLAN 4.11b.18 CLOSED, RAR-M42; SECTION 4.11b COMPLETE:**
+  endgame evidence refreshed against the accepted board head. Layer-1 theory is
+  identical on all 19 families — no clean win newly discarded — and floors PASS
+  on both arms, the 4.11 head reproducing the registered aggregate exactly.
+  The registered 4.12 order was **rederived** and reproduces
+  `endgame_ranking_v2.json` across all twenty families, with the accepted head
+  matching, so no renumbering is needed. Conversion alone would have said
+  "nothing changed": its four families are bare-king and byte-identical, while
+  the frozen corpus splits 34.5% of both-sides positions differing against 0.0%
+  bare-king, because SEE fires only where captures exist. Evidence versioned as
+  `endgame_drawn_census_v2.json` and `endgame_truth_baseline_v2.json`; every v1
+  artifact and the floors file untouched. Owed: KRP-KB win-preserving -2.2 SE,
+  non-blocking, owner 4.12.6. 4.12.1 is next.
+
 - **2026-09-08 — PLAN 4.11b.17 ACCEPTED, RAR-E15:** the integrated 4.11b board
   cluster passes its playing gate. H1 accepted at **1,950 games**, 12% of the
   16,000 cap: Elo **+12.12 +/- 10.17**, nElo **+18.40 +/- 15.42**, LLR 2.96 of

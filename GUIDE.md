@@ -89,12 +89,12 @@ together, and `python tools/diag/check_guide.py` must pass.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none; **RAR-E15 ACCEPTED 2026-09-08 at +12.12 +/- 10.17 Elo, +18.40 nElo** |
 | Instrument state | **4.10 repaired; v2 baselines/floors, budget transfer, label audit, mate-drive closure and conversion corrections recorded.** |
-| Current step | **4.11b.18 — refresh affected endgame evidence and close**, `RESEARCH / V` |
+| Current step | **4.12.1 — adopt the endgame order; recognizer-vs-scale classification**, `RESEARCH / R3` |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## Next and held work
 
-**Next: 4.11b.18 — refresh affected endgame evidence and close 4.11b.**
+**Next: 4.12.1 — adopt the registered endgame order and confirm the recognizer-vs-scale classification.** Section 4.11b is CLOSED.
 4.11.7–4.11.10 are complete; their scheduling holds/evidence gaps are resolved.
 4.11b.9 is ACCEPTED in `5c439da` (+0.876% full-search, RAR-M33). 4.11b.10 and
 4.11b.11 both closed `NO_CHANGE` (RAR-M34, RAR-M35), and 4.11b.12 likewise
@@ -182,7 +182,7 @@ holds still come from PLAN; a readiness label never lifts one.
     - [x] **4.11.10** Conversion claims corrected — E08 aggregate superseded; KQ-KP -3.79 pp confirmed; RAR-M24
     - [x] **4.11.11** Panic reported on stdout, where the harness keeps it
     - [x] **4.11.12** Occurrence re-measured over 36,400 rated games; 4.12 re-ranked to **v2**
-- [ ] **4.11b** Board correctness and HCE throughput
+- [x] **4.11b** Board correctness and HCE throughput
     - [x] **4.11b.1** Freeze the board audit and three-engine comparison
     - [x] **4.11b.2** Strengthen benchmark coverage and correctness oracles; RAR-M25
     - [x] **4.11b.3** Repair move parsing and counter boundaries; RAR-M26
@@ -200,7 +200,7 @@ holds still come from PLAN; a readiness label never lifts one.
     - [x] **4.11b.15** Review draw/null/repetition policy boundaries — **CLOSED `NO_CHANGE`**, RAR-M40
     - [x] **4.11b.16** Qualify integrated correctness and throughput — **QUALIFIED +1.421%**, RAR-M41
     - [x] **4.11b.17** Register and qualify the playing cluster — **ACCEPTED +12.12 Elo**, RAR-E15
-    - [ ] **4.11b.18** Refresh affected endgame evidence and close — **READY_FOR_IMPLEMENTATION / V**, dependency-held
+    - [x] **4.11b.18** Refresh affected endgame evidence and close — **CLOSED**, RAR-M42
 - [ ] **4.12** Endgame reference functions — order registered by 4.11.6, re-derived at 4.11.12
     - [ ] **4.12.1** Adopt the order; confirm recognizer-vs-scale classification — **RESEARCH / R3**
     - [ ] **4.12.2** KRPKR [ref 13] scale — 30.7% overclaim remains after 4.9a.7 — **RESEARCH / R3**

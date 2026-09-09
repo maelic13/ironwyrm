@@ -17,7 +17,7 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active game job | none. **RAR-E15 ACCEPTED 2026-09-08** — 4.11b integrated board cluster, **+12.12 +/- 10.17 Elo**, **+18.40 nElo**, H1 at 1,950 games under `[-5,5]`. RAR-E12 accepted 2026-09-03 at +11.81 +/- 5.33 Elo; RAR-E13 withdrawn unresolved |
-| Current step | **4.11b.18 — refresh affected endgame evidence and close**, `RESEARCH / V` |
+| Current step | **4.12.1 — adopt the endgame order; recognizer-vs-scale classification**, `RESEARCH / R3` |
 | Instrument state | 4.10 repairs; v2 baselines/floors, budget transfer, label audit, mate-drive closure and conversion-claim correction are complete. Historical v1 pawn-family conversion claims are retained but superseded in place by RAR-M24 |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -2103,7 +2103,7 @@ recommendations without coupling this roadmap to model generations.
 | 4.11b.15 | CLOSED (`NO_CHANGE`) | R3 | All four policies kept with independent dispositions; identity separation pinned | RAR-M40 `df94b7d`; `analysis/draw_policy_2026-09-08.md` | Engine untouched at 7,601,220 / EBF 2.474; no playing change proposed, no bundle rescued |
 | 4.11b.16 | CLOSED (QUALIFIED) | V | Correctness matrix passed; +1.421% [+0.953%, +1.764%] pooled-PGO throughput banked | RAR-M41; `analysis/cluster_qualification_2026-09-08.md` | Null pair unbiased at +0.222% [-0.130%, +0.630%]; behaviour identical throughout; no Elo claimed |
 | 4.11b.17 | CLOSED (ACCEPTED) | V | Integrated cluster gated and accepted | RAR-E15; `analysis/playing_gate_2026-09-08.md` | H1 at 1,950 games under a symmetric `[-5,5]` registered before games: +12.12 +/- 10.17 Elo, +18.40 nElo, LLR 2.96. Magnitude imprecise; no subcomponent credited |
-| 4.11b.18 | READY_FOR_IMPLEMENTATION | V | Refresh only endgame evidence affected by the accepted board head | Dependency-held on 4.11b.17 disposition | Versioned affected evidence and ranking, with unchanged artifacts reused mechanically |
+| 4.11b.18 | CLOSED (refreshed) | V | Affected evidence refreshed and versioned; 4.12 order verified unchanged | RAR-M42; `analysis/endgame_refresh_2026-09-09.md` | Layer-1 theory identical on all 19 families, floors PASS both arms, order rederived and reproduces registered v2 exactly. One non-blocking KRP-KB report owned by 4.12.6 |
 
 1. **4.11b.1 Freeze the audit and comparison -- DONE.** RAR-M20 and its committed evidence preserve the
    three-engine results, limitations, raw output, binary/source hashes, exact
@@ -2841,7 +2841,8 @@ recommendations without coupling this roadmap to model generations.
     each require their own SPRT. Update the accepted fingerprint only with
     the actual integrated verdict and its evidence.
 
-18. **4.11b.18 Refresh affected endgame evidence and close.** Before 4.12,
+18. **4.11b.18 Refresh affected endgame evidence and close -- DONE
+    (RAR-M42, 2026-09-09).** Before 4.12,
     compare the accepted board head with the exact 4.11 head on the corrected
     frozen endgame corpus/budgets and existing theory/draw safeguards. SEE
     changes may change conversion/search occurrence even if HCE coefficients
@@ -2854,6 +2855,60 @@ recommendations without coupling this roadmap to model generations.
     fingerprints, synchronize GUIDE/PLAN, and hand Phase 5 the accepted state
     contract. The section is done only after the necessary gate and evidence
     refresh, not after a faster perft number.
+
+    **Disposition: refreshed, floors PASS, 4.12 order verified UNCHANGED.
+    Section 4.11b closes.** Both arms are the binaries RAR-E15 already gated, so
+    nothing was rebuilt; every instrument is node-budgeted and seeded, so none of
+    this depends on host load.
+
+    **What could be reused was checked, not assumed.** The registered order's
+    dominant input is a frozen 36,400-game Colosseum corpus classified by
+    material, which no engine can change. But `endgame_measurement_layers.md`
+    describes drawn-share bias as "per position, static", and it is **not**:
+    `endgame_drawn.py` takes `--engine` and searches every position. Reusing it
+    on that reading would have been reuse on a false premise.
+
+    **Mechanism.** Over the frozen 83-position `tests/endgames.epd` at 60,000
+    nodes, 19 positions search differently, split exactly: **34.5% (19/55) of
+    positions with material on both sides, 0.0% (0/28) bare-king**. SEE fires
+    only where captures exist. This is why conversion is the wrong instrument
+    here — its four families are all bare-king and it came back **byte-identical**
+    across both heads, which alone would have produced a false "nothing changed".
+
+    **Layer 1 is clean.** `endgame_truth.py`, 19 families x 100 positions at
+    60,000 nodes, cohort digest `fe4866045506636f...` matching the registered
+    floors. **Theory verdicts identical on every family; no clean win newly
+    discarded.** Under the precedence rule that truth is an absolute veto, that
+    is the result that had to hold.
+
+    **Floors PASS on both arms.** The 4.11 head reproduces the registered
+    aggregate exactly (0.9300 -> 0.9300), validating the instrument before the
+    candidate is read; the accepted head reads 0.9300 -> **0.9336** (+0.4 SE, not
+    significant). Eleven families moved in both directions, the largest being
+    **KRP-KR conversion 0.9178 -> 0.9726** — notable because KRP-KR is the top
+    family in the registered order at 10.04% occurrence — and **KQ-KR dtz
+    progress +2.7 SE**, a ratchet candidate. **The floors file was NOT updated**:
+    KRP-KB's win-preserving rate fell 2.2 SE, and raising one floor while
+    lowering another in the same commit as the change that moved them is exactly
+    what the rule against relaxing a check alongside its own change forbids.
+
+    **The order was rederived, not asserted.** With the same held-constant
+    inputs, the 4.11 head reproduces `endgame_ranking_v2.json` across all twenty
+    families exactly, and the accepted head's order equals it. The first
+    rederivation used `--occurrence-scope all` and disagreed with the registered
+    v2; that was a wrong parameter, since v2 records its provenance as
+    `Rating Tournament [engine], 10,000 games`. 4.11.6's retry trigger is not
+    fired: occurrence was not re-measured.
+
+    **Versioned, not overwritten:** `endgame_drawn_census_v2.json` and
+    `endgame_truth_baseline_v2.json` are new; every v1 artifact and
+    `endgame_floors.json` are byte-identical. **Owed:** KRP-KB win-preserving
+    0.9990 -> 0.9949 (−2.2 SE), reported and non-blocking, owner **4.12.6**;
+    blocking if a later change pushes it past 3 SE. **Not done and stated:**
+    `endgame_reference_results_v1.json` and `endgame_tree_occurrence_v1.json`
+    were held constant to isolate the census effect, so this work does not
+    establish that they are current. Evidence:
+    `analysis/endgame_refresh_2026-09-09.md`.
 
 ### 4.12 Endgame reference functions (was 4.9a.9-4.9a.28)
 
