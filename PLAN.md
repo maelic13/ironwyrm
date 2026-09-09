@@ -227,9 +227,13 @@ from.
       target engines and Basilisk only, 400 games per pair, no affinity, after
       a 4T null pair. Establishes the SMP starting point for D.3.
     - **A.3.3 Oracle deficit meter (RAR-O03).** Paired equal-time run of the
-      head against the frozen `hybrid` oracle, `3+0.03`, 3,000 games, no
-      adjudication. Re-measures G(0) on the head the search programme starts
-      from; RAR-S70's 250.8 is the prior. Prediction registered in the row.
+      head against the `hybrid` oracle, `3+0.03`, 3,000 games, no
+      adjudication. The oracle is the frozen Stockfish `9587eeeb` search
+      driving `rarog_hce.dll`; rebuild that DLL from the head's evaluation
+      (`hybrid/build.ps1` on the tagged branch) so the meter holds the
+      evaluation constant and measures search only. Re-measures G(0) on the
+      head the search programme starts from; RAR-S70's 250.8 is the prior.
+      Prediction registered in the row.
     - **A.3.4 Speed baseline.** Pooled-PGO NPS of the head with the
       RAR-M41 protocol; three builds; archived hashes. The number B and C
       measure against.
