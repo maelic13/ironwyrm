@@ -291,8 +291,31 @@ fn gen_moves_pinned<const CAPTURES: bool, const QUIETS: bool, S: MoveSink>(
         ),
         "stale pinned set handed to gen_moves_pinned"
     );
-    let us = board.side_to_move;
+    // 4.11b.19(c): ONE runtime dispatch on the side to move, then everything
+    // below sees the colour as a constant -- pawn push direction, promotion
+    // and double-push ranks, capture shifts and the castling square set all
+    // fold. Basilisk's `template<Color Us>` is the same shape. The dispatch
+    // must not move below this point: it is what makes `WHITE` a constant.
+    if board.side_to_move == Color::White {
+        gen_moves_pinned_impl::<CAPTURES, QUIETS, true, S>(board, pinned, moves);
+    } else {
+        gen_moves_pinned_impl::<CAPTURES, QUIETS, false, S>(board, pinned, moves);
+    }
+}
+
+fn gen_moves_pinned_impl<
+    const CAPTURES: bool,
+    const QUIETS: bool,
+    const WHITE: bool,
+    S: MoveSink,
+>(
+    board: &Board,
+    pinned: Bitboard,
+    moves: &mut S,
+) {
+    let us = colour::<WHITE>();
     let them = !us;
+    debug_assert_eq!(us, board.side_to_move, "WHITE disagrees with the board");
     let atk = &*ATTACKS;
 
     let our_occ = board.color_occ(us);
@@ -334,8 +357,8 @@ fn gen_moves_pinned<const CAPTURES: bool, const QUIETS: bool, S: MoveSink>(
     };
 
     // --- Pawns ---
-    gen_pawn_moves::<CAPTURES, QUIETS, _>(
-        board, us, them, their_occ, all_occ, pinned, king_sq, check_mask, moves,
+    gen_pawn_moves::<CAPTURES, QUIETS, WHITE, _>(
+        board, their_occ, all_occ, pinned, king_sq, check_mask, moves,
     );
 
     // --- Knights ---
@@ -392,8 +415,18 @@ fn gen_moves_pinned<const CAPTURES: bool, const QUIETS: bool, S: MoveSink>(
 
     // --- Castling (only when not in check, not captures_only) ---
     if QUIETS && !checkers.any() {
-        gen_castling(board, us, them, all_occ, moves);
+        gen_castling::<WHITE, _>(board, all_occ, moves);
     }
+}
+
+/// The colour a `const WHITE: bool` monomorphisation stands for.
+///
+/// Const generics take only integers, `bool` and `char`, so the colour is
+/// carried as a bool and turned back into a `Color` here. Inside a
+/// monomorphisation this is a constant, which is the entire point.
+#[inline(always)]
+const fn colour<const WHITE: bool>() -> Color {
+    if WHITE { Color::White } else { Color::Black }
 }
 
 #[inline(always)]
@@ -418,6 +451,24 @@ fn gen_unpinned_captures(
     checkers: Bitboard,
     moves: &mut MoveList,
 ) {
+    debug_assert_eq!(us, board.side_to_move);
+    debug_assert_eq!(them, !board.side_to_move);
+    // 4.11b.19(c): same one-dispatch shape as `gen_moves_pinned`.
+    if us == Color::White {
+        gen_unpinned_captures_impl::<true>(board, king_sq, checkers, moves);
+    } else {
+        gen_unpinned_captures_impl::<false>(board, king_sq, checkers, moves);
+    }
+}
+
+fn gen_unpinned_captures_impl<const WHITE: bool>(
+    board: &Board,
+    king_sq: Square,
+    checkers: Bitboard,
+    moves: &mut MoveList,
+) {
+    let us = colour::<WHITE>();
+    let them = !us;
     let atk = &*ATTACKS;
     let their_occ = board.color_occ(them) & !board.pieces(them, Piece::King);
     let all_occ = board.all_occ;
@@ -449,7 +500,7 @@ fn gen_unpinned_captures(
         if let Some(ep_sq) = board.ep_square()
             && (atk.pawn(us, from) & Bitboard::from(ep_sq)).any()
         {
-            let ep_cap_sq = if us == Color::White {
+            let ep_cap_sq = if WHITE {
                 Square(ep_sq.0 - 8)
             } else {
                 Square(ep_sq.0 + 8)
@@ -529,10 +580,8 @@ fn ep_capture_is_legal(
 // Pawn move generation
 // -----------------------------------------------------------------------
 
-fn gen_pawn_moves<const CAPTURES: bool, const QUIETS: bool, S: MoveSink>(
+fn gen_pawn_moves<const CAPTURES: bool, const QUIETS: bool, const WHITE: bool, S: MoveSink>(
     board: &Board,
-    us: Color,
-    them: Color,
     their_occ: Bitboard,
     all_occ: Bitboard,
     pinned: Bitboard,
@@ -540,26 +589,26 @@ fn gen_pawn_moves<const CAPTURES: bool, const QUIETS: bool, S: MoveSink>(
     check_mask: Bitboard,
     moves: &mut S,
 ) {
+    let us = colour::<WHITE>();
+    let them = !us;
     let atk = &*ATTACKS;
     let pawns = board.pieces(us, Piece::Pawn);
     let free_pawns = pawns & !pinned;
     let pinned_pawns = pawns & pinned;
 
     if QUIETS {
-        gen_unpinned_pawn_quiets(us, free_pawns, all_occ, check_mask, moves);
+        gen_unpinned_pawn_quiets::<WHITE, _>(free_pawns, all_occ, check_mask, moves);
     }
     if CAPTURES {
-        gen_unpinned_pawn_captures(us, free_pawns, their_occ, check_mask, moves);
+        gen_unpinned_pawn_captures::<WHITE, _>(free_pawns, their_occ, check_mask, moves);
     }
 
-    let rank2 = match us {
-        Color::White => Bitboard::RANK_2,
-        Color::Black => Bitboard::RANK_7,
+    let rank2 = if WHITE {
+        Bitboard::RANK_2
+    } else {
+        Bitboard::RANK_7
     };
-    let push_one = |bb: Bitboard| match us {
-        Color::White => bb.north(),
-        Color::Black => bb.south(),
-    };
+    let push_one = |bb: Bitboard| if WHITE { bb.north() } else { bb.south() };
 
     let mut pawn_bb = pinned_pawns;
     while pawn_bb.any() {
@@ -604,7 +653,7 @@ fn gen_pawn_moves<const CAPTURES: bool, const QUIETS: bool, S: MoveSink>(
     }
 
     if CAPTURES && let Some(ep_sq) = board.ep_square() {
-        let ep_cap_sq = if us == Color::White {
+        let ep_cap_sq = if WHITE {
             Square(ep_sq.0 - 8)
         } else {
             Square(ep_sq.0 + 8)
@@ -628,32 +677,33 @@ fn gen_pawn_moves<const CAPTURES: bool, const QUIETS: bool, S: MoveSink>(
     }
 }
 
-fn gen_unpinned_pawn_quiets<S: MoveSink>(
-    us: Color,
+fn gen_unpinned_pawn_quiets<const WHITE: bool, S: MoveSink>(
     pawns: Bitboard,
     all_occ: Bitboard,
     check_mask: Bitboard,
     moves: &mut S,
 ) {
     let empty = !all_occ;
-    let (push_from, promo_from, push_offset, double_offset) = match us {
-        Color::White => (
+    let (push_from, promo_from, push_offset, double_offset) = if WHITE {
+        (
             pawns & !Bitboard::RANK_7,
             pawns & Bitboard::RANK_7,
             8i16,
             16i16,
-        ),
-        Color::Black => (
+        )
+    } else {
+        (
             pawns & !Bitboard::RANK_2,
             pawns & Bitboard::RANK_2,
             -8i16,
             -16i16,
-        ),
+        )
     };
 
-    let single = match us {
-        Color::White => push_from.north(),
-        Color::Black => push_from.south(),
+    let single = if WHITE {
+        push_from.north()
+    } else {
+        push_from.south()
     } & empty;
     let mut targets = single & check_mask;
     while targets.any() {
@@ -665,9 +715,10 @@ fn gen_unpinned_pawn_quiets<S: MoveSink>(
         ));
     }
 
-    let double = match us {
-        Color::White => (single & Bitboard::RANK_3).north(),
-        Color::Black => (single & Bitboard::RANK_6).south(),
+    let double = if WHITE {
+        (single & Bitboard::RANK_3).north()
+    } else {
+        (single & Bitboard::RANK_6).south()
     } & empty
         & check_mask;
     let mut targets = double;
@@ -680,9 +731,10 @@ fn gen_unpinned_pawn_quiets<S: MoveSink>(
         ));
     }
 
-    let promo = match us {
-        Color::White => promo_from.north(),
-        Color::Black => promo_from.south(),
+    let promo = if WHITE {
+        promo_from.north()
+    } else {
+        promo_from.south()
     } & empty
         & check_mask;
     let mut targets = promo;
@@ -697,16 +749,16 @@ fn gen_unpinned_pawn_quiets<S: MoveSink>(
     }
 }
 
-fn gen_unpinned_pawn_captures<S: MoveSink>(
-    us: Color,
+fn gen_unpinned_pawn_captures<const WHITE: bool, S: MoveSink>(
     pawns: Bitboard,
     their_occ: Bitboard,
     check_mask: Bitboard,
     moves: &mut S,
 ) {
-    let (east_targets, west_targets, east_offset, west_offset) = match us {
-        Color::White => (pawns.north_east(), pawns.north_west(), 9i16, 7i16),
-        Color::Black => (pawns.south_east(), pawns.south_west(), -7i16, -9i16),
+    let (east_targets, west_targets, east_offset, west_offset) = if WHITE {
+        (pawns.north_east(), pawns.north_west(), 9i16, 7i16)
+    } else {
+        (pawns.south_east(), pawns.south_west(), -7i16, -9i16)
     };
 
     let mut targets = east_targets & their_occ & check_mask;
@@ -773,42 +825,41 @@ fn add_move<S: MoveSink>(from: Square, to: Square, their_occ: Bitboard, moves: &
 // Castling
 // -----------------------------------------------------------------------
 
-fn gen_castling<S: MoveSink>(
-    board: &Board,
-    us: Color,
-    them: Color,
-    all_occ: Bitboard,
-    moves: &mut S,
-) {
-    let (ks_flag, qs_flag, king_sq, ks_rook, qs_rook, ks_empty, qs_empty, ks_safe, qs_safe) = if us
-        == Color::White
-    {
-        (
-            CastlingRights::WHITE_KINGSIDE,
-            CastlingRights::WHITE_QUEENSIDE,
-            Square::E1,
-            Square::H1,
-            Square::A1,
-            // Squares that must be empty for KS / QS
-            Bitboard::from(Square::F1) | Bitboard::from(Square::G1),
-            Bitboard::from(Square::B1) | Bitboard::from(Square::C1) | Bitboard::from(Square::D1),
-            // Squares that must not be attacked for KS / QS (king path)
-            [Square::F1, Square::G1],
-            [Square::C1, Square::D1],
-        )
-    } else {
-        (
-            CastlingRights::BLACK_KINGSIDE,
-            CastlingRights::BLACK_QUEENSIDE,
-            Square::E8,
-            Square::H8,
-            Square::A8,
-            Bitboard::from(Square::F8) | Bitboard::from(Square::G8),
-            Bitboard::from(Square::B8) | Bitboard::from(Square::C8) | Bitboard::from(Square::D8),
-            [Square::F8, Square::G8],
-            [Square::C8, Square::D8],
-        )
-    };
+fn gen_castling<const WHITE: bool, S: MoveSink>(board: &Board, all_occ: Bitboard, moves: &mut S) {
+    let us = colour::<WHITE>();
+    let them = !us;
+    let (ks_flag, qs_flag, king_sq, ks_rook, qs_rook, ks_empty, qs_empty, ks_safe, qs_safe) =
+        if WHITE {
+            (
+                CastlingRights::WHITE_KINGSIDE,
+                CastlingRights::WHITE_QUEENSIDE,
+                Square::E1,
+                Square::H1,
+                Square::A1,
+                // Squares that must be empty for KS / QS
+                Bitboard::from(Square::F1) | Bitboard::from(Square::G1),
+                Bitboard::from(Square::B1)
+                    | Bitboard::from(Square::C1)
+                    | Bitboard::from(Square::D1),
+                // Squares that must not be attacked for KS / QS (king path)
+                [Square::F1, Square::G1],
+                [Square::C1, Square::D1],
+            )
+        } else {
+            (
+                CastlingRights::BLACK_KINGSIDE,
+                CastlingRights::BLACK_QUEENSIDE,
+                Square::E8,
+                Square::H8,
+                Square::A8,
+                Bitboard::from(Square::F8) | Bitboard::from(Square::G8),
+                Bitboard::from(Square::B8)
+                    | Bitboard::from(Square::C8)
+                    | Bitboard::from(Square::D8),
+                [Square::F8, Square::G8],
+                [Square::C8, Square::D8],
+            )
+        };
 
     // Verify the rook is actually present (handles FEN edge cases)
     if board.castling.has(ks_flag)
