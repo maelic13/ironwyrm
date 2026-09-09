@@ -5,6 +5,15 @@
 //! verified by a preflight pass, so "same benchmark" is enforced rather than
 //! assumed.
 //!
+//! Every generating workload writes into a caller-owned `MoveList` built
+//! before timing starts, which is what the peer harnesses do and what the
+//! search itself does. The by-value form returns a 520-byte aggregate that the
+//! fat-LTO build copies on the normal return path, and RAR-M44 measured that
+//! copy at +11.2% on legal generation and +40.5% on captures -- it was inside
+//! the timed region and reported as move generation. `see_captures` and
+//! `perft` deliberately keep their own delivery: they are the untouched
+//! controls for the 4.11b.19 sessions.
+//!
 //! The profile is shared with Basilisk (`tests/board_performance.cpp`) and
 //! Manta (`tools/board_bench.zig`); the contract they all implement is written
 //! down in Manta's `docs/BOARD_BENCHMARK.md`. Corpus, order, work quanta,
@@ -20,8 +29,8 @@ use std::hint::black_box;
 use std::time::{Duration, Instant};
 
 use rarog::board::{
-    Board, CROSS_ENGINE_SEE_VALUES, MoveList, SeeValues, generate_captures,
-    generate_legal_movelist, perft,
+    Board, CROSS_ENGINE_SEE_VALUES, MoveList, SeeValues, generate_captures, generate_captures_into,
+    generate_legal_into, perft,
 };
 
 const WARMUP: Duration = Duration::from_millis(150);
@@ -108,18 +117,24 @@ fn main() {
     // region. `perft` restores it exactly through make/unmake, so one board
     // serves every sample — which is also what the peer implementations do.
     let mut perft_board = Board::starting_position();
+    // Caller-owned lists, built here for the same reason the boards are: a
+    // container the workload constructs (or receives by value) is charged to
+    // board throughput and is not board work.
+    let mut scratch = MoveList::new();
+    let mut outer = MoveList::new();
+    let mut inner = MoveList::new();
 
     // Preflight: prove every work quantum before timing anything. A workload
     // that generates a different number of moves than its peers is not the
     // same benchmark, however similar the label looks.
     {
         let measured = [
-            legal_movegen(&boards),
-            capture_gen(&mut capture_boards),
-            make_unmake(&mut mutable_boards),
+            legal_movegen(&boards, &mut scratch),
+            capture_gen(&mut capture_boards, &mut scratch),
+            make_unmake(&mut mutable_boards, &mut scratch),
             see_captures(&mut see_boards, see_values),
             perft(&mut perft_board, 4),
-            game_simulation(&mut simulation_boards),
+            game_simulation(&mut simulation_boards, &mut outer, &mut inner),
         ];
         let mut ok = true;
         for (i, (&got, &want)) in measured.iter().zip(EXPECTED_OPS.iter()).enumerate() {
@@ -144,13 +159,13 @@ fn main() {
 
     let results = [
         measure("legal moves", "moves", EXPECTED_OPS[0], || {
-            legal_movegen(&boards)
+            legal_movegen(&boards, &mut scratch)
         }),
         measure("legal captures", "moves", EXPECTED_OPS[1], || {
-            capture_gen(&mut capture_boards)
+            capture_gen(&mut capture_boards, &mut scratch)
         }),
         measure("make/unmake", "moves", EXPECTED_OPS[2], || {
-            make_unmake(&mut mutable_boards)
+            make_unmake(&mut mutable_boards, &mut scratch)
         }),
         measure("threshold SEE", "captures", EXPECTED_OPS[3], || {
             see_captures(&mut see_boards, see_values)
@@ -159,7 +174,7 @@ fn main() {
             perft(&mut perft_board, 4)
         }),
         measure("two-ply simulation", "moves", EXPECTED_OPS[5], || {
-            game_simulation(&mut simulation_boards)
+            game_simulation(&mut simulation_boards, &mut outer, &mut inner)
         }),
     ];
 
@@ -323,37 +338,39 @@ where
     }
 }
 
-// `generate_legal_movelist` writes into a fixed-capacity stack `MoveList`.
-// The convenience wrapper `generate_legal_moves` returns a `Vec<Move>` and so
-// puts a `Vec::with_capacity(48)` malloc/free pair inside the timed region —
-// that allocation was worth 17-43% on the four workloads that used it, and it
-// is allocator throughput, not board throughput. Search itself prefers the
-// movelist form, so this is also the more representative call.
-fn legal_movegen(boards: &[Board]) -> u64 {
+// `generate_legal_into` writes into a fixed-capacity `MoveList` the caller
+// owns. The convenience wrapper `generate_legal_moves` returns a `Vec<Move>`
+// and so puts a `Vec::with_capacity(48)` malloc/free pair inside the timed
+// region — that allocation was worth 17-43% on the four workloads that used
+// it, and it is allocator throughput, not board throughput. The by-value
+// `generate_legal_movelist` has the same defect in smaller print: a 520-byte
+// return copy. Search itself uses the out-parameter form, so this is also the
+// more representative call.
+fn legal_movegen(boards: &[Board], moves: &mut MoveList) -> u64 {
     let mut total = 0u64;
     for board in boards {
-        let moves = generate_legal_movelist(black_box(board));
+        generate_legal_into(black_box(board), moves);
         total += moves.len() as u64;
-        black_box(&moves);
+        black_box(&*moves);
     }
     total
 }
 
-fn capture_gen(boards: &mut [Board]) -> u64 {
+fn capture_gen(boards: &mut [Board], moves: &mut MoveList) -> u64 {
     let mut total = 0u64;
     for board in boards {
-        let moves = generate_captures(black_box(board));
+        generate_captures_into(black_box(board), moves);
         total += moves.len() as u64;
-        black_box(&moves);
+        black_box(&*moves);
     }
     total
 }
 
-fn make_unmake(boards: &mut [Board]) -> u64 {
+fn make_unmake(boards: &mut [Board], moves: &mut MoveList) -> u64 {
     let mut ops = 0u64;
     for board in boards {
-        let moves: MoveList = generate_legal_movelist(board);
-        for &mv in &moves {
+        generate_legal_into(board, moves);
+        for &mv in moves.as_slice() {
             board.make_move(mv);
             black_box(&board);
             board.unmake_move(mv);
@@ -391,15 +408,15 @@ fn see_captures(boards: &mut [Board], values: SeeValues) -> u64 {
     ops
 }
 
-fn game_simulation(boards: &mut [Board]) -> u64 {
+fn game_simulation(boards: &mut [Board], outer: &mut MoveList, inner: &mut MoveList) -> u64 {
     let mut ops = 0u64;
     for board in boards {
-        let moves: MoveList = generate_legal_movelist(board);
-        for &mv in &moves {
+        generate_legal_into(board, outer);
+        for &mv in outer.as_slice() {
             board.make_move(mv);
-            let replies = generate_legal_movelist(board);
-            ops += replies.len() as u64;
-            black_box(&replies);
+            generate_legal_into(board, inner);
+            ops += inner.len() as u64;
+            black_box(&*inner);
             board.unmake_move(mv);
         }
     }
