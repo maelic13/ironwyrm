@@ -92,21 +92,19 @@ together, and `python tools/diag/check_guide.py` must pass.
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
 | Active experiment | none; **RAR-E15 ACCEPTED 2026-09-08 at +12.12 +/- 10.17 Elo, +18.40 nElo** |
 | Instrument state | **4.10 repaired; v2 baselines/floors, budget transfer, label audit, mate-drive closure and conversion corrections recorded.** |
-| Current step | **4.11b.19 — caller-owned move-list delivery and generator constant factors**; (a) and (b) **IMPLEMENTED**, pooled-PGO NPS run owed to the maintainer; then (c)/(d), then 4.12.1 |
+| Current step | **4.11b.19 — caller-owned move-list delivery and generator constant factors**; (a)+(b) done, **(b) BANKED at +2.48% NPS**; (c) constant-factor screen then (d), then 4.12.1 |
 | Next release | Conditional 2.4.0 at 4.20; NNUE follows either way |
 
 ## Next and held work
 
-**Next: 4.11b.19(b)'s pooled-PGO NPS run, which is the maintainer's**
-(RAR-M44; `analysis/movelist_delivery_2026-09-09.md`). **(a) harness parity
-`55e228a` and (b) caller-owned delivery `021dc98` are implemented and
-deterministically qualified**: zero 520-byte `memcpy` sites left in the fat-LTO binary, down from
-four; fingerprint exactly 7,601,220 / EBF 2.474 on magic and PEXT; debug and
-release suites, fmt and Clippy clean. The registered prediction is **+0.5% to
-+1.5%** whole-search NPS with a **+0.5%** practical floor; an interval
-including zero closes (b) `NO_CHANGE` while (a) still stands. **(c)** is
-conditional on that result and **(d)** re-measures the four arms; **4.12.1**
-follows. Behaviour-neutral throughout, so no game gate is owed.
+**Next: 4.11b.19(c), the bounded constant-factor screen, then (d)'s corrected
+four-arm comparison** (RAR-M44; `analysis/movelist_delivery_2026-09-09.md`).
+**(a) harness parity `55e228a` and (b) caller-owned delivery `021dc98` are
+done and qualified**: zero 520-byte `memcpy` sites left in the fat-LTO binary,
+down from four, and the registered pooled-PGO run **BANKED +2.48% whole-search
+NPS, [+2.29%, +2.65%]**, null pair -0.21%, against a frozen +0.5% floor -- the
+prediction of +0.5% to +1.5% missed high in magnitude. Fingerprint stays
+exactly 7,601,220 / EBF 2.474, so no game gate is owed. **4.12.1** follows (d).
 
 **Section 4.11b is otherwise CLOSED**, and 4.11.7–4.11.10 before it. Its playing gate
 RAR-E15 was **ACCEPTED at +12.12 +/- 10.17 Elo, +18.40 nElo**, H1 at 1,950
@@ -217,7 +215,7 @@ holds still come from PLAN; a readiness label never lifts one.
     - [x] **4.11b.16** Qualify integrated correctness and throughput — **QUALIFIED +1.421%**, RAR-M41
     - [x] **4.11b.17** Register and qualify the playing cluster — **ACCEPTED +12.12 Elo**, RAR-E15
     - [x] **4.11b.18** Refresh affected endgame evidence and close — **CLOSED**, RAR-M42
-    - [ ] **4.11b.19** Caller-owned move-list delivery; constant-factor screen; corrected comparison — **IMPLEMENTED / I1**, RAR-M44; (a)+(b) done, NPS run owed
+    - [ ] **4.11b.19** Caller-owned move-list delivery; constant-factor screen; corrected comparison — **LOCAL_QUALIFIED / I1**, RAR-M44; (a)+(b) banked +2.48% NPS, (c)/(d) open
 - [ ] **4.12** Endgame reference functions — order registered by 4.11.6, re-derived at 4.11.12
     - [ ] **4.12.1** Adopt the order; confirm recognizer-vs-scale classification — **RESEARCH / R3**
     - [ ] **4.12.2** KRPKR [ref 13] scale — 30.7% overclaim remains after 4.9a.7 — **RESEARCH / R3**

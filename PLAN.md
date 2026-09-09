@@ -2112,7 +2112,7 @@ recommendations without coupling this roadmap to model generations.
 | 4.11b.16 | CLOSED (QUALIFIED) | V | Correctness matrix passed; +1.421% [+0.953%, +1.764%] pooled-PGO throughput banked | RAR-M41; `analysis/cluster_qualification_2026-09-08.md` | Null pair unbiased at +0.222% [-0.130%, +0.630%]; behaviour identical throughout; no Elo claimed |
 | 4.11b.17 | CLOSED (ACCEPTED) | V | Integrated cluster gated and accepted | RAR-E15; `analysis/playing_gate_2026-09-08.md` | H1 at 1,950 games under a symmetric `[-5,5]` registered before games: +12.12 +/- 10.17 Elo, +18.40 nElo, LLR 2.96. Magnitude imprecise; no subcomponent credited |
 | 4.11b.18 | CLOSED (refreshed) | V | Affected evidence refreshed and versioned; 4.12 order verified unchanged | RAR-M42; `analysis/endgame_refresh_2026-09-09.md` | Layer-1 theory identical on all 19 families, floors PASS both arms, order rederived and reproduces registered v2 exactly. One non-blocking KRP-KB report owned by 4.12.6 |
-| 4.11b.19 | IMPLEMENTED | I1 | (a)+(b) done and deterministically qualified; (c)/(d) open. Remove the 520-byte move-list return copy from bench and search; bounded constant-factor screen; corrected comparison record | RAR-M44; `analysis/movelist_delivery_2026-09-09.md`; probe `tools/results/board-copy-probe-20260909/` | (a) `55e228a` and (b) `021dc98` landed on the exact fingerprint 7,601,220 / EBF 2.474 (magic and PEXT) with zero 520-byte `memcpy` sites left in the fat-LTO binary, four before; pooled-PGO NPS floor +0.5% decides whether (b) is banked or closes `NO_CHANGE`, and that run is owed to the maintainer; (c) conditional on the parity bench; (d) re-measures the four arms and supersedes RAR-M43's gap table |
+| 4.11b.19 | LOCAL_QUALIFIED | I1 | (a)+(b) done and qualified, (b) banked at +2.48% NPS; (c)/(d) open. Remove the 520-byte move-list return copy from bench and search; bounded constant-factor screen; corrected comparison record | RAR-M44; `analysis/movelist_delivery_2026-09-09.md`; probe `tools/results/board-copy-probe-20260909/` | (a) `55e228a` and (b) `021dc98` landed on the exact fingerprint 7,601,220 / EBF 2.474 (magic and PEXT) with zero 520-byte `memcpy` sites left in the fat-LTO binary, four before; the registered pooled-PGO run measured **+2.48% [+2.29%, +2.65%]** against a +0.5% floor, null pair -0.21% [-0.57%, +0.23%], so (b) is **BANKED** and the prediction missed high; (c) conditional on the parity bench; (d) re-measures the four arms and supersedes RAR-M43's gap table |
 
 1. **4.11b.1 Freeze the audit and comparison -- DONE.** RAR-M20 and its committed evidence preserve the
    three-engine results, limitations, raw output, binary/source hashes, exact
@@ -2920,7 +2920,7 @@ recommendations without coupling this roadmap to model generations.
     `analysis/endgame_refresh_2026-09-09.md`.
 
 19. **4.11b.19 Caller-owned move-list delivery and generator constant factors
-    -- (a) and (b) IMPLEMENTED / I1 (RAR-M44, registered 2026-09-09).**
+    -- (a) and (b) DONE and QUALIFIED / I1 (RAR-M44, registered 2026-09-09).**
     Inserted after the section closed. Research is done; this leaf is
     implementation, cheap deterministic qualification and one pooled-PGO
     throughput measurement, followed by a bounded, conditional screen.
@@ -2970,8 +2970,8 @@ recommendations without coupling this roadmap to model generations.
     prints `PASS` with the same six quanta; `cargo fmt --check`;
     `cargo clippy --all-features --all-targets` zero warnings.
 
-    (b) **Production delivery -- engine commit. DONE `021dc98`; the NPS run
-    is still owed.** Add to `src/board/moves.rs` `MoveList::clear(&mut self)`
+    (b) **Production delivery -- engine commit. DONE `021dc98`; BANKED at
+    +2.48% NPS.** Add to `src/board/moves.rs` `MoveList::clear(&mut self)`
     (`len = 0`, no element writes). Add to
     `src/board/movegen.rs` the out-parameter forms and route the by-value
     forms through them so there is one generator body per kind:
@@ -3027,6 +3027,19 @@ recommendations without coupling this roadmap to model generations.
     `tools/results/movelist-delivery-20260909/` (ignored: `asm_lib_after.txt`,
     `asm_bin_before_after.txt`, `fingerprint.txt`, `harness_parity.txt`,
     `asmcheck.py`, `where520.py`).
+
+    **(b)'s registered measurement, run 2026-09-09 on an idle host.** Three
+    PGO builds per arm through `tools/nps_multibuild.ps1 -Cycles 10
+    -Repeats 3`, base at `f10b999`: **+2.48% whole-search NPS, 95% bootstrap
+    [+2.29%, +2.65%]** (3,142,298 -> 3,220,173 n/s; best-of +2.81%). Null
+    pair `cand-1` vs `cand-2`, same revision: **-0.21% [-0.57%, +0.23%]**, so
+    the instrument carries no arm-level offset. All six binaries reproduce
+    7,601,220 / EBF 2.474 and all six hashes differ. **BANKED** -- the lower
+    bound is more than four times the registered +0.5% floor. **The frozen
+    prediction of +0.5% to +1.5% missed high, in magnitude only**; the
+    calibration is in RAR-M44 and `analysis/movelist_delivery_2026-09-09.md`.
+    NPS is not Elo and none is claimed; behaviour is unchanged, so RAR-E15's
+    verdict stands and no game gate is owed. This unblocks (c).
 
     (c) **Bounded constant-factor screen -- conditional, class I2, only after
     (b)'s result is recorded.** The remaining ~32% legal-moves gap is also

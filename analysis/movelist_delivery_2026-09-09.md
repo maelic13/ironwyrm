@@ -94,3 +94,44 @@ Directory contents: `probe.diff`, `ab.py`, `ab.log`, `ab_result.json`,
 `board-base.exe`, `board-variant.exe`, `binaries.sha256`, build logs,
 `README.txt`. Base SHA-256 `a64057a1…`, variant `ddb78137…`. Source `c1a7713`
 plus `probe.diff`. Ignored directory; not in Git.
+
+## Implementation and the registered production measurement (2026-09-09)
+
+Committed as `021dc98` (engine) and `55e228a` (harness); recorded in PLAN
+4.11b.19 and RAR-M44. One deviation from the registered caller list, reported
+rather than taken silently: **ProbCut's capture generation** reached the same
+copy through `Board::generate_legal_captures` and was converted with the rest.
+The assembly scan is what found it — after the registered sites were done it
+was the only 520-byte copy left in the binary.
+
+Mechanical proof: the fat-LTO binary has **zero** `movl $520` + `callq memcpy`
+sites, against **four** before (`movegen::generate_captures`,
+`movegen::generate_legal_movelist`, `MovePicker::staged`, `MovePicker::next`).
+The same scan still reports the copy inside the three surviving by-value
+wrappers, so a clean line is a measurement and not an absent pattern. `bench
+13` reproduces **7,601,220 / EBF 2.474** on magic and PEXT.
+
+**Registered pooled-PGO result, one run, maintainer, idle host:**
+
+| Arm | pooled median n/s |
+|---|---:|
+| base (`f10b999`, three PGO builds) | 3,142,298 |
+| cand (head, three PGO builds) | 3,220,173 |
+
+**+2.48% whole-search NPS, 95% bootstrap [+2.29%, +2.65%]**; best-of +2.81%.
+Null pair `cand-1` vs `cand-2`, same revision: **−0.21% [−0.57%, +0.23%]**.
+All six binaries reproduce the fingerprint and all six hashes differ.
+
+**BANKED.** The lower bound is more than four times the registered +0.5% floor.
+
+**Calibration, written after exposure.** The frozen band was +0.5% to +1.5%;
+the measurement is +2.48%. The miss is in **magnitude only** — sign, floor and
+the ceiling argument above (RAR-M36's 6.556% generation share) all held, and
+2.48% sits well inside that ceiling. What failed is the sentence in this
+document that reads "the copy is a bounded fraction of that": it was about
+**38%** of the generation share. Two candidate reasons, neither established
+here: the copy was not confined to generation — ProbCut and quiescence paid it
+at the caller's return slot, outside the symbol a share profile charges
+generation to — and 520 bytes of store traffic per call costs more than its
+instruction count implies. No Elo is claimed; behaviour is unchanged and
+RAR-E15's verdict stands.
