@@ -255,7 +255,16 @@ being played and can still make this release if it passes its checks.
       the ARM64 compatibility host (RAR-P14 is the 1.97.1 precedent), and the
       CI matrix has not yet run on the new pin. Both are held in GUIDE and are
       required before A.3.4 publishes assets.
-    - **A.3.2 Release gate — RAR-E16, `V`.** Registered before games: the
+    - **A.3.2 Release gate — RAR-E16, DONE 2026-09-09: H1 ACCEPTED, 2.4.0
+      licensed.** STC 1T H1 at 742 games of a 16,000 cap, **+54.77 +/- 17.04
+      Elo** (nElo +81.73 +/- 25.00, LLR 2.95, LOS 100.00%), one time forfeit;
+      the `3+0.03` 4T direction check read **+79.53 +/- 21.21** over 400 games
+      with zero forfeits and zero protocol warnings. The release rule wants at
+      least +40 with the lower bound above +25 and the lower bound is +37.73,
+      so the version is **2.4.0** — subject to A.3.3 and the two 1.98.1 holds.
+      The magnitude is not settled: a boundary stop at 4.6% of the cap biases
+      the estimate upward, so the head is clearly and substantially stronger
+      than 2.3.2 without +54.77 being its Elo. Registered as: the
       release candidate (A.3.1 head, PGO pext) against the 2.3.2 release binary,
       `3+0.03`, 1T, Hash 64, paired UHO, no adjudication, `[3,10]` nElo, cap
       16,000 games, plus a `3+0.03` 4T direction check of 400 games with zero
@@ -611,7 +620,6 @@ class until they open.
 
 | Leaf | Workflow state | Class | Current decision |
 |---|---|---|---|
-| A.3.2 | LOCAL_QUALIFIED | V | Arms built and manifest-verified, baseline corrected before games; maintainer runs the STC SPRT, then the LTC and 4T direction checks |
 | A.3.3 | READY_FOR_IMPLEMENTATION | R2 | Diagnose the seven forfeits by reconstructed clock; fix the low-time reserve; RAR-R11 registered |
 | A.3.4 | RESEARCH | M | Waits for the A.3.2 verdict, the A.3.3 repair and the A.4.5 decision; version per the release rule |
 | A.4.1 | READY_FOR_IMPLEMENTATION | R2 | Symbol-isolation link prototype first; then the design document and handoffs |
