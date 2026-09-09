@@ -97,16 +97,21 @@ together, and `python tools/diag/check_guide.py` must pass.
 
 ## Next and held work
 
-**Next: 4.12.1 — adopt the registered endgame order and confirm the recognizer-vs-scale classification.** Section 4.11b is CLOSED.
-4.11.7–4.11.10 are complete; their scheduling holds/evidence gaps are resolved.
-4.11b.9 is ACCEPTED in `5c439da` (+0.876% full-search, RAR-M33). 4.11b.10 and
-4.11b.11 both closed `NO_CHANGE` (RAR-M34, RAR-M35), and 4.11b.12 likewise
-(RAR-M37): king lookup is 0.502%, a ceiling below instrument resolution. The
-board profile recipe was recovered and refreshed at head (RAR-M36).
+**Next: 4.12.1 — adopt the registered endgame order and confirm the
+recognizer-vs-scale classification.**
 
-| Open hold | Resume when | Must be resolved before |
+**Section 4.11b is CLOSED**, and 4.11.7–4.11.10 before it. Its playing gate
+RAR-E15 was **ACCEPTED at +12.12 +/- 10.17 Elo, +18.40 nElo**, H1 at 1,950
+games, so the fingerprint 7,601,220 / EBF 2.474 now has its integrated verdict
+and is the accepted foundation for 4.12. RAR-M41 banked **+1.421%
+[+0.953%, +1.764%]** pooled-PGO throughput; 4.11b.10, 4.11b.11, 4.11b.12,
+4.11b.14 and 4.11b.15 closed `NO_CHANGE` on evidence; RAR-M42 verified the 4.12
+order unchanged by rederivation.
+
+| Open hold / obligation | Resume or resolve when | Must be resolved before |
 |---|---|---|
 | **4.12.21** Future 7-man evidence gap | Independent truth/verification becomes available, or a justified exclusion is recorded | 4.12.23 closes |
+| **KRP-KB win-preserving** 0.9990 -> 0.9949 (−2.2 SE, RAR-M42) | Non-blocking now; becomes blocking if a later change pushes it past 3 SE | 4.12.6 closes (owner) |
 
 Follow the earliest **unblocked** leaf. Keep held items unticked in their
 original place; check their return conditions at every handoff. PLAN owns
