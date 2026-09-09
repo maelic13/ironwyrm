@@ -15,6 +15,20 @@ two numbering schemes do not correspond and are not meant to.
 
 ## Completed current-roadmap work (dated records; PLAN owns IDs)
 
+- **2026-09-08 — PLAN 4.11b.17 ACCEPTED, RAR-E15:** the integrated 4.11b board
+  cluster passes its playing gate. H1 accepted at **1,950 games**, 12% of the
+  16,000 cap: Elo **+12.12 +/- 10.17**, nElo **+18.40 +/- 15.42**, LLR 2.96 of
+  +/-2.94, LOS 99.03%, W-D-L 530-958-462, one timeout at 0.051% (below RAR-M14's
+  floor). Bounds `[-5,5]` and every setting were registered before games and
+  match the run manifest exactly. **The registered prior was badly wrong** — it
+  predicted -4 to +4 nElo by treating a +10.14% node increase as a tax, but the
+  tree grew because the search stopped pruning incorrectly, which is the
+  opposite sign from widening a search. **RAR-M10 predicted 1,925 games against
+  1,950 actual**, validating it outside its stated +/-6 nElo range. Magnitude is
+  imprecise at +/-10.17 Elo and no subcomponent is credited. The development
+  fingerprint 7,601,220 / EBF 2.474 now has its integrated verdict and is the
+  accepted foundation for 4.12. 4.11b.18 is next.
+
 - **2026-09-08 — PLAN 4.11b.16 QUALIFIED, RAR-M41:** the integrated board
   cluster banks **+1.421%** whole-search NPS, 95% [+0.953%, +1.764%], under
   production pooled-PGO settings on a verified-idle host, with behaviour

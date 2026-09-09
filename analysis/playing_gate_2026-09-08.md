@@ -100,7 +100,97 @@ no-adjudication throughput of 88.4 games/min the cap is about **3 hours**.
 No bound, cap, book, clock or adjudication setting changes after games are seen,
 and no success threshold is invented afterwards.
 
-## Status
+## Status at registration time
 
-**Registered, not yet run.** Command handed to the maintainer; the run is a
-machine-occupying job and belongs to them.
+**Registered, not yet run** — superseded by the Result section below, which
+records the run the maintainer then performed.
+
+---
+
+# Result — 2026-09-08, **H1 ACCEPTED**
+
+`SPRT ([-5.00, 5.00]) completed - H1 was accepted` at **1,950 games**, 12.2% of
+the registered 16,000 cap, in 21 minutes 47 seconds. The overnight Windows
+restart happened afterwards and cost nothing: the run had already completed at
+21:14:56Z.
+
+| Quantity | Value |
+|---|---|
+| Elo | **+12.12 ± 10.17** |
+| nElo | **+18.40 ± 15.42** |
+| LLR | **2.96** of ±2.94 (100.4%) |
+| LOS | 99.03% |
+| W–D–L | 530–958–462 over 1,950 games, **51.74%** |
+| Draw ratio | 41.74% |
+| PairsRatio | 1.25 |
+| Ptnml(0–2) | [45, 207, 407, 267, 49] |
+| Timeouts / crashes | 1 / 0 |
+
+Provenance verified against the registration: engine SHA-256 `8916725E...` and
+`6F1592FF...`, `elo0=-5 elo1=5 alpha=0.05 beta=0.05 model=normalized`, budget
+16,000, `3+0.03`, Hash 64, 1T, concurrency 14 on affinity CPUs
+`0,2,4,...,26`, paired UHO book `7A7F6470...`, **adjudication none**, natural
+termination. Nothing was changed after games were seen.
+
+The single timeout is 1 in 1,950 = **0.051%**, at or below RAR-M14's documented
+forfeit floor for this concurrency (0.077%, 0.135% and 0.172% in three
+identical-binary null pairs). It is recorded, not treated as a defect.
+
+## The prior was badly wrong, and in an instructive way
+
+Registered prior: **−4 to +4 nElo, centred near zero**. Measured: **+18.40
+nElo**. That is a miss in magnitude and in the confidence with which the sign
+was called two-sided.
+
+The error was treating the **+10.14% node increase as a tax**. It cited AGENTS'
+measured "+7.36% tree change worth −1.49 ± 2.87 Elo" — but that calibration came
+from a change that grew the tree *without* improving the decisions inside it.
+Here the tree grew **because the search stopped pruning incorrectly**: the
+pre-repair SEE returned wrong verdicts that cut lines it should have kept. The
+extra nodes are the symptom of the repair working, not its cost, and the
+accuracy plainly outweighed the ~8.6% time-to-depth penalty.
+
+The second error was over-generalising from **RAR-S62**, where a ProbCut
+correctness fix cost 5 Elo. That was one precedent with a different mechanism —
+a desync that may have carried usable signal — and it was weighted as though it
+established a general rule that correctness fixes cost strength.
+
+**The lesson is specific: a node-count increase caused by removing wrong prunes
+is not comparable to a node-count increase from widening a search.** They have
+opposite expected signs and the calibration constant for one does not transfer
+to the other.
+
+## RAR-M10 was validated, and outside its stated range
+
+RAR-M10 predicts `drift/game ≈ 8.3e-6 × width × (true − midpoint)`. At width 10,
+midpoint 0 and a true +18.4 nElo that gives `1.527e-3` per game and **1,925
+games** to ±2.94. The run took **1,950** — within **1.3%**.
+
+RAR-M10 explicitly warned that predictions "outside roughly ±6 nElo, or under
+different bounds" are extrapolation. This point is both: +18.4 nElo under
+`[-5,5]` rather than `[3,10]`. It held anyway, which **extends** the fit's
+validated range and is worth recording as a fourth calibration point.
+
+## What is claimed
+
+**Claimed:** the integrated 4.11b board cluster is accepted at **+12.12 ± 10.17
+Elo**, **+18.40 ± 15.42 nElo**, H1 at 1,950 games under a symmetric `[-5,5]`
+bracket registered before any games. The development fingerprint **7,601,220 /
+EBF 2.474** now has its integrated verdict and becomes the accepted foundation
+for 4.12.
+
+**Not claimed — the magnitude is imprecise.** An SPRT decides; it does not
+estimate. At 1,950 games the interval is ±10.17 Elo, so the honest reading is
+"clearly positive, size poorly determined". Do not quote +12.12 as a settled
+number.
+
+**No subcomponent is credited.** The SEE repair, the boundary repair and the
+throughput work were gated as one cluster under the cluster rule. Splitting the
+gain between the repaired pruning and the +1.421% NPS requires an ablation that
+has not been run, and RAR-S57's precedent is explicit that the honest
+attribution until then is "the bundle".
+
+## Evidence
+
+`tools/results/sprt_411bCluster_vs_411bBase_20260908_225308.{log,pgn,manifest.txt}`
+plus both engine manifests. PGN SHA-256 `F6F7295C...`, log SHA-256 `C02B1E36...`.

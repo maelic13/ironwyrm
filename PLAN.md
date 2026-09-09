@@ -16,8 +16,8 @@ instrument audit; section 13 maps the old numbers to the new ones.
 | Frozen search/HCE oracle | `hybrid` at `75d0d43`, Stockfish `9587eeeb` driving the exact Rarog 2.3.2 HCE |
 | Measured search deficit | **355.26 +/- 27.03 Elo at equal nodes** and **250.77 +/- 13.12 Elo at equal time**; Rarog's speed is worth a measured **104.5 Elo** |
 | Accepted Phase-4 gains | ProbCut **+15.56 +/- 10.02**; root LMR relief **+2.33 +/- 1.85**; complete HCE refit **+22.04 +/- 7.51**; TB-corrected labels **+6.73 +/- 3.82**; hce-v3 refit **+11.81 +/- 5.33** |
-| Active game job | **RAR-E15 registered 2026-09-08, not yet run** — 4.11b.17 integrated board cluster, `[-5,5]` nElo, cap 16,000. RAR-E12 accepted 2026-09-03 at **+11.81 +/- 5.33 Elo**, +17.57 nElo; RAR-E13 withdrawn unresolved |
-| Current step | **4.11b.17 — register and qualify the playing cluster**, `RESEARCH / V` |
+| Active game job | none. **RAR-E15 ACCEPTED 2026-09-08** — 4.11b integrated board cluster, **+12.12 +/- 10.17 Elo**, **+18.40 nElo**, H1 at 1,950 games under `[-5,5]`. RAR-E12 accepted 2026-09-03 at +11.81 +/- 5.33 Elo; RAR-E13 withdrawn unresolved |
+| Current step | **4.11b.18 — refresh affected endgame evidence and close**, `RESEARCH / V` |
 | Instrument state | 4.10 repairs; v2 baselines/floors, budget transfer, label audit, mate-drive closure and conversion-claim correction are complete. Historical v1 pawn-family conversion claims are retained but superseded in place by RAR-M24 |
 | HCE state | Completely refitted and accepted. The 1,218-slot surface has one whole-surface game verdict; structural gaps (4.9) are closed and endgame closure (4.12) is open |
 | Next release | Conditional **2.4.0** after 4.20; baseline NNUE then targets **2.5.0** |
@@ -2102,7 +2102,7 @@ recommendations without coupling this roadmap to model generations.
 | 4.11b.14 | CLOSED (`NO_CHANGE`) | R3 | No board region above 6.7%; all three alternatives lose on measured grounds | RAR-M39; RAR-M36 profile; `analysis/representation_2026-09-08.md` | Gate for opening an implementation not met; footprint pinned by const assertions naming this leaf |
 | 4.11b.15 | CLOSED (`NO_CHANGE`) | R3 | All four policies kept with independent dispositions; identity separation pinned | RAR-M40 `df94b7d`; `analysis/draw_policy_2026-09-08.md` | Engine untouched at 7,601,220 / EBF 2.474; no playing change proposed, no bundle rescued |
 | 4.11b.16 | CLOSED (QUALIFIED) | V | Correctness matrix passed; +1.421% [+0.953%, +1.764%] pooled-PGO throughput banked | RAR-M41; `analysis/cluster_qualification_2026-09-08.md` | Null pair unbiased at +0.222% [-0.130%, +0.630%]; behaviour identical throughout; no Elo claimed |
-| 4.11b.17 | RESEARCH | V | Design and run the playing gate for deliberate behavior changes | Candidate undefined until 4.11b.16 | Freeze prediction, arms, recipe, bracket/cap and stop rule; then `GAME_GATE` decides |
+| 4.11b.17 | CLOSED (ACCEPTED) | V | Integrated cluster gated and accepted | RAR-E15; `analysis/playing_gate_2026-09-08.md` | H1 at 1,950 games under a symmetric `[-5,5]` registered before games: +12.12 +/- 10.17 Elo, +18.40 nElo, LLR 2.96. Magnitude imprecise; no subcomponent credited |
 | 4.11b.18 | READY_FOR_IMPLEMENTATION | V | Refresh only endgame evidence affected by the accepted board head | Dependency-held on 4.11b.17 disposition | Versioned affected evidence and ranking, with unchanged artifacts reused mechanically |
 
 1. **4.11b.1 Freeze the audit and comparison -- DONE.** RAR-M20 and its committed evidence preserve the
