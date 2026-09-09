@@ -3041,8 +3041,9 @@ recommendations without coupling this roadmap to model generations.
     NPS is not Elo and none is claimed; behaviour is unchanged, so RAR-E15's
     verdict stands and no game gate is owed. This unblocks (c).
 
-    (c) **Bounded constant-factor screen -- conditional, class I2, only after
-    (b)'s result is recorded.** The remaining ~32% legal-moves gap is also
+    (c) **Bounded constant-factor screen -- SCREEN COMPLETE 2026-09-09, 2 of
+    4 candidates promoted; the bundled pooled-PGO run is registered and owed
+    to the maintainer. Class I2.** The remaining ~32% legal-moves gap is also
     constant factor; the candidates below were seen in the same assembly and
     are listed in priority order. Rules: one candidate at a time on top of
     (b); measure each with the parity bench from (a) using the RAR-M43 runner
@@ -3075,6 +3076,61 @@ recommendations without coupling this roadmap to model generations.
     flag-free `make_move(from, to)`; that is a representation change owned
     by 4.11b.14's reopen rule, and it would touch every consumer of
     `Move::is_capture`.
+
+    **(c) OUTCOME, 2026-09-09.** All four registered candidates were screened,
+    one at a time, in the registered order; none was added. Each prediction was
+    frozen in `tools/results/movelist-c-screen-20260909/predeclared.md` before
+    its run. A null pair of the base binary against itself was measured first
+    and put every column inside +/-1%, so the instrument resolves the +3% gate.
+
+    | Candidate | legal moves | two-ply | verdict |
+    |---|---:|---:|---|
+    | 1 force inlining | **+4.68%** | **+4.59%** | PROMOTED `be5c02a` |
+    | 2 const-generic colour | **+7.38%** | **+7.78%** | PROMOTED `c969ccd` |
+    | 3 unchecked `MoveList::push` | **-9.57%** | **-9.95%** | REJECTED, reverted |
+    | 4 hoist `LazyLock` checks | **-4.25%** | **-1.54%** | REJECTED, reverted |
+
+    Cumulative from the (b) head: legal moves +12.7%, two-ply +12.7%, legal
+    captures +10.7%. Fingerprint exactly 7,601,220 / EBF 2.474 on magic and
+    PEXT at both promoted steps, with 26/26 debug and release tests, fmt and
+    Clippy clean each time.
+
+    **A registered rule that could not be applied as written, reported before
+    any candidate ran.** (c) inherits "controls within 1%" from the RAR-M43
+    discipline. That worked for (b), where `see_captures` and `perft` kept
+    by-value delivery and were genuinely untouched. It cannot work for (c):
+    the change is in the GENERATOR and both controls call it inside their
+    timed region, so a generator win is EXPECTED to move them and the literal
+    rule would reject a candidate for working. Session validity was taken from
+    the interleaved order plus the measured null pair instead; the columns are
+    still reported. **The promotion gate was not loosened** -- >= +3% on legal
+    moves or two-ply plus an exact fingerprint, exactly as registered.
+
+    **The screen's durable result is a negative one, and it replicated.**
+    Candidates 3 and 4 both provably removed work at the source level and both
+    made the generator slower, by 9.6% and 4.3% on legal generation. Mechanism
+    is unresolved and was deliberately not chased. **Retry trigger: neither
+    may be retried until there is evidence explaining WHY removing the check
+    costs, not merely a new idea for removing it.** What paid was the opposite
+    move -- giving the compiler more information, by forcing inlining and by
+    making the colour a compile-time constant.
+
+    **(c) bundle run, REGISTERED and frozen before any run, owed to the
+    maintainer.** Same RAR-M41 instrument, `tools/nps_multibuild.ps1 -Cycles
+    10 -Repeats 3`, three PGO builds per arm. Base is the (b) head -- the same
+    three binaries that were (b)'s candidate arm, so the two measurements
+    chain without a gap. Prediction **+0.8% to +2.2%** whole-search NPS, floor
+    **+0.5%**, one run, null pair reported. The band sits below (b)'s +2.48%
+    on purpose: (c) moves legal moves about as much as (b) did but legal
+    captures only +10.7% against (b)'s +40.5%, and search generates captures
+    far more often. **Consequence fixed in advance: below the floor, or an
+    interval including zero, closes the bundle `NO_CHANGE` and REVERTS both
+    commits** -- unlike (a), nothing in (c) is owed regardless of speed -- and
+    (d) must then be re-run. **Stated risk the microbenchmark cannot see:**
+    candidate 2 roughly doubles the generator (`generate_legal_into` assembly
+    898 -> 1489 lines), and a bench running one hot generator does not pay the
+    I-cache cost a real search does. Commands and binaries:
+    `tools/results/movelist-c-screen-20260909/HANDOFF.md`.
 
     (d) **Re-measure and correct the record -- class V then M.** Rerun the
     RAR-M43 four-arm comparison with the parity harness, in one session,
