@@ -733,7 +733,11 @@ fn gen_unpinned_pawn_captures<S: MoveSink>(
 }
 
 /// Emit pawn move(s) — either simple or promotion set.
-#[inline]
+///
+/// 4.11b.19(c): `#[inline(always)]`, not `#[inline]`. The plain hint did not
+/// take in the fat-LTO build -- all four call sites called out of line -- and
+/// `is_capture` is a constant at every one of them.
+#[inline(always)]
 fn push_pawn_move_flags<S: MoveSink>(from: Square, to: Square, is_capture: bool, moves: &mut S) {
     let is_promo = to.rank() == Rank::R8 || to.rank() == Rank::R1;
     if is_promo {
@@ -831,6 +835,10 @@ fn gen_castling<S: MoveSink>(
 // -----------------------------------------------------------------------
 
 /// Compute the bitboard of our pieces that are pinned to our king.
+///
+/// 4.11b.19(c): inlined into its generator callers, which each call it once
+/// per generation with facts they already hold.
+#[inline(always)]
 fn compute_pinned(board: &Board, king_sq: Square, us: Color, them: Color) -> Bitboard {
     crate::diag_count!(board_compute_pinned_calls);
     let our_occ = board.color_occ(us);
@@ -1013,6 +1021,9 @@ const fn init_line() -> [[Bitboard; 64]; 64] {
 // -----------------------------------------------------------------------
 
 impl Board {
+    /// 4.11b.19(c): inlined; the generator calls it per king target and the
+    /// early-exit chain specialises well on the caller's occupancy.
+    #[inline(always)]
     pub fn is_attacked_with_occ(&self, sq: Square, attacker: Color, occ: Bitboard) -> bool {
         let atk = &*ATTACKS;
         if (atk.pawn(!attacker, sq) & self.pieces(attacker, Piece::Pawn)).any() {
