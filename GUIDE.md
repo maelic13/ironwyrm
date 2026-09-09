@@ -35,14 +35,17 @@
 
 PLAN records only stable capability classes. Edit this table when model
 generations change; do not rewrite the roadmap. Effort is selected per model.
+These are maintainer judgments, not measured rankings: the 2026-09-07
+engine-choice audit records no comparative measurements for any Claude model
+on this project, so do not cite this table as evidence of superiority.
 
 | Class | Capability | GPT | Claude |
 |---|---|---|---|
-| `R3` | Frontier causal/architecture research | GPT-6 Astra — Extra High | Claude Opus 5 — High |
+| `R3` | Frontier causal/architecture research | GPT-6 Astra — Extra High | Claude Fable 5.1 — High |
 | `R2` | Bounded correctness-sensitive reasoning | GPT-5.6 Sol — High | Claude Opus 5 — High |
 | `I2` | Difficult implementation | GPT-5.6 Sol — High | Claude Opus 5 — High |
 | `I1` | Well-specified implementation | GPT-5.6 Terra — Medium | Claude Sonnet 5 — Medium |
-| `M` | Mechanical/docs/provenance | GPT-5.6 Terra — Medium | Claude Fable 5.1 — Medium |
+| `M` | Mechanical/docs/provenance | GPT-5.6 Terra — Medium | Claude Sonnet 5 — Medium |
 | `V` | Verification/measurement | GPT-5.6 Sol — High | Claude Sonnet 5 — High |
 
 ### Reusable research prompt
