@@ -240,12 +240,21 @@ being played and can still make this release if it passes its checks.
   labels and the board cluster are all gated individually. The version follows
   the release rule in section 4: 2.4.0 if the registered STC gate's point
   estimate is at least +40 with the lower bound above +25, else 2.3.3.
-    - **A.3.1 Toolchain bump, behaviour-neutral — `I1`.** `rust-toolchain.toml`
-      from 1.97.1 to the current stable (1.98.1 on this host), never between a
-      baseline build and its candidate. Done criteria: exact fingerprint
-      7,601,220 / EBF 2.474 on magic and PEXT, debug and release suites, clippy
-      on the new toolchain, ISA verification of the PGO asset, pooled-PGO NPS
-      against the 1.97.1 build inside ±1% or the delta explained.
+    - **A.3.1 Toolchain bump, behaviour-neutral — DONE 2026-09-09 (`ca8988a`),
+      RAR-P18.** `rust-toolchain.toml` moved from 1.97.1 to 1.98.1
+      (`48a229cea`), with no experiment in flight and before RAR-E16's binaries
+      exist. Every done criterion met: fingerprint 7,601,220 / EBF 2.474 exact
+      on the `x86-64`, `avx2` and `pext` plain builds and on three `pext` PGO
+      builds; `cargo test -p rarog` debug and release green, tooling crates
+      green, fmt and clippy clean; `verify-isa` clean on all four assets;
+      pooled-PGO NPS −0.53% (95% CI −1.99% .. +0.08%), inside ±1%, with a
+      same-source null pair at −0.42% (−1.30% .. +0.33%) showing the
+      instrument cannot separate the compiler from per-build profile luck.
+      **Two obligations remain open and belong to other owners:** RAR-P08's
+      `rust-lld` Windows ARM64 PGO workaround is unverified on 1.98.1 and needs
+      the ARM64 compatibility host (RAR-P14 is the 1.97.1 precedent), and the
+      CI matrix has not yet run on the new pin. Both are held in GUIDE and are
+      required before A.3.3 publishes assets.
     - **A.3.2 Release gate — RAR-E16, `V`.** Registered before games: the
       release candidate (A.3.1 head, PGO pext) against the 2.3.2 release binary,
       `3+0.03`, 1T, Hash 64, paired UHO, no adjudication, `[3,10]` nElo, cap
@@ -553,7 +562,6 @@ class until they open.
 
 | Leaf | Workflow state | Class | Current decision |
 |---|---|---|---|
-| A.3.1 | READY_FOR_IMPLEMENTATION | I1 | Toolchain 1.97.1 -> 1.98.1; exact fingerprint, suites, ISA, pooled NPS |
 | A.3.2 | READY_FOR_IMPLEMENTATION | V | RAR-E16 registered; maintainer-run STC SPRT plus LTC and 4T direction checks |
 | A.3.3 | RESEARCH | M | Waits for the A.3.2 verdict and the A.4.5 decision; version per the release rule |
 | A.4.1 | READY_FOR_IMPLEMENTATION | R2 | Symbol-isolation link prototype first; then the design document and handoffs |

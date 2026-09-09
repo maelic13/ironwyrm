@@ -84,27 +84,29 @@ together, and `python tools/diag/check_guide.py` must pass.
 | Item | Value |
 |---|---|
 | Released baseline | **2.3.2** at `f931722` on `master` |
-| Development head | `dev`; fingerprint **7,601,220 / EBF 2.474**; accepted by RAR-E15 (+12.12 ± 10.17 Elo) |
+| Development head | `dev` at `ca8988a`; fingerprint **7,601,220 / EBF 2.474**; accepted by RAR-E15 (+12.12 ± 10.17 Elo); pinned `rustc 1.98.1` since A.3.1 |
 | Pool position, `3+0.03` 1T | Houdini 1.5a −216, Critter 1.6a −197, Fritz 16 −161, Rybka 4 −109, Basilisk 1.9.3 −26 (2026-09-04, 2.4.0-dev) |
 | Search deficit | **250.8 ± 13.1 Elo** equal time against the frozen oracle; selectivity explains 272 ± 18 |
 | Evaluation deficit | **about 329 Elo** against Stockfish's classical HCE with the same search |
 | Speed | 3.22 MNPS bench 13, PGO 1T; Basilisk 3.71 |
 | Conversion | 57 draws + 12 losses after a persistent piece-up in 2,400 games vs the six HCE-era engines |
 | Active experiment | none; RAR-E16 registered for A.3.2; RAR-M45, RAR-M46 and RAR-O03 registered for A.5 |
-| Current step | **A.3.1 — toolchain bump** (agent); then the maintainer runs the **A.3.2** gate while the agent does **A.4**; release at **A.3.3**; then **A.5** baselines on the released binary |
+| Current step | **A.3.2 — release gate RAR-E16** (maintainer) while the agent does **A.4**; release at **A.3.3**; then **A.5** baselines on the released binary |
 | Next release | A.3: 2.4.0 if RAR-E16 reads at least +40 with the lower bound above +25, else 2.3.3; universal binary if A.4 adopts; later 3.0.0 if E.2 is met |
 
 ## Next and held work
 
-**Next: A.3.1 toolchain bump** (agent, behaviour-neutral). Then the maintainer
-runs the A.3.2 release gate while the agent investigates the universal binary
-(A.4); A.3.3 releases on the gate's verdict, with the universal asset only if
+**Next: A.3.2 release gate RAR-E16** (maintainer, registered before games).
+The agent investigates the universal binary (A.4) while it runs; A.3.3
+releases on the gate's verdict, with the universal asset only if
 A.4.5 adopted it. The maintainer then runs the A.5 baselines on the released
 binary while the agent does A.6 (conversion instrument) and A.7 (consolidation
 analysis). **B.0**, the search programme investigation, opens after A.7.
 
 | Open hold / obligation | Resume or resolve when | Must be resolved before |
 |---|---|---|
+| Windows ARM64 PGO `rust-lld` workaround unverified on the 1.98.1 pin (RAR-P08, RAR-P14) | The ARM64 compatibility host runs `cargo xtask build --arch arm64 --pgo` | A.3.3 publishes assets |
+| CI matrix has not run on the 1.98.1 pin (RAR-P15 precedent) | A `workflow_dispatch` of `ci.yml` on the A.3.1 head or later goes green | A.3.3 publishes assets |
 | KRPPKRP 7-man truth gap | Independent truth becomes available, or C.5.8 records an explicit exclusion | C.5.8 closes |
 | KRP-KB win-preserving 0.9990 → 0.9949 (−2.2 SE, RAR-M42) | Non-blocking; blocking if a later change pushes it past 3 SE | C.5.4 closes (owner) |
 
@@ -121,7 +123,7 @@ is the numbering: release first, baselines on the released binary.
     - [x] **A.2.2** Branch and tag disposition: seven branches tagged and deleted, oracle package archived, stale worktrees removed — DONE 2026-09-09
     - [x] **A.2.3** Feature and option inventory: 42 inert parameters for B.1, 55 seeds for B.2, features kept — DONE 2026-09-09
 - [ ] **A.3** Consolidation release before the search programme
-    - [ ] **A.3.1** Toolchain bump 1.97.1 → 1.98.1, behaviour-neutral: exact fingerprint, suites, ISA, pooled NPS — **READY_FOR_IMPLEMENTATION / I1**
+    - [x] **A.3.1** Toolchain bump 1.97.1 → 1.98.1, behaviour-neutral: fingerprint, suites, ISA and pooled NPS all clean (RAR-P18) — DONE 2026-09-09
     - [ ] **A.3.2** Release gate RAR-E16: candidate vs 2.3.2, STC `[3,10]`, plus `10+0.1` and 4T direction checks — **READY_FOR_IMPLEMENTATION / V**
     - [ ] **A.3.3** Release 2.4.0 or 2.3.3 per the release rule; universal binary only if A.4.5 adopted it — **RESEARCH / M**
 - [ ] **A.4** Universal x86-64 binary: one file per OS selecting its code path at startup
